@@ -18,7 +18,7 @@ for modem in $modems; do
     json_get_vars id service_modes
 
     [ "$id" = "$MODEM_ID" ] && [ -z "$service_modes" ] && {
-        fw=$(gsmctl -O "$id" -y)
+        fw=$(ubus call gsm.modem0 info | jsonfilter -e "$.cache.firmware")
         /bin/board_modem "$id" "$fw"
         break
     }

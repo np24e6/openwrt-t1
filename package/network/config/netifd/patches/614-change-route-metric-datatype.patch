@@ -1,0 +1,102 @@
+Index: netifd-2022-01-12-5ca5e0b4/interface-ip.c
+===================================================================
+--- netifd-2022-01-12-5ca5e0b4.orig/interface-ip.c
++++ netifd-2022-01-12-5ca5e0b4/interface-ip.c
+@@ -34,7 +34,7 @@ static const struct blobmsg_policy route
+ 	[ROUTE_TARGET] = { .name = "target", .type = BLOBMSG_TYPE_STRING },
+ 	[ROUTE_MASK] = { .name = "netmask", .type = BLOBMSG_TYPE_STRING },
+ 	[ROUTE_GATEWAY] = { .name = "gateway", .type = BLOBMSG_TYPE_STRING },
+-	[ROUTE_METRIC] = { .name = "metric", .type = BLOBMSG_TYPE_INT32 },
++	[ROUTE_METRIC] = { .name = "metric", .type = BLOBMSG_TYPE_INT64 },
+ 	[ROUTE_MTU] = { .name = "mtu", .type = BLOBMSG_TYPE_INT32 },
+ 	[ROUTE_TABLE] = { .name = "table", .type = BLOBMSG_TYPE_STRING },
+ 	[ROUTE_VALID] = { .name = "valid", .type = BLOBMSG_TYPE_INT32 },
+@@ -423,7 +423,7 @@ interface_ip_add_route(struct interface
+ 	}
+ 
+ 	if ((cur = tb[ROUTE_METRIC]) != NULL) {
+-		route->metric = blobmsg_get_u32(cur);
++		route->metric = blobmsg_get_u64(cur);
+ 		route->flags |= DEVROUTE_METRIC;
+ 	}
+ 
+@@ -680,7 +680,7 @@ interface_update_proto_addr(struct vlist
+ 
+ 					memset(&route, 0, sizeof(route));
+ 					route.flags = v6 ? DEVADDR_INET6 : DEVADDR_INET4;
+-					route.metric = INT32_MAX;
++					route.metric = UINT32_MAX;
+ 					route.mask = a_old->mask;
+ 					route.addr = a_old->addr;
+ 
+@@ -721,7 +721,7 @@ interface_update_proto_addr(struct vlist
+ 
+ 					memset(&route, 0, sizeof(route));
+ 					route.flags = v6 ? DEVADDR_INET6 : DEVADDR_INET4;
+-					route.metric = INT32_MAX;
++					route.metric = UINT32_MAX;
+ 					route.mask = a_new->mask;
+ 					route.addr = a_new->addr;
+ 
+@@ -1267,7 +1267,7 @@ interface_update_prefix(struct vlist_tre
+ 	struct device_route route;
+ 	memset(&route, 0, sizeof(route));
+ 	route.flags = DEVADDR_INET6;
+-	route.metric = INT32_MAX;
++	route.metric = UINT32_MAX;
+ 	route.mask = (node_new) ? prefix_new->length : prefix_old->length;
+ 	route.addr.in6 = (node_new) ? prefix_new->addr : prefix_old->addr;
+ 
+@@ -1627,7 +1627,7 @@ void interface_ip_set_enabled(struct int
+ 
+ 				memset(&route, 0, sizeof(route));
+ 				route.flags = v6 ? DEVADDR_INET6 : DEVADDR_INET4;
+-				route.metric = INT32_MAX;
++				route.metric = UINT32_MAX;
+ 				route.mask = addr->mask;
+ 				route.addr = addr->addr;
+ 
+@@ -1651,7 +1651,7 @@ void interface_ip_set_enabled(struct int
+ 
+ 				memset(&route, 0, sizeof(route));
+ 				route.flags = v6 ? DEVADDR_INET6 : DEVADDR_INET4;
+-				route.metric = INT32_MAX;
++				route.metric = UINT32_MAX;
+ 				route.mask = addr->mask;
+ 				route.addr = addr->addr;
+ 
+Index: netifd-2022-01-12-5ca5e0b4/interface-ip.h
+===================================================================
+--- netifd-2022-01-12-5ca5e0b4.orig/interface-ip.h
++++ netifd-2022-01-12-5ca5e0b4/interface-ip.h
+@@ -119,7 +119,7 @@ struct device_route {
+ 
+ 	/* must be last */
+ 	enum device_addr_flags flags;
+-	int metric; /* there can be multiple routes to the same target */
++	uint32_t metric; /* there can be multiple routes to the same target */
+ 	unsigned int table;
+ 	unsigned int mask;
+ 	unsigned int sourcemask;
+@@ -200,7 +200,7 @@ void interface_ip_update_start(struct in
+ void interface_ip_update_complete(struct interface_ip_settings *ip);
+ void interface_ip_flush(struct interface_ip_settings *ip);
+ void interface_ip_set_enabled(struct interface_ip_settings *ip, bool enabled);
+-void interface_ip_update_metric(struct interface_ip_settings *ip, int metric);
++void interface_ip_update_metric(struct interface_ip_settings *ip, uint32_t metric);
+ 
+ struct interface *interface_ip_add_target_route(union if_addr *addr, bool v6, struct interface *iface);
+ 
+Index: netifd-2022-01-12-5ca5e0b4/interface.h
+===================================================================
+--- netifd-2022-01-12-5ca5e0b4.orig/interface.h
++++ netifd-2022-01-12-5ca5e0b4/interface.h
+@@ -154,7 +154,7 @@ struct interface {
+ 	struct vlist_tree host_routes;
+ 	struct vlist_tree host_neighbors;
+ 
+-	int metric;
++	uint32_t metric;
+ 	int dns_metric;
+ 	unsigned int ip4table;
+ 	unsigned int ip6table;

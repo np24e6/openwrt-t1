@@ -1,0 +1,17 @@
+#!/bin/sh
+
+[ "$EVENT_NAME" = "snd_sms" ] || exit 0
+
+. /lib/functions.sh
+. /usr/share/libubox/jshn.sh
+
+json_load "$DATA"
+json_get_var SMS_USED sms_used
+json_get_var NUMBER number
+
+ubus call log write_ext "{
+	\"event\": \"Sent ${SMS_USED} PDUs to ${NUMBER}\",
+	\"sender\": \"SMS\",
+	\"table\": 0,
+	\"write_db\": 1
+}"

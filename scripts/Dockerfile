@@ -28,9 +28,11 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC \
 	java-propose-classpath \
 	jq \
 	libc6-dev \
+	libffi-dev \
 	libncurses5-dev \
 	libpcre3-dev \
 	libssl-dev \
+	libsqlite3-dev \
 	libxml-parser-perl \
 	lz4 \
 	make \
@@ -39,9 +41,6 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC \
 	ocaml-nox \
 	patch \
 	pkg-config \
-	python-is-python3 \
-	python-yaml \
-	python2.7 \
 	python3 \
 	python3-dev \
 	python3-distutils \

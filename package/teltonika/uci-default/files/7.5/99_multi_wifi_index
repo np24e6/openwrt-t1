@@ -1,0 +1,15 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+index=0
+add_index() {
+	[ "${1:0:3}" != "cfg" ] && return
+
+	index=$((index + 1))
+	uci_rename "multi_wifi" "$1" "$index"
+}
+
+config_load "multi_wifi"
+config_foreach add_index "wifi-iface"
+uci_commit "multi_wifi"

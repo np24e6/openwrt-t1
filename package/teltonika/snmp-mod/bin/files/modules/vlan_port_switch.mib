@@ -1,0 +1,62 @@
+-- Port-based VLAN in switches --
+
+pVlanCount OBJECT-TYPE
+	SYNTAX      INTEGER
+	MAX-ACCESS  read-only
+	STATUS      current
+	DESCRIPTION "Amount of port-based virtual networks."
+	::= { vlan 1 }
+
+pVlanTable OBJECT-TYPE
+	SYNTAX      SEQUENCE OF PVlan_Entry
+	MAX-ACCESS  not-accessible
+	STATUS      current
+	DESCRIPTION "A list of port-based virtual networks."
+	::= { vlan 2 }
+
+pVlanEntry OBJECT-TYPE
+	SYNTAX      PVlan_Entry
+	MAX-ACCESS  not-accessible
+	STATUS      current
+	DESCRIPTION "An entry containing information about a port-based VLAN"
+	INDEX   { pVlanIndex }
+	::= { pVlanTable 1 }
+
+PVlan_Entry ::=
+	SEQUENCE {
+	pVlanIndex  	INTEGER,
+	pVlanName   	DisplayString,
+	pVlanVID    	INTEGER,
+	pVlanPortsUntag DisplayString,
+	pVlanPortsTag	DisplayString
+	}
+
+pVlanIndex OBJECT-TYPE (0..65535)
+	SYNTAX      INTEGER
+	MAX-ACCESS  read-only
+	DESCRIPTION "Index of port-based VLAN"
+	::= { pVlanEntry 1 }
+
+pVlanName OBJECT-TYPE
+	SYNTAX      DisplayString
+	MAX-ACCESS  read-only
+	DESCRIPTION "Name of port-based VLAN"
+	::= { pVlanEntry 2 }
+
+pVlanVID OBJECT-TYPE
+	SYNTAX      INTEGER
+	MAX-ACCESS  read-only
+	DESCRIPTION "VLAN ID of port-based VLAN"
+	::= { pVlanEntry 3 }
+
+pVlanPortsUntag OBJECT-TYPE
+	SYNTAX      DisplayString
+	MAX-ACCESS  read-only
+	DESCRIPTION "Untagged ports of port-based VLAN"
+	::= { pVlanEntry 4 }
+
+pVlanPortsTag OBJECT-TYPE
+	SYNTAX      DisplayString
+	MAX-ACCESS  read-only
+	DESCRIPTION "Tagged ports of port-based VLAN"
+	::= { pVlanEntry 5 }

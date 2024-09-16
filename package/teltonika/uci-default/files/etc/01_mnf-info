@@ -3,7 +3,7 @@
 . /lib/functions.sh
 
 get_hw_info() {
-	local param hostname routername version
+	local param hostname devicename version
 
 	param=$(/sbin/mnf_info "--name")
 	[ -n "$param" ] && [ "${#param}" = 12 ] && uci_set "system" "@system[0]" "device_code" "$param"
@@ -11,8 +11,16 @@ get_hw_info() {
 	hostname="${param:0:6}"
 	[ -n "$hostname" ] && [ "${#hostname}" = 6 ] && [ -z "$(uci_get system @system[0] hostname)" ] && uci_set "system" "@system[0]" "hostname" "Teltonika-${hostname}.com"
 
-	routername="${param:0:6}"
-	[ -n "$routername" ] && [ "${#routername}" = 6 ] && [ -z "$(uci_get system @system[0] routername)" ] && uci_set "system" "@system[0]" "routername" "$routername"
+	devicename="$(uci_get system @system[0] routername)"
+	if [ -n "$devicename" ]; then
+		uci_remove "system" "@system[0]" "routername"
+		uci_set "system" "@system[0]" "devicename" "$devicename"
+	else
+		devicename="${param:0:6}"
+		[ -n "$devicename" ] && [ "${#devicename}" = 6 ] && \
+			[ -z "$(uci_get system @system[0] devicename)" ] && \
+				uci_set "system" "@system[0]" "devicename" "$devicename"
+	fi
 
 	version=$(cat /etc/version)
 	[ -n "$version" ] && uci_set "system" "@system[0]" "device_fw_version" "$version"

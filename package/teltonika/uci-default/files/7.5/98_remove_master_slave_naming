@@ -1,0 +1,207 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+PACKAGE_FILE="/etc/package_restore.txt"
+
+path="/etc/config/"
+modbus_config="modbus_master"
+dnp3_config="dnp3_master"
+mbus_config="mbus_master"
+opcua_config="opcua_master"
+data_sender_config="modbus_data_sender"
+modbusgwd_config="rs_modbus"
+bacnet_config="bacnet_router"
+
+rename_configs() {
+	local configs="modbus_master modbus dnp3_master mbus_master opcua_master"
+	local new_suffix="client"
+
+	for config in $configs
+	do
+		[ ! -e "$path$config" ] && continue
+
+		new_config=""
+		case "$config" in
+			modbus)
+				new_config="modbus_server"
+				;;
+			*)
+				# change all characters after '_' to 'client'
+				new_config=$(echo "$config" | sed "s/_[^_]*$/_$new_suffix/")
+				;;
+		esac
+
+		mv "$path$config" "$path$new_config"
+		uci_commit "$path$new_config"
+	done
+}
+
+modbus_change_section_type() {
+	local section="$1"
+	local new_section_type="$2"
+
+	config_get server_id "$section" "slave_id" "0"
+	uci_set "$modbus_config" "$section" "server_id" "$server_id"
+	uci_remove "$modbus_config" "$section" "slave_id"
+
+	uci set "$modbus_config"."$section"="$new_section_type"
+}
+
+modbus_config_routine() {
+	[ ! -e "$path$modbus_config" ] && return
+
+	local section_type_tcp="tcp_slave"
+	local section_type_rtu="rtu_slave"
+
+	config_load "$modbus_config" || return
+	config_foreach modbus_change_section_type "$section_type_tcp" "tcp_server"
+	config_foreach modbus_change_section_type "$section_type_rtu" "rtu_server"
+	uci_commit "$modbus_config"
+}
+
+dnp3_change_section_type() {
+	local section_name="$1"
+	local new_section_type="$2"
+
+	uci set "$dnp3_config"."$section_name"="$new_section_type"
+}
+
+dnp3_change_master_id() {
+	local section="$1"
+
+	config_get client_id "$section" "master_id" "0"
+	uci_set "$dnp3_config" "$section" "client_id" "$client_id"
+	uci_remove "$dnp3_config" "$section" "master_id"
+}
+
+dnp3_config_routine() {
+	[ ! -e "$path$dnp3_config" ] && return
+
+	local section_type_tcp="tcp_master"
+	local section_type_rtu="serial_master"
+	local section_type_instace="instance"
+
+	config_load "$dnp3_config" || return
+	config_foreach dnp3_change_section_type "$section_type_tcp" "tcp_client"
+	config_foreach dnp3_change_section_type "$section_type_rtu" "serial_client"
+	config_foreach dnp3_change_master_id "$section_type_instace"
+	uci_commit "$dnp3_config"
+}
+
+rename_master_section() {
+	local config="$1"
+	[ ! -e "$path$config" ] && return
+
+	local section="master"
+	local new_section_type="main"
+
+	uci set "$config"."$section"="$new_section_type"
+	uci_rename "$config" "$section" "$new_section_type"
+	uci_commit "$config"
+}
+
+data_sender_change_options() {
+	local section="$1"
+
+	config_get filter_server_id "$section" "filter_slave_id" "-1"
+	config_get filter_server_ip "$section" "filter_slave_ip" "-1"
+	config_get device_filtering "$section" "device_filtering" "-1"
+
+	if [ "$device_filtering" = "slave_id" ]; then
+		uci_set "$data_sender_config" "$section" "device_filtering" "server_id"
+	fi
+
+	if [ "$device_filtering" = "slave_ip" ]; then
+		uci_set "$data_sender_config" "$section" "device_filtering" "server_ip"
+	fi
+
+	if [ "$filter_server_id" != "-1" ]; then
+		uci_set "$data_sender_config" "$section" "filter_server_id" "$filter_server_id"
+		uci_remove "$data_sender_config" "$section" "filter_slave_id"
+	fi
+
+	if [ "$filter_server_ip" != "-1" ]; then
+		uci_set "$data_sender_config" "$section" "filter_server_ip" "$filter_server_ip"
+		uci_remove "$data_sender_config" "$section" "filter_slave_ip"
+	fi
+}
+
+data_sender_routine() {
+	config_load "$data_sender_config" || return
+	config_foreach data_sender_change_options "data_sender"
+	uci_commit "$data_sender_config"
+}
+
+modbusgwd_change_options() {
+	local section="$1"
+
+	config_get server_id "$section" "slave_id" "-1"
+	config_get server_id_config "$section" "slave_id_config" "-1"
+	config_get multi_server_id "$section" "multi_slave_id" "-1"
+	config_get single_server_id "$section" "single_slave_id" "-1"
+
+	if [ "$server_id" != "-1" ]; then
+		uci_set "$modbusgwd_config" "$section" "server_id" "$server_id"
+		uci_remove "$modbusgwd_config" "$section" "slave_id"
+	fi
+
+	if [ "$server_id_config" != "-1" ]; then
+		uci_set "$modbusgwd_config" "$section" "server_id_config" "$server_id_config"
+		uci_remove "$modbusgwd_config" "$section" "slave_id_config"
+	fi
+
+	if [ "$multi_server_id" != "-1" ]; then
+		uci_set "$modbusgwd_config" "$section" "multi_server_id" "$multi_server_id"
+		uci_remove "$modbusgwd_config" "$section" "multi_slave_id"
+	fi
+
+	if [ "$single_server_id" != "-1" ]; then
+		uci_set "$modbusgwd_config" "$section" "single_server_id" "$single_server_id"
+		uci_remove "$modbusgwd_config" "$section" "single_slave_id"
+	fi
+}
+
+modbusgwd_config_routine() {
+	config_load "$modbusgwd_config" || return
+	config_foreach modbusgwd_change_options "modbus"
+	uci_commit "$modbusgwd_config"
+}
+
+bacnet_change_options() {
+	local section="$1"
+
+	config_get max_client "$section" "max_master" "-1"
+
+	if [ "$max_client" != "-1" ]; then
+		uci_set "$bacnet_config" "$section" "max_client" "$max_client"
+		uci_remove "$bacnet_config" "$section" "max_master"
+	fi
+}
+
+bacnet_config_routine() {
+	config_load "$bacnet_config" || return
+	config_foreach bacnet_change_options "port"
+	uci_commit "$bacnet_config"
+}
+
+rename_package_restore_packages() {
+	[ -s "$PACKAGE_FILE" ] && {
+		sed -i "s/modbusd - MODBUS Slave/modbus_server - MODBUS Server/g" "$PACKAGE_FILE"
+		sed -i "s/modbusd - MODBUS TCP Slave/modbus_server - MODBUS Server/g" "$PACKAGE_FILE"
+		sed -i "s/modbus_tcp_master - MODBUS Master/modbus_client - MODBUS Client/g" "$PACKAGE_FILE"
+		sed -i "s/opcua_master - OPC UA/opcua_client - OPC UA Client/g" "$PACKAGE_FILE"
+	}
+}
+
+modbus_config_routine
+dnp3_config_routine
+data_sender_routine
+modbusgwd_config_routine
+bacnet_config_routine
+rename_master_section "$mbus_config"
+rename_master_section "$opcua_config"
+rename_configs
+rename_package_restore_packages
+
+exit 0

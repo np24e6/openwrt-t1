@@ -1,0 +1,15 @@
+Revert "firmware: qcom_scm: Clear download bit during reboot"
+This reverts commit 781d32d1c9709fd25655c4e3e3e15370ae4ae4db.
+
+--- a/drivers/firmware/qcom_scm.c
++++ b/drivers/firmware/qcom_scm.c
+@@ -1256,7 +1256,8 @@ static int qcom_scm_probe(struct platfor
+ static void qcom_scm_shutdown(struct platform_device *pdev)
+ {
+ 	/* Clean shutdown, disable download mode to allow normal restart */
+-	qcom_scm_set_download_mode(false);
++       if (download_mode)
++               qcom_scm_set_download_mode(false);
+ }
+ 
+ static const struct of_device_id qcom_scm_dt_match[] = {

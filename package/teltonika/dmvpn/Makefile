@@ -19,7 +19,7 @@ define Package/dmvpn
 	DEPENDS:=+kmod-gre +IPV6:kmod-gre6 +resolveip +libpthread +ip \
 		+kmod-crypto-authenc +kmod-ipsec +kmod-ipsec4 +IPV6:kmod-ipsec6 \
 		+kmod-ipt-ipsec +iptables-mod-ipsec +frr +frr-libfrr +libcares \
-		+frr-vtysh +frr-watchfrr +frr-zebra +vuci-app-dmvpn-ui +frr-nhrpd +frr-nhrp +iptables-mod-hashlimit
+		+frr-zebra +vuci-app-dmvpn-ui +frr-nhrp +vuci-app-dynamic-routes-nhrp-ui +iptables-mod-hashlimit
 	ifeq (m, $(CONFIG_PACKAGE_dmvpn))
 		PKG_TLT_NAME:=DMVPN
 		PKG_ROUTER:=$(TLT_PLATFORM_NAME)
@@ -50,14 +50,15 @@ define Package/dmvpn/prerm
 	}
 	clean_dmvpn() {
 		config="$${1}"
-		config_load "$${config}"
+		config_load "$${config}" || return
 		config_foreach delete_dmvpn "" "$${config}"
-		uci commit "$${config}"
+		uci_commit "$${config}"
 		/etc/init.d/"$${config}" reload
 	}
 	clean_dmvpn network
 	clean_dmvpn ipsec
 	clean_dmvpn frr
+	exit 0
 endef
 
 $(eval $(call BuildPackage,dmvpn))

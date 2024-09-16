@@ -51,6 +51,9 @@ enum {
 
 #define LIMIT_FMT " ORDER BY id DESC limit 1"
 
+#define UPDATE_USR_PWD "UPDATE users SET password='%s' \
+			WHERE ("NOT_EXPIRED_FMT" AND email = '%s');"
+
 #define USER_TIME_FMT "(strftime('%%s','now') - strftime('%%s', created)) AS user_time"
 
 //Cont all unexpired users with corresponding phone number
@@ -96,6 +99,8 @@ struct str_user {
 };
 
 int usr_get_user (sqlite3 *db, struct str_user *user, char *email);
+int usr_update_user_pwd(sqlite3 *db, struct str_user *user, char *email, char *new_passw);
+int usr_update_user_pwd_uci(char username[256], char passw[256], char *new_passw);
 int usr_add_user(struct redir_conn_t *conn);
 
 int usr_get_sms_user(sqlite3 *db, struct str_sms_user *user, char *password);

@@ -6,10 +6,10 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=rms-packages
-PKG_VERSION:=2023-06-15
+PKG_VERSION:=2023-09-08
 PKG_RELEASE:=1
 
-PKG_SOURCE_VERSION:=b80f7a011d10b7dae0c09a762581dafc5073569a
+PKG_SOURCE_VERSION:=3.6
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_SOURCE_VERSION)-$(PKG_VERSION)
 PKG_SOURCE:=$(PKG_SOURCE_SUBDIR).tar.gz
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_SOURCE_SUBDIR)
@@ -38,7 +38,7 @@ define Package/rms_json
 	CATEGORY:=Base system
 	TITLE:=Collects and prints out information about device.
 	DEPENDS:=+libuci +MOBILE_SUPPORT:libgsm +GPS_SUPPORT:libgps +libmnfinfo +libblobmsg-json +libubus \
-		+libubox +libjson-c +MOBILE_SUPPORT:libmdcollect +MOBILE_SUPPORT:rpcd-mod-simd +IO_SUPPORT:iomand +libboardjson
+		+libubox +libjson-c +MOBILE_SUPPORT:libmdcollect +IO_SUPPORT:iomand +libboardjson
 endef
 
 define Package/rms_mqtt/conffiles

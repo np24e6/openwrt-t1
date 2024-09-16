@@ -12,6 +12,11 @@ static int chilli_forget_method(struct ubus_context *ctx, struct ubus_object *ob
 								struct ubus_request_data *req, const char *method, struct blob_attr *msg);
 
 enum {
+	FORMAT_TABLE,
+	FORMAT_ARRAY
+};
+
+enum {
 	CHILLI_IP,
 	CHILLI_MAC,
 	CHILLI_SESSION_ID,
@@ -134,20 +139,23 @@ static void chilli_session_acct(struct session_state *state, struct blob_buf *b)
 	blobmsg_add_string(b, "viewPoint", _options.swapoctets ? "nas" : "client");
 }
 
-static void chilli_getinfo(struct app_conn_t *appconn, struct blob_buf *b) {
+static void chilli_getinfo(struct app_conn_t *appconn, struct blob_buf *b, int format_array) {
 	if (appconn->s_state.authenticated) {
 		void *i = blobmsg_open_table(b, "session");
 		chilli_session_params(&appconn->s_state, &appconn->s_params, b);
 		blobmsg_close_table(b, i);
 
-		i = blobmsg_open_table(b, "accounting");
-		chilli_session_acct(&appconn->s_state, b);
-		blobmsg_close_table(b, i);
+		if (format_array) {
+			i = blobmsg_open_table(b, "accounting");
+			chilli_session_acct(&appconn->s_state, b);
+			blobmsg_close_table(b, i);
+		}
 	}
 }
 
-void chilli_form_blob(struct blob_buf *b, struct app_conn_t *appconn, struct dhcp_conn_t *conn) {
+void chilli_form_blob(struct blob_buf *b, struct app_conn_t *appconn, struct dhcp_conn_t *conn, int format_array) {
 	char tmp_buff[64];
+	void *i;
 
 	if (!appconn && conn)
 		appconn = (struct app_conn_t *)conn->peer;
@@ -157,7 +165,9 @@ void chilli_form_blob(struct blob_buf *b, struct app_conn_t *appconn, struct dhc
 	} else if (conn && !conn->inuse) {
 		return;
 	} else {
-		void *i = blobmsg_open_table(b, NULL);
+		if (format_array) {
+			i = blobmsg_open_table(b, NULL);
+		}
 		if (appconn) {
 			blobmsg_add_u32(b, "nasPort", appconn->unit);
 			blobmsg_add_u8(b, "clientState", appconn->s_state.authenticated);
@@ -174,10 +184,12 @@ void chilli_form_blob(struct blob_buf *b, struct app_conn_t *appconn, struct dhc
 		}
 
 		if (appconn) {
-			chilli_getinfo(appconn, b);
+			chilli_getinfo(appconn, b, format_array);
 		}
 
-		blobmsg_close_table(b, i);
+		if (format_array) {
+			blobmsg_close_table(b, i);
+		}
 	}
 }
 
@@ -226,12 +238,12 @@ static int chilli_list_method(struct ubus_context *ctx, struct ubus_object *obj,
 	appconn = find_app_conn(&req_params, &crt);
 	if (appconn) {
 		dhcpconn = (struct dhcp_conn_t *)appconn->dnlink;
-		chilli_form_blob(&b, appconn, dhcpconn);
+		chilli_form_blob(&b, appconn, dhcpconn, FORMAT_ARRAY);
 	} else if (!crt) {
 		if (dhcp) {
 			dhcpconn = dhcp->firstusedconn;
 			while (dhcpconn) {
-				chilli_form_blob(&b, NULL, dhcpconn);
+				chilli_form_blob(&b, NULL, dhcpconn, FORMAT_ARRAY);
 				dhcpconn = dhcpconn->next;
 			}
 		}
@@ -501,4 +513,32 @@ void chilli_ubus_subscribe_hostapd(struct ubus_context *ctx, struct options_t op
 			chilli_ubus_singlesub_hostapd(ctx, &hostapd_multi_events[i], options.moreif[i].dhcpif);
 		}
 	#endif
+}
+
+void send_ubus_event(struct ubus_context *ctx, char *state, struct app_conn_t *appconn,
+			struct dhcp_conn_t *dhcpconn)
+{
+	if (!ctx) {
+		return;
+	}
+
+	struct blob_buf b = { 0 };
+	int err = 0;
+
+	blob_buf_init(&b, 0);
+
+	if (appconn) {
+		if (!strcmp(state, CHILLI_EVENT_CONNECT)) {
+			chilli_form_blob(&b, appconn, dhcpconn, FORMAT_TABLE);
+		} else {
+			blobmsg_add_string(&b, "sessionId", appconn->s_state.sessionid);
+		}
+	}
+
+	err = ubus_send_event(ctx, state, b.head);
+	if (err) {
+		syslog(LOG_ERR, "Failed to send ubus event '%s': %s", state, ubus_strerror(err));
+	}
+
+	blob_buf_free(&b);
 }

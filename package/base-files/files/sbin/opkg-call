@@ -86,8 +86,9 @@ install_package() {
 
 	mkdir "/tmp/custom_package"
 	opkg install -f /etc/tlt_opkg.conf --tmp-dir "/tmp/custom_package" --force-removal-of-essential-packages "$package_name"
+	return_code="$?"
 	rmdir "/tmp/custom_package"
-	if [ $? -ne 0 ]; then
+	if [ "$return_code" -ne "0" ]; then
 		return $INSTALL_FAIL
 	fi
 

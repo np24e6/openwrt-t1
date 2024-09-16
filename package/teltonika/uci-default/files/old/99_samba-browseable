@@ -1,0 +1,17 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+[ -f "/etc/config/samba" ] || return 0
+
+fix_browseable() {
+        local value
+        config_get value $1 browseable
+        [ -n "$value" ] || uci_set "samba" "$1" "browseable" "yes"
+}                                                                 
+ 
+config_load samba
+config_foreach fix_browseable sambashare
+uci commit samba                        
+                
+exit 0

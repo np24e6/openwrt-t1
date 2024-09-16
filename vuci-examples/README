@@ -1,0 +1,46 @@
+# Custom Web page and API creation
+
+## Technologies
+
+- WebUI apps are built using Vue 2 Javascript framework.
+- Backend API apps are built using Lua 5.1 programming language.
+
+## Building
+
+    1. Copy "vuci-app-example-api" and "vuci-app-example-ui" into "RUTX_R_GPL_00.07.05/package/feeds/vuci" directory.
+
+       Directory names can be changed, but API and UI names must match, for example "vuci-app-test-app-api" and "vuci-app-test-app-ui" are valid.
+
+    2. Enter OpenWrt Configuration
+
+        $ make menuconfig
+
+    3. Navigate to "VuCI -> Applications/UI" and select <M> or <*> for "vuci-app-example-ui".
+
+        - If <M> is selected application will not be installed when compiling the firmware and will need to be installed manually.
+
+        - If <*> is selected application will be installed when compiling the firmware.
+
+    4. Build the selected APP
+
+        - Building application for <M> mode:
+
+            $ make package/vuci-app-example-ui/{clean,compile}
+
+        - Building firmware for <*> mode:
+
+            $ make clean
+            $ make
+
+    5. After building both the API and UI packages will be available in "RUTX_R_GPL_00.07.05/bin/packages/ipq40xx/vuci"
+
+## Manual installation
+
+    1. Copy both API and UI packages from "RUTX_R_GPL_00.07.05/bin/packages/ipq40xx/vuci" to the device.
+
+        $ scp "RUTX_R_GPL_00.07.05/bin/packages/ipq40xx/vuci/vuci-app-example-api_1_ipq40xx.ipk" "RUTX_R_GPL_00.07.05/bin/packages/ipq40xx/vuci/vuci-app-example-ui_1_ipq40xx.ipk" root@192.168.1.1:/tmp
+
+    2. Install using "opkg"
+
+        $ opkg install /tmp/vuci-app-example-api_1_ipq40xx.ipk
+        $ opkg install /tmp/vuci-app-example-ui_1_ipq40xx.ipk

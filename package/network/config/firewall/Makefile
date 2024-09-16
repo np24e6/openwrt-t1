@@ -28,7 +28,7 @@ define Package/firewall
   SECTION:=net
   CATEGORY:=Base system
   TITLE:=OpenWrt C Firewall
-  DEPENDS:=+libubox +libubus +libuci +libip4tc +IPV6:libip6tc +libxtables +kmod-ipt-core +kmod-ipt-conntrack +IPV6:kmod-nf-conntrack6 +kmod-ipt-nat +libnetfilter-conntrack +libmnl
+  DEPENDS:=+libubox +libubus +libuci +libip4tc +IPV6:libip6tc +libxtables +kmod-ipt-core +kmod-ipt-conntrack +IPV6:kmod-nf-conntrack6 +kmod-ipt-nat +libnetfilter-conntrack +libmnl +AP_DEVICE:iptables-mod-filter
 endef
 
 define Package/firewall/description
@@ -50,20 +50,30 @@ ifeq ($(TLT_PLATFORM_TAP100), y)
 	FIREWALL_CONFIG=firewall.config-tap100
 endif
 
+ifeq ($(TLT_PLATFORM_TAP200), y)
+	FIREWALL_CONFIG=firewall.config-tap200
+endif
+
+ifeq ($(CONFIG_HW_OFFLOAD), y)
+	FIREWALL_CONFIG=firewall.config-offload-full
+endif
+
+ifeq ($(CONFIG_SW_OFFLOAD), y)
+	FIREWALL_CONFIG=firewall.config-offload-sw
+endif
+
+ifeq ($(CONFIG_GATEWAY_DEVICE), y)
+	FIREWALL_CONFIG=firewall.config-without-wan
+endif
+
+ifeq ($(CONFIG_SW_OFFLOAD), y)
+ifeq ($(CONFIG_GATEWAY_DEVICE), y)
+	FIREWALL_CONFIG=firewall.config-offload-sw-without-wan
+endif
+endif
+
 ifeq ($(TLT_PLATFORM_TCR1), y)
 	FIREWALL_CONFIG=firewall.config-tcr100
-endif
-
-ifeq ($(TLT_PLATFORM_RUTM), y)
-	FIREWALL_CONFIG=firewall.config-rutm
-endif
-
-ifneq ($(filter y,$(TLT_PLATFORM_RUTX) $(TLT_PLATFORM_RUT2M) $(TLT_PLATFORM_RUT9M) $(TLT_PLATFORM_RUT361)),)
-	FIREWALL_CONFIG=firewall.config-offload
-endif
-
-ifneq ($(filter y,$(TLT_PLATFORM_TRB1) $(TLT_PLATFORM_TRB2) $(TLT_PLATFORM_TRB2M) $(TLT_PLATFORM_TRB5)),)
-	FIREWALL_CONFIG=firewall.config-without-wan
 endif
 
 define Package/firewall/install
@@ -80,10 +90,14 @@ define Package/firewall/install
 	$(INSTALL_DIR) $(1)/usr/share/fw3
 	$(INSTALL_CONF) $(PKG_BUILD_DIR)/helpers.conf $(1)/usr/share/fw3
 
-	$(if $(TLT_PLATFORM_TAP100),,\
+	$(if $(CONFIG_AP_DEVICE),,\
 		$(INSTALL_DIR) $(1)/usr $(1)/usr/bin; \
-		$(INSTALL_BIN) ./files/port-scan-prevention.sh $(1)/usr/bin/port-scan-prevention;)
+		$(INSTALL_BIN) ./files/attack_prevention.sh $(1)/usr/bin/attack_prevention;)
 
+	if [ $(TLT_PLATFORM_RUTX) ]; then \
+		$(INSTALL_DIR) $(1)/usr/bin; \
+		$(INSTALL_BIN) ./files/rutx_hnat.sh $(1)/usr/bin/rutx_hnat; \
+	fi;
 endef
 
 $(eval $(call BuildPackage,firewall))

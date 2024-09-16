@@ -1,0 +1,8 @@
+{
+  "services/example": {
+    "title": "Example",
+    "index": 500,
+    "view": "services/Example",
+    "acls": ["services/example"]
+  }
+}

@@ -1,5 +1,17 @@
 -- Device --
 
+deviceGroup OBJECT-GROUP
+	OBJECTS { serial,
+		  deviceName,
+		  productCode,
+		  batchNumber,
+		  hardwareRevision,
+		  fwVersion,
+		  deviceUptime }
+	STATUS current
+	DESCRIPTION "Device SNMP group defined according to RFC 2580"
+	::= { teltonikaSnmpGroups 1 }
+
 serial OBJECT-TYPE
 	SYNTAX		DisplayString (SIZE (0..255))
 	MAX-ACCESS	read-only
@@ -7,37 +19,44 @@ serial OBJECT-TYPE
 	DESCRIPTION	"Serial number"
 	::= { device 1 }
 
-routerName OBJECT-TYPE
+deviceName OBJECT-TYPE
 	SYNTAX		DisplayString (SIZE (0..255))
 	MAX-ACCESS	read-only
 	STATUS		current
-	DESCRIPTION	"Router name"
+	DESCRIPTION	"Device name"
 	::= { device 2 }
 
 productCode OBJECT-TYPE
 	SYNTAX		DisplayString (SIZE (0..255))
 	MAX-ACCESS	read-only
 	STATUS		current
-	DESCRIPTION	"Router product code"
+	DESCRIPTION	"Device product code"
 	::= { device 3 }
 
 batchNumber OBJECT-TYPE
 	SYNTAX		DisplayString (SIZE (0..255))
 	MAX-ACCESS	read-only
 	STATUS		current
-	DESCRIPTION	"Router batch number"
+	DESCRIPTION	"Device batch number"
 	::= { device 4 }
 
 hardwareRevision OBJECT-TYPE
 	SYNTAX		DisplayString (SIZE (0..255))
 	MAX-ACCESS	read-only
 	STATUS		current
-	DESCRIPTION	"Router hardware revision"
+	DESCRIPTION	"Device hardware revision"
 	::= { device 5 }
 
 fwVersion OBJECT-TYPE
 	SYNTAX		DisplayString (SIZE (0..255))
 	MAX-ACCESS	read-only
 	STATUS		current
-	DESCRIPTION	"Router firmware version"
+	DESCRIPTION	"Device firmware version"
 	::= { device 6 }
+
+deviceUptime OBJECT-TYPE
+	SYNTAX		DisplayString (SIZE (0..255))
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION	"Device uptime in seconds"
+	::= { device 7 }

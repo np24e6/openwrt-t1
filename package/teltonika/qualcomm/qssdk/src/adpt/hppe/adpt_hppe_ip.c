@@ -664,6 +664,7 @@ adpt_hppe_ip_host_del(a_uint32_t dev_id, a_uint32_t del_mode,
 	}
 	return rv;
 }
+
 sw_error_t
 adpt_hppe_ip_route_mismatch_get(a_uint32_t dev_id, fal_fwd_cmd_t *cmd)
 {

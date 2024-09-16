@@ -1,4 +1,6 @@
 #include "chilli.h"
+#include <uci.h>
+#include <libtlt_uci.h>
 #ifdef ENABLE_GSM
 #include "gsm.h"
 #endif
@@ -161,7 +163,7 @@ out:
 	return ret;
 }
 
-int usr_get_user(sqlite3 *db, struct str_user *user, char *email)
+int usr_get_user (sqlite3 *db, struct str_user *user, char *email)
 {
 	int ret;
 	char *sql;
@@ -185,7 +187,104 @@ int usr_get_user(sqlite3 *db, struct str_user *user, char *email)
 	return SQL_SUCCESS;
 }
 
-int usr_add_user(struct redir_conn_t *conn)
+int usr_update_user_pwd (sqlite3 *db, struct str_user *user, char *email, char *new_passw)
+{
+	#ifndef HAVE_OPENSSL
+	return SQL_FAIL;
+	#endif
+	char *new_passw_hash = hash_sha512(new_passw);
+	int ret;
+	char *sql;
+	char *err = 0;
+
+	asprintf(&sql, UPDATE_USR_PWD, new_passw_hash, email);
+	if (_options.debug)
+		syslog(LOG_INFO, "[%s] SQL: %s", __FUNCTION__ , sql);
+
+	ret = sqlite3_exec(db, sql, _select_callback, user, &err);
+	if (ret){
+		syslog(LOG_INFO, "[%s] SQL error: %s\n", __FUNCTION__, err);
+		sqlite3_free(err);
+		free(sql);
+		free(new_passw_hash);
+
+		return SQL_FAIL;
+	}
+
+	free(sql);
+	free(new_passw_hash);
+
+	return SQL_SUCCESS;
+}
+
+int ubus_uci_reload ()
+{
+	int ret = USER_RET_SUCCESS;
+	uint32_t uci_id = 0;
+	struct ubus_context *ctx;
+
+	ctx = ubus_connect(NULL);
+	if (!ctx) {
+		syslog(LOG_INFO, "[%s] failed to connect to ubus\n", __FUNCTION__);
+		return USER_RET_ERROR;
+	}
+
+	if (ubus_lookup_id(ctx, "uci", &uci_id) ||
+	    	ubus_invoke(ctx, uci_id, "reload_config", NULL, NULL, NULL, 3000)) {
+		syslog(LOG_INFO, "[%s] ubus request failed\n", __FUNCTION__);
+		ret = USER_RET_ERROR;
+	}
+
+	ubus_free(ctx);
+	return ret;
+}
+
+int usr_update_user_pwd_uci (char username[256], char password[256], char *new_password)
+{
+	struct uci_context *uci = uci_alloc_context();
+	if (!uci) {
+		return 1;
+	}
+
+	struct uci_package *uci_chilli = NULL;
+	if (uci_load(uci, "chilli", &uci_chilli)) {
+		uci_cleanup(uci);
+		return 1;
+	}
+
+	struct uci_element *e = NULL;
+	uci_foreach_element (&uci_chilli->sections, e) {
+		struct uci_section *s = uci_to_section(e);
+		if (!s->type || strcmp(s->type, "user")) {
+			continue;
+		}
+
+		char *username_uci = ucix_get_option(uci, "chilli", s->e.name, "username");
+		if (!username_uci) {
+			continue;
+		}
+
+		char *password_uci = ucix_get_option(uci, "chilli", s->e.name, "password");
+		if (!password_uci) {
+			continue;
+		}
+
+		if (!strncmp(username_uci, username, strlen(username)) && !strncmp(password_uci, password, strlen(password))) {
+			ucix_add_option(uci, "chilli", s->e.name, "password", new_password);
+		}
+
+		free(username_uci);
+		free(password_uci);
+	}
+
+	ucix_commit(uci, "chilli");
+	uci_cleanup(uci);
+	ubus_uci_reload();
+
+	return 0;
+}
+
+int usr_add_user (struct redir_conn_t *conn)
 {
 	sqlite3 *db;
 	char *sql = NULL;
@@ -211,23 +310,9 @@ int usr_add_user(struct redir_conn_t *conn)
 		goto out;
 	}
 
-#ifdef HAVE_OPENSSL
-	char *hashed_password = hash_md5(conn->s_state.redir.signup_password);
-
-	// If hashing fails, we can save unencrypted data as a fallback since
-	// later we handle both encrypted and plaintext data.
-	if (!hashed_password)
-		hashed_password = strdup(conn->s_state.redir.signup_password);
-#endif
-
 	asprintf(&sql, INSERT_USERS_FMT, username, conn->s_state.redir.email,
-#ifdef HAVE_OPENSSL
-		 hashed_password,
-#else
-		 conn->s_state.redir.signup_password,
-#endif
-		 MAC_ARG(conn->hismac), conn->s_state.redir.phone,
-		 _options.dynexpirationtime);
+		 conn->s_state.redir.signup_password, MAC_ARG(conn->hismac), 
+		 conn->s_state.redir.phone, _options.dynexpirationtime);
 
 	if (_options.debug)
 		syslog(LOG_INFO, "[%s] SQL: %s", __FUNCTION__, sql);
@@ -246,9 +331,6 @@ int usr_add_user(struct redir_conn_t *conn)
 		ret = USER_RET_ERROR;
 	}
 
-#ifdef HAVE_OPENSSL
-	free(hashed_password);
-#endif
 	free(sql);
 out:
 	sqlclose(db);
@@ -256,7 +338,7 @@ out:
 	return ret;
 }
 
-int _sms_select_callback(void *str_user, int argc, char **argv, char **azColName)
+int _sms_select_callback (void *str_user, int argc, char **argv, char **azColName)
 {
 	struct str_sms_user *p_str_user = (struct str_sms_user *)str_user;
 

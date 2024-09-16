@@ -1,36 +1,33 @@
 #
-# Copyright (C) 2021 Teltonika
+# Copyright (C) 2023 Teltonika
 #
 
 include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=apn_db
-PKG_VERSION:=2023-01-06
-PKG_RELEASE:=1
 
-PKG_SOURCE_VERSION:=2cc88da7f626db09d6bbfcb0295c19e33601625e
-PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_SOURCE_VERSION)-$(PKG_VERSION)
-PKG_SOURCE:=$(PKG_SOURCE_SUBDIR).tar.gz
-PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_SOURCE_SUBDIR)
+PKG_SOURCE_VERSION:=1.0.1
 
 include $(INCLUDE_DIR)/package.mk
 
-define Package/apn_db
+define Package/$(PKG_NAME)
 	SECTION:=utils
 	CATEGORY:=Utilities
 	TITLE:=One APN database for all projects
 endef
 
-define Package/apn_db/description
+define Package/$(PKG_NAME)/description
 	One APN database for all projects
 endef
 
 
 
-define Package/apn_db/install
-	$(INSTALL_DIR) $(1)/usr/share/mobifd/
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/files/apn.xml.db $(1)/usr/share/mobifd/apn.db
+define Package/$(PKG_NAME)/install
+	$(INSTALL_DIR) $(1)/usr/share/mobifd $(1)/usr/bin $(1)/etc/uci-defaults/etc
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/apn.db $(1)/usr/share/mobifd/apn.db
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/scripts/backup_apn_db $(1)/usr/bin/backup_apn_db
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/files/99_apn_db $(1)/etc/uci-defaults/etc/99_apn_db
 endef
 
-$(eval $(call BuildPackage,apn_db))
+$(eval $(call BuildPackage,$(PKG_NAME)))

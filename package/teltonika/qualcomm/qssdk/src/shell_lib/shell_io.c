@@ -5280,22 +5280,23 @@ cmd_data_check_napt_entry(char *cmd_str, void * val, a_uint32_t size)
                         "usage: integer\n",
                         (param_check_t)cmd_data_check_uint32, &(entry.status),
                         sizeof (a_uint32_t));
-    if (rv)
+    if (rv) {
         return rv;
-
-	rv = __cmd_data_check_complex("vrf_id", "0x0",
+    }
+    rv = __cmd_data_check_complex("vrf_id", "0x0",
                         "usage: integer\n",
                         (param_check_t)cmd_data_check_uint32, &(entry.vrf_id),
                         sizeof (a_uint32_t));
-    if (rv)
+    if (rv) {
         return rv;
-
-	rv = __cmd_data_check_complex("flow_cookie", "0x0",
+    }
+    rv = __cmd_data_check_complex("flow_cookie", "0x0",
                         "usage: integer\n",
                         (param_check_t)cmd_data_check_uint32, &(entry.flow_cookie),
                         sizeof (a_uint32_t));
-    if (rv)
+    if (rv) {
         return rv;
+    }
 
 	rv = __cmd_data_check_complex("load_balance", "0x0",
                         "usage: integer\n",
@@ -5398,11 +5399,11 @@ cmd_data_check_napt_entry(char *cmd_str, void * val, a_uint32_t size)
                         "usage: <yes/no/y/n>\n",
                         cmd_data_check_confirm, A_FALSE, &entry.priority_en,
                         sizeof (a_bool_t));
-    if (rv)
+    if (rv) {
         return rv;
+    }
 
-	if (A_TRUE == entry.priority_en)
-    {
+    if (A_TRUE == entry.priority_en) {
         rv = __cmd_data_check_complex("priority value", "0",
                             "usage: integer\n",
                             (param_check_t)cmd_data_check_uint32, &(entry.priority_val),
@@ -5442,29 +5443,33 @@ cmd_data_check_flow_entry(char *cmd_str, void * val, a_uint32_t size)
                         "usage: integer\n",
                         (param_check_t)cmd_data_check_uint32, &(entry.status),
                         sizeof (a_uint32_t));
-    if (rv)
+    if (rv) {
         return rv;
+    }
 
-	rv = __cmd_data_check_complex("vrf_id", "0x0",
+    rv = __cmd_data_check_complex("vrf_id", "0x0",
                         "usage: integer\n",
                         (param_check_t)cmd_data_check_uint32, &(entry.vrf_id),
                         sizeof (a_uint32_t));
-    if (rv)
+    if (rv) {
         return rv;
+    }
 
-	rv = __cmd_data_check_complex("flow_cookie", "0x0",
+    rv = __cmd_data_check_complex("flow_cookie", "0x0",
                         "usage: integer\n",
                         (param_check_t)cmd_data_check_uint32, &(entry.flow_cookie),
                         sizeof (a_uint32_t));
-    if (rv)
+    if (rv) {
         return rv;
+    }
 
-	rv = __cmd_data_check_complex("load_balance", "0x0",
+    rv = __cmd_data_check_complex("load_balance", "0x0",
                         "usage: integer\n",
                         (param_check_t)cmd_data_check_uint32, &(entry.load_balance),
                         sizeof (a_uint32_t));
-    if (rv)
+    if (rv) {
         return rv;
+    }
 
     rv = __cmd_data_check_complex("src addr", "0.0.0.0",
                         "usage: the format is xx.xx.xx.xx \n",
@@ -5535,11 +5540,10 @@ cmd_data_check_flow_entry(char *cmd_str, void * val, a_uint32_t size)
                         "usage: <yes/no/y/n>\n",
                         cmd_data_check_confirm, A_FALSE, &entry.priority_en,
                         sizeof (a_bool_t));
-    if (rv)
+    if (rv) {
         return rv;
-
-	if (A_TRUE == entry.priority_en)
-    {
+    }
+    if (A_TRUE == entry.priority_en) {
         rv = __cmd_data_check_complex("priority value", "0",
                             "usage: integer\n",
                             (param_check_t)cmd_data_check_uint32, &(entry.priority_val),
@@ -7256,30 +7260,35 @@ cmd_data_check_ip4_rfs_entry(char *cmd_str, void * val, a_uint32_t size)
                         "usage: the format is xx-xx-xx-xx-xx-xx \n",
                         (param_check_t)cmd_data_check_macaddr, &(entry.mac_addr),
                         sizeof (fal_mac_addr_t));
-    if (rv)
+    if (rv) {
         return rv;
+    }
 
-	rv = __cmd_data_check_complex("ip4 addr", NULL,
+    rv = __cmd_data_check_complex("ip4 addr", NULL,
                             "usage: the format is xx.xx.xx.xx \n",
                             (param_check_t)cmd_data_check_ip4addr, &(entry.ip4_addr),
                             4);
-    if (rv)
+    if (rv) {
         return rv;
+    }
 
-	rv = __cmd_data_check_complex("vid", "0",
+    rv = __cmd_data_check_complex("vid", "0",
                         "usage: the format is xx \n",
                         cmd_data_check_uint32, &(entry.vid),
                         sizeof (a_uint32_t));
-    if (rv)
+    if (rv) {
         return rv;
+    }
 
-	rv = __cmd_data_check_complex("loadbalance", "0",
+    rv = __cmd_data_check_complex("loadbalance", "0",
                         "usage: the format is xx \n",
                         cmd_data_check_uint32, &tmp,
                         sizeof (a_uint32_t));
-    if (rv)
+    if (rv) {
         return rv;
-	entry.load_balance = tmp;
+    }
+
+    entry.load_balance = tmp;
 	*(fal_ip4_rfs_t *)val = entry;
 	return SW_OK;
 }
@@ -7336,44 +7345,49 @@ cmd_data_check_flow_cookie(char *cmd_str, void * val, a_uint32_t size)
                         "usage: the format is xx \n",
                         cmd_data_check_uint32, &(entry.proto),
                         sizeof (a_uint32_t));
-    if (rv)
+    if (rv) {
         return rv;
+    }
 
-	rv = __cmd_data_check_complex("src addr", NULL,
+    rv = __cmd_data_check_complex("src addr", NULL,
                             "usage: the format is xx.xx.xx.xx \n",
                             (param_check_t)cmd_data_check_ip4addr, &(entry.src_addr),
                             4);
-    if (rv)
+    if (rv) {
         return rv;
+    }
 
-	rv = __cmd_data_check_complex("dst addr", NULL,
+    rv = __cmd_data_check_complex("dst addr", NULL,
                             "usage: the format is xx.xx.xx.xx \n",
                             (param_check_t)cmd_data_check_ip4addr, &(entry.dst_addr),
                             4);
-    if (rv)
+    if (rv) {
         return rv;
+    }
 
-	rv = __cmd_data_check_complex("src port", "0",
+    rv = __cmd_data_check_complex("src port", "0",
                         "usage: the format is xx \n",
                         cmd_data_check_uint32, &(entry.src_port),
                         sizeof (a_uint32_t));
-    if (rv)
+    if (rv) {
         return rv;
+    }
 
-	rv = __cmd_data_check_complex("dst port", "0",
+    rv = __cmd_data_check_complex("dst port", "0",
                         "usage: the format is xx \n",
                         cmd_data_check_uint32, &(entry.dst_port),
                         sizeof (a_uint32_t));
-    if (rv)
+    if (rv) {
         return rv;
+    }
 
-	rv = __cmd_data_check_complex("flow cookie", "0",
+    rv = __cmd_data_check_complex("flow cookie", "0",
                         "usage: the format is xx \n",
                         cmd_data_check_uint32, &(entry.flow_cookie),
                         sizeof (a_uint32_t));
-    if (rv)
+    if (rv) {
         return rv;
-
+    }
 
 	*(fal_flow_cookie_t *)val = entry;
 	return SW_OK;
@@ -7392,46 +7406,51 @@ cmd_data_check_flow_rfs(char *cmd_str, void * val, a_uint32_t size)
                         "usage: the format is xx \n",
                         cmd_data_check_uint32, &(entry.proto),
                         sizeof (a_uint32_t));
-    if (rv)
+    if (rv) {
         return rv;
+    }
 
-	rv = __cmd_data_check_complex("src addr", NULL,
+    rv = __cmd_data_check_complex("src addr", NULL,
                             "usage: the format is xx.xx.xx.xx \n",
                             (param_check_t)cmd_data_check_ip4addr, &(entry.src_addr),
                             4);
-    if (rv)
+    if (rv) {
         return rv;
+    }
 
-	rv = __cmd_data_check_complex("dst addr", NULL,
+    rv = __cmd_data_check_complex("dst addr", NULL,
                             "usage: the format is xx.xx.xx.xx \n",
                             (param_check_t)cmd_data_check_ip4addr, &(entry.dst_addr),
                             4);
-    if (rv)
+    if (rv) {
         return rv;
+    }
 
-	rv = __cmd_data_check_complex("src port", "0",
+    rv = __cmd_data_check_complex("src port", "0",
                         "usage: the format is xx \n",
                         cmd_data_check_uint32, &(entry.src_port),
                         sizeof (a_uint32_t));
-    if (rv)
+    if (rv) {
         return rv;
+    }
 
-	rv = __cmd_data_check_complex("dst port", "0",
+    rv = __cmd_data_check_complex("dst port", "0",
                         "usage: the format is xx \n",
                         cmd_data_check_uint32, &(entry.dst_port),
                         sizeof (a_uint32_t));
-    if (rv)
+    if (rv) {
         return rv;
+    }
 
-	rv = __cmd_data_check_complex("flow rfs", "0",
+    rv = __cmd_data_check_complex("flow rfs", "0",
                         "usage: the format is xx \n",
                         cmd_data_check_uint32, &tmp,
                         sizeof (a_uint32_t));
-    if (rv)
+    if (rv) {
         return rv;
+    }
 
-	entry.load_balance = tmp;
-
+    entry.load_balance = tmp;
 
 	*(fal_flow_rfs_t *)val = entry;
 	return SW_OK;
@@ -9036,30 +9055,35 @@ cmd_data_check_ip6_rfs_entry(char *cmd_str, void * val, a_uint32_t size)
                         "usage: the format is xx-xx-xx-xx-xx-xx \n",
                         (param_check_t)cmd_data_check_macaddr, &(entry.mac_addr),
                         sizeof (fal_mac_addr_t));
-    if (rv)
+    if (rv) {
         return rv;
+    }
 
-	rv = __cmd_data_check_complex("ip6 addr", NULL,
+    rv = __cmd_data_check_complex("ip6 addr", NULL,
                             "usage: the format is xxxx::xxxx \n",
                             (param_check_t)cmd_data_check_ip6addr, &(entry.ip6_addr),
                             16);
-    if (rv)
+    if (rv) {
         return rv;
+    }
 
-	rv = __cmd_data_check_complex("vid", "0",
+    rv = __cmd_data_check_complex("vid", "0",
                         "usage: the format is xx \n",
                         cmd_data_check_uint32, &(entry.vid),
                         sizeof (a_uint32_t));
-    if (rv)
+    if (rv) {
         return rv;
+    }
 
-	rv = __cmd_data_check_complex("loadbalance", "0",
+    rv = __cmd_data_check_complex("loadbalance", "0",
                         "usage: the format is xx \n",
                         cmd_data_check_uint32, &tmp,
                         sizeof (a_uint32_t));
-    if (rv)
+    if (rv) {
         return rv;
-	entry.load_balance = tmp;
+    }
+
+    entry.load_balance = tmp;
 
 	*(fal_ip6_rfs_t *)val = entry;
 	return SW_OK;

@@ -1,6 +1,6 @@
 #ifndef GSM_MODEM_BAND_H
 #define GSM_MODEM_BAND_H
-
+#include "limits.h"
 /** @file modem_band.h
  * This file contains GSM/WCDMA/LTE/5G supported bands.
 */
@@ -9,99 +9,168 @@
  * Modem GSM band enumeration
  */
 enum modem_gsm_band_id {
-	MB_GSM_NONE = 0, //!< Reserved
-	MB_GSM_ANY  = 1, //!< Reserved
+	MB_GSM_NONE = 0ULL, //!< Reserved
+	MB_GSM_ANY  = 1ULL, //!< Reserved
 
-	MB_GSM_850  = (1 << 1), //!< GSM 850
-	MB_GSM_900  = (1 << 2), //!< GSM 900
-	MB_GSM_1800 = (1 << 3), //!< GSM 1800
-	MB_GSM_1900 = (1 << 4), //!< GSM 1900
+	MB_GSM_850  = (1ULL << 1), //!< GSM 850
+	MB_GSM_900  = (1ULL << 2), //!< GSM 900
+	MB_GSM_1800 = (1ULL << 3), //!< GSM 1800
+	MB_GSM_1900 = (1ULL << 4), //!< GSM 1900
 
 	__MB_GSM_MAX,
+	__MB_GSM_ALIGN = ULLONG_MAX,
 };
 
 /**
  * Modem WCDMA band enumeration
  */
 enum modem_wcdma_band_id {
-	MB_WCDMA_NONE = 0, //!< Reserved
-	MB_WCDMA_ANY  = 1, //!< Reserved
+	MB_WCDMA_NONE = 0ULL, //!< Reserved
+	MB_WCDMA_ANY  = 1ULL, //!< Reserved
 
-	MB_WCDMA_700  = (1 << 1), //!< WCDMA 700
-	MB_WCDMA_800  = (1 << 2), //!< WCDMA 800
-	MB_WCDMA_850  = (1 << 3), //!< WCDMA 850
-	MB_WCDMA_J850 = (1 << 4), //!< WCDMA Japan 850
-	MB_WCDMA_900  = (1 << 5), //!< WCDMA 900
-	MB_WCDMA_1500 = (1 << 6), //!< WCDMA 1500
-	MB_WCDMA_1700 = (1 << 7), //!< WCDMA 1700
-	MB_WCDMA_1800 = (1 << 8), //!< WCDMA 1800
-	MB_WCDMA_1900 = (1 << 9), //!< WCDMA 1900
-	MB_WCDMA_2100 = (1 << 10), //!< WCDMA 2100
-	MB_WCDMA_2600 = (1 << 11), //!< WCDMA 2600
-	MB_WCDMA_3500 = (1 << 12), //!< WCDMA 3500
+	MB_WCDMA_700  = (1ULL << 1), //!< WCDMA 700
+	MB_WCDMA_800  = (1ULL << 2), //!< WCDMA 800
+	MB_WCDMA_850  = (1ULL << 3), //!< WCDMA 850
+	MB_WCDMA_J850 = (1ULL << 4), //!< WCDMA Japan 850
+	MB_WCDMA_900  = (1ULL << 5), //!< WCDMA 900
+	MB_WCDMA_1500 = (1ULL << 6), //!< WCDMA 1500
+	MB_WCDMA_1700 = (1ULL << 7), //!< WCDMA 1700
+	MB_WCDMA_1800 = (1ULL << 8), //!< WCDMA 1800
+	MB_WCDMA_1900 = (1ULL << 9), //!< WCDMA 1900
+	MB_WCDMA_2100 = (1ULL << 10), //!< WCDMA 2100
+	MB_WCDMA_2600 = (1ULL << 11), //!< WCDMA 2600
+	MB_WCDMA_3500 = (1ULL << 12), //!< WCDMA 3500
 
 	__MB_WCDMA_MAX,
+	__MB_WCDMA_ALIGN = ULLONG_MAX,
 };
 
 /**
  * Modem LTE band enumeration
  */
 enum modem_lte_band_id {
-	MB_LTE_NONE = 0, //!< Reserved
-	MB_LTE_ANY  = 1, //!< Reserved
+	MB_LTE_NONE = 0ULL, //!< Reserved
+	MB_LTE_ANY  = 1ULL, //!< Reserved
 
-	MB_LTE_B1 = (1 << 1), //!< LTE B1
-	MB_LTE_B2 = (1 << 2), //!< LTE B2
-	MB_LTE_B3 = (1 << 3), //!< LTE B3
-	MB_LTE_B4 = (1 << 4), //!< LTE B4
-	MB_LTE_B5 = (1 << 5), //!< LTE B5
+	MB_LTE_B1 = (1ULL << 1), //!< LTE B1
+	MB_LTE_B2 = (1ULL << 2), //!< LTE B2
+	MB_LTE_B3 = (1ULL << 3), //!< LTE B3
+	MB_LTE_B4 = (1ULL << 4), //!< LTE B4
+	MB_LTE_B5 = (1ULL << 5), //!< LTE B5
 	/* */
-	MB_LTE_B7 = (1 << 6), //!< LTE B7
-	MB_LTE_B8 = (1 << 7), //!< LTE B8
+	MB_LTE_B7 = (1ULL << 6), //!< LTE B7
+	MB_LTE_B8 = (1ULL << 7), //!< LTE B8
 	/* */
-	MB_LTE_B12 = (1 << 8), //!< LTE B12
-	MB_LTE_B13 = (1 << 9), //!< LTE B13
-	MB_LTE_B14 = (1 << 10), //!< LTE B14
+	MB_LTE_B12 = (1ULL << 8), //!< LTE B12
+	MB_LTE_B13 = (1ULL << 9), //!< LTE B13
+	MB_LTE_B14 = (1ULL << 10), //!< LTE B14
 	/* */
-	MB_LTE_B17 = (1 << 11), //!< LTE B17
-	MB_LTE_B18 = (1 << 12), //!< LTE B18
-	MB_LTE_B19 = (1 << 13), //!< LTE B19
-	MB_LTE_B20 = (1 << 14), //!< LTE B20
+	MB_LTE_B17 = (1ULL << 11), //!< LTE B17
+	MB_LTE_B18 = (1ULL << 12), //!< LTE B18
+	MB_LTE_B19 = (1ULL << 13), //!< LTE B19
+	MB_LTE_B20 = (1ULL << 14), //!< LTE B20
 	/* */
-	MB_LTE_B25 = (1 << 15), //!< LTE B25
-	MB_LTE_B26 = (1 << 16), //!< LTE B26
+	MB_LTE_B25 = (1ULL << 15), //!< LTE B25
+	MB_LTE_B26 = (1ULL << 16), //!< LTE B26
 	/* */
-	MB_LTE_B28 = (1 << 17), //!< LTE B28
-	MB_LTE_B29 = (1 << 18), //!< LTE B29
-	MB_LTE_B30 = (1 << 19), //!< LTE B30
+	MB_LTE_B27 = (1ULL << 17), //!< LTE B27
+	MB_LTE_B28 = (1ULL << 18), //!< LTE B28
+	MB_LTE_B29 = (1ULL << 19), //!< LTE B29
+	MB_LTE_B30 = (1ULL << 20), //!< LTE B30
+	MB_LTE_B31 = (1ULL << 21), //!< LTE B31
 	/* */
-	MB_LTE_B32 = (1 << 20), //!< LTE B32
+	MB_LTE_B32 = (1ULL << 22), //!< LTE B32
 	/* */
-	MB_LTE_B34 = (1 << 21), //!< LTE B34
+	MB_LTE_B34 = (1ULL << 23), //!< LTE B34
 	/* */
-	MB_LTE_B38 = (1 << 22), //!< LTE B38
-	MB_LTE_B39 = (1 << 23), //!< LTE B39
+	MB_LTE_B38 = (1ULL << 24), //!< LTE B38
+	MB_LTE_B39 = (1ULL << 25), //!< LTE B39
 	/* */
-	MB_LTE_B40 = (1 << 24), //!< LTE B40
-	MB_LTE_B41 = (1 << 25), //!< LTE B41
-	MB_LTE_B42 = (1 << 26), //!< LTE B42
-	MB_LTE_B43 = (1 << 27), //!< LTE B43
+	MB_LTE_B40 = (1ULL << 26), //!< LTE B40
+	MB_LTE_B41 = (1ULL << 27), //!< LTE B41
+	MB_LTE_B42 = (1ULL << 28), //!< LTE B42
+	MB_LTE_B43 = (1ULL << 29), //!< LTE B43
 	/* */
-	MB_LTE_B48 = (1 << 28), //!< LTE B48
+	MB_LTE_B48 = (1ULL << 30), //!< LTE B48
 	/* */
-	MB_LTE_B66 = (1 << 29), //!< LTE B66
+	MB_LTE_B66 = (1ULL << 31), //!< LTE B66
 	/* */
-	MB_LTE_B71 = (1 << 30), //!< LTE B71
+	MB_LTE_B71 = (1ULL << 32), //!< LTE B71
+	MB_LTE_B72 = (1ULL << 33), //!< LTE B72
+	MB_LTE_B73 = (1ULL << 34), //!< LTE B73
+	/* */
+	MB_LTE_B85 = (1ULL << 35), //!< LTE B85
 
 	__MB_LTE_MAX,
+	__MB_LTE_ALIGN = ULLONG_MAX,
+};
+
+/**
+ * Modem LTE Narrow Band enumeration
+ */
+enum modem_lte_nb_band_id {
+	MB_LTE_NB_NONE = 0ULL, //!< Reserved
+	MB_LTE_NB_ANY  = 1ULL, //!< Reserved
+
+	MB_LTE_NB1 = (1ULL << 1), //!< LTE B1
+	MB_LTE_NB2 = (1ULL << 2), //!< LTE B2
+	MB_LTE_NB3 = (1ULL << 3), //!< LTE B3
+	MB_LTE_NB4 = (1ULL << 4), //!< LTE B4
+	MB_LTE_NB5 = (1ULL << 5), //!< LTE B5
+	/* */
+	MB_LTE_NB7 = (1ULL << 6), //!< LTE B7
+	MB_LTE_NB8 = (1ULL << 7), //!< LTE B8
+	/* */
+	MB_LTE_NB12 = (1ULL << 8), //!< LTE B12
+	MB_LTE_NB13 = (1ULL << 9), //!< LTE B13
+	MB_LTE_NB14 = (1ULL << 10), //!< LTE B14
+	/* */
+	MB_LTE_NB17 = (1ULL << 11), //!< LTE B17
+	MB_LTE_NB18 = (1ULL << 12), //!< LTE B18
+	MB_LTE_NB19 = (1ULL << 13), //!< LTE B19
+	MB_LTE_NB20 = (1ULL << 14), //!< LTE B20
+	/* */
+	MB_LTE_NB25 = (1ULL << 15), //!< LTE B25
+	MB_LTE_NB26 = (1ULL << 16), //!< LTE B26
+	/* */
+	MB_LTE_NB27 = (1ULL << 17), //!< LTE B27
+	MB_LTE_NB28 = (1ULL << 18), //!< LTE B28
+	MB_LTE_NB29 = (1ULL << 19), //!< LTE B29
+	MB_LTE_NB30 = (1ULL << 20), //!< LTE B30
+	MB_LTE_NB31 = (1ULL << 21), //!< LTE B31
+	/* */
+	MB_LTE_NB32 = (1ULL << 22), //!< LTE B32
+	/* */
+	MB_LTE_NB34 = (1ULL << 23), //!< LTE B34
+	/* */
+	MB_LTE_NB38 = (1ULL << 24), //!< LTE B38
+	MB_LTE_NB39 = (1ULL << 25), //!< LTE B39
+	/* */
+	MB_LTE_NB40 = (1ULL << 26), //!< LTE B40
+	MB_LTE_NB41 = (1ULL << 27), //!< LTE B41
+	MB_LTE_NB42 = (1ULL << 28), //!< LTE B42
+	MB_LTE_NB43 = (1ULL << 29), //!< LTE B43
+	/* */
+	MB_LTE_NB48 = (1ULL << 30), //!< LTE B48
+	/* */
+	MB_LTE_NB66 = (1ULL << 31), //!< LTE B66
+	/* */
+	MB_LTE_NB71 = (1ULL << 32), //!< LTE B71
+	MB_LTE_NB72 = (1ULL << 33), //!< LTE B72
+	MB_LTE_NB73 = (1ULL << 34), //!< LTE B73
+	/* */
+	MB_LTE_NB85 = (1ULL << 35), //!< LTE B85
+
+	__MB_LTE_NB_MAX,
+	__MB_LTE_NB_ALIGN = ULLONG_MAX,
 };
 
 /**
  * Modem NSA 5G band enumeration
  */
 enum modem_nsa5g_band_id {
-	MB_NSA_5G_NONE = 0, //!< Reserved
-	MB_NSA_5G_ANY  = 1, //!< Reserved
+	MB_NSA_5G_NONE = 0ULL, //!< Reserved
+	MB_NSA_5G_ANY  = 1ULL, //!< Reserved
 
 	MB_NSA_5G_N1 = (1ULL << 1), //!< NSA 5G N1
 	MB_NSA_5G_N2 = (1ULL << 2), //!< NSA 5G N2
@@ -151,14 +220,15 @@ enum modem_nsa5g_band_id {
 	MB_NSA_5G_N262 = (1ULL << 32), //!< NSA 5G N262
 
 	__MB_NSA_5G_MAX,
+	__MB_NSA_5G_ALIGN = ULLONG_MAX,
 };
 
 /**
  * Modem 5G band enumeration
  */
 enum modem_5g_band_id {
-	MB_5G_NONE = 0, //!< Reserved
-	MB_5G_ANY  = 1, //!< Reserved
+	MB_5G_NONE = 0ULL, //!< Reserved
+	MB_5G_ANY  = 1ULL, //!< Reserved
 
 	MB_5G_N1 = (1ULL << 1), //!< 5G N1
 	MB_5G_N2 = (1ULL << 2), //!< 5G N2
@@ -201,6 +271,7 @@ enum modem_5g_band_id {
 	MB_5G_N79 = (1ULL << 27), //!< 5G N79
 
 	__MB_5G_MAX,
+	__MB_5G_ALIGN = ULLONG_MAX,
 };
 
 /**
@@ -229,7 +300,7 @@ const char *modem_lte_band_str(enum modem_lte_band_id band);
  * @param[in]	band	Enumeration value of LTE band.
  * @return const char *. String of LTE NB band value.
  */
-const char *modem_lte_nb_band_str(enum modem_lte_band_id band);
+const char *modem_lte_nb_band_str(enum modem_lte_nb_band_id band);
 
 /**
  * Convert NSA 5G band enumeration value to string value.
@@ -275,7 +346,7 @@ char *modem_lte_band_ret_str(enum modem_lte_band_id band, char *band_str);
  * @param[in]	band_str  Band string value buffer.
  * @return const char *. String of LTE NB band return value.
  */
-char *modem_lte_nb_band_ret_str(enum modem_lte_band_id band, char *band_str);
+char *modem_lte_nb_band_ret_str(enum modem_lte_nb_band_id band, char *band_str);
 
 /**
  * Convert 5G NSA band enumeration value to return string value.
@@ -320,10 +391,10 @@ enum modem_lte_band_id modem_info_lte_band_val(const char *name);
 /**
  * Retrieve lte band value by lte cat-nb string.
  * @param[in]	*name	String of lte band.
- * @return enum modem_lte_band_id. Enumeration value of lte band value.
+ * @return enum modem_lte_nb_band_id. Enumeration value of lte band value.
  * If band is not found enum `__MB_LTE_MAX` is returned.
  */
-enum modem_lte_band_id modem_info_lte_nb_band_val(const char *name);
+enum modem_lte_nb_band_id modem_info_lte_nb_band_val(const char *name);
 
 /**
  * Retrieve nsa 5g band value by string.
@@ -368,10 +439,10 @@ enum modem_lte_band_id modem_info_lte_band_ret_val(const char *name);
 /**
  * Retrieve lte band value by lte cat-nb return format string.
  * @param[in]	*name	String of lte band.
- * @return enum modem_lte_band_id. Enumeration value of lte band value.
+ * @return enum modem_lte_nb_band_id. Enumeration value of lte band value.
  * If band is not found enum `__MB_LTE_MAX` is returned.
  */
-enum modem_lte_band_id modem_info_lte_nb_band_ret_val(const char *name);
+enum modem_lte_nb_band_id modem_info_lte_nb_band_ret_val(const char *name);
 
 /**
  * Retrieve nsa 5g band value by return format string.

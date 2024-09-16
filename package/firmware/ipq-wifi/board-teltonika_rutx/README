@@ -1,5 +1,5 @@
 To create ath10k format boarddata file from qca boarddata using
 https://github.com/qca/qca-swiss-army-knife tool, use this command:
-	./ath10k-bdencoder -c board-2.json -o ../board-teltonika_rutx.bin
+	./ath10k-bdencoder -c board-2.json -o ../board-teltonika_rutx.qca4019
 
 

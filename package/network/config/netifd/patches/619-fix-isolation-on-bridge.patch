@@ -1,0 +1,14 @@
+Index: netifd-2022-01-12-5ca5e0b4/system-linux.c
+===================================================================
+--- netifd-2022-01-12-5ca5e0b4.orig/system-linux.c
++++ netifd-2022-01-12-5ca5e0b4/system-linux.c
+@@ -956,6 +956,9 @@ retry:
+ 	    dev->settings.isolate)
+ 		system_bridge_set_isolated(dev, "1");
+ 
++	if (dev->wireless && dev->wireless_isolate)
++		system_bridge_set_isolated(dev, dev->wireless_isolate ? "1" : "0");
++
+ 	if (dev->bpdu_filter)
+ 		system_bridge_set_bpdu_filter(dev, dev->bpdu_filter ? "1" : "0");
+ 

@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2023 Teltonika
+# Copyright (C) 2022 Teltonika
 #
 
 include $(TOPDIR)/rules.mk
@@ -7,7 +7,7 @@ include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=gsm
 
-PKG_SOURCE_VERSION:=9cbef93a8155f749e44e612519ece2555e452cfd
+PKG_SOURCE_VERSION:=1.2.6
 
 GPL_INCLUDE_HEADERS:=1
 
@@ -17,14 +17,14 @@ define Package/gsmd
 	SECTION:=net
 	CATEGORY:=Network
 	TITLE:=Simple server to route AT commands to modem
-	DEPENDS:=+USE_GLIBC:glib2 +libusb-1.0 +libubus +libubox +libuci +libblobmsg-json +modems +libe4c
+	DEPENDS:=+USE_GLIBC:glib2 +libusb-1.0 +libubus +libubox +libuci +libblobmsg-json +modems +libe4c +kmod-usb-serial-option
 endef
 
 define Package/gsmctl
 	SECTION:=net
 	CATEGORY:=Network
 	TITLE:=Sending AT commands by ubus to gsmd deamon app
-	DEPENDS:=+libblobmsg-json +libubus +libgsm +gsmd +rpcd-mod-simd
+	DEPENDS:=+libblobmsg-json +libubus +libgsm +gsmd
 endef
 
 define Package/libgsm
@@ -105,8 +105,15 @@ define Package/gsmd/install
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/files/gsmd.init $(1)/etc/init.d/gsmd
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/files/gsmd.hotplug $(1)/etc/hotplug.d/usb/05_gsmd.sh
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/files/gsm_event.hotplug $(1)/etc/hotplug.d/iface/89-gsm-event
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/files/fill_modem.hotplug $(1)/etc/hotplug.d/gsm/2-fill-modem-info
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/files/check_vcert.hotplug $(1)/etc/hotplug.d/gsm/1-check_vcert
+	$(if $(CONFIG_BASEBAND_SUPPORT),, \
+		$(INSTALL_BIN) $(PKG_BUILD_DIR)/files/fill_modem.hotplug \
+			$(1)/etc/hotplug.d/gsm/2-fill-modem-info)
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/files/reload_simcard.hotplug $(1)/etc/hotplug.d/gsm/3-reload-simcard
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/files/notify_send_sms.hotplug $(1)/etc/hotplug.d/gsm/4-notify-send-sms
+	if [ $(CONFIG_MULTI_DEVICE_QUIRK) ]; then \
+		$(INSTALL_BIN) $(PKG_BUILD_DIR)/files/validate_cefs.hotplug $(1)/etc/hotplug.d/gsm/5-validate-cefs; \
+	fi;
 	$(INSTALL_CONF) /dev/null $(1)/etc/config/simcard
 endef
 

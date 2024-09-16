@@ -58,8 +58,8 @@ identify_modem() {
     fi
 }
 
-interface=$(echo "$INTERFACE" | awk -F "_4" '{print $1}')
-iface=$(echo "$INTERFACE" | grep "_4" | wc -l)
+interface=$(echo "$INTERFACE" | sed -E 's|(.*)_[46]$|\1|')
+iface=$(echo "$INTERFACE" | grep -e "_4" -e "_6" | wc -l)
 MODEM=$(uci -q get network."$interface".modem)
 MODEM_TYPE=""
 DEV_NAME=$(mnf_info -n | cut -b 0-6)
@@ -67,7 +67,7 @@ DEV_NAME=$(mnf_info -n | cut -b 0-6)
 if [ "$MODEM" != "" ]; then
     identify_modem "$MODEM"
 
-    if [ "$ACTION" = "ifup" ] || [ "$iface" -gt 0 ]; then
+    if [ "$ACTION" = "ifup" ] && [ "$iface" -gt 0 ]; then
         mdm_ubus_obj="$(find_mdm_ubus_obj "$MODEM")"
         get_operator
         get_contype

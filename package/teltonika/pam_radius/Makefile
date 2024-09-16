@@ -3,10 +3,10 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=pam-radius
-PKG_VERSION:=2023-01-30
+PKG_VERSION:=2023-09-01
 PKG_RELEASE:=1
 
-PKG_SOURCE_VERSION:=10dbbc850953211a4b4dc4a7a822aa9266928b10
+PKG_SOURCE_VERSION:=1.2
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_SOURCE_VERSION)-$(PKG_VERSION)
 PKG_SOURCE:=$(PKG_SOURCE_SUBDIR).tar.gz
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_SOURCE_SUBDIR)
@@ -18,10 +18,10 @@ PKG_FIXUP:=autoreconf
 include $(INCLUDE_DIR)/package.mk
 
 define Package/pam-radius
-	SECTION:=base
-	CATEGORY:=Base system
-	TITLE:=Radius server PAM module
-	DEPENDS:=+libpam
+  SECTION:=base
+  CATEGORY:=Base system
+  TITLE:=Radius server PAM module
+  DEPENDS:=+libpam
 endef
 
 

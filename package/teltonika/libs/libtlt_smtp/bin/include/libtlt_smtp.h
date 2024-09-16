@@ -4,8 +4,6 @@
 
 #include <curl/curl.h>
 
-#define LSMTP_CA_CERT "/etc/cacert.pem"
-
 typedef enum {
     LSMTP_SUCCESS,
     LSMTP_ERROR,

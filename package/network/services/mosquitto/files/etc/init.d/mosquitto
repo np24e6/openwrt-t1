@@ -73,6 +73,7 @@ read_broker_config() {
 		config_get bridge_tls_version "$section_id" bridge_tls_version
 		config_get bridge_insecure "$section_id" bridge_insecure
 		config_get bridge_protocol_version "$section_id" bridge_protocol_version
+		config_get bridge_alpn "$section_id" bridge_alpn
 
 		config_get try_private "$section_id" try_private
 		config_get cleansession "$section_id" cleansession
@@ -120,7 +121,8 @@ fill_mosquitto_bridge_config() {
 			[ -n "$bridge_ca_file" ] && echo "bridge_cafile $bridge_ca_file" >>$CONFIG
 			[ -n "$bridge_cert_file" ] && echo "bridge_certfile $bridge_cert_file" >>$CONFIG
 			[ -n "$bridge_key_file" ] && echo "bridge_keyfile $bridge_key_file" >>$CONFIG
-			echo "bridge_tls_version $bridge_tls_version" >>$CONFIG
+			[ -n "$bridge_alpn" ] && echo "bridge_alpn $bridge_alpn" >>$CONFIG
+			[ -n "$bridge_tls_version" ] && echo "bridge_tls_version $bridge_tls_version" >>$CONFIG
 			if [ "$bridge_insecure" = "1" ]; then
 				echo "bridge_insecure true" >>$CONFIG
 			fi
@@ -129,8 +131,12 @@ fill_mosquitto_bridge_config() {
 		# Use remote login
 		if [ "$use_bridge_login" == "1" ]; then
 			echo "remote_clientid $remote_clientid" >>$CONFIG
-			echo "remote_username $remote_username" >>$CONFIG
-			echo "remote_password $remote_password" >>$CONFIG
+			[ -n "$remote_username" ] && {
+				echo "remote_username $remote_username" >>$CONFIG
+				[ -n  "$remote_password" ] && {
+					echo "remote_password $remote_password" >>$CONFIG
+				}
+			}
 		fi
 
 		# Set other options

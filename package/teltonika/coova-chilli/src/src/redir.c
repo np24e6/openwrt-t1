@@ -33,7 +33,7 @@ static int optionsdebug = 0; /* TODO: Should be changed to instance */
 
 static int termstate = REDIR_TERM_INIT;    /* When we were terminated */
 
-char credits[] =
+const char credits[] =
     "<H1>CoovaChilli " VERSION "</H1>"
     "<p>Copyright 2002-2005 Mondru AB</p>"
     "<p>Copyright 2006-2012 David Bird (Coova Technologies)</p>"
@@ -403,7 +403,7 @@ static int base64decoder (char * eapstr, struct eapmsg_t * eapmsg)
 }
 
 static void bstring_buildurl(bstring str, struct redir_conn_t *conn,
-			     struct redir_t *redir, char *redir_url, char *resp,
+			     struct redir_t *redir, char *redir_url, const char *resp,
 			     long int timeleft, char* hexchal, char* uid,
 			     char* userurl, char* reply, char* redirurl,
 			     uint8_t *hismac, struct in_addr *hisip, char *amp) {
@@ -1548,7 +1548,7 @@ static int redir_json_reply(struct redir_t *redir, int res, struct redir_conn_t 
 #endif
 
 static void redir_buildurl(struct redir_conn_t *conn, bstring str,
-			   struct redir_t *redir, char *resp,
+			   struct redir_t *redir, const char *resp,
 			   long int timeleft, char* hexchal, char* uid,
 			   char* userurl, char* reply, char* redirurl,
 			   uint8_t *hismac, struct in_addr *hisip) {
@@ -1625,7 +1625,7 @@ int redir_reply(struct redir_t *redir, struct redir_socket_t *sock,
 		char* userurl, char* reply, char* redirurl,
 		uint8_t *hismac, struct in_addr *hisip, char *qs) {
 
-  char *resp = NULL;
+  const char *resp = NULL;
   bstring buffer;
 
   switch (res) {
@@ -2414,7 +2414,16 @@ static int redir_getreq(struct redir_t *redir, struct redir_socket_t *sock,
 	  p = buffer + 15;
 	  while (*p && isspace((int) *p)) p++;
 	  len = strlen(p);
-	  if (len > 0) httpreq->clen = atoi(p);
+	  if (len > 0) {
+		  char *endptr;
+		  long int clen = strtol(p, &endptr, 10);
+      if(p != endptr && *endptr != '\0')
+      {
+	      httpreq->clen = clen;
+      } else {
+        syslog(LOG_DEBUG, "%s(%d): Bad Content-Length: %s", __FUNCTION__, __LINE__, p);
+      }
+	  }
 #if(_debug_ > 1)
           if (_options.debug)
             syslog(LOG_DEBUG, "%s(%d): Content-Length: %s", __FUNCTION__, __LINE__, p);
@@ -2567,11 +2576,16 @@ static int redir_getreq(struct redir_t *redir, struct redir_socket_t *sock,
                           conn->authdata.v.chapmsg.password,
                           RADIUS_CHAPSIZE);
 
-          if (!redir_getparam(redir, httpreq->qs, "ident", bt) && bt->slen)
-            conn->authdata.v.chapmsg.identity = atoi((char*)bt->data);
-          else
+          if (!redir_getparam(redir, httpreq->qs, "ident", bt) && bt->slen) {
+            char *endptr;
+            unsigned long value = strtoul((char *)bt->data, &endptr, 10);
+            if(*endptr == '\0' && value <= UINT8_MAX) {
+              conn->authdata.v.chapmsg.identity = (uint8_t)value;
+            }
+          } else {
             conn->authdata.v.chapmsg.identity = 0;
-        }
+          }
+	}
         else if (!redir_getparam(redir, httpreq->qs, "password", bt)) {
           conn->authdata.type = REDIR_AUTH_PAP;
           if (_options.nochallenge) {
@@ -3289,112 +3303,171 @@ int auth_chap(struct redir_conn_t *conn, MD5_CTX *context, uint8_t *chap_challen
 	return ACCESS_DENIED;
 }
 
+void mac_block_invoke(const char *command, struct redir_conn_t *conn)
+{
+  uint32_t tmp_id = 0;
+  struct blob_buf b = { 0 };
+  char mac[MACSTRLEN+1];
+
+  snprintf(mac, sizeof(mac), MAC_FMT, MAC_ARG(conn->hismac));
+  ubus_ctx = ubus_connect(NULL);
+  if (!ubus_ctx) {
+    syslog(LOG_WARNING, "Warning: Failed to connect to ubus.");
+    return;
+  }
+
+  int ret = ubus_lookup_id(ubus_ctx, "ip_block", &tmp_id);
+  if (ret) {
+    syslog(LOG_WARNING, "Warning: Failed to find 'ip_block' object.");
+    goto end;
+  }
+
+  blob_buf_init(&b, 0);
+  blobmsg_add_string(&b, "mac", mac);
+  void *r = blobmsg_open_array(&b, "interface");
+  if(_options.dhcpif)
+    blobmsg_add_string(&b, NULL, _options.dhcpif);
+  for (int i = 0; i < MAX_MOREIF; i++) {
+    if(!_options.moreif[i].dhcpif)
+	    continue;
+    blobmsg_add_string(&b, NULL, _options.moreif[i].dhcpif);
+	}
+  blobmsg_close_array(&b, r);
+
+  ubus_invoke(ubus_ctx, tmp_id, command, b.head, NULL, NULL, 1000);
+  blob_buf_free(&b);
+
+end:
+  ubus_free(ubus_ctx);
+}
+
 int authenticator(struct redir_t *redir, struct redir_conn_t *conn, MD5_CTX *context,
 			  uint8_t *user_password, uint8_t *chap_challenge)
 {
-	FILE *f;
-	int match = ACCESS_DENIED;
-	char *line = 0;
-	char u[256]; char p[256];
-	ssize_t len;
-	size_t usernamelen, sz=1024;
+  FILE *f;
+  int match = ACCESS_DENIED;
+  char *line = 0;
+  char u[256]; char p[256];
+  ssize_t len;
+  size_t usernamelen, sz=1024;
 
-	if (_options.debug)
-		syslog(LOG_INFO, "%s(%d): checking %s for user %s", __FUNCTION__, __LINE__,
-			   _options.localusers, conn->s_state.redir.username);
+  if (_options.debug)
+    syslog(LOG_INFO, "%s(%d): checking %s for user %s", __FUNCTION__, __LINE__,
+      _options.localusers, conn->s_state.redir.username);
 
-	if (!(f = fopen(_options.localusers, "r"))) {
-		syslog(LOG_INFO, "%s: fopen() failed opening %s!", strerror(errno), _options.localusers);
-		return ACCESS_DENIED;
-	}
+  if (!(f = fopen(_options.localusers, "r"))) {
+    syslog(LOG_INFO, "%s: fopen() failed opening %s!", strerror(errno), _options.localusers);
+    return ACCESS_DENIED;
+  }
 
-	if (_options.debug)
-		syslog(LOG_INFO, "%s(%d): looking for %s", __FUNCTION__, __LINE__, conn->s_state.redir.username);
-	usernamelen = strlen(conn->s_state.redir.username);
+  if (_options.debug)
+    syslog(LOG_INFO, "%s(%d): looking for %s", __FUNCTION__, __LINE__, conn->s_state.redir.username);
+  usernamelen = strlen(conn->s_state.redir.username);
 
-	line=(char*)malloc(sz);
-	while ((len = getline(&line, &sz, f)) > 0) {
-		if (len > 3 && len < sizeof(u) && line[0] != '#') {
-			char *pl=line,  /* pointer to current line */
-					*pu=u,     /* pointer to username     */
-					*pp=p;     /* pointer to password     */
+  line=(char*)malloc(sz);
+  while ((len = getline(&line, &sz, f)) > 0) {
+    if (len > 3 && len < sizeof(u) && line[0] != '#') {
+      char *pl=line,  /* pointer to current line */
+        *pu=u,     /* pointer to username     */
+        *pp=p;     /* pointer to password     */
 
-			/* username until the first ':' */
-			while (*pl && *pl != ':')	*pu++ = *pl++;
+      /* username until the first ':' */
+      while (*pl && *pl != ':')	*pu++ = *pl++;
 
-			/* skip over ':' otherwise error */
-			if (*pl == ':') pl++;
-			else {
-				syslog(LOG_INFO, "not a valid localusers line: %s", line);
-				continue;
-			}
+      /* skip over ':' otherwise error */
+      if (*pl == ':') pl++;
+      else {
+        syslog(LOG_INFO, "not a valid localusers line: %s", line);
+        continue;
+      }
 
-			/* password until the next ':' */
-			while (*pl && *pl != ':' && *pl != '\n') *pp++ = *pl++;
+      /* password until the next ':' */
+      while (*pl && *pl != ':' && *pl != '\n') *pp++ = *pl++;
 
-			*pu = 0; /* null terminate */
-			*pp = 0;
+      *pu = 0; /* null terminate */
+      *pp = 0;
 
-			if (usernamelen == strlen(u) &&
-				!strncmp(conn->s_state.redir.username, u, usernamelen)) {
+      if (usernamelen == strlen(u) &&
+          !strncmp(conn->s_state.redir.username, u, usernamelen)) {
 
-				if (_options.debug)
-				  syslog(LOG_INFO, "%s(%d): found %s, checking password", __FUNCTION__, __LINE__, u);
+        if (_options.debug)
+          syslog(LOG_INFO, "%s(%d): found %s, checking password", __FUNCTION__, __LINE__, u);
 
-				if (conn->authdata.type == REDIR_AUTH_PAP) {
+        if (conn->authdata.type == REDIR_AUTH_PAP) {
 #ifdef HAVE_OPENSSL
-					char *salt = extract_salt(p);
+          char *salt = extract_salt(p);
+          char *plain_password = strndup((char *)user_password, strlen(p));
+          if (salt) {
+            user_password = (uint8_t *)hash_sha512_with_salt(plain_password, salt);
 
-					if (salt) {
-						char *plain_password = strndup((char *)user_password, strlen(p));
-						user_password = (uint8_t *)hash_md5_with_salt(plain_password, salt);
+            if (!user_password) {
+              syslog(LOG_INFO,
+                "%s(%d): failed to compute password hash for user %s",
+                __FUNCTION__, __LINE__, u);
+              // When hashing fails, make sure password check fails too
+              user_password = (uint8_t *)strdup("");
+            }
 
-						if (!user_password) {
-							syslog(LOG_INFO,
-							       "%s(%d): failed to compute password hash for user %s",
-							       __FUNCTION__, __LINE__, u);
-							// When hashing fails, make sure password check fails too
-							user_password = (uint8_t *)strdup("");
-						}
-
-						free(plain_password);
-					}
+            // Check for hash match, if hashes do not match, try again with MD5 hash
+            if (strncmp((char *)user_password, p, strlen(p))) {
+              user_password = (uint8_t *)hash_md5_with_salt(plain_password, salt);
+              if (!user_password) {
+                syslog(LOG_INFO,
+                  "%s(%d): failed to compute password hash for user %s",
+                  __FUNCTION__, __LINE__, u);
+                // When hashing fails, make sure password check fails too
+                user_password = (uint8_t *)strdup("");
+              }
+            }
+          }
 #endif
-					if (!strncmp((char *)user_password, p, strlen(p)))
-						match = ACCESS_ACCEPTED;
+                // Check for password math from UCI config
+          if (!strncmp((char *)user_password, p, strlen(p))) {
+#ifdef HAVE_OPENSSL
+            if (get_hash_type(p) == HASH_MD5) {
+              // If stored password is MD5 hash, rehash it to SHA-512 using the plain password
+              uint8_t *user_password_rehashed = (uint8_t *)hash_sha512(plain_password);
+              usr_update_user_pwd_uci(u, p, (char *)user_password_rehashed);
+              free(user_password_rehashed);
+            }
+#endif
+            match = ACCESS_ACCEPTED;
+          }
 
 #ifdef HAVE_OPENSSL
-					// If salt is not NULL that means that user_password was changed to point to newly allocated memory and we need to free it.
-					if (salt) {
-						free(user_password);
-						free(salt);
-					}
+          // If salt is not NULL that means that user_password was changed to point to newly allocated memory and we need to free it.
+          if (salt) {
+            free(user_password);
+            free(salt);
+          }
+          free(plain_password);
 #endif
-				}
-				else if (conn->authdata.type == REDIR_AUTH_CHAP) {
-                  match = auth_chap(conn, context, chap_challenge, user_password, p);
-				}
+        }
+        else if (conn->authdata.type == REDIR_AUTH_CHAP) {
+          match = auth_chap(conn, context, chap_challenge, user_password, p);
+        }
 
 				if (match == ACCESS_ACCEPTED) {
+          mac_block_invoke("unblock_mac", conn);
 				  conn->s_state.redir.auth_mode = AUTH_LOCAL_USER;
                   if (*pl == ':') pl++; //Skip ':'
                     session_param_local(&conn->s_params, pl);
                 }
 
-				break;
-			}
-		}
-	}
+        break;
+      }
+    }
+  }
 
-	if (_options.debug)
-		syslog(LOG_DEBUG, "%s(%d): user %s %s", __FUNCTION__, __LINE__,
-			   conn->s_state.redir.username,
-			   match ? "found" : "not found");
+  if (_options.debug)
+    syslog(LOG_DEBUG, "%s(%d): user %s %s", __FUNCTION__, __LINE__,
+      conn->s_state.redir.username,
+      match ? "found" : "not found");
 
-	fclose(f);
-	free(line);
+  fclose(f);
+  free(line);
 
-	return match;
+  return match;
 }
 
 int is_local_user(struct redir_t *redir, struct redir_conn_t *conn,
@@ -3461,14 +3534,17 @@ int is_local_user(struct redir_t *redir, struct redir_conn_t *conn,
 
   user_password[RADIUS_PWSIZE] = 0;
   if ((match = cb_validator(redir, conn, &context, user_password, chap_challenge))
-  		== ACCESS_ACCEPTED)
+  		== ACCESS_ACCEPTED) {
   	conn->response = REDIR_SUCCESS;
+  }
   else if ((match = cb_validator(redir, conn, &context, user_password, chap_challenge))
   		== ACCESS_DENIED_UDUPCLICATE) {
   	conn->response = REDIR_FAILED_USER_DUPLICATE;
   }
-  else
+  else{
+    mac_block_invoke("push_mac", conn);
   	conn->response = REDIR_FAILED_REJECT;
+  }
 
 #ifdef ENABLE_DATABASE
 	if (match == ACCESS_ACCEPTED){
@@ -3506,7 +3582,7 @@ int dynamic_user_authenticator(struct redir_t *redir, struct redir_conn_t *conn,
 
   if (_options.debug)
     syslog(LOG_INFO, "%s(%d): checking %s for user %s", __FUNCTION__, __LINE__,
-           _options.usersdbpath, conn->s_state.redir.username);
+      _options.usersdbpath, conn->s_state.redir.username);
 
   if (!(db = sqlopen(_options.usersdbpath))) {
     syslog(LOG_INFO, "%s: sqlopen() failed opening %s!", strerror(errno), _options.usersdbpath);
@@ -3518,35 +3594,55 @@ int dynamic_user_authenticator(struct redir_t *redir, struct redir_conn_t *conn,
     syslog(LOG_INFO, "%s(%d): looking for %s", __FUNCTION__, __LINE__, conn->s_state.redir.username);
 
   if (!usr_get_user(db, &user, email_escaped) &&
-	  !strncmp(user.email, email_escaped, USER_EMAILSIZE)) {
+	    !strncmp(user.email, email_escaped, USER_EMAILSIZE)) {
 
     if (conn->authdata.type == REDIR_AUTH_PAP) {
 #ifdef HAVE_OPENSSL
-	    char *salt = extract_salt(user.password);
+    char *salt = extract_salt(user.password);
+    char *plain_password = strndup((char *)user_password, strlen(user.password));
 
-	    if (salt) {
-		    char *plain_password = strndup((char *)user_password, strlen(user.password));
-		    user_password	 = (uint8_t *)hash_md5_with_salt(plain_password, salt);
+    if (salt) {
+      user_password	 = (uint8_t *)hash_sha512_with_salt(plain_password, salt);
 
-		    if (!user_password) {
-			    syslog(LOG_INFO, "%s(%d): failed to compute password hash for user %s",
-				   __FUNCTION__, __LINE__, user.username);
-			    // When hashing fails, make sure password check fails too
-			    user_password = (uint8_t *)strdup("");
-		    }
+      if (!user_password) {
+        syslog(LOG_INFO, "%s(%d): failed to compute password hash for user %s",
+          __FUNCTION__, __LINE__, user.username);
+        // When hashing fails, make sure password check fails too
+        user_password = (uint8_t *)strdup("");
+      }
 
-		    free(plain_password);
-	    }
+      // Check for hash match, if hashes do not match, try again with MD5 hash
+      if (strncmp((char *)user_password, user.password, strlen(user.password))) {
+        user_password = (uint8_t *)hash_md5_with_salt(plain_password, salt);
+        if (!user_password) {
+          syslog(LOG_INFO, "%s(%d): failed to compute password hash for user %s",
+            __FUNCTION__, __LINE__, user.username);
+          // When hashing fails, make sure password check fails too
+          user_password = (uint8_t *)strdup("");
+        }
+      }
+}
 #endif
-	    if (!strncmp((char *)user_password, user.password, strlen(user.password)))
-		    match = ACCESS_ACCEPTED;
+      if (!strncmp((char *)user_password, user.password, strlen(user.password))) {
+#ifdef HAVE_OPENSSL
+        // Update password hash on the database
+        if(get_hash_type(user.password) == HASH_MD5) {
+          syslog(LOG_INFO, "%s(%d): updating user MD5 hash to SHA-512",
+            __FUNCTION__, __LINE__);
+          // If stored password is MD5 hash, rehash it to SHA-512 using the plain password
+          usr_update_user_pwd(db, &user, email_escaped, plain_password);
+        }
+#endif
+        match = ACCESS_ACCEPTED;
+      }
 
 #ifdef HAVE_OPENSSL
-	    // If salt is not NULL that means that user_password was changed to point to newly allocated memory and we need to free it.
-	    if (salt) {
-		    free(user_password);
-		    free(salt);
-	    }
+      // If salt is not NULL that means that user_password was changed to point to newly allocated memory and we need to free it.
+      if (salt) {
+        free(user_password);
+        free(salt);
+      }
+      free(plain_password);
 #endif
     }
     else if (conn->authdata.type == REDIR_AUTH_CHAP) {
@@ -3563,7 +3659,7 @@ int dynamic_user_authenticator(struct redir_t *redir, struct redir_conn_t *conn,
 
   if (_options.debug)
     syslog(LOG_DEBUG, "%s(%d): user %s %s", __FUNCTION__, __LINE__,
-           conn->s_state.redir.username, match ? "found" : "not found");
+      conn->s_state.redir.username, match ? "found" : "not found");
 
   sqlclose(db);
 
@@ -3618,7 +3714,7 @@ int sms_user_authenticator(struct redir_t *redir, struct redir_conn_t *conn,
         conn->s_state.redir.user_time = user.user_time;
         conn->s_state.redir.auth_mode = AUTH_SMS_USER;
         strncpy(conn->s_state.redir.username, user.username, USER_RAND_USERNAME_LEN);
-        strncpy(conn->s_state.redir.phone, user.phone, sizeof(conn->s_state.redir.phone));
+        strlcpy(conn->s_state.redir.phone, user.phone, sizeof(conn->s_state.redir.phone));
         session_params_dyn(&conn->s_params);
       }
     }
@@ -3647,7 +3743,7 @@ int mac_user_authenticator(struct redir_t *redir, struct redir_conn_t *conn,
              conn->s_state.redir.username, _options.macpass);
 
     if (conn->authdata.type == REDIR_AUTH_PAP) {
-      if (!strncmp((char *) user_password, _options.macpass, strlen(_options.macpass)))
+      if (!strcmp((char *) user_password, _options.macpass))
         match = ACCESS_ACCEPTED;
     } else if (conn->authdata.type == REDIR_AUTH_CHAP) {
       match = auth_chap(conn, context, chap_challenge, user_password, _options.macpass);
@@ -4146,8 +4242,8 @@ int redir_main(struct redir_t *redir,
                                 || isWPAD
 #endif
                                 )) {
-          char *ctype = "text/plain";
-          char *filename = conn.wwwfile;
+          const char *ctype = "text/plain";
+          const char *filename = conn.wwwfile;
           size_t namelen = strlen(filename);
           int parse = 0;
 
@@ -4167,7 +4263,7 @@ int redir_main(struct redir_t *redir,
             } else
 #endif
             {
-              char *p;
+              const char *p;
               int cnt = 0;
               for (p=filename; *p; p++) {
                 if (*p == '.' || *p == '_'|| *p == '-' || *p == '/') {

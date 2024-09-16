@@ -1,0 +1,5 @@
+case "$ACTION" in
+"ifup" | "ifdown" | "ifupdate" | "free" | "create" | "add" | "remove")
+	/bin/trigger_vuci_routes_reload -t "${ACTION} of ${INTERFACE} interface"
+	;;
+esac

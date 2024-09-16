@@ -151,7 +151,10 @@ dropbear_instance()
 		}
 	}
 
-	[ "${enable}" = "0" ] && return 1
+	if [ "${enable}" = "0" ]; then
+		$(sleep 3 ; killclients)&
+		return 1
+	fi       
 	PIDCOUNT="$(( ${PIDCOUNT} + 1))"
 	local pid_file="/var/run/${NAME}.${PIDCOUNT}.pid"
 

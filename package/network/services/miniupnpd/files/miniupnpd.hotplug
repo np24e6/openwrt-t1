@@ -1,4 +1,4 @@
-/etc/init.d/miniupnpd enabled || exit 0
+/etc/init.d/miniupnpd enabled && [ "$(uci_get upnpd.config.enabled)" = "1" ] || exit 0
 
 # If miniupnpd is not running:
 # - check on _any_ event (event updates may contribute to network_find_wan*)

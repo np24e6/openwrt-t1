@@ -87,7 +87,7 @@ check_config "modbus_serial_master" "rs232" "enabled" "modbus_serial_master" "Mo
 check_config "modbus_serial_master" "rs485" "enabled" "modbus_serial_master" "Modbus Serial Master"
 check_config "smpp" "smpp" "enabled" "smpp" "SMPP"
 check_config "qos" "interface" "enabled" "qos-scripts" "QoS scripts"
-check_config "modbus_tcp_master" "tcp_slave" "enabled" "modbus_tcp_master" "MODBUS TCP Master"
+check_config "modbus_master" "tcp_slave" "enabled" "modbus_tcp_master" "MODBUS Master"
 check_config "modbusgateway" "gateway" "enabled" "mqtt-modbus-gateway" "MQTT-MODBUS-gateway"
 check_config "modbus_data_sender" "data_sender" "enabled" "modbus_data_sender" "Data to Server"
 check_config "modbus" "modbus" "enabled" "modbusd" "MODBUS TCP Slave"

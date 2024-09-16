@@ -20,6 +20,7 @@
 
 #include "chilli.h"
 #include "bstrlib.h"
+#include "ubus.h"
 #ifdef ENABLE_MODULES
 #include "chilli_module.h"
 #endif
@@ -43,6 +44,9 @@ struct app_conn_t *lastfreeconn=0;  /* Last free in linked list */
 struct app_conn_t *firstusedconn=0; /* First used in linked list */
 struct app_conn_t *lastusedconn=0;  /* Last used in linked list */
 struct app_conn_t admin_session;
+
+struct ubus_context *g_ubus_event_ctx; /* Ubus for sending events
+                                          about connected/disconnected clients */
 
 struct timespec mainclock;
 time_t checktime;
@@ -1042,6 +1046,7 @@ int chilli_getconn(struct app_conn_t **conn, uint32_t ip,
 
 static int dnprot_terminate(struct app_conn_t *appconn) {
   appconn->s_state.authenticated = 0;
+  send_ubus_event(g_ubus_event_ctx, CHILLI_EVENT_DISCONNECT, appconn, NULL);
 #ifdef ENABLE_SESSIONSTATE
   appconn->s_state.session_state = 0;
 #endif
@@ -2463,6 +2468,7 @@ int dnprot_accept(struct app_conn_t *appconn) {
     /* This is the one and only place state is switched to authenticated */
     appconn->s_state.authenticated = 1;
     appconn->s_state.terminate_cause_ui = 0;
+    send_ubus_event(g_ubus_event_ctx, CHILLI_EVENT_CONNECT, appconn, dhcpconn);
 
 #ifdef ENABLE_SESSIONSTATE
     appconn->s_state.session_state =
@@ -5832,6 +5838,8 @@ int cb_dhcp_disconnect(struct dhcp_conn_t *conn, int term_cause) {
 
   appconn = (struct app_conn_t*) conn->peer;
 
+  send_ubus_event(g_ubus_event_ctx, CHILLI_EVENT_DISCONNECT, appconn, NULL);
+
   return session_disconnect(appconn, conn, term_cause);
 }
 
@@ -7476,9 +7484,6 @@ int chilli_main(int argc, char **argv) {
 #ifdef ENABLE_CHILLIQUERY
   int cmdsock = -1;
 #endif
-#ifdef ENABLE_UBUS
-  struct ubus_context *ubus_ctx;
-#endif
 
   pid_t cpid = getpid();
 
@@ -7718,6 +7723,11 @@ int chilli_main(int argc, char **argv) {
                  _options.noc2c)) {
       syslog(LOG_ERR, "Failed to create dhcp listener on %s", _options.dhcpif);
       exit(1);
+    }
+
+    g_ubus_event_ctx = ubus_connect(NULL);
+    if (!g_ubus_event_ctx) {
+      syslog(LOG_ERR, "Failed to set up ubus for event sending");
     }
 
     dhcp_set_cb_request(dhcp, cb_dhcp_request);
@@ -8096,6 +8106,10 @@ int chilli_main(int argc, char **argv) {
     } /* while(keep_going) */
 
     syslog(LOG_INFO, "CoovaChilli shutting down");
+
+    if (g_ubus_event_ctx) {
+      ubus_free(g_ubus_event_ctx);
+    }
 
     if (_options.seskeepalive) {
 #ifdef ENABLE_BINSTATFILE

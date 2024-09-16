@@ -109,17 +109,19 @@ append_secret_by_type() {
 
 ipsec_xappend_passthrough() {
 	local interface="$1"
+	local conn="$2"
 	local subnets
 	local sub
 
 	network_get_subnets subnets "$interface"
 
-	xappend "${IPSEC_VAR_CONN_FILE}" "conn passth_${CONFIG_SECTION}_${interface}"
+	xappend "${IPSEC_VAR_CONN_FILE}" "conn passth_${conn}_${interface}"
 	xappend "${IPSEC_VAR_CONN_FILE}" "  type=passthrough"
 
 	for sub in $subnets; do
-		xappend "${IPSEC_VAR_CONN_FILE}" "  leftsubnet=$sub"
-		xappend "${IPSEC_VAR_CONN_FILE}" "  rightsubnet=$sub"
+		eval "$(ipcalc.sh "$sub")";gw_net="$NETWORK/$PREFIX"
+		xappend "${IPSEC_VAR_CONN_FILE}" "  leftsubnet=$gw_net"
+		xappend "${IPSEC_VAR_CONN_FILE}" "  rightsubnet=$gw_net"
 	done
 
 	xappend "${IPSEC_VAR_CONN_FILE}" "  auto=route"
@@ -127,12 +129,12 @@ ipsec_xappend_passthrough() {
 }
 
 ipsec_passthrough_ip() {
-	local ip_list
-	config_get ip_list "$1" passthrough_ip
+	local ip_list conn="$1"
+	config_get ip_list "$conn" passthrough_ip
 	[ -n "$ip_list" ] && {
 		ip_list=${ip_list// /,}
 
-		xappend "${IPSEC_VAR_CONN_FILE}" "conn passth_${CONFIG_SECTION}"
+		xappend "${IPSEC_VAR_CONN_FILE}" "conn passth_${conn}"
 		xappend "${IPSEC_VAR_CONN_FILE}" "  type=passthrough"
 		xappend "${IPSEC_VAR_CONN_FILE}" "  rightsubnet=$ip_list"
 		xappend "${IPSEC_VAR_CONN_FILE}" "  auto=route"
@@ -208,6 +210,26 @@ split_sa() {
 	done
 }
 
+set_margintime() {
+	local ikelifetime="$1"
+	local lifetime="$2"
+	local margintime="9m"
+	local time
+	[ "${ikelifetime:(-1)}" = "h" ] && ikelifetime=$(( ${ikelifetime::-1} * 60 * 60 ))
+	[ "${ikelifetime:(-1)}" = "m" ] && ikelifetime=$(( ${ikelifetime::-1} * 60 ))
+	[ "${ikelifetime:(-1)}" = "s" ] && ikelifetime="${ikelifetime::-1}"
+	[ "${lifetime:(-1)}" = "h" ] && lifetime=$(( ${lifetime::-1} * 60 * 60 ))
+	[ "${lifetime:(-1)}" = "m" ] && lifetime=$(( ${lifetime::-1} * 60 ))
+	[ "${lifetime:(-1)}" = "s" ] && lifetime="${lifetime::-1}"
+	[ "$ikelifetime" -le "$lifetime" ] && time="$ikelifetime" || time="$lifetime"
+	[ "$time" -le "1800" ] && margintime="3m"
+	[ "$time" -le "600" ] && margintime="1m"
+	[ "$time" -le "300" ] && margintime="30s"
+	[ "$time" -le "120" ] && margintime="10s"
+	[ "$time" -le "60" ] && margintime="5s"
+	echo "$margintime"
+}
+
 config_conn() {
 	# Generic ipsec conn section shared by tunnel and transport
 	local mode
@@ -256,7 +278,7 @@ config_conn() {
 	config_get remote_firewall          "$1"           remote_firewall "0"
 	config_get ikelifetime              "$1"           ikelifetime "3h"
 	config_get lifetime                 "$1"           lifetime "1h"
-	config_get margintime               "$1"           margintime "9m"
+	config_get margintime               "$1"           margintime "$(set_margintime "$ikelifetime" "$lifetime")"
 	config_get keyingtries              "$1"           keyingtries "3"
 	config_get dpdaction                "$1"           dpdaction "none"
 	config_get dpddelay                 "$1"           dpddelay "30"
@@ -280,7 +302,7 @@ config_conn() {
 	[ -n "$local_nat" ] && local_subnet=$local_nat
 
 	for iface in $passthrough; do
-		ipsec_xappend_passthrough "$iface"
+		ipsec_xappend_passthrough "$iface" "$1"
 	done
 
 	ipsec_passthrough_ip "$1"
@@ -435,6 +457,7 @@ config_remote() {
 	config_get leftcert          "$1" leftcert ""
 	config_get rightcert         "$1" rightcert ""
 	config_get key               "$1" key ""
+	config_get key_decrypt       "$1" key_decrypt ""
 	config_get cacert            "$1" cacert ""
 	config_get LEFT              "$1" left "%any"
 	config_get keyexchange	     "${1}_c" keyexchange ""
@@ -465,7 +488,8 @@ config_remote() {
 		if [ -n "$pre_shared_key" ]; then
 			append_secret_by_type PSK "" "$pre_shared_key"
 		else
-			secret_xappend " : ${key:+RSA $key}"
+			[ -n "$key_decrypt" ] && key_decrypt="\"$key_decrypt\""
+			secret_xappend " : ${key:+RSA $key $key_decrypt}"
 		fi
 	}
 
@@ -552,6 +576,7 @@ config_ipsec() {
 	swan_xappend "    identifier = ipsec"
 	swan_xappend "    daemon {"
 	swan_xappend "      default = $debug"
+	swan_xappend "      ike_name = yes"
 	swan_xappend "    }"
 	swan_xappend "  }"
 	swan_xappend "}"
@@ -563,18 +588,23 @@ config_secrets() {
 	config_get id_selector "$1" id_selector
 	config_get type "$1" type
 	config_get secret "$1" secret
+	config_get key "$1" key
+	config_get key_decrypt "$1" key_decrypt
+
+	[ -n "$key" ] && [ "$type" = "rsa" ] && secret="${key}${key_decrypt:+ \"$key_decrypt\"}"
 	[ -z "$secret" ] && return 1
 
 	case "$type" in
 		psk) append_secret_by_type PSK "${id_selector}" "$secret";;
 		xauth) append_secret_by_type XAUTH "${id_selector}" "$secret";;
-		pubkey|rsa) secret_xappend "${id_selector} : RSA $secret";;
+		rsa) secret_xappend "${id_selector} : RSA $secret";;
 		eap) append_secret_by_type EAP "${id_selector}" "$secret";;
 	esac
 }
 
 prepare_env() {
 	mkdir -p /var/ipsec
+	mkdir -p /tmp/state/ipsec
 	remove_includes
 	config_load ipsec
 	config_foreach config_ipsec ipsec
@@ -645,8 +675,8 @@ start_service() {
 	procd_append_param file $STRONGSWAN_CONF_FILE
 	procd_append_param file /etc/strongswan.d/*.conf
 	procd_append_param file /etc/strongswan.d/charon/*.conf
-
 	procd_set_param respawn
-
 	procd_close_instance
+
+	date "+%s" > /tmp/state/ipsec/uptime
 }

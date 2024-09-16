@@ -1,5 +1,7 @@
---- a/CMakeLists.txt
-+++ b/CMakeLists.txt
+Index: ubox-2020-10-25-9ef88681/CMakeLists.txt
+===================================================================
+--- ubox-2020-10-25-9ef88681.orig/CMakeLists.txt
++++ ubox-2020-10-25-9ef88681/CMakeLists.txt
 @@ -56,14 +56,14 @@ INSTALL(TARGETS validate_data
  	RUNTIME DESTINATION sbin
  )

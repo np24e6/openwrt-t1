@@ -252,28 +252,24 @@ check_manufacturer() {
 	local modem_id="$1"
 	local counter=0
 
-	debug "Checking manufacturer of the $modem_id  modem..."
+	debug "Checking manufacturer of the $modem_id modem"
 
 	manufacturer=$(get_from_info "$modem_id" "manuf")
 	debug "Modem $modem_id manufacturer: $manufacturer"
 	while [ "$counter" -lt 5 ]; do
-		case "$manufacturer" in
-			Quectel) return 0;;
-			Meig) break;;
-		esac
+		[ "$manufacturer" = "Quectel" ] && return 0
+
+		[ "$manufacturer" != "" ] && {
+			print_error "DFOTA is available only for Quectel modems!" "$EC_NOT_QUECTEL"
+			return 1
+		}
 
 		counter=$((counter+1))
 		sleep 1
 		manufacturer=$(get_from_info "$modem_id" "manuf")
-
 	done;
 
-	if [ "$counter" -eq 5 ]; then
-		print_error "Unable to get manufacturer of modem $modem_id" "$EC_NO_MANUF"
-	else
-		print_error "DFOTA is available only for Quectel modems!" "$EC_NOT_QUECTEL"
-	fi
-
+	print_error "Unable to get manufacturer of modem $modem_id" "$EC_NO_MANUF"
 	return 1
 }
 

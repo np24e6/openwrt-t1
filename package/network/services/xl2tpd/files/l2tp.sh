@@ -101,6 +101,14 @@ proto_l2tp_setup() {
 	ipv6="${ipv6:++ipv6}"
 	mtu="${mtu:+mtu $mtu mru $mtu}"
 
+	config_load network
+	config_get auth_pap "$interface" auth_pap "0"
+	[ "$auth_pap" = "0" ] && allow_pap="refuse-pap"
+	config_get auth_chap "$interface" auth_chap "1"
+	[ "$auth_chap" = "0" ] && allow_chap="refuse-chap"
+	config_get auth_mschap2 "$interface" auth_mschap2 "1"
+	[ "$auth_mschap2" = "0" ] && allow_mschap2="refuse-mschap-v2"
+
 	cat "$static_opt" > "$optfile"
 	cat <<EOF >>"$optfile"
 ipparam "$interface"
@@ -110,6 +118,9 @@ $username
 $ipv6
 $mtu
 $pppd_options
+$allow_pap
+$allow_chap
+$allow_mschap2
 EOF
 
 	xl2tpd-control add-lac l2tp-${interface} pppoptfile=${optfile} lns=${server} || {

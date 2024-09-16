@@ -1,0 +1,22 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+[ -e "/etc/config/frr" ] || exit 0
+
+index=0
+
+config_cb() {
+	[ "$1" = "access_list" ] || [ "$1" = "ospf_interface" ] || \
+	[ "$1" = "ospf_neighbor" ] || [ "_${1##*_}" = "_map" ] || return
+	index=$((index + 1))
+
+	while uci_get "frr" "$index" >/dev/null; do
+		index=$((index + 1))
+	done
+
+	uci_rename "frr" "$2" "$index"
+}
+
+config_load "frr"
+uci_commit "frr"

@@ -1,5 +1,16 @@
 -- Interface-based VLAN --
 
+iVlanGroup OBJECT-GROUP
+	OBJECTS { iVlanCount,
+		  iVlanIndex,
+		  iVlanName,
+		  iVlanType,
+		  iVlanIfName,
+		  iVlanVID }
+	STATUS current
+	DESCRIPTION "Interface-based VLAN SNMP group defined according to RFC 2580"
+	::= { teltonikaSnmpGroups 9 }
+
 iVlanCount OBJECT-TYPE
 	SYNTAX      INTEGER
 	MAX-ACCESS  read-only
@@ -8,31 +19,31 @@ iVlanCount OBJECT-TYPE
 	::= { vlan 3 }
 
 iVlanTable OBJECT-TYPE
-	SYNTAX      SEQUENCE OF IVlan_Entry
+	SYNTAX      SEQUENCE OF IVlanEntry
 	MAX-ACCESS  not-accessible
 	STATUS      current
 	DESCRIPTION "A list interface-based virtual networks."
 	::= { vlan 4 }
 
 iVlanEntry OBJECT-TYPE
-	SYNTAX      IVlan_Entry
+	SYNTAX      IVlanEntry
 	MAX-ACCESS  not-accessible
 	STATUS      current
 	DESCRIPTION "An entry containing information about an interface-based VLAN."
 	INDEX   { iVlanIndex }
 	::= { iVlanTable 1 }
 
-IVlan_Entry ::=
+IVlanEntry ::=
 	SEQUENCE {
 	iVlanIndex  INTEGER,
 	iVlanName   DisplayString,
 	iVlanType   DisplayString,
 	iVlanIfName DisplayString,
-	iVlanVID    INTEGER,
+	iVlanVID    INTEGER
 	}
 
 iVlanIndex OBJECT-TYPE
-	SYNTAX     INTEGER
+	SYNTAX     INTEGER (0..65535)
 	MAX-ACCESS read-only
 	STATUS     current
 	DESCRIPTION "The index of an iface-based VLAN."

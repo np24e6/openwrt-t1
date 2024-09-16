@@ -1,0 +1,25 @@
+#!/bin/sh
+
+. /lib/functions/network.sh
+
+[ "$INTERFACE" = "lan" ] && [ "$ACTION" = "ifup" ] && {
+	network_get_ipaddr ipaddr "lan"
+	network_is_up dhcp || echo "address=/:tap200.rutos.net*:/$ipaddr" > /tmp/dnsmasq.d/hostname
+	/etc/init.d/dnsmasq reload
+}
+
+[ "$INTERFACE" = "dhcp" ] || return
+
+case "$ACTION" in
+	ifup)
+		network_get_ipaddr ipaddr "$INTERFACE"
+		echo "address=/:tap200.rutos.net*:/$ipaddr" > /tmp/dnsmasq.d/hostname
+	;;
+	ifdown)
+		network_get_ipaddr ipaddr "lan"
+		echo "address=/:tap200.rutos.net*:/$ipaddr" > /tmp/dnsmasq.d/hostname
+	;;
+esac
+
+/etc/init.d/dnsmasq reload
+

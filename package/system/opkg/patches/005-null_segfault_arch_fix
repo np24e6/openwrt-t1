@@ -1,0 +1,14 @@
+--- a/libopkg/pkg_vec.c
++++ b/libopkg/pkg_vec.c
+@@ -60,6 +60,11 @@ void pkg_vec_insert_merge(pkg_vec_t * ve
+ 	for (i = 0; i < vec->len; i++) {
+ 		vec_architecture = pkg_get_architecture(vec->pkgs[i]);
+ 
++		if (!vec_architecture) {
++			opkg_msg(ERROR, "Invalid package architecture. You can check supported architectures using 'opkg print-architecture'.\n");
++			vec_architecture = "";
++		}
++
+ 		opkg_msg(DEBUG2, "%s %s arch=%s vs. %s %s arch=%s.\n",
+ 			 pkg->name, pkg_version, pkg_architecture,
+ 			 vec->pkgs[i]->name, pkg_get_string(vec->pkgs[i], PKG_VERSION),

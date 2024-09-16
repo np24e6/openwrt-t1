@@ -1,0 +1,24 @@
+
+menu "Target Firmware tweaks"
+
+config LUCI_SCRIPTS_MINIFICATION
+	bool "Minify Luci scripts"
+	default y
+	select LUCI_SRCDIET
+	select LUCI_JSMIN
+
+config BOARD_BRINGUP_UTILS
+	bool "Enable board bring-up utilities"
+	select KERNEL_DEVMEM
+	select BUSYBOX_CONFIG_DEVMEM
+
+# Busybox config options
+config BUSYBOX_CONFIG_OPT
+	bool
+	default y
+	select BUSYBOX_DEFAULT_FEATURE_EDITING_SAVEHISTORY
+	select BUSYBOX_DEFAULT_FEATURE_REVERSE_SEARCH
+	select BUSYBOX_DEFAULT_FEATURE_VI_UNDO
+	select BUSYBOX_DEFAULT_FEATURE_VI_UNDO_QUEUE
+
+endmenu

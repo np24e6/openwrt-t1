@@ -6,10 +6,10 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=snmptrap
-PKG_VERSION:=2023-02-13
-PKG_RELEASE:=1
+PKG_VERSION:=2023-09-01
+PKG_RELEASE:=2
 
-PKG_SOURCE_VERSION:=52253062a3ccbddc2df356fe9bddd545f2d16f86
+PKG_SOURCE_VERSION:=1.4
 PKG_MAINTAINER:=Darius Joksas <darius.joksas@teltonika.lt>
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_SOURCE_VERSION)-$(PKG_VERSION)
 PKG_SOURCE:=$(PKG_SOURCE_SUBDIR).tar.gz
@@ -46,6 +46,10 @@ endif
 
 ifdef CONFIG_SNMPTRAP_IO
 	CONFIGURE_ARGS += --enable-io
+endif
+
+ifdef CONFIG_SNMPTRAP_CHILLI
+	CONFIGURE_ARGS += --enable-chilli
 endif
 
 

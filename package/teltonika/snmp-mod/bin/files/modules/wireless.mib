@@ -2,6 +2,17 @@
 
 -- Wireless Radios
 
+radioGroup OBJECT-GROUP
+	OBJECTS { radioCount,
+		  radioIndex,
+		  radioName,
+		  radioUpState,
+		  radioDisabledState,
+		  radioChannel }
+	STATUS current
+	DESCRIPTION "Radio SNMP group defined according to RFC 2580"
+	::= { teltonikaSnmpGroups 7 }
+
 radioCount  OBJECT-TYPE
 	SYNTAX      INTEGER
 	MAX-ACCESS  read-only
@@ -10,31 +21,31 @@ radioCount  OBJECT-TYPE
 	::= { wireless 1 }
 
 radioTable OBJECT-TYPE
-	SYNTAX      SEQUENCE OF Radio_Entry
+	SYNTAX      SEQUENCE OF RadioEntry
 	MAX-ACCESS  not-accessible
 	STATUS      current
 	DESCRIPTION "A list of wireless radios."
 	::= { wireless 2 }
 
 radioEntry OBJECT-TYPE
-	SYNTAX      Radio_Entry
+	SYNTAX      RadioEntry
 	MAX-ACCESS  not-accessible
 	STATUS      current
 	DESCRIPTION "An entry containing information of a particular wireless radio."
 	INDEX   { radioIndex }
 	::= { radioTable 1 }
 
-Radio_Entry ::=
+RadioEntry ::=
 	SEQUENCE {
 		radioIndex         INTEGER,
 		radioName          DisplayString,
 		radioUpState       INTEGER,
 		radioDisabledState INTEGER,
-		radioChannel       DisplayString,
+		radioChannel       DisplayString
 	}
 
 radioIndex OBJECT-TYPE
-	SYNTAX      INTEGER
+	SYNTAX      INTEGER (0..65535)
 	MAX-ACCESS  read-only
 	STATUS      current
 	DESCRIPTION "A unique value, greater than zero, for each wireless radio."
@@ -66,9 +77,20 @@ radioChannel OBJECT-TYPE
 	MAX-ACCESS  read-only
 	STATUS      current
 	DESCRIPTION "Current active channel of the wireless radio."
-	::= { radioEntry 5 } 
+	::= { radioEntry 5 }
 
 -- Wireless Interfaces
+
+wIfaceGroup OBJECT-GROUP
+	OBJECTS { wIfaceCount,
+		  wIfaceIndex,
+		  wIfaceSSID,
+		  wIfaceHidden,
+		  wIfaceEncryption,
+		  wIfaceMode }
+	STATUS current
+	DESCRIPTION "Wireless interface SNMP group defined according to RFC 2580"
+	::= { teltonikaSnmpGroups 8 }
 
 wIfaceCount OBJECT-TYPE
 	SYNTAX      INTEGER
@@ -78,31 +100,31 @@ wIfaceCount OBJECT-TYPE
 	::= { wireless 3 }
 
 wIfaceTable OBJECT-TYPE
-	SYNTAX SEQUENCE OF WIface_Entry
+	SYNTAX SEQUENCE OF WIfaceEntry
 	MAX-ACCESS  not-accessible
 	STATUS      current
 	DESCRIPTION "A list of wireless interfaces."
 	::= { wireless 4 }
 
 wIfaceEntry OBJECT-TYPE
-	SYNTAX WIface_Entry
+	SYNTAX WIfaceEntry
 	MAX-ACCESS  not-accessible
 	STATUS      current
 	DESCRIPTION "An entry containing information of a particular wireless interface."
 	INDEX   { wIfaceIndex }
 	::= { wIfaceTable 1 }
 
-WIface_Entry ::=
+WIfaceEntry ::=
 	SEQUENCE {
 	wIfaceIndex        INTEGER,
 	wIfaceSSID         DisplayString,
 	wIfaceHidden       INTEGER,
 	wIfaceEncryption   DisplayString,
-	wIfaceMode         DisplayString,
+	wIfaceMode         DisplayString
 	}
 
 wIfaceIndex OBJECT-TYPE
-	SYNTAX      INTEGER
+	SYNTAX      INTEGER (0..65535)
 	MAX-ACCESS  read-only
 	STATUS      current
 	DESCRIPTION "A unique value, greater than zero, for each wireless interface."

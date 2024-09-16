@@ -3,19 +3,19 @@
 . /lib/functions.sh
 . ../netifd-proto.sh
 . /lib/functions/mobile.sh
+
 init_proto "$@"
 
 INCLUDE_ONLY=1
 
 ctl_device=""
-dat_device=""
 
 proto_gobinet_setup() { echo "wwan[$$] gobinet proto is missing"; }
 proto_mbim_setup() { echo "wwan[$$] mbim proto is missing"; }
 proto_qmi_setup() { echo "wwan[$$] qmi proto is missing"; }
 proto_qmux_setup() { echo "wwan[$$] qmi proto is missing"; }
 proto_ncm_setup() { echo "wwan[$$] ncm proto is missing"; }
-proto_3g_setup() { echo "wwan[$$] 3g proto is missing"; }
+proto_pppmobile_setup() { echo "wwan[$$] pppmobile proto is missing"; }
 proto_directip_setup() { echo "wwan[$$] directip proto is missing"; }
 proto_trb_qmapv5_setup() { echo "wwan[$$] qmapv5 proto is missing"; }
 
@@ -24,49 +24,9 @@ proto_trb_qmapv5_setup() { echo "wwan[$$] qmapv5 proto is missing"; }
 [ -f ./ncm.sh ] && . ./ncm.sh
 [ -f ./qmi.sh ] && . ./qmi.sh
 [ -f ./qmux.sh ] && . ./qmux.sh
-[ -f ./3g.sh ] && { . ./ppp.sh; . ./3g.sh; }
+[ -f ./pppmobile.sh ] && { . ./ppp.sh; . ./pppmobile.sh; }
 [ -f ./directip.sh ] && . ./directip.sh
 [ -f ./qmapv5.sh ] && . ./qmapv5.sh
-
-multiapn() {
-	local ret
-	ret=$(
-		flag=false
-		proto=""
-		m_id=""
-		sim=""
-
-		second_loop(){
-			local intf="$2"
-			config_get proto2 "$1" proto
-			config_get m_id2 "$1" modem
-			config_get sim2 "$1" sim
-			config_get dis2 "$1" disabled 0
-			[ "$proto2" = "wwan" ] || return
-			[ "$dis2" = "1" ] && return
-			[ "$m_id2" = "$m_id" ] && [ "$sim2" = "$sim" ] && [ "$1" != "$intf" ] && {
-				flag=true
-			}
-		}
-
-		first_loop() {
-			config_get proto "$1" proto
-			config_get m_id "$1" modem
-			config_get sim "$1" sim
-			config_get dis "$1" disabled 0
-			[ "$proto" = "wwan" ] || return
-			[ "$dis" = "1" ] && return
-			[ "$flag" = "true" ] && return
-			config_foreach second_loop interface "$1"
-		}
-		config_load network
-		config_foreach first_loop interface
-		printf "$flag"
-	)
-	[ "$ret" = "true" ] && return 0
-
-	return 1
-}
 
 proto_wwan_init_config() {
 	available=1
@@ -97,6 +57,24 @@ proto_wwan_init_config() {
 	proto_config_add_int mtu
 
 	proto_config_add_defaults
+}
+
+check_ppp_driver() {
+	json_set_namespace global_json old_cb
+	for ob in "$(ubus list | grep gsm.modem)"; do
+		local usb_id=""
+		local tty_port=""
+		json_load "$(ubus call $ob info)"
+		json_get_var usb_id usb_id
+		json_get_var tty_port tty_port
+		if [ "$usb_id" = "$modem" ] && [ $tty_port = "/dev/ttyS2" ]; then
+			json_get_var ctl_device data_port
+			driver="pppmobile"
+			json_set_namespace $old_cb
+			return
+		fi
+	done
+	json_set_namespace $old_cb
 }
 
 proto_wwan_setup() {
@@ -143,22 +121,16 @@ proto_wwan_setup() {
 	echo "wwan[$$]" "Using wwan usb device on bus $devicename"
 
 	[ -n "$usb" ] && {
-		local old_cb control data ep_iface dl_max_size dl_max_datagrams
+		local old_cb control data ep_iface dl_max_size dl_max_datagrams ul_max_size ul_max_datagrams
 
 		json_set_namespace wwan old_cb
 		json_init
 		json_load "$(cat "$usb")"
 		json_select
-		json_get_vars desc control data ep_iface dl_max_size dl_max_datagrams
+		json_get_vars desc control data ep_iface dl_max_size dl_max_datagrams ul_max_size ul_max_datagrams
 		json_set_namespace "$old_cb"
-
-		[ -n "$control" -a -n "$data" ] && {
-			ttys=$(ls -d /sys/bus/usb/devices/$devicename/${devicename}*/tty?* /sys/bus/usb/devices/$devicename/${devicename}*/tty/tty?* | sed "s/.*\///g" | tr "\n" " ")
-			ctl_device=/dev/$(echo $ttys | cut -d" " -f $((control + 1)))
-			dat_device=/dev/$(echo $ttys | cut -d" " -f $((data + 1)))
-			driver=comgt
-		}
 	}
+
 
 	[ -z "$ctl_device" ] && for net in $(ls /sys/class/net/ | grep -e wwan -e usb); do
 		[ -z "$ctl_device" ] || continue
@@ -175,7 +147,7 @@ proto_wwan_setup() {
 			fi
 			#EC21/EC25/EG06/EP06/EM06/EG12/EP12/EM12/EG16/EG18/EM20/RG500 all support QMAP/QMUX.
 			[ -f ./qmux.sh ] && [ -n "$ep_iface" ] && {
-				multiapn && driver=qmux
+				driver=qmux
 				[ $dl_max_size -gt 16384 ] && driver=qmapv5
 			}
 			;;
@@ -196,6 +168,8 @@ proto_wwan_setup() {
 		echo "wwan[$$]" "Using proto:$driver device:$ctl_device iface:$net desc:$desc"
 	done
 
+	[ -z "$ctl_device" ] && check_ppp_driver
+
 	[ -n "$ctl_device" ] || {
 		echo "wwan[$$]" "No valid device was found"
 		proto_notify_error "$interface" NO_WWAN_DEVICE
@@ -205,13 +179,12 @@ proto_wwan_setup() {
 
 	uci_set_state network "$interface" driver "$driver"
 	uci_set_state network "$interface" ctl_device "$ctl_device"
-	uci_set_state network "$interface" dat_device "$dat_device"
 
 	case $driver in
 	GobiNet)		proto_gobinet_setup $@ ;;
 	cdc_mbim)		proto_mbim_setup $@ ;;
 	sierra_net)		proto_directip_setup $@ ;;
-	comgt)			proto_3g_setup $@ ;;
+	pppmobile)		proto_pppmobile_setup $@ ;;
 	cdc_ether|*cdc_ncm) 	proto_ncm_setup $@ ;;
 	qmi_wwan)		proto_qmi_setup $@ ;;
 	qmux|qmapv5)		proto_qmux_setup $@ ;;
@@ -223,13 +196,12 @@ proto_wwan_teardown() {
 	local interface=$1
 	local driver=$(uci_get_state network "$interface" driver)
 	ctl_device=$(uci_get_state network "$interface" ctl_device)
-	dat_device=$(uci_get_state network "$interface" dat_device)
 
 	case $driver in
 	GobiNet)		proto_gobinet_teardown $@ ;;
 	cdc_mbim)		proto_mbim_teardown $@ ;;
 	sierra_net)		proto_directip_teardown $@ ;;
-	comgt)			proto_3g_teardown $@ ;;
+	pppmobile)		proto_pppmobile_teardown $@ ;;
 	cdc_ether|*cdc_ncm) 	proto_ncm_teardown $@ ;;
 	qmi_wwan)		proto_qmi_teardown $@ ;;
 	qmux|qmapv5)		proto_qmux_teardown $@ ;;

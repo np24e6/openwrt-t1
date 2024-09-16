@@ -230,7 +230,11 @@ define Package/ppp/install
 	$(LN) /tmp/resolv.conf.ppp $(1)/etc/ppp/resolv.conf
 	$(INSTALL_DIR) $(1)/lib/netifd/proto
 	$(INSTALL_BIN) ./files/ppp.sh $(1)/lib/netifd/proto/
-	$(INSTALL_BIN) ./files/lib/netifd/ppp-up $(1)/lib/netifd/
+	if [ -e "./files/lib/netifd/ppp-up-$(call device_shortname)" ]; then \
+		$(INSTALL_BIN) ./files/lib/netifd/ppp-up-$(call device_shortname) $(1)/lib/netifd/ppp-up; \
+	else \
+		$(INSTALL_BIN) ./files/lib/netifd/ppp-up $(1)/lib/netifd/; \
+	fi;
 	$(INSTALL_BIN) ./files/lib/netifd/ppp6-up $(1)/lib/netifd/
 	$(INSTALL_BIN) ./files/lib/netifd/ppp-down $(1)/lib/netifd/
 	$(INSTALL_DATA) ./files/etc/ppp/options.sstp $(1)/etc/ppp/

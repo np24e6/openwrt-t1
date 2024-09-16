@@ -1,0 +1,16 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+[ -f "/etc/config/teltonika" ] || return 0
+
+first_login=$(uci_get teltonika sys first_login)
+if [ "$first_login" = "1" ]; then
+    uci_set "vuci" "main" "firstlogin" "1"
+else
+    uci_remove "vuci" "main" "firstlogin" 2>/dev/null
+fi
+
+uci_commit "vuci"
+
+exit 0

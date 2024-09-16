@@ -78,7 +78,7 @@
 #define NF_NAT_INIT_ENTRIES_NUM 5
 
 static int
-nat_ipt_set_ctl(struct sock *sk, int cmd, void __user * user, unsigned int len);
+nat_ipt_set_ctl(struct sock *sk, int cmd, sockptr_t arg, unsigned int len);
 static int
 nat_ipt_get_ctl(struct sock *sk, int cmd, void __user * user, int *len);
 
@@ -534,10 +534,10 @@ nat_ipt_data_init(void)
     memset(&old_replace, 0, sizeof (old_replace));
 
     /*record ipt rule(SNAT) sequence for hw nat*/
-    memset(hw_nat_ipt_seq, 0, NAT_HW_NUM);
+    memset(hw_nat_ipt_seq, 0, NAT_HW_NUM * sizeof(uint32_t));
 
     /*record ipt rule(SNAT) pubip index for hw nat*/
-    memset(hw_nat_pip_idx, 0, NAT_HW_NUM);
+    memset(hw_nat_pip_idx, 0, NAT_HW_NUM * sizeof(uint32_t));
 }
 
 static void
@@ -608,9 +608,9 @@ nat_ipt_hook_type_check(struct ipt_replace ireplace)
 
 static void
 nat_ipt_rules_cp_from_user(void **buf, unsigned int *buf_len,
-                           void __user *user, unsigned int user_len)
+                           sockptr_t arg, size_t offset, unsigned int user_len)
 {
-    if((*buf == 0) || (user == 0))
+    if((*buf == 0) || sockptr_is_null(arg))
     {
         return;
     }
@@ -630,14 +630,14 @@ nat_ipt_rules_cp_from_user(void **buf, unsigned int *buf_len,
         }
     }
     HNAT_PRINTK("(2)nat_ipt_rules_cp_from_user *buf:%x user:%x user_len:%d\n",
-                (unsigned int)*buf, (unsigned int)user, user_len);
-    copy_from_user(*buf, user, user_len);
+                (unsigned int)*buf, (unsigned int)arg.user, user_len);
+    copy_from_sockptr_offset(*buf, arg, offset, user_len);
 
     return;
 }
 
 static int
-nat_ipt_set_ctl(struct sock *sk, int cmd, void __user * user, unsigned int len)
+nat_ipt_set_ctl(struct sock *sk, int cmd, sockptr_t arg, unsigned int len)
 {
     struct ipt_replace ireplace;
 
@@ -648,7 +648,7 @@ nat_ipt_set_ctl(struct sock *sk, int cmd, void __user * user, unsigned int len)
     if (cmd != IPT_SO_SET_REPLACE)
         goto normal;
 
-    copy_from_user(&ireplace, user, sizeof (ireplace));
+    copy_from_sockptr(&ireplace, arg, sizeof (ireplace));
 
     if (strcmp(ireplace.name, "nat")
             || (ireplace.num_entries == ireplace.num_counters))
@@ -670,7 +670,7 @@ nat_ipt_set_ctl(struct sock *sk, int cmd, void __user * user, unsigned int len)
     }
 
     nat_ipt_rules_cp_from_user((void **)&sbuffer, &slen,
-                               (user + sizeof (ireplace)),
+                               arg, sizeof (ireplace),
                                ireplace.size);
 
     if (ireplace.num_entries > ireplace.num_counters)
@@ -686,7 +686,7 @@ normal:
     /*save old_replace for next hook type check*/
     old_replace = ireplace;
 
-    return orgi_ipt_sockopts.set(sk, cmd, user, len);
+    return orgi_ipt_sockopts.set(sk, cmd, arg, len);
 }
 
 static int
@@ -702,7 +702,7 @@ nat_ipt_get_ctl(struct sock *sk, int cmd, void __user * user, int *len)
         copy_from_user(&entries, user, sizeof (entries));
 
         nat_ipt_rules_cp_from_user((void **)&gbuffer, &glen,
-                                   (user + sizeof (struct ipt_get_entries)),
+                                   USER_SOCKPTR(user), sizeof (struct ipt_get_entries),
                                    (*len - sizeof (entries)));
     }
     return k;

@@ -1,77 +1,65 @@
 #!/bin/ash
+# shellcheck shell=dash
 
-# This script inserts/removes all required ipt rules for ip_blockd
+# This script inserts/removes all required iptables rules for ip_blockd
 
 # consts
-ipt="iptables"
-ip6t="ip6tables"
-
-rule_input="INPUT -m set --match-set"
-rule_forward="FORWARD -m set --match-set"
-target="-j DROP"
+ipt="/usr/sbin/iptables"
+ip6t="/usr/sbin/ip6tables"
 
 # checks a rule, if it's not there, inserts
 check_and_insert() {
-	local ipt=$1 # for ipv6 support
-	local rule=$2
+    local ipt=$1 # for ipv6 support
+    local rule=$2
 
-	$ipt -C $rule 2>/dev/null || {
-		$ipt -I $rule 2>/dev/null
-	}
+    $ipt -C $rule >& /dev/null
+    [ "$?" = "1" ] && {
+        $ipt -I $rule
+    }
 }
 
 check_and_remove() {
-	local ipt=$1 # for ipv6 support
-	local rule=$2
+    local ipt=$1 # for ipv6 support
+    local rule=$2
 
-	$ipt -C $rule 2>/dev/null && {
-		$ipt -D $rule 2>/dev/null
-	}
-}
-
-# executes an ipt rule in both the input and forward tables
-rule_infw() {
-	func=$1
-	iptb=$2
-	table=$3
-	io=$4
-
-	$func "$iptb" "${rule_input} ${table} ${io} ${target}"
-	$func "$iptb" "${rule_forward} ${table} ${io} ${target}"
-}
-
-# executes an ipt rule in both ipv4 and ipv6 iptables,
-# while calling the function above, so that it would insert
-# into both INPUT and FORWARD tables as well
-rule_ip() {
-	func=$1
-	table=$2
-	io=$3
-
-	rule_infw $func $ipt $table $io
-	rule_infw $func $ip6t "${table}_v6" $io
+    $ipt -C "$rule"
+    [ "$?" = "0" ] && {
+        $ipt -D "$rule"
+    }
 }
 
 # enacts the required static ruleset
 enact_ruleset() {
-	func=$1 # function must have args: $1 as ipt bin, $2 as rule
+  func=$1 # function must have args: $1 as ipt bin, $2 as rule
 
-	rule_ip $func "ipb_only_ip" "src"
-	rule_ip $func "ipb_port" "src,dst"
-	rule_ip $func "ipb_port_dest" "src,dst,dst"
+  # ipv4
+  $func "$ipt" "INPUT -m set --match-set ipb_mac src -j DROP"
+  $func "$ipt" "INPUT -m set --match-set ipb_port src,dst -j DROP"
+  $func "$ipt" "INPUT -m set --match-set ipb_port_dest src,dst,dst -j DROP"
+  $func "$ipt" "FORWARD -m set --match-set ipb_mac src -j DROP"
+  $func "$ipt" "FORWARD -m set --match-set ipb_port src,dst -j DROP" 
+  $func "$ipt" "FORWARD -m set --match-set ipb_port_dest src,dst,dst -j DROP"
+
+  # ipv6
+  $func "$ip6t" "INPUT -m set --match-set ipb_mac src -j DROP"
+  $func "$ip6t" "INPUT -m set --match-set ipb_port_v6 src,dst -j DROP"
+  $func "$ip6t" "INPUT -m set --match-set ipb_port_dest_v6 src,dst,dst -j DROP"
+  $func "$ip6t" "FORWARD -m set --match-set ipb_mac src -j DROP"
+  $func "$ip6t" "FORWARD -m set --match-set ipb_port_v6 src,dst -j DROP" 
+  $func "$ip6t" "FORWARD -m set --match-set ipb_port_dest_v6 src,dst,dst -j DROP"
+
 }
 
 main() {
-	case $1 in
-	"insert")
-		enact_ruleset check_and_insert
-		exit 0
-		;;
-	"remove")
-		enact_ruleset check_and_remove
-		exit 0
-		;;
-	esac
+  [ "$1" = "insert" ] && {
+    enact_ruleset check_and_insert
+    exit 0
+  }
+
+  [ "$1" = "remove" ] && {
+    enact_ruleset check_and_remove
+    exit 0
+  }
 }
 
-main $1
+main "$1"

@@ -24,6 +24,8 @@ PKG_LICENSE:=EPL-2.0
 
 include $(INCLUDE_DIR)/package.mk
 
+TARGET:=linux
+
 define Package/libsera
 	SECTION:=libs
 	CATEGORY:=Libraries

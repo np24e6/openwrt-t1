@@ -42,7 +42,7 @@ endef
 define Package/logd
   SECTION:=base
   CATEGORY:=Base system
-  DEPENDS:=+libubox +libubus +libblobmsg-json +USE_GLIBC:librt +libsqlite3
+  DEPENDS:=+libubox +libubus +libblobmsg-json +USE_GLIBC:librt +libsqlite3 +log_rotation
   TITLE:=OpenWrt system log implementation
   USERID:=logd=514:logd=514
 endef

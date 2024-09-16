@@ -1,0 +1,78 @@
+#!/usr/bin/lua
+local CFG = {
+    APN_DB = "/usr/share/mobifd/apn.db",
+    BACKUP_FILE = "/usr/share/mobifd/apn_backup.json"
+}
+
+local json = require("luci.jsonc")
+local fs = require("nixio.fs")
+local sqlite = require("vuci.sqlite").init()
+
+local function connect_db()
+    local db = sqlite.database(CFG.APN_DB)
+    if not db then os.exit(1) end
+    return db
+end
+
+local function backup_data()
+    local db = connect_db()
+    -- Gets user modified values from apn database
+    local user_modified = db:select("SELECT * FROM apn INNER JOIN user_modified ON apn.id = user_modified.id")
+    db:close()
+
+    if #user_modified > 0 then
+        -- Exports backup with user modified values
+        fs.writefile(CFG.BACKUP_FILE, json.stringify(user_modified))
+    end
+end
+
+local function restore_data()
+    if not fs.access(CFG.BACKUP_FILE) then os.exit(1) end
+    -- Load backup file
+    local data = json.parse(fs.readfile(CFG.BACKUP_FILE))
+    if not data or type(data) ~= "table" or #data == 0 then os.exit(1) end
+
+    -- Write data to database
+    local db = connect_db()
+    for _, row in pairs(data) do
+        local keys = {}
+        local binds = {}
+        local exist_binds = {}
+        for k in pairs(row) do
+            if k:match("[^%w]") then os.exit(3) end
+            table.insert(keys, k)
+            table.insert(binds, ":" .. k)
+            table.insert(exist_binds, k .. " = :" .. k)
+        end
+
+        local id_exist = #db:select("SELECT id FROM apn WHERE id = :id", {id = row.id}) > 0
+        local no_duplicates = #db:select(("SELECT id FROM apn WHERE %s"):format(table.concat(exist_binds, " AND ")), row) == 0
+        if no_duplicates then -- Skips duplicates
+            if id_exist then
+                -- If database already has such id then it needs to be updated.
+                db:insert(("UPDATE apn SET %s WHERE id = :id"):format(table.concat(exist_binds, ", ")), row)
+            else
+                db:insert(("INSERT INTO apn (%s) VALUES (%s)"):format(table.concat(keys, ", "), table.concat(binds, ", ")), row)
+            end
+        end
+    end
+
+    db:close()
+    fs.unlink(CFG.BACKUP_FILE)
+end
+
+local select = arg[1]
+local script_name = arg[0]
+if select == "-b" then
+    backup_data()
+    os.exit(0)
+elseif select == "-r" then
+    restore_data()
+    os.exit(0)
+else
+    print(("To backup data use: %s -b"):format(script_name))
+    print(("To restore data use: %s -r"):format(script_name))
+    print(("Database file:\n%s."):format(CFG.APN_DB))
+    print(("User modified and extracted data will save to:\n%s."):format(CFG.BACKUP_FILE))
+    os.exit(0)
+end

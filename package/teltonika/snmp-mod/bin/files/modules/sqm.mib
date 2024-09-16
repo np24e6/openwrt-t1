@@ -1,5 +1,19 @@
 -- SQM --
 
+queueVlanGroup OBJECT-GROUP
+	OBJECTS { queueCount,
+		  queueIndex,
+		  queueName,
+		  queueEnabled,
+		  queueIface,
+		  queueDownLimit,
+		  queueUpLimit,
+		  queueQdisk,
+		  queueScript }
+	STATUS current
+	DESCRIPTION "SQM SNMP group defined according to RFC 2580"
+	::= { teltonikaSnmpGroups 11 }
+
 queueCount  OBJECT-TYPE
 	SYNTAX      INTEGER
 	MAX-ACCESS  read-only
@@ -8,21 +22,21 @@ queueCount  OBJECT-TYPE
 	::= { sqm 1 }
 
 queueTable OBJECT-TYPE
-	SYNTAX      SEQUENCE OF Queue_Entry
+	SYNTAX      SEQUENCE OF QueueEntry
 	MAX-ACCESS  not-accessible
 	STATUS      current
 	DESCRIPTION "A list of traffic shaping configs."
 	::= { sqm 2 }
 
 queueEntry OBJECT-TYPE
-	SYNTAX      Queue_Entry
+	SYNTAX      QueueEntry
 	MAX-ACCESS  not-accessible
 	STATUS      current
 	DESCRIPTION "Entry containg info of a traffic shaping config."
 	INDEX   { queueIndex }
 	::= { queueTable 1 }
 
-Queue_Entry ::=
+QueueEntry ::=
 	SEQUENCE {
 	queueIndex     INTEGER,
 	queueName      DisplayString,
@@ -31,12 +45,12 @@ Queue_Entry ::=
 	queueDownLimit INTEGER,
 	queueUpLimit   INTEGER,
 	queueQdisk     DisplayString,
-	queueScript    DisplayString,
+	queueScript    DisplayString
 	}
 
 
 queueIndex     OBJECT-TYPE
-	SYNTAX INTEGER
+	SYNTAX INTEGER (0..65535)
 	MAX-ACCESS read-only
 	STATUS  current
 	DESCRIPTION "The index of the queue"

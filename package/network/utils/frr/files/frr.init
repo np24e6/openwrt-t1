@@ -1,811 +1,925 @@
 #!/bin/sh /etc/rc.common
 
+. /lib/functions/network.sh
+
 START=95
 
 USE_PROCD=1
 
-DEBUG_LEVEL=4
+# Check installed daemons
+daemons_installed="$(find /usr/lib/opkg/info/frr-*d.list 2>/dev/null | sed 's#.*/frr-##' | sed 's/d\.list *$//' | tr '\n' ' ')"
+[ -e "/etc/config/nhrp" ] && daemons_installed="${daemons_installed} nhrp"
+BASE_DIR="/var/etc/frr"
+CONFIG_FILE_BGP="$BASE_DIR/bgp.conf"
+CONFIG_FILE_RIP="$BASE_DIR/rip.conf"
+CONFIG_FILE_OSPF="$BASE_DIR/ospf.conf"
+CONFIG_FILE_EIGRP="$BASE_DIR/eigrp.conf"
+CONFIG_FILE_NHRP="$BASE_DIR/nhrp.conf"
+CONFIG_FILE_LDP="$BASE_DIR/ldp.conf"
+CONFIG_FILE_STATIC="$BASE_DIR/static.conf"
 
-ZEBRA_CONFIG=/etc/frr/zebra.conf
-ZEBRA_USERNAME="admin"
-ZEBRA_PASSWORD="admin01"
+mkdir -p /var/etc/frr
 
-BGP_CONFIG=/etc/frr/bgpd.conf
-BGPD_USERNAME="admin"
-BGPD_PASSWORD="admin01"
-FIREWALL_SEC="A_BGP"
+#################################################
+#               Global functions                #
+#################################################
 
-RIP_CONFIG=/etc/frr/ripd.conf
-RIPD_USERNAME="admin"
-RIPD_PASSWORD="admin01"
-RIP_FIREWALL_SEC="A_RIP"
-
-OSPF_CONFIG=/etc/frr/ospfd.conf
-OSPF_USERNAME="admin"
-OSPF_PASSWORD="admin01"
-OSPF_FIREWALL_SEC="A_OSPF"
-
-NHRP_CONFIG=/etc/frr/nhrpd.conf
-
-EIGRP_CONFIG=/etc/frr/eigrpd.conf
-
-service_triggers()
-{
-	procd_add_reload_trigger "frr"
+file_reset() {
+	# Cleans up tmp config dir
+	rm $BASE_DIR/* > /dev/null 2>&1
 }
 
-write_bgp_config() {
-	echo "$1" >> "$BGP_CONFIG"
-}
-
-write_rip_config() {
-	echo "$1" >> "$RIP_CONFIG"
-}
-
-write_ospf_config() {
-	echo "$1" >> "$OSPF_CONFIG"
-}
-
-write_nhrp_config() {
-	echo "$1" >> "$NHRP_CONFIG"
-}
-
-write_eigrp_config() {
-	echo "$1" >> "$EIGRP_CONFIG"
-}
-
-writeToConfig() {
-	echo "$1" >> $2
-}
-
-write_if_exists() {
-	if [[ -n "$3" ]]; then
-		if [[ -n "$4" ]] && [[ "$3" = "$4"  ]]; then
-			$1 "$2"
-		elif [[ -z "$4" ]]; then
-			$1 "$2"
+empty_var_check(){
+	# Checks whether a passed variable is empty or not
+	local var
+	local empty_var=0
+	for var in "$@"; do
+		if [ -z "$var" ]; then
+			empty_var=1
+			break
 		fi
+	done
+	return $empty_var
+}
+
+xappend() {
+	# Writes passed parameters to file if empty_var_check is passed
+	local file="$1"
+	shift
+	if empty_var_check "$@"; then
+		echo "$@" >> "$file"
 	fi
 }
 
-prepare_distribute_list() {
+xappend_list() {
+	# Xappend, but for lists
+	# $1 = File to write
+	# $2 = String to prepend before list item
+	# $3 = List items
 
-	local section=$1; local target_section=$2; local from=$3; local proto=$4
-	local enabled
-	local target
-	config_get target "$section" target
-
-	[[ -z "$target" ]] || [[ "$target" != "$target_section" ]] && return 1
-
-	config_get enabled $section enabled
-	[[ "$enabled" != "1" ]] && return 2
-	config_get direction $section direction
-
-	if [[ -n "$direction" ]]; then
-		if [[ "$proto" == "bgp" ]]; then
-			write_bgp_config "neighbor $from distribute-list ${target}_${direction} $direction"
-		elif [[ "$proto" == "rip" ]]; then
-			write_rip_config "distribute-list ${target}_${direction} $direction $from"
-		fi
-	fi
-}
-
-prepare_peer() {
-	local section="$1"
-	local instance_name="$2"
-	local ipaddr; local as; local instance; local port; local description; local ebgp_multihop;
-	local default_originate; local weight; local maximum_prefix
-	local enabled; local inbound=0; local outbound=0;
-	local timer_keepalive; local timer_holdtime; local timer_connect;
-
-	config_get instance $section "instance"
-	[[ "$instance" != "$instance_name" ]] && return 2
-	config_get enabled $section "enabled"
-	[[ "$enabled" != "1" ]] && return 1
-
-	config_get ipaddr $section "ipaddr"
-	config_get as $section "as"
-	config_get port $section "port"
-	config_get description $section "description"
-	config_get default_originate $section "default_originate"
-	config_get weight $section "weight"
-	config_get maximum_prefix $section "maximum_prefix"
-	config_get ebgp_multihop $section "ebgp_multihop"
-	config_get password $section "password"
-	config_get timer_keepalive $section "timer_keepalive"
-	config_get timer_holdtime $section "timer_holdtime"
-	config_get timer_connect $section  "timer_connect"
-
-	write_bgp_config "  neighbor $ipaddr remote-as $as"
-	write_if_exists write_bgp_config "  neighbor $ipaddr port $port" "$port"
-	write_if_exists write_bgp_config "  neighbor $ipaddr description $description" "$description"
-	write_if_exists write_bgp_config "  neighbor $ipaddr default-originate" "$default_originate" "1"
-	write_if_exists write_bgp_config "  neighbor $ipaddr weight" "$weight"
-	write_if_exists write_bgp_config "  neighbor $ipaddr maximum-prefix" "$maximum_prefix"
-	write_if_exists write_bgp_config "  neighbor $ipaddr ebgp-multihop $ebgp_multihop" "$ebgp_multihop"
-	write_if_exists write_bgp_config "  neighbor $ipaddr password $password" "$password"
-	write_if_exists write_bgp_config "  neighbor $ipaddr timers $timer_keepalive $timer_holdtime" "$timer_keepalive"
-	write_if_exists	write_bgp_config "  neighbor $ipaddr timers connect $timer_connect" "$timer_connect"
-	config_foreach prepare_distribute_list " access_list" "$section" "$ipaddr" "bgp"
-
-	inbound=0
-	outbound=0
-}
-
-prepare_peer_groups() {
-	local enabled
-	local section="$1"
-	local instance_name="$2"
-
-	local neighbor; local as; local adv_int; local cl_config_type; local next_hop_self; local next_hop_self_all;
-	local soft_rec_inbound; local con_check;
-
-	config_get enabled $section "enabled"
-	[[ "$enabled" != "1" ]] && return 1
-
-	config_get neighbor $section "neighbor"
-	config_get as $section "as"
-	config_get adv_int $section "adv_int"
-	config_get cl_config_type $section "cl_config_type"
-	config_get next_hop_self $section "next_hop_self"
-	config_get next_hop_self_all $section "next_hop_self_all"
-	config_get soft_rec_inbound $section "soft_rec_inbound"
-	config_get con_check $section "con_check"
-
-	write_bgp_config "  neighbor $section peer-group"
-	write_bgp_config "  neighbor $section remote-as $as"
-
-	if [[ "$con_check" = "1" ]]; then
-		write_bgp_config "  neighbor $section disable-connected-check"
-	fi
-
-	write_if_exists write_bgp_config "  neighbor $section advertisement-interval $adv_int" "$adv_int"
-	write_if_exists write_bgp_config"  neighbor $section $cl_config_type" "$cl_config_type"
-
-	if [[ "$next_hop_self" = "1" ]] && [[ "$next_hop_self_all" = "1" ]]; then
-		write_bgp_config "  neighbor $section next-hop-self all"
-	elif [[ "$next_hop_self" = "1" ]]; then
-		write_bgp_config "  neighbor $section next-hop-self"
-	fi
-
-	if [[ "$soft_rec_inbound" = "1" ]]; then
-		write_bgp_config "  neighbor $section soft-reconfiguration inbound"
-	fi
-
-	if [[ -n "$neighbor" ]]; then
-		for neigh in $neighbor
+	local file="$1"
+	shift
+	if empty_var_check "$@"; then
+		for i in $2
 		do
-			write_bgp_config "  neighbor $neigh peer-group $section"
+			echo "$1 $i" >> "$file"
 		done
 	fi
 }
 
-prepare_route_map() {
+xappend_bool() {
+	# Prepends "no " before passed string if option is '0'
+	# $1 = File location
+	# $2 = Variable with "0/1" value
+	# $3 = String to write to file
+
+	local file="$1"
+	local enabled="$2"
+	shift 2
+
+	if [ "$enabled" = "1" ]; then
+		echo "$@" >> "$file"
+	elif [ "$enabled" = "0" ]; then
+		echo "no $*" >> "$file"
+	fi
+}
+
+xappend_to_var() {
+	# Like Xappend, but writes to a variable instead of a file
+	# $1 = Variable name to write to, similar to config_get
+	# $2 = string to write to variable
+
+	local var_name="$1"
+	shift
+	local var_content="$*"
+	if empty_var_check "$@"; then
+		eval "$var_name=\"\${$var_name}$var_content\\n\""
+	fi
+}
+
+daemons_check_enabled() {
+	# Checks installed daemons and determines which ones are enabled in config
+	# also retrieves debug option
 	local enabled
-	local section="$1"
-
-	config_get enabled "$section" "enabled"
-	[ "$enabled" != "1" ] && return
-
-	config_get local_preference "$section" "local_preference"
-	config_get action "$section" "action"
-	config_get metric "$section" "metric"
-	config_get sequence "$section" "sequence"
-
-	write_bgp_config "route-map $section $action $sequence"
-	write_if_exists write_bgp_config "  set local-preference $local_preference" "$local_preference"
-	write_if_exists write_bgp_config "  set metric $metric" "$metric"
-	write_bgp_config "!"
-}
-
-prepare_route_map_filters() {
-	local enabled
-	local section="$1"
-
-	config_get enabled "$section" "enabled"
-	[ "$enabled" != "1" ] && return
-
-	config_get target "$section" "target"
-	config_get route_map "$section" "route_map"
-	config_get direction "$section" "direction"
-	config_get ipaddr "$target" "ipaddr"
-
-	write_bgp_config "    neighbor ${ipaddr:-$target} route-map $route_map $direction"
-}
-
-prepare_redistribution() {
-	local redistribute; local section="$1"
-
-	config_get redistribute $section "redistribute"
-
-	if [[ -n "$redistribute" ]]; then
-		for redis in $redistribute; do
-			write_if_exists $2 "  redistribute $redis" "$redis"
-		done
-	fi
-}
-
-prepare_networks() {
-	local network; local section="$1";
-
-	config_get network $section "network" ""
-
-	if [[ -n "$network" ]]; then
-		for net in $network; do
-			write_if_exists $2 "  network $net" "$net"
-		done
-	fi
-}
-
-prepare_neighbor_list() {
-	local neighbor; local section="$1"
-
-	config_get neighbor $section "neighbor" ""
-
-	if [[ -n "$neighbor" ]]; then
-		for net in $neighbor; do
-			write_if_exists $2 "  neighbor $net" "$net"
-		done
-	fi
-}
-
-route_map_filters_exist() {
-	n=0
-	while uci_get "frr" "@route_map_filters[$n]" >/dev/null; do
-		enabled=$(uci_get "frr" "@route_map_filters[$n]" "enabled")
-		[ "$enabled" = "1" ] && return 0
-		n=$((n + 1))
+	local daemon
+	for daemon in ${daemons_installed/ldp/mpls}
+	do
+		config_load "$daemon"
+		config_get enabled "$daemon" "enabled" "0"
+		config_get debug "$daemon" "debug" "0"
+		if [ "$daemon" = "mpls" ]; then
+			daemon="ldp"
+		fi
+		[ "$enabled" = 1 ] && daemons_enabled="$daemons_enabled$daemon "
+		[ "$debug" = 1 ] && debug_enabled="$debug_enabled$daemon "
 	done
-	return 1
 }
 
-prepare_bgp_instance() {
-	local section="$1"
-	local as; local id; local network; local enabled
-
-	config_get enabled $section "enabled"
-	[[ "$enabled" != "1" ]] && return 1
-
-	config_get as $section "as"
-	config_get id $section "id"
-	config_get network $section "network"
-
-	config_foreach prepare_route_map "route_maps"
-
-	write_bgp_config "router bgp $as"
-	write_if_exists write_bgp_config "  bgp router-id $id" "$id"
-	prepare_networks "$section" write_bgp_config
-	prepare_redistribution "$section" write_bgp_config
-	config_foreach prepare_peer "peer" $section
-	config_foreach prepare_peer_groups "peer_group" $section
-
-	route_map_filters_exist && {
-		write_bgp_config "  address-family ipv4 unicast"
-		config_foreach prepare_route_map_filters "route_map_filters"
-		write_bgp_config "  exit-address-family"
-	}
-
-	write_bgp_config "!"
-	write_bgp_config "address-family ipv4 unicast"
-	config_foreach prepare_bgp_prefix_list "access_list"
-	write_bgp_config "exit-address-family"
-	prepare_prefix_list
-}
-
-apply_maps() {
-	local ip_addr; local nbma;
-	config_get ip_addr $1 "ip_addr" ""
-	config_get nbma $1 "nbma" ""
-	if [[ "$ip_addr" != "" ]] && [[ "$nbma" != "" ]]; then
-		write_nhrp_config "  ip nhrp map $ip_addr $nbma"
-	fi
-}
-
-prepare_nhrp_instance() {
-	local is_enabled; local nhs; local nbma; local t_source; local holdtime; local network_id; local interface; local ipsec_support;
-	local ipsec_instance;
-	local tmp auth
-	config_get is_enabled $1 "enabled" "0"
-	config_get nhs $1 "proto_address" "0"
-	config_get nbma $1 "nbma_address"
-	config_get t_source $1 "tunnel_source"
-	config_get holdtime $1 "holdtime" ""
-	config_get network_id $1 "network_id" "1"
-	config_get interface $1 "interface" ""
-	config_get ipsec_support $1 "ipsec_support" ""
-	config_get ipsec_instance $1 "ipsec_instance" ""
-	config_get auth $1 "auth"
-	config_get redirect $1 "redirect"
-
-
-	if [[ "$is_enabled" = "1" ]] && [[ "$interface" != "" ]]; then
-		write_nhrp_config "interface $interface"
-		write_nhrp_config "  ip nhrp network-id $network_id"
-		write_nhrp_config "  ip nhrp cisco-authentification $auth"
-		config_foreach apply_maps "$1_map"
-
-		if [[ -n "$nhs" ]] && [[ -n "$nbma" ]] && [[ "$redirect" = "1" ]]; then
-			write_nhrp_config "  ip nhrp nhs dynamic nbma $nbma"
-		fi
-
-		if [[ -n "$nhs" ]] && [[ -n "$nbma" ]] && [[ "$redirect" = "0" ]]; then
-			write_nhrp_config "  ip nhrp nhs $nhs nbma $nbma"
-		fi
-
-		write_nhrp_config "  ip nhrp registration no-unique"
-
-		if [ "$redirect" = "1" ]; then
-			write_nhrp_config "  ip nhrp redirect"
-		fi
-
-		write_nhrp_config "  ip nhrp shortcut"
-		if [[ "$ipsec_support" = "1" ]]; then
-			write_nhrp_config "  tunnel protection vici profile $ipsec_instance"
-		fi
-		write_if_exists write_nhrp_config "  tunnel source $t_source" $t_source
-		if [[ "$holdtime" ]] && [[ "$holdtime" != "" ]]; then
-			write_nhrp_config "  ip nhrp holdtime $holdtime"
-		fi
-
-		GLOBAL_ENABLED="1"
-	fi
-	write_nhrp_config "!"
-}
-
-prepare_eigrp_instance() {
-	local is_enabled; local as; local router_id;
-
-	config_get is_enabled $1 "enabled" "0"
-
-	config_get as $1 "as"
-	config_get router_id $1 "id"
-
-	if [[ "$is_enabled" = "1" ]]; then
-		write_eigrp_config "router eigrp $as"
-		write_if_exists write_eigrp_config "  eigrp router-id $router_id" "$router_id"
-
-		prepare_networks "$1" write_eigrp_config
-		prepare_neighbor_list "$1" write_eigrp_config
-		prepare_redistribution "$1" write_eigrp_config
-	fi
-	write_eigrp_config "!"
-}
-
-prepare_ospf_network() {
-	local enabled; local section="$1"; local net; local authentication
-
-	config_get enabled $section "enabled"
-
-	if [[ "$enabled" == "1" ]]; then
-		config_get net $section "net"
-		config_get area $section "area"
-		write_ospf_config "  network $net area $area"
-
-		if [[ "$authentication" == "pass" ]]; then
-			write_ospf_config "area $area authentication"
-		elif [[ "$authentication" == "md5_hmac" ]]; then
-			write_ospf_config "area $area authentication message-digest"
-		fi
-	fi
-}
-
-prepare_ospf_neighbor() {
-		local enabled; local neighbor; local priority; local polling_interval
-
-		config_get enabled $section "enabled"
-
-		if [[ "$enabled" == "1" ]]; then
-				config_get neighbor $section "neighbor"
-				config_get priority $section "priority" 0
-				config_get polling_interval $section "polling_interval" 120
-
-				write_ospf_config "  neighbor $neighbor priority $priority poll-interval $polling_interval"
-		fi
-}
-
-prepare_ospf_interface() {
-	local section="$1"; local enabled; local ifname; local hello_interval
-	local dead_interval; local retransmit_interval; local cost; local priority
-	local typ; local authentication; local password; local id
-
-	config_get enabled $section "enabled" ""
-
-	[[ "$enabled" != "1" ]] && return 0
-
-	config_get ifname $section "ifname"
-	config_get hello_interval $section "hello_interval"
-	config_get dead_interval $section "dead_interval"
-	config_get retransmit_interval $section "retransmit_interval"
-	config_get cost $section "cost"
-	config_get priority $section "priority"
-	config_get typ $section "typ"
-	config_get authentication $section "authentication"
-
-	write_ospf_config "!"
-	write_ospf_config "interface $ifname"
-	write_if_exists write_ospf_config "  ip ospf cost $cost" $cost
-	write_if_exists write_ospf_config "  ip ospf hello-interval $hello_interval" $hello_interval
-	write_if_exists write_ospf_config "  ip ospf dead-interval $dead_interval" $dead_interval
-	write_if_exists write_ospf_config "  ip ospf retransmit-interval $retransmit_interval" $retransmit_interval
-	write_if_exists write_ospf_config "  ip ospf priority $priority" $priority
-	write_if_exists write_ospf_config "  ip ospf network $typ" $typ
-
-	if [[ "$authentication" == "pass" ]]; then
-		config_get password $section "password"
-		write_ospf_config "  ip ospf authentication"
-		write_if_exists write_ospf_config "  ip ospf authentication-key $password" $password
-	elif [[ "$authentication" == "md5_hmac" ]]; then
-		config_get password $section "password"
-		config_get id $section "id" "1"
-		write_ospf_config "  ip ospf authentication message-digest"
-		write_if_exists write_ospf_config "  ip ospf message-digest-key $id md5 $password" $password
-	fi
-}
-
-prepare_rip_interface() {
-	local section="$1"
-	local interface; local enabled; local deterministic_med; local passive_interface
-
-	config_get enabled $section "enabled"
-	[[ "$enabled" != "1" ]] && return 1
-
-	config_get ifname $section "ifname"
-	config_get passive_interface $section "passive_interface"
-	config_get deterministic_med $section "deterministic_med"
-
-	write_rip_config "! Interface $ifname"
-	write_if_exists write_rip_config "network $ifname" "$ifname"
-	write_if_exists write_rip_config "bgp deterministic-med" "$deterministic_med"
-	write_if_exists write_rip_config "passive-interface $ifname" "$passive_interface" "1"
-	config_foreach prepare_distribute_list "rip_access_list" "$section" "$ifname" "rip"
-}
-
-prepare_bgp_prefix_list() {
-	local section=$1
-	local target enabled action net direction neigh target_type
-	config_get enabled $section "enabled"
-
-	[ "$enabled" != "1" ] && return 2
-
-	config_get target "$section" target
-	config_get action "$section" action
-	config_get net "$section" net
-	config_get direction "$section" direction
-
-	if [ -n "$target" ] && [ -n "$action" ] && [ -n "$direction" ]; then
-		target_type="$(uci_get frr "$target")"
-		case "$target_type" in
-			peer_group)
-				write_bgp_config " neighbor $target prefix-list prefl_${target} ${direction}"
-			;;
-			peer)
-				neigh="$(uci_get frr "$target" ipaddr)"
-				write_bgp_config " neighbor ${neigh} prefix-list prefl_${target} ${direction}"
-			;;
-		esac
-	fi
-}
-
-prepare_prefix_list() {
-	local section=$1; local config=$2; local target
-	local enabled;
-
-	config_get enabled $section "enabled"
-
-	[ "$enabled" != "1" ] && return 2
-
-	config_get target $section "target"
-	config_get action $section "action"
-	config_get net $section "net"
-	config_get direction $section "direction"
-
-	if [ -n "$target" ] && [ -n "$action" ] && [ -n "$net" ] && [ -n "$direction" ]; then
-		writeToConfig "ip prefix-list prefl_${target} $action $net" $config
-	fi
-}
-
-prepare_rip_access_list() {
-	local section=$1
-	local target enabled
-
-	config_get enabled $section "enabled"
-
-	[ "$enabled" != "1" ] && return 2
-
-	config_get target $section "target"
-	config_get action $section "action"
-	config_get net $section "net"
-	config_get direction $section "direction"
-
-	if [ -n "$target" ] && [ -n "$action" ] && [ -n "$net" ] && [ -n "$direction" ]; then
-		write_rip_config "access-list ${target}_${direction} ${action} ${net}"
-	fi
-}
-
-prepare_bgpd() {
-	local debug; local enabled_vty; local bgpd_custom_conf
-	local instances=`uci show frr | grep -c =instance`
-
-	config_get bgpd_custom_conf "bgp" "bgpd_custom_conf"
-
-	if [[ -n "$bgpd_custom_conf" ]]; then
-		cp "$bgpd_custom_conf" "$BGP_CONFIG"
-		return 0
-	fi
-
-	config_get debug "general" "debug"
-	config_get enabled_vty "general" "enabled_vty"
-
-	echo "" > $BGP_CONFIG
-	write_bgp_config "hostname $BGPD_USERNAME"
-	write_bgp_config "password $BGPD_PASSWORD"
-	write_bgp_config "enable password $BGPD_PASSWORD"
-	write_bgp_config "!"
-	write_bgp_config "access-list vty permit 127.0.0.0/8"
-
-	if [[ -n "$enabled_vty" ]] && [[ "$enabled_vty" = "1" ]]; then
-		network_get_subnet net "lan"
-		write_if_exists write_bgp_config "access-list vty permit $net" "$net"
-	fi
-
-	write_bgp_config "access-list vty deny any"
-	write_bgp_config "!"
-	[[ $instances -gt 1 ]] && write_bgp_config "bgp multiple-instance"
-	config_foreach prepare_bgp_instance "bgp_instance"
-
-	write_bgp_config "!"
-	config_foreach prepare_prefix_list "access_list" "$BGP_CONFIG"
-
-	write_bgp_config "!"
-	write_bgp_config "line vty"
-	write_bgp_config "access-class vty"
-	write_if_exists write_bgp_config "log syslog" "$debug" "1"
-}
-
-prepare_rip() {
-	local debug; local enabled_vty; local custom_conf; local version
-	local neighbors;
-
-	config_get custom_conf "rip" "custom_conf"
-
-	if [[ -n "$custom_conf" ]]; then
-		cp "$custom_conf" "$RIP_CONFIG"
-		return 0
-	fi
-
-	config_get debug "rip" "debug"
-	config_get enabled_vty "rip" "enabled_vty"
-	config_get neighbors "rip" "neighbors"
-	config_get version "rip" "version"
-
-	echo "" > $RIP_CONFIG
-	write_rip_config "hostname $RIPD_USERNAME"
-	write_rip_config "password $RIPD_PASSWORD"
-	write_rip_config "enable password $RIPD_PASSWORD"
-	write_rip_config "!"
-	write_rip_config "access-list vty permit 127.0.0.0/8"
-
-	if [[ -n "$enabled_vty" ]] && [[ "$enabled_vty" = "1" ]]; then
-		network_get_subnet net "lan"
-		write_if_exists write_rip_config "access-list vty permit $net" "$net"
-	fi
-
-	write_rip_config "access-list vty deny any"
-	write_rip_config "!"
-	write_rip_config "router rip"
-	config_foreach prepare_rip_interface "interface"
-
-	for neighbor in $neighbors; do
-		write_rip_config "neighbor $neighbor"
-	done
-
-	write_if_exists write_rip_config "version $version" "$version"
-
-	config_foreach prepare_rip_access_list "rip_access_list"
-
-	write_rip_config "!"
-	write_rip_config "line vty"
-	write_rip_config "access-class vty"
-	write_if_exists write_rip_config "log syslog" "$debug" "1"
-}
-
-prepare_ospf(){
-	local debug enabled_vty ustom_conf version id
-
-	config_get custom_conf "ospf" "custom_conf"
-
-	if [[ -n "$custom_conf" ]]; then
-		cp "$custom_conf" "$OSPF_CONFIG"
-		return 0
-	fi
-
-	config_get debug "ospf" "debug"
-	config_get enabled_vty "ospf" "enabled_vty"
-	config_get id "ospf" "id"
-
-	echo "" > $OSPF_CONFIG
-	write_ospf_config "hostname $OSPF_USERNAME"
-	write_ospf_config "password $OSPF_PASSWORD"
-	write_ospf_config "enable password $OSPF_PASSWORD"
-	write_ospf_config "!"
-	write_ospf_config "access-list vty permit 127.0.0.0/8"
-
-	if [[ -n "$enabled_vty" ]] && [[ "$enabled_vty" = "1" ]]; then
-		network_get_subnet net "lan"
-		write_if_exists write_ospf_config "access-list vty permit $net" "$net"
-	fi
-
-	write_ospf_config "access-list vty deny any"
-	write_ospf_config "!"
-
-	config_foreach prepare_ospf_interface "ospf_interface"
-	write_ospf_config "router ospf"
-	write_ospf_config "ospf router-id ${id}" "${id}"
-	prepare_redistribution "ospf" write_ospf_config
-
-	config_foreach prepare_ospf_network "ospf_network"
-	config_foreach prepare_ospf_neighbor "ospf_neighbor"
-
-	local originate passive_if
-	config_get originate "ospf" "originate"
-	config_get passive_if "ospf" "passive_ifname"
-
-	if [ -n "$originate" ]; then
-		if [ "$originate" == "default" ]; then
-			write_ospf_config "  default-information originate"
-		else
-			write_ospf_config "  default-information originate $originate"
-		fi
-	fi
-
-	if [ -n "$passive_if" ]; then
-		for ifname in $passive_if; do
-			write_ospf_config "  passive-interface $ifname"
-		done
-	fi
-
-	write_ospf_config "!"
-	write_ospf_config "line vty"
-	write_ospf_config "access-class vty"
-	write_if_exists write_ospf_config "log syslog" "$debug" "1"
-
-	if [[ "$debug" == "1" ]]; then
-		config_get debug_inf "ospf" "debug_inf"
-
-		if [[ "$debug_inf" != "" ]]; then
-			for inf in $debug_inf; do
-				write_ospf_config "debug ospf $inf"
-			done
-		fi
-	fi
-}
-
-prepare_nhrp() {
-	local debug nflog_group;
-	config_get debug "nhrp" "debug" "0"
-	config_get nflog_group "nhrp" "nflog_group"
-
-	echo "" > $NHRP_CONFIG
-
-	if [[ "$debug" == "1" ]]; then
-		write_nhrp_config "log syslog"
-		write_nhrp_config "debug nhrp common"
-		write_nhrp_config "debug nhrp event"
-	fi
-
-	[ -n "$nflog_group" ] && write_nhrp_config "nhrp nflog-group $nflog_group"
-	write_nhrp_config "hostname admin"
-	write_nhrp_config "password admin01"
-	write_nhrp_config "enable password admin01"
-	write_nhrp_config "!"
-
-	config_foreach prepare_nhrp_instance "nhrp_instance"
-
-	write_nhrp_config "line vty"
-	write_nhrp_config "access-class vty"
-	write_nhrp_config "!"
-}
-
-prepare_eigrp() {
-	local debug;
-	config_get debug "eigrp" "debug" "0"
-
-	echo "" > $EIGRP_CONFIG
-	write_eigrp_config "hostname admin"
-	write_eigrp_config "password admin01"
-	write_eigrp_config "enable password admin01"
-	write_eigrp_config "!"
-
-	config_foreach prepare_eigrp_instance "eigrp_general"
-
-	write_eigrp_config "line vty"
-	write_eigrp_config "access-class vty"
-
-	if [[ -n "$debug" ]] && [[ "$debug" = "1" ]]; then
-		write_eigrp_config "log syslog"
-		write_eigrp_config "debug eigrp packets all"
-		write_eigrp_config "debug eigrp transmit all"
-	fi
-	write_eigrp_config "!"
-}
-
-start_service() {
-	. /lib/functions/network.sh
-	local bgp_enabled
-	config_load frr
-
-	config_get bgp_enabled "bgp" "enabled" "0"
-	config_get rip_enabled "rip" "enabled" "0"
-	config_get ospf_enabled "ospf" "enabled" "0"
-	config_get nhrp_enabled "nhrp" "enabled" "0"
-	config_get eigrp_enabled "eigrp" "enabled" "0"
-
-	if [[ "$bgp_enabled" = "1" ]] || [[ "$rip_enabled" = "1" ]] || [[ "$ospf_enabled" = "1" ]] || [[ "$nhrp_enabled" = "1" ]] || [[ "$eigrp_enabled" = "1" ]]; then
-		local daemons="zebra"
+daemons_launch() {
+	# Checks daemons_enabled variable and if not empty launches Zebra and Staticd
+	# Loops through daemons_enabled variable and launches enabled daemons one by one
+	local daemon
+	if [ -n "$daemons_enabled" ]; then
 		procd_open_instance zebra
 		procd_set_param command /usr/sbin/zebra
 		procd_close_instance
+
+		for daemon in $daemons_enabled
+		do
+			config_load "$daemon"
+			config_get CUSTOM_CONFIG_FILE "${daemon}" "${daemon}d_custom_conf"
+			if [ -z "$CUSTOM_CONFIG_FILE" ]; then
+				${daemon}_parse_config
+				procd_open_instance "${daemon}d"
+				procd_set_param command /usr/sbin/"${daemon}d" -f "${BASE_DIR}/${daemon}.conf"
+				procd_set_param respawn
+				procd_close_instance
+			else
+				procd_open_instance "${daemon}d"
+				procd_set_param command /usr/sbin/"${daemon}d" -f "$CUSTOM_CONFIG_FILE"
+				procd_set_param respawn
+				procd_close_instance
+			fi
+		done
 	else
 		return 1
 	fi
-
-	if [[ "$bgp_enabled" == "1" ]]; then
-		prepare_bgpd
-		procd_open_instance bgpd
-		procd_set_param command /usr/sbin/bgpd
-		procd_close_instance
-		daemons="$daemons bgpd"
-	elif [[ -f "$BGP_CONFIG" ]]; then #/usr/sbin/quagga.init: deleted config file means daemon is disabled
-		:>$BGP_CONFIG
-	fi
-
-	if [[ "$rip_enabled" == "1" ]]; then
-		prepare_rip
-		procd_open_instance ripd
-		procd_set_param command /usr/sbin/ripd
-		procd_close_instance
-		daemons="$daemons ripd"
-	elif [[ -f "$RIP_CONFIG" ]]; then #/usr/sbin/quagga.init: deleted config file means daemon is disabled
-		:>$RIP_CONFIG
-	fi
-
-	if [[ "$ospf_enabled" == "1" ]]; then
-		prepare_ospf
-		procd_open_instance ospfd
-		procd_set_param command /usr/sbin/ospfd
-		procd_close_instance
-		daemons="$daemons ospfd"
-	elif [[ -f "$OSPF_CONFIG" ]]; then #/usr/sbin/quagga.init: deleted config file means daemon is disabled
-		:>$OSPF_CONFIG
-	fi
-
-	if [[ "$nhrp_enabled" == "1" ]]; then
-		prepare_nhrp
-		procd_open_instance nhrpd
-		procd_set_param command /usr/sbin/nhrpd
-		procd_close_instance
-		daemons="$daemons nhrpd"
-	elif [[ -f "$NHRP_CONFIG" ]]; then #/usr/sbin/quagga.init: deleted config file means daemon is disabled
-		:>$NHRP_CONFIG
-	fi
-
-	if [[ "$eigrp_enabled" == "1" ]]; then
-		prepare_eigrp
-		daemons="$daemons eigrpd"
-		procd_open_instance eigrpd
-		procd_set_param command /usr/sbin/eigrpd
-		procd_close_instance
-	elif [[ -f "$EIGRP_CONFIG" ]]; then #/usr/sbin/quagga.init: deleted config file means daemon is disabled
-		:>$EIGRP_CONFIG
-	fi
-
-	procd_open_instance watchfrr
-	procd_set_param command /usr/sbin/watchfrr -r /usr/sbin/frr.init_watchrestart_%s -s /usr/sbin/frr.init_start_%s -k /usr/sbin/frr.init_stop_%s -b _ ${daemons}
-	procd_set_param respawn ${respawn_threshold:-3600} ${respawn_timeout:-5} ${respawn_retry:-5}
-	procd_close_instance
-	return 0
 }
 
-reload_service() {
-	restart
+enable_vty(){
+	# Enables VTY if any of the daemons has it enabled
+
+	local enabled_vty
+	local config_file="$1"
+	local service="$2"
+
+	xappend "$config_file" "password admin01"
+	xappend "$config_file" "enable password admin01"
+
+	xappend "$config_file" "line vty"
+	xappend "$config_file" "access-class vty"
+	xappend "$config_file" "access-list vty seq 1 permit" "127.0.0.1"
+
+	config_get enabled_vty "$service" enabled_vty
+	if [ "$enabled_vty" = "1" ]; then
+		network_get_subnet net "lan"
+		xappend "$config_file" "access-list vty seq 2 permit" "$net"
+	fi
+	echo "" >> "$config_file"
+}
+
+enable_debug() {
+	# Set debug options in these variables.
+	# Options must be separated by + because some contain a whitespace character
+
+	local bgp="neighbor-events+updates"
+	local rip="events"
+	local ospf="event"
+	local eigrp="packets all+transmit all"
+	local nhrp="common+event"
+
+	local daemon
+	local debug
+	local debug_list
+
+	for daemon in $debug_enabled; do
+		xappend "${BASE_DIR}/${daemon}.conf" "log syslog"
+		eval "debug_list=\$$daemon"
+		local IFS="+"
+		for debug in $debug_list; do
+			xappend "${BASE_DIR}/${daemon}.conf" "debug" "$daemon" "$debug"
+		done
+	echo "" >> "${BASE_DIR}/${daemon}.conf"
+	done
+}
+
+add_interface_trigger() {
+	local section="$1"
+	procd_add_interface_trigger "interface.*.up" "$section" /etc/init.d/frr reload
+}
+
+#################################################
+#                 BGP functions                 #
+#################################################
+
+bgp_parse_config() {
+	local enabled
+	config_load bgp
+
+	config_get enabled "bgp" enabled "0"
+	[ "$enabled" = "0" ] && return 1
+
+	enable_vty "$CONFIG_FILE_BGP" "bgp"
+
+	config_foreach bgp_parse_route_maps bgp_route_maps
+	config_foreach bgp_parse_instance bgp_instance
+	config_foreach bgp_parse_peer bgp_peer
+	config_foreach bgp_parse_vrf bgp_vrf
+	config_foreach bgp_parse_access_list bgp_access_list
+
+	echo -ne "$prefix_list" >> "$CONFIG_FILE_BGP"
+	prefix_list=""
+	echo "" >> "$CONFIG_FILE_BGP"
+}
+
+bgp_parse_instance() {
+	local section="$1"
+	local enabled
+	local deterministic_med
+	local as
+	local network
+	local redistribute
+	local id
+	local ebgp_requires_policy
+
+	config_get enabled "$section" enabled "0"
+	[ "$enabled" = "0" ] && return 1
+
+	config_get deterministic_med    "$section" deterministic_med "0"
+	config_get as                   "$section" as
+	config_get network              "$section" network
+	config_get redistribute         "$section" redistribute
+	config_get id                   "$section" id
+	config_get ebgp_requires_policy "$section" ebgp_requires_policy "1"
+
+	xappend      "$CONFIG_FILE_BGP" "router bgp" "$as"
+	xappend      "$CONFIG_FILE_BGP" "address-family ipv4 unicast"
+	xappend      "$CONFIG_FILE_BGP" "bgp router-id" "$id"
+	xappend_bool "$CONFIG_FILE_BGP" "$ebgp_requires_policy" "bgp ebgp-requires-policy"
+	xappend_bool "$CONFIG_FILE_BGP" "$deterministic_med" "bgp deterministic-med"
+	xappend_list "$CONFIG_FILE_BGP" "network" "$network"
+	xappend_list "$CONFIG_FILE_BGP" "redistribute" "$redistribute"
+}
+
+bgp_parse_peer() {
+	local section="$1"
+	local enabled
+#	local instance
+#	local main_as
+	local as
+	local default_originate
+	local ipaddr
+	local port
+	local ebgp_multihop
+	local description
+	local password
+	local route_reflector_client
+	local weight
+	local timer_keepalive
+	local timer_holdtime
+	local timer_connect
+
+	config_get enabled "$section" enabled "0"
+
+	[ "$enabled" = "0" ] && return 1
+
+	# for multi instance bgp
+	# config_get instance             "$section"      instance
+	# config_get main_as              "main_instance" as
+	config_get as                     "$section"      as
+	config_get default_originate      "$section"      default_originate
+	config_get ipaddr                 "$section"      ipaddr
+	config_get port                   "$section"      port
+	config_get ebgp_multihop          "$section"      ebgp_multihop
+	config_get description            "$section"      description
+	config_get password               "$section"      password
+	config_get update_source          "$section" 	  update_source
+	config_get route_reflector_client "$section"	  route_reflector_client
+	config_get weight                 "$section"      weight
+	config_get timer_keepalive        "$section"      timer_keepalive
+	config_get timer_holdtime         "$section"      timer_holdtime
+	config_get timer_connect          "$section"      timer_connect
+
+	xappend      "$CONFIG_FILE_BGP" "neighbor" "$ipaddr" "remote-as" "$as"
+	xappend_bool "$CONFIG_FILE_BGP" "$default_originate" "neighbor" "$ipaddr" "default-originate"
+	xappend      "$CONFIG_FILE_BGP" "neighbor" "$ipaddr" "port" "$port"
+	xappend      "$CONFIG_FILE_BGP" "neighbor" "$ipaddr" "ebgp-multihop" "$ebgp_multihop"
+	xappend      "$CONFIG_FILE_BGP" "neighbor" "$ipaddr" "description" "$description"
+	xappend      "$CONFIG_FILE_BGP" "neighbor" "$ipaddr" "password" "$password"
+	xappend      "$CONFIG_FILE_BGP" "neighbor" "$ipaddr" "update-source" "$update_source"
+	xappend      "$CONFIG_FILE_BGP" "neighbor" "$ipaddr" "weight" "$weight"
+	xappend      "$CONFIG_FILE_BGP" "neighbor" "$ipaddr" "timers" "$timer_keepalive" "$timer_holdtime"
+	xappend      "$CONFIG_FILE_BGP" "neighbor" "$ipaddr" "timers connect" "$timer_connect"
+	xappend_bool "$CONFIG_FILE_BGP" "$route_reflector_client" "neighbor" "$ipaddr" "route-reflector-client"
+	config_foreach bgp_parse_peer_group bgp_peer_group "$ipaddr" "$as"
+	config_foreach bgp_parse_route_map_filters bgp_route_map_filters
+}
+
+bgp_parse_peer_group() {
+	local section="$1"
+	local enabled
+#	local instance
+	local group_as
+	local group_ipaddr
+	local next_hop_self
+	local next_hop_self_all
+	local soft_rec_inbound
+	local con_check
+	local adv_int
+	local listen_range
+	local match=0
+
+	config_get enabled  "$section" enabled "0"
+	config_get group_as "$section" as
+	config_get group_ipaddr "$section" neighbor
+
+	[ "$enabled" = "0" ] && return 1
+	[ -z "$group_as" ] && [ -z "$group_ipaddr" ] && return 1
+
+	for gr_addr in $group_ipaddr; do
+		if [ "$gr_addr" = "$ipaddr" ]; then
+			group_ipaddr="$gr_addr"
+			match=1
+			break
+		fi
+	done
+	[ "$match" = 0 ] && group_ipaddr=""
+
+	[ -z "$group_ipaddr" ] && [ "$group_as" != "$as" ] && return 1
+
+#	config_get instance               "$section" instance
+	config_get next_hop_self          "$section" next_hop_self
+	config_get next_hop_self_all      "$section" next_hop_self_all
+	config_get soft_rec_inbound       "$section" soft_rec_inbound
+	config_get con_check              "$section" con_check
+	config_get adv_int                "$section" adv_int
+	config_get listen_range           "$section" listen_range
+	config_get cl_config_type         "$section" cl_config_type
+
+
+	xappend      "$CONFIG_FILE_BGP" "neighbor" "$section" "peer-group"
+	xappend      "$CONFIG_FILE_BGP" "neighbor" "$section" "remote-as" "$group_as"
+	xappend_bool "$CONFIG_FILE_BGP" "$con_check" "neighbor" "$section" "disable-connected-check"
+	xappend      "$CONFIG_FILE_BGP" "neighbor" "$section" "advertisement-interval" "$adv_int"
+	xappend_bool "$CONFIG_FILE_BGP" "$soft_rec_inbound" "neighbor" "$section" "soft-reconfiguration inbound"
+	xappend      "$CONFIG_FILE_BGP" "neighbor" "$section" "soft-reconfiguration" "$soft_rec_inbound"
+	xappend      "$CONFIG_FILE_BGP" "neighbor" "$ipaddr" "peer-group" "$section"
+	xappend      "$CONFIG_FILE_BGP" "bgp listen range" "$listen_range" "peer-group" "$section"
+	xappend      "$CONFIG_FILE_BGP" "neighbor" "$section" "$cl_config_type"
+
+
+	if [ "$next_hop_self" = "1" ] && [ "$next_hop_self_all" = "1" ]; then
+		xappend "$CONFIG_FILE_BGP" "neighbor" "$section" "next-hop-self all"
+	elif [ "$next_hop_self" = "1" ] && [ "$next_hop_self_all" = "0" ]; then
+		xappend "$CONFIG_FILE_BGP" "neighbor" "$section" "next-hop-self"
+	fi
+}
+
+bgp_parse_vrf() {
+	local enabled
+	local as
+	local redistribute
+	local label_export
+	local rd_export
+	local rt_import
+	local rt_export
+	local export_vpn
+	local import_vpn
+
+	config_get enabled  "$section" enabled "0"
+	[ "$enabled" = "0" ] && return 1
+
+	config_get as			"$section" as
+	config_get redistribute "$section" redistribute
+	config_get label_export "$section" label_export
+	config_get rd_export 	"$section" rd_export
+	config_get rt_import 	"$section" rt_import
+	config_get rt_export 	"$section" rt_export
+	config_get export_vpn 	"$section" export_vpn
+	config_get import_vpn 	"$section" import_vpn
+
+	xappend      "$CONFIG_FILE_BGP" "router bgp" "$as" "vrf" "$section"
+	xappend      "$CONFIG_FILE_BGP" "address-family ipv4 unicast"
+	xappend_list "$CONFIG_FILE_BGP" "redistribute" "$redistribute"
+	xappend      "$CONFIG_FILE_BGP" "label vpn export" "$label_export"
+	xappend      "$CONFIG_FILE_BGP" "rd vpn export" "$rd_export"
+	xappend      "$CONFIG_FILE_BGP" "rt vpn import" "$rt_import"
+	xappend      "$CONFIG_FILE_BGP" "rt vpn export" "$rt_export"
+	xappend_bool "$CONFIG_FILE_BGP" "$vpn_export" "export vpn"
+	xappend_bool "$CONFIG_FILE_BGP" "$vpn_import" "import vpn"
+	xappend      "$CONFIG_FILE_BGP" "exit-address-family"
+}
+
+bgp_parse_access_list() {
+	local enabled
+	local target
+	local action
+	local net
+	local direction
+	local neigh
+	local prefl
+	local ipaddr
+
+	config_get enabled "$section" enabled "0"
+
+	[ "$enabled" = "0" ] && return 1
+
+	config_get target    "$section" target
+	config_get action    "$section" action
+	config_get net       "$section" net
+	config_get direction "$section" direction
+	config_get ipaddr    "$target"  ipaddr
+
+	[ -n "$target" ] && prefl="prefl_$target"
+
+	if [ -z "$target" ]; then
+		config_get neigh "$target" ipaddr
+		xappend "$CONFIG_FILE_BGP" "neighbor" "$neigh" "prefix-list" "$prefl" "$direction"
+	else
+		xappend "$CONFIG_FILE_BGP" "neighbor" "$ipaddr" "prefix-list" "$prefl" "$direction"
+	fi
+
+	xappend_to_var "prefix_list" "ip prefix-list" "$prefl" "seq 5" "$action" "$net"
+}
+
+bgp_parse_route_maps() {
+	local section="$1"
+	local action
+	local sequence
+	local metric
+	local enabled
+	local local_preference
+
+	config_get enabled "$section" enabled "0"
+
+	[ "$enabled" = "0" ] && return 1
+
+	config_get action           "$section" action
+	config_get sequence         "$section" sequence
+	config_get metric           "$section" metric
+	config_get local_preference "$section" local_preference
+
+	xappend "$CONFIG_FILE_BGP" "route-map" "$section" "$action" "$sequence"
+	xappend "$CONFIG_FILE_BGP" "set local-preference" "$local_preference"
+	xappend "$CONFIG_FILE_BGP" "set metric" "$metric"
+
+}
+
+bgp_parse_route_map_filters() {
+	local enabled
+	local target
+	local route_map
+	local direction
+
+	config_get enabled "$section" enabled
+	[ "$enabled" = "0" ] && return 1
+
+	config_get target    "$section" target
+	config_get route_map "$section" route_map
+	config_get direction "$section" direction
+	config_get ipaddr    "$target"  ipaddr
+
+	xappend "$CONFIG_FILE_BGP" "neighbor" "${ipaddr:-$target}" "route-map" "$route_map" "$direction"
+
+}
+
+#################################################
+#                 RIP functions                 #
+#################################################
+
+rip_parse_config() {
+	local enabled
+	config_load rip
+
+	config_get enabled "rip" enabled "0"
+	[ "$enabled" = "0" ] && return 1
+	enable_vty "$CONFIG_FILE_RIP" "rip"
+
+	config_foreach rip_parse_general rip_general
+	config_foreach rip_parse_interface rip_interface
+	config_foreach rip_parse_access_list rip_access_list
+	echo -ne "$rip_acl" >> "$CONFIG_FILE_RIP"
+	rip_acl=""
+
+	echo "" >> "$CONFIG_FILE_RIP"
+}
+
+rip_parse_general(){
+
+	local version
+	local neighbors
+	local section="$1"
+
+	config_get version   "$section" version "2"
+	config_get neighbors "$section" neighbors
+
+	xappend      "$CONFIG_FILE_RIP" "router rip"
+	xappend      "$CONFIG_FILE_RIP" "version" "$version"
+	xappend_list "$CONFIG_FILE_RIP" "neighbor" "$neighbors"
+}
+
+rip_parse_interface() {
+
+	local enabled
+	local passive_interface
+	local ifname
+
+	config_get enabled "$section" enabled "0"
+	[ "$enabled" = "0" ] && return 1
+
+	config_get passive_interface "$section" passive_interface "0"
+	config_get ifname            "$section" ifname
+
+	xappend      "$CONFIG_FILE_RIP" "network" "$ifname"
+	xappend_bool "$CONFIG_FILE_RIP" "$passive_interface" "passive-interface $ifname"
+}
+
+rip_parse_access_list() {
+	local enabled
+	local target
+	local action
+	local net
+	local direction
+	local interface
+
+	config_get enabled "$section" enabled "0"
+	[ "$enabled" = "0" ] && return 1
+
+	config_get target    "$section" target
+	config_get action    "$section" action
+	config_get net       "$section" net
+	config_get direction "$section" direction
+	config_get interface "$target"  ifname
+
+	xappend        "$CONFIG_FILE_RIP" "distribute-list" "${target:+${target}_${direction}}" "$direction" "$interface"
+	xappend_to_var "rip_acl" "access-list" "${target:+${target}_${direction}}" "$action" "$net"
+}
+
+#################################################
+#                                               #
+#                 OSPF functions                #
+#                                               #
+#################################################
+
+ospf_parse_config() {
+	local enabled
+	config_load ospf
+
+	config_get enabled "ospf" enabled "0"
+	[ "$enabled" = "0" ] && return 1
+
+	enable_vty "$CONFIG_FILE_OSPF" "ospf"
+
+	config_foreach ospf_parse_general ospf_general
+	config_foreach ospf_parse_network ospf_network
+	config_foreach ospf_parse_neighbor ospf_neighbor
+	config_foreach ospf_parse_interface ospf_interface
+
+	echo "" >> "$CONFIG_FILE_OSPF"
+}
+
+ospf_parse_general(){
+
+	local id
+	local originate
+	local passive_ifname
+	local redistribute
+	local section="$1"
+
+	config_get id             "$section" id
+	config_get originate      "$section" originate ""
+	config_get passive_ifname "$section" passive_ifname
+	config_get redistribute   "$section" redistribute
+	config_get mpls_ldp_sync  "$section" mpls_ldp_sync
+
+	xappend "$CONFIG_FILE_OSPF" "router ospf"
+	xappend "$CONFIG_FILE_OSPF" "ospf router-id" "$id"
+
+	if [ "$originate" = "default" ]; then
+		xappend "$CONFIG_FILE_OSPF" "default-information originate"
+	elif [ "$originate" = "always" ]; then
+		xappend "$CONFIG_FILE_OSPF" "default-information originate" "$originate"
+	fi
+	xappend_list "$CONFIG_FILE_OSPF" "redistribute" "$redistribute"
+	xappend_list "$CONFIG_FILE_OSPF" "passive-interface" "$passive_ifname"
+	xappend_bool "$CONFIG_FILE_OSPF" "$mpls_ldp_sync" "mpls ldp-sync"
+
+}
+
+ospf_parse_network() {
+	local enabled
+	local network
+	local area
+	local area_name
+
+	config_get enabled "$section" enabled "0"
+	[ "$enabled" = "0" ] && return 1
+
+	config_get network "$section" net
+	config_get area_name "$section" area
+	config_get area "$area_name" area
+
+	config_foreach ospf_parse_area ospf_area "$area"
+}
+
+ospf_parse_neighbor() {
+	local enabled
+	local neighbor
+	local priority
+	local polling_interval
+
+	config_get enabled "$section" enabled "0"
+	[ "$enabled" = "0" ] && return 1
+
+	config_get neighbor         "$section" neighbor
+	config_get priority         "$section" priority "0"
+	config_get polling_interval "$section" polling_interval "120"
+
+	xappend "$CONFIG_FILE_OSPF" "neighbor" "$neighbor" "priority" "$priority" "poll-interval" "$polling_interval"
+}
+
+ospf_parse_area() {
+	local enabled
+	local area
+	local stub
+
+	config_get area "$section" area
+	[ "$area" != "$2" ] && return 1
+
+	config_get enabled "$section" enabled "0"
+	[ "$enabled" = "0" ] && return 1
+
+	config_get_bool stub "$section" stub
+
+	xappend      "$CONFIG_FILE_OSPF" "network" "$network" "area" "$area"
+	xappend_bool "$CONFIG_FILE_OSPF" "$stub" "area" "$area" "stub"
+
+}
+
+ospf_parse_interface() {
+	local enabled
+	local cost
+	local hello_interval
+	local dead_interval
+	local retransmit_interval
+	local priority
+	local type
+	local authentication
+	local password
+	local ifname
+	local id
+
+	config_get enabled "$section" enabled "0"
+	[ "$enabled" = "0" ] && return 1
+
+	config_get cost                "$section" cost
+	config_get hello_interval      "$section" hello_interval
+	config_get dead_interval       "$section" dead_interval
+	config_get retransmit_interval "$section" retransmit_interval
+	config_get priority            "$section" priority
+	config_get type                "$section" type
+	config_get ptp_dmvpn           "$section" ptp_dmvpn
+	config_get authentication      "$section" authentication
+	config_get password            "$section" password
+	config_get ifname              "$section" ifname
+	config_get id                  "$section" id
+
+	xappend "$CONFIG_FILE_OSPF" "interface" "$ifname"
+
+	if [ "$authentication" = "md5_hmac" ]; then
+		xappend "$CONFIG_FILE_OSPF" "ip ospf authentication message-digest"
+		xappend "$CONFIG_FILE_OSPF" "ip ospf message-digest-key" "$id" "md5" "$password"
+	fi
+
+	if [ "$authentication" = "pass" ]; then
+		xappend "$CONFIG_FILE_OSPF" "ip ospf authentication"
+		xappend "$CONFIG_FILE_OSPF" "ip ospf authentication-key $password"
+	fi
+	xappend "$CONFIG_FILE_OSPF" "ip ospf cost" "$cost"
+	xappend "$CONFIG_FILE_OSPF" "ip ospf dead-interval" "$dead_interval"
+	xappend "$CONFIG_FILE_OSPF" "ip ospf hello-interval" "$hello_interval"
+	[ "$ptp_dmvpn" = "1" ] && type="" && xappend "$CONFIG_FILE_OSPF" "ip ospf network point-to-point dmvpn"
+	xappend "$CONFIG_FILE_OSPF" "ip ospf network" "$type"
+	xappend "$CONFIG_FILE_OSPF" "ip ospf priority" "$priority"
+	xappend "$CONFIG_FILE_OSPF" "ip ospf retransmit-interval" "$retransmit_interval"
+}
+
+#################################################
+#                EIGRP functions                #
+#################################################
+
+eigrp_parse_config() {
+	local enabled
+	config_load eigrp
+
+	config_get enabled "eigrp" enabled "0"
+	[ "$enabled" = "0" ] && return 1
+
+	enable_vty "$CONFIG_FILE_EIGRP" "eigrp"
+	config_foreach eigrp_parse_general eigrp_general
+
+	echo "" >> "$CONFIG_FILE_EIGRP"
+}
+
+eigrp_parse_general(){
+	local section="$1"
+	local debug
+	local as
+	local id
+	local network
+	local redistribute
+	local neighbor
+
+	config_get debug        "$section" debug
+	config_get as           "$section" as
+	config_get id           "$section" id
+	config_get network      "$section" network
+	config_get redistribute "$section" redistribute
+	config_get neighbor     "$section" neighbor
+
+
+	xappend      "$CONFIG_FILE_EIGRP" "router eigrp" "$as"
+	xappend      "$CONFIG_FILE_EIGRP" "eigrp router-id" "$id"
+	xappend_list "$CONFIG_FILE_EIGRP" "network" "$network"
+	xappend_list "$CONFIG_FILE_EIGRP" "redistribute" "$redistribute"
+	xappend_list "$CONFIG_FILE_EIGRP" "neighbor" "$neighbor"
+}
+
+#################################################
+#                 NHRP functions                #
+#################################################
+
+nhrp_parse_config() {
+	local enabled
+	config_load nhrp
+
+	config_get enabled "nhrp" enabled "0"
+	[ "$enabled" = "0" ] && return 1
+
+	enable_vty "$CONFIG_FILE_NHRP" "nhrp"
+	config_foreach nhrp_parse_general nhrp_general
+	config_foreach nhrp_parse_instance nhrp_instance
+
+	echo "" >> "$CONFIG_FILE_NHRP"
+}
+
+nhrp_parse_general() {
+	##todo##
+	local section="$1"
+	local debug
+	local nflog_group
+	multicast_nflog_group=
+
+	config_get nflog_group "$section" nflog_group
+	config_get multicast_nflog_group "$section" multicast_nflog_group
+
+	xappend "$CONFIG_FILE_NHRP" "nhrp nflog-group" "$nflog_group"
+	xappend "$CONFIG_FILE_NHRP" "nhrp multicast-nflog-group" "$multicast_nflog_group"
+}
+
+nhrp_parse_instance(){
+	local enabled
+	local network_id
+	local auth
+	local proto_address
+	local nbma_address
+	local holdtime
+	local ipsec_support
+	local ipsec_instance
+	local interface
+	local redirect
+	local section="$1"
+
+	config_get enabled "$section" enabled "0"
+	[ "$enabled" = "0" ] && return 1
+
+	config_get network_id     "$section" network_id "1"
+	config_get auth           "$section" auth
+	config_get proto_address  "$section" proto_address
+	config_get nbma_address   "$section" nbma_address
+	config_get holdtime       "$section" holdtime
+	config_get ipsec_support  "$section" ipsec_support
+	config_get ipsec_instance "$section" ipsec_instance
+	config_get interface      "$section" interface
+	config_get redirect       "$section" redirect
+
+	xappend      "$CONFIG_FILE_NHRP" "interface" "$interface"
+	xappend      "$CONFIG_FILE_NHRP" "ip nhrp cisco-authentification" "$auth"
+	xappend      "$CONFIG_FILE_NHRP" "ip nhrp network-id" "$network_id"
+
+	[ -n "$multicast_nflog_group" ] && xappend "$CONFIG_FILE_NHRP" "ip nhrp map multicast dynamic"
+
+	if [ "$redirect" = "1" ]; then
+		xappend      "$CONFIG_FILE_NHRP" "ip nhrp nhs dynamic nbma" "$nbma_address"
+	else
+		xappend      "$CONFIG_FILE_NHRP" "ip nhrp nhs" "$proto_address" "nbma" "$nbma_address"
+	fi
+
+	xappend_bool "$CONFIG_FILE_NHRP" "$redirect" "ip nhrp redirect"
+	xappend      "$CONFIG_FILE_NHRP" "ip nhrp registration no-unique"
+	xappend      "$CONFIG_FILE_NHRP" "ip nhrp shortcut"
+	xappend      "$CONFIG_FILE_NHRP" "ip nhrp holdtime" "$holdtime"
+	[ "$ipsec_support" = "1" ] && \
+	xappend      "$CONFIG_FILE_NHRP" "tunnel protection vici profile" "$ipsec_instance"
+
+	config_foreach nhrp_parse_map "${section}_map"
+}
+
+nhrp_parse_map() {
+
+	local enabled
+	local ip_addr
+	local nbma
+	local section="$1"
+
+	config_get enabled "$section" enabled "0"
+	[ "$enabled" = "0" ] && return 1
+
+	config_get ip_addr "$section" ip_addr
+	config_get nbma "$section" nbma
+
+	xappend "$CONFIG_FILE_NHRP" "ip nhrp map" "$ip_addr" "$nbma"
+}
+
+#################################################
+#                 LDP functions                 #
+#################################################
+
+ldp_parse_config() {
+	local enabled
+	config_load mpls
+
+	config_get enabled "mpls" enabled "0"
+	[ "$enabled" = "0" ] && return 1
+
+	enable_vty "$CONFIG_FILE_LDP" "ldp"
+	config_foreach ldp_parse_general ldp_general
+
+	echo "" >> "$CONFIG_FILE_LDP"
+}
+
+ldp_parse_general() {
+	local id
+	local transport_address
+	local interface
+
+	config_get id "$section" id
+	config_get transport_address "$section" transport_address
+	config_get interface "$section" interface
+
+	xappend      "$CONFIG_FILE_LDP" "mpls ldp"
+	xappend      "$CONFIG_FILE_LDP" "router-id" "$id"
+	xappend      "$CONFIG_FILE_LDP" "address-family ipv4"
+	xappend	     "$CONFIG_FILE_LDP" "discovery transport-address" "$transport_address"
+	xappend_list "$CONFIG_FILE_LDP" "interface" "$interface"
+}
+
+#################################################
+#               STATIC functions                #
+#################################################
+
+static_parse_config() {
+	local enabled
+	config_load static
+
+	config_get enabled "static" enabled "0"
+	[ "$enabled" = "0" ] && return 1
+
+	enable_vty "$CONFIG_FILE_STATIC" "static"
+	config_foreach static_parse_route static_route
+}
+
+static_parse_route() {
+	local section="$1"
+	local enabled
+	local network
+	local interface
+	local gateway
+	local distance
+
+	config_get enabled "$section" enabled
+	[ "$enabled" = "0" ] && return 1
+
+	config_get network "$section" network
+	config_get interface "$section" interface
+	config_get gateway "$section" gateway
+	config_get distance "$section" distance
+
+	xappend "$CONFIG_FILE_STATIC" "ip route" "$network" "$interface" "$gateway" "$distance"
+}
+
+frr_start() {
+	daemons_check_enabled
+
+	file_reset
+	enable_debug
+	daemons_launch
+}
+
+start_service()
+{
+	frr_start
+}
+
+reload_service()
+{
+	stop
+	start
+}
+
+service_triggers()
+{
+	procd_add_reload_trigger "bgp" "rip" "ospf" "eigrp" "nhrp" "dmvpn"
+	config_load 'network'
+	config_foreach add_interface_trigger 'interface'
 }

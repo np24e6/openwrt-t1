@@ -1,0 +1,265 @@
+#!/bin/ash
+
+. /lib/functions.sh
+. /usr/share/libubox/jshn.sh
+
+add_interface_info() {
+	json_add_object
+	json_add_string "interface" "$1"
+	[ "$3" != "wifi" ] && json_add_string "proto" "$2"
+	json_add_string "type" "$3"
+	json_add_boolean "disabled" "$4"
+	json_add_boolean "status" "$5"
+	json_add_string "device" "$6"
+	json_add_string "ip" "$7"
+	[ "$3" = "wifi" ] && json_add_string "network" "$8"
+	json_close_object
+}
+
+add_device_info() {
+	json_add_object
+	json_add_string "ip" "$1"
+	json_add_string "mac" "$2"
+	json_add_string "hostname" "$3"
+	json_add_string "vendor" "$4"
+	json_add_string "type" "$5"
+	json_add_string "interface" "$6"
+	json_close_object
+}
+
+interface_type() {
+	local int="$1"
+	local networks network
+	[ "$device" = "$(jsonfilter -i /etc/board.json -e '@.network.wan.device')" ] && return
+	[ "$proto" = "wwan" ] && return
+	[ "$proto" = "connm" ] && return
+	networks="$(ubus call network.wireless status | jsonfilter -e '@.*.interfaces[@.config.mode="sta"].config.network[*]')"
+	for network in $networks;do
+		[ "$network" = "$int" ] && return
+	done
+	return 1
+}
+
+get_interface_info() {
+	local int="$1"
+	local scan="$2"
+	local proto disabled invisible status was_lan device type ip mask ip_a int_
+
+	config_get proto "$1" proto
+	config_get disabled "$1" disabled 0
+	config_get invisible "$1" invisible 0
+
+	[ "$int" = "loopback" ] && return
+	[ "$invisible" = "1" ] && return
+	[ "$proto" != "static" ] && [ "$proto" != "dhcp" ] && [ "$proto" != "wwan" ] && [ "$proto" != "connm" ] && return
+
+	if [ "$proto" = "wwan" ] || [ "$proto" = "connm" ];then
+		int_="${int}_4"
+	else
+		int_="$int"
+	fi
+
+	eval "$(ubus call network.interface dump | jsonfilter -e 'status=@.interface[@.interface="'"$int_"'"].up' -e 'device=@.interface[@.interface="'"$int_"'"].device')"
+	[ -z "$device" ] && [ "$proto" != "wwan" ] && [ "$proto" != "connm" ] && return
+
+	[ -z "$status" ] && status=0
+
+	config_get was_lan "$1" was_lan 0
+	if interface_type "$int" || [ "$was_lan" = "1" ];then
+		type="wan"
+	else
+		type="lan"
+	fi
+
+	if [ "$status" = 1 ];then
+		eval "$(ubus call network.interface dump | jsonfilter -e 'ip=@.interface[@.interface="'"$int_"'"]["ipv4-address"][0].address' -e 'mask=@.interface[@.interface="'"$int_"'"]["ipv4-address"][0].mask')"
+		[ -n "$ip" ] && [ -n "$mask" ] && ip_a="${ip}/${mask}"
+	fi
+
+	add_interface_info "$int" "$proto" "$type" "$disabled" "$status" "$device" "$ip_a" ""
+}
+
+
+
+get_wireless_interface_info() {
+	local int="$1"
+	local scan="$2"
+	local ssid disabled device_ device status_ network
+	local status=0
+
+
+	config_get ssid "$1" ssid
+	config_get disabled "$1" disabled 0
+	config_get device_ "$1" device
+	eval "$(ubus call network.wireless status | jsonfilter -e \
+		status_='@.'"${device_}"'.interfaces[@.section="'"$int"'"].config.ssid' -e \
+		device='@.'"${device_}"'.interfaces[@.section="'"$int"'"].ifname' -e \
+		network='@.'"${device_}"'.interfaces[@.section="'"$int"'"].config.network[*]')"
+	[ -n "$status_" ] && status=1
+
+	add_interface_info "$ssid" "" "wifi" "$disabled" "$status" "$device" "" "$network"
+}
+
+get_interfaces() {
+	local scan="$1"
+	json_init
+	json_add_array interfaces
+	config_load 'network'
+	config_foreach get_interface_info 'interface' "$scan"
+	config_load 'wireless'
+	config_foreach get_wireless_interface_info 'wifi-iface' "$scan"
+	json_close_array
+	INTERFACES_JSON=$(json_dump)
+	[ "$scan" = false ] && echo "$INTERFACES_JSON" && json_cleanup
+}
+
+check_int() {
+	local arg="$1"
+	local scan_int_status=false
+	while IFS= read -r i; do
+		[ "$i" = "$arg" ] && scan_int_status=true
+	done < "$TMP_I"
+	if [ "$scan_int_status" = true ];then
+		echo "$arg" > "$TMP_I"
+	else
+		exit
+	fi
+}
+
+get_device_info() {
+	local device="$1"
+	local address="$2"
+	local int="$3"
+	local wifi_dev="$4"
+	local lan_dev="$5"
+	local wan_dev="$6"
+	local ping="$7"
+	local ip mac name vendor_json hostname type
+	while read -r line; do
+		[ -z "$line" ] && continue
+		ip=$(echo "${line%% *}" | grep -o -E '([0-9]{1,3}[\.]){3}[0-9]{1,3}')
+		[ -z "$ip" ] && continue
+		mac=$(echo "$line" | grep -o -E '([[:xdigit:]]{1,2}:){5}[[:xdigit:]]{2}')
+		name="${line##*"$mac"}"
+		if [ -z "${name##*Unknown*}" ] && [ "$ping" = true ];then
+			vendor_json=$(curl -s https://ouilookup.com/api/search/$mac)
+			name=$(echo ${vendor_json:1:-1} | jsonfilter -e '@["vendor"].name' 2>/dev/null)
+		else
+			name=""
+		fi
+		hostname=$(grep "$mac" /tmp/dhcp.leases | awk '{print $4}')
+
+		type=""
+		for w_dev in $wifi_dev; do
+			if [ -n "$(ubus -S call iwinfo assoclist '{ "device": "'"$w_dev"'", "mac": "'"$mac"'" }')" ]; then
+				type="wireless"
+				int="$(ubus call network.wireless status | jsonfilter -e '@.*.interfaces[@.ifname="'"$w_dev"'"].config.ssid')"
+			fi
+		done
+
+		[ -z "$type" ] && {
+			if [ -z "${device##wwan*}" ] || [ -z "${device##rmnet*}" ]; then
+				type="mobile"
+			else
+				type="wired"
+			fi
+		}
+
+		add_device_info "$ip" "$mac" "$hostname" "$name" "$type" "$int"
+	done <<EOF
+	$(arp-scan -I "$device" "$address" 2>/dev/null)
+EOF
+}
+
+scan_devices() {
+	local device address wifi_dev lan_dev wan_dev w_dev scan_int type_int ping proto
+	local scan=true
+	TMP_I="/var/tmp_networkmap_int_$1"
+
+	case "$1" in
+			interfaces)
+				scan=false
+				;;
+			lan)
+				type_int="lan"
+				;;
+			wan)
+				type_int="wan"
+				;;
+			all)
+				[ -n "$2" ] && scan_int="$2"
+				;;
+	esac
+
+	get_interfaces "$scan"
+	[ "$scan" = false ] && exit
+
+	if [ -n "$type_int" ]; then
+		echo "$INTERFACES_JSON" | jsonfilter -e '@.interfaces[@.type="'"$type_int"'"].interface' > "$TMP_I"
+	else
+		echo "$INTERFACES_JSON" | jsonfilter -e '@.interfaces[@.status=true]' | jsonfilter -a -e '@[@.type!="wifi"].interface' > "$TMP_I"
+	fi
+
+	[ -n "$scan_int" ] && check_int "$scan_int"
+
+	wifi_dev="$(ubus call iwinfo devices | jsonfilter -e @.devices.*)"
+	eval "$(jsonfilter -i /etc/board.json -e 'lan_dev=@.network.lan.device' -e 'wan_dev=@.network.wan.device')"
+	ping -c1 -W1 ouilookup.com &>/dev/null && ping=true || ping=false
+
+	json_init
+	json_add_array devices
+
+	while IFS= read -r int; do
+		eval "$(echo "$INTERFACES_JSON" | jsonfilter -e address='@.interfaces[@.interface="'"$int"'"].ip' -e proto='@.interfaces[@.interface="'"$int"'"].proto')"
+		if [ "$proto" = "wwan" ] || [ "$proto" = "connm" ]; then
+			int="${int}_4"
+		fi
+		device="$(ubus call network.interface dump | jsonfilter -e '@.interface[@.interface="'"$int"'"].device')"
+		[ -n "$device" ] && [ -n "$address" ] && get_device_info "$device" "$address" "$int" "$wifi_dev" "$lan_dev" "$wan_dev" "$ping"
+	done < "$TMP_I"
+
+	rm "$TMP_I"
+	json_close_array
+	json_dump
+	json_cleanup
+}
+
+main() {
+	local interface
+	case "$1" in 
+		list)
+			json_init
+			json_add_object interfaces
+			json_close_object
+			json_add_object devices_lan
+			json_close_object
+			json_add_object devices_wan
+			json_close_object
+			json_add_object devices
+			json_add_string "interface" ""
+			json_close_object
+			json_dump
+			;;
+		call)
+			case "$2" in
+				interfaces)
+					scan_devices "interfaces"
+					;;
+				devices_lan)
+					scan_devices "lan"
+					;;
+				devices_wan)
+					scan_devices "wan"
+					;;
+				devices)
+					read input;
+					json_load "$input"
+					json_get_var interface interface
+					scan_devices "all" "$interface"
+					;;
+			esac
+			;;
+	esac
+}
+
+main "$@"

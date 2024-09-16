@@ -15,7 +15,7 @@ define Test/unit_test
 	cd "$(PKG_BUILD_DIR)" && {							\
 		TARGET_IP="$(TARGET_IP)"						\
 		TARGET_PORT="$(TARGET_PORT)"						\
-		ceedling verbosity[$(_v)] "test:$(TEST_FILE)" >&$(_FD) 2>&1;		\
+		ceedling verbosity[$(_v)] "gcov:$(TEST_FILE)" "utils:gcov" >&$(_FD) 2>&1; \
 		cd -;									\
 	}
 endef

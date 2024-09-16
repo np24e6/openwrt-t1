@@ -1,0 +1,55 @@
+#!/bin/sh /etc/rc.common
+
+START=66
+STOP=99
+USE_PROCD=1
+
+service_triggers() {
+	procd_add_reload_trigger sim_idle_protection
+}
+
+handle_cron() {
+	local section="$1"
+	local TIME=""
+
+	config_get enab "$section" "enable"
+	config_get modem "$section" "modem"
+	config_get position "$section" "position"
+
+	if [ $enab -eq 1 ]; then
+		config_get hour "$section" "hour"
+		config_get minute "$section" "min"
+		config_get period "$section" "period"
+
+		if [ "$period" = "month" ]; then
+			config_get day "$section" "day"
+			TIME="$minute $hour $day * *"
+		elif [ "$period" = "week" ]; then
+			config_get weekday "$section" "weekday"
+			TIME="$minute $hour * * $weekday"
+		fi
+
+		sed -i "/sim_idle_protection.sh -s sim$position -m $modem/d" /etc/crontabs/root
+		echo "$TIME /sbin/sim_idle_protection.sh -s sim$position -m $modem" >>/etc/crontabs/root
+	else
+		sed -i "/sim_idle_protection.sh -s sim$position -m $modem/d" /etc/crontabs/root
+	fi
+}
+
+start_service() {
+	config_load "sim_idle_protection"
+	config_foreach handle_cron sim_idle_protection
+	/etc/init.d/cron restart
+}
+
+stop_service() {
+	sed -i "/sim_idle_protection.sh/d" /etc/crontabs/root
+	/etc/init.d/cron restart
+}
+
+reload_service() {
+	sed -i "/sim_idle_protection.sh/d" /etc/crontabs/root
+	config_load "sim_idle_protection"
+	config_foreach handle_cron sim_idle_protection
+	/etc/init.d/cron restart
+}

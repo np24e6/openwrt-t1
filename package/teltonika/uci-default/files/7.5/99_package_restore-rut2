@@ -1,0 +1,15 @@
+#!/bin/sh
+
+. /lib/functions.sh
+PACKAGE_FILE="/etc/package_restore.txt"
+
+[ -s "$PACKAGE_FILE" ] && {
+	sed -i "s/frr-bgpd/frr5-bgpd/g" "$PACKAGE_FILE"
+	sed -i "s/frr-ripd/frr5-ripd/g" "$PACKAGE_FILE"
+	sed -i "s/frr-ospfd/frr5-ospfd/g" "$PACKAGE_FILE"
+	sed -i "s/frr-eigrpd/frr5-eigrpd/g" "$PACKAGE_FILE"
+	sed -i "s/frr-nhrp/frr5-nhrp/g" "$PACKAGE_FILE"
+	sed -i "s/dmvpn/dmvpn_frr5/g" "$PACKAGE_FILE"
+}
+
+exit 0

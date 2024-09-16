@@ -11,11 +11,9 @@ Signed-off-by: Ariadne Conill <ariadne@dereferenced.org>
  libbb/xconnect.c | 5 +++--
  1 file changed, 3 insertions(+), 2 deletions(-)
 
-diff --git a/libbb/xconnect.c b/libbb/xconnect.c
-index 0e0b247b8..02c061e67 100644
 --- a/libbb/xconnect.c
 +++ b/libbb/xconnect.c
-@@ -497,8 +497,9 @@ static char* FAST_FUNC sockaddr2str(const struct sockaddr *sa, int flags)
+@@ -505,8 +505,9 @@ static char* FAST_FUNC sockaddr2str(cons
  	);
  	if (rc)
  		return NULL;
@@ -26,7 +24,7 @@ index 0e0b247b8..02c061e67 100644
  #if ENABLE_FEATURE_IPV6
  	if (sa->sa_family == AF_INET6) {
  		if (strchr(host, ':')) /* heh, it's not a resolved hostname */
-@@ -509,7 +510,7 @@ static char* FAST_FUNC sockaddr2str(const struct sockaddr *sa, int flags)
+@@ -517,7 +518,7 @@ static char* FAST_FUNC sockaddr2str(cons
  #endif
  	/* For now we don't support anything else, so it has to be INET */
  	/*if (sa->sa_family == AF_INET)*/
@@ -35,6 +33,3 @@ index 0e0b247b8..02c061e67 100644
  	/*return xstrdup(host);*/
  }
  
--- 
-2.35.1
-

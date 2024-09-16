@@ -11,7 +11,7 @@ define Package/dfota
 	CATEGORY:=Utilities
 	MAINTAINER:=Titas Kutavičius
 	TITLE:=Quectel DFOTA update script
-	DEPENDS:=+curl +gsmctl +ubus +libubox
+	DEPENDS:=+curl +gsmctl +ubus +libubox +generic-container
 endef
 
 define Package/dfota/description

@@ -1,0 +1,19 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+change_option() {
+        local section="$1"
+        local http https
+
+        config_get http "$section" "listen_http"
+        config_get https "$section" "listen_https"
+
+        uci_set "uhttpd" "$1" "listen_http" "${http%% *}"
+        uci_set "uhttpd" "$1" "listen_https" "${https%% *}"
+
+}                                                              
+                                                               
+config_load "uhttpd"                                           
+config_foreach change_option "uhttpd"                          
+uci_commit "uhttpd"

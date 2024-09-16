@@ -45,6 +45,8 @@ config_get peer "$peer_config" endpoint_host
 config_get metric "$iface" metric
 
 [ "$ACTION" = "ifup" ] && {
-	[ -n "$gw" ] && ip route add "$peer" via "$gw" dev "$DEVICE" metric "$metric" || ip route add "$peer" dev "$DEVICE" metric "$metric"
-	echo "ip route del "$peer" dev "$DEVICE" metric $metric" >> "/tmp/wireguard/default-status"
+	for ip in $(resolveip -4 "$peer");do
+		ip route add "$ip" ${gw:+via "$gw"} dev "$dev" metric "$metric"
+		echo "ip route del "$ip" dev "$DEVICE" metric $metric" >> "/tmp/wireguard/default-status"
+	done
 }

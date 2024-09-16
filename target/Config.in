@@ -107,6 +107,9 @@ config VIRTIO_SUPPORT
 config BASEBAND_SUPPORT
 	bool
 
+config PPP_MOBILE_SUPPORT
+	bool
+
 config BYPASS_OFFLOAD_FEATURE
 	bool
 
@@ -119,6 +122,21 @@ config USES_ROOTFS_PART
 config USES_BOOT_PART
 	bool
 
+config USB_SUPPORT_EXTERNAL
+	bool
+
+config HAS_SINGLE_ETH_PORT
+	bool
+
+config HAS_IO
+	bool
+
+config HAS_MODBUS
+	bool
+
+config HAS_DOWNSTREAM_KERNEL
+	bool
+
 config SMP_SUPPORT
 	bool
 
@@ -129,6 +147,36 @@ config USES_SOFT_PORT_MIRROR
 	bool
 
 config USES_VENDOR_WIFI_DRIVER
+	bool
+
+config BASIC_ROUTER
+	bool
+
+config SERIAL_RESET_QUIRK
+	bool
+
+config MULTI_DEVICE_QUIRK
+	bool
+
+config HIGH_WATCHDOG_PRIORITY
+	bool
+
+config AP_DEVICE
+	bool
+
+config LEDMAN_FULL
+	bool
+
+config GATEWAY_DEVICE
+	bool
+
+config 64MB_RAM
+	bool
+	
+config SW_OFFLOAD
+	bool
+
+config HW_OFFLOAD
 	bool
 
 # Architecture selection
@@ -166,7 +214,7 @@ config i386
 	bool
 
 config i686
-	bool 
+	bool
 
 config m68k
 	bool

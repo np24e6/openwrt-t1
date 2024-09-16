@@ -64,6 +64,14 @@ check_qcawifi_config() {
 	}
 }
 
+check_antenna_gain() {
+	config_get gain "$1" antenna_gain
+	[ -z "$gain" ] && {
+		uci set wireless."$1".antenna_gain="3"
+		uci commit wireless
+	}
+}
+
 convert_qcawifi_dev_opts() {
 	config_get old_qcawifi_hwmode "$1" hwmode
 	[ -n "$old_qcawifi_hwmode" ] && {
@@ -172,6 +180,7 @@ add_custom_wifi_iface() {
 	local upp_key
 	local mod="$2"
 	local mac="$3"
+	local index=$((dvidx + 1))
 
 	json_load_file "/etc/board.json"
 	json_get_keys keys network
@@ -184,15 +193,15 @@ add_custom_wifi_iface() {
 		[ "$wireless" = "true" ] && {
 			upp_key=$(echo "$key" | awk '{print toupper($0)}')
 			uci -q batch <<-EOF
-			add  wireless wifi-iface
-			set wireless.@wifi-iface[-1].device='radio${dvidx}'
-			set wireless.@wifi-iface[-1].network='$key'
-			set wireless.@wifi-iface[-1].mode=ap
-			set wireless.@wifi-iface[-1].ssid='${mod}_${mac}_${upp_key}'
-			set wireless.@wifi-iface[-1].wifi_id='wifi${wifi_id}'
-			set wireless.@wifi-iface[-1].encryption=none
-			set wireless.@wifi-iface[-1].isolate=1
-			set wireless.@wifi-iface[-1].disabled=1
+			set wireless."$index"=wifi-iface
+			set wireless."$index".device='radio${dvidx}'
+			set wireless."$index".network='$key'
+			set wireless."$index".mode=ap
+			set wireless."$index".ssid='${mod}_${mac}_${upp_key}'
+			set wireless."$index".wifi_id='wifi${wifi_id}'
+			set wireless."$index".encryption=none
+			set wireless."$index".isolate=1
+			set wireless."$index".disabled=1
 			EOF
 			wifi_id=$((wifi_id + 1))
 		}
@@ -202,7 +211,7 @@ add_custom_wifi_iface() {
 	done
 }
 
-should_use_phy_device() {
+is_mt7615() {
 	local dev="$1"
 	local vid="$(cat /sys/class/ieee80211/${dev}/device/vendor)"
 	local pid="$(cat /sys/class/ieee80211/${dev}/device/device)"
@@ -225,6 +234,7 @@ detect_mac80211() {
 	local wifi_id=0
 	local wps
 	local cust_mac
+	local ant_gain
 
 	config_load wireless
 	while :; do
@@ -253,6 +263,9 @@ detect_mac80211() {
 				renamed=1
 			}
 
+			is_mt7615 "$dev" && {
+				config_foreach check_antenna_gain wifi-device
+			}
 			wifi_id="$((wifi_id + 1))"
 			continue
 		}
@@ -280,8 +293,9 @@ detect_mac80211() {
 
 		[ -n "$htmode" ] && ht_capab="set wireless.radio${devidx}.htmode=$htmode"
 
-		if should_use_phy_device "$dev"; then
+		if is_mt7615 "$dev"; then
 			dev_id="set wireless.radio${devidx}.phy='$dev'"
+			ant_gain="set wireless.radio${devidx}.antenna_gain='3'"
 		else
 			path="$(mac80211_phy_to_path "$dev")"
 			if [ -n "$path" ]; then
@@ -343,6 +357,7 @@ EOF
 			${dev_id}
 			${ht_capab}
 			set wireless.radio${devidx}.country=US
+			${ant_gain}
 			#set wireless.radio${devidx}.disabled=1
 
 			set wireless.default_radio${devidx}=wifi-iface

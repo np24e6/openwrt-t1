@@ -5,7 +5,7 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=uci-default
-PKG_VERSION:=2023-02-13
+PKG_VERSION:=2023-04-25
 PKG_RELEASE:=1
 
 GPL_INCLUDE_SRC:=1

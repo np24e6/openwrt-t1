@@ -7,107 +7,31 @@ START=99
 STOP=99
 
 CONFIG="rs_modem"
-PROGRAM="/usr/bin/socat"
+PROGRAM="/usr/sbin/sodog"
 
-# get_default_modem <modem id>
-get_default_modem() {
-
-	json_init
-	json_load "$(cat /etc/board.json)"
-	json_get_keys modems modems
-	json_select modems
-	for modem in $modems; do
-		json_select "$modem"
-		json_get_vars id control builtin primary
-
-		[ "$primary" = "1" ] && modem=$id && break
-		[ "$builtin" = "1" ] && modem=$id && break
-	done
-
-	export $1=$id
-	export $2=$control
-}
-
-set_service() {
+start_application() {
 	local section="$1"
-	local modem_num=0
 
 	config_get ENABLED "$section" "enabled"
 	[ "$ENABLED" != "1" ] && return 1
 
-	config_get SPEED "$section" "baudrate"
-	config_get DBITS "$section" "databits"
-	config_get PARITY "$section" "parity"
-	config_get SBITS "$section" "stopbits"
-	config_get FCTRL "$section" "flowcontrol"
-	config_get DEVICE "$section" "device"
-	config_get DUPLEX "$section" "full_duplex_enabled"
-	config_get ECHO_ENABLED "$section" "echo_enabled"
-
-	set_tty_options "$DEVICE" "$SPEED" "$DBITS" "$PARITY" "$SBITS" "$FCTRL" "$DUPLEX" "$ECHO_ENABLED"
-
-	config_get FWD_TYPE "$section" "ctl_mode"
-
-	get_default_modem modem_id modem_control
-
-	if ubus list gsm.modem$modem_num >/dev/null 2>/dev/null; then
-		json_init
-		json_load "$(ubus -S call gsm.modem$modem_num info)"
-		json_get_vars tty_port aux_port
-		cmd_port=$tty_port
-		gsm_port=$aux_port
-	else
-		ttys=$(ls -d /sys/bus/usb/devices/$id/${id}*/tty?* /sys/bus/usb/devices/$id/${id}/tty/tty?* 2>/dev/null | sed "s/.*\///g" | tr "\n" " ")
-		cmd_port=/dev/$(echo $ttys | cut -d" " -f $((modem_control + 1)))
-	fi
-
-
-	if [ "$FWD_TYPE" == "full" ] && [ -e "$cmd_port" ]; then
-		ubus call mctl stop_track "{\"id\":\"$modem_id\"}"
-		ubus call gsm deattach "{\"usbid\":\"$modem_id\"}"
-		uci_add_list "$CONFIG" "blocked_modems" "modem" "$modem_id"
-		procd_open_instance
-		procd_set_param command $PROGRAM
-		procd_set_param term_timeout 0
-		procd_append_param command "$cmd_port",raw,echo=0,crnl
-		procd_append_param command "$DEVICE",raw,echo=0,crnl
-		procd_append_param file "/etc/config/$CONFIG"
-		procd_set_param respawn 3600 60 0
-		procd_close_instance
-	elif [ "$FWD_TYPE" == "partial" ] && [ -e "$gsm_port" ]; then
-		procd_open_instance
-		procd_set_param command $PROGRAM
-		procd_set_param term_timeout 0
-		procd_append_param command "unix-connect:$gsm_port"
-		procd_append_param command "$DEVICE",raw,echo=0,crnl,icanon=1
-		procd_append_param file "/etc/config/$CONFIG"
-		procd_set_param respawn 3600 60 0
-		procd_close_instance
-	fi
-}
-
-reattach_modems() {
-	local modem_id_l="$1"
-	ubus call gsm attach "{\"usbid\":\"$modem_id_l\"}"
-	uci_remove_list "$CONFIG" "blocked_modems" "modem" "$modem_id_l"
-	ubus call mctl start_track "{\"id\":\"$modem_id_l\"}"
+	procd_open_instance
+	procd_set_param command $PROGRAM -s $section -m
+	procd_append_param file "/etc/config/$CONFIG"
+	procd_set_param term_timeout 180
+	procd_set_param respawn 3600 10 0
+	procd_close_instance
 }
 
 start_service() {
 	config_load "$CONFIG"
-	config_foreach set_service
+	config_foreach start_application
 	uci_commit "$CONFIG"
 }
 
 reload_service() {
 	stop
 	start
-}
-
-service_stopped() {
-	config_load "$CONFIG"
-	config_list_foreach "blocked_modems" "modem" reattach_modems
-	uci_commit "$CONFIG"
 }
 
 service_triggers() {

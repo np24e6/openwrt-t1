@@ -22,7 +22,7 @@ start_service() {
 	rm_cron_entry
 
 	minute="$(awk -v min=0 -v max=59 'BEGIN{srand(); print int(min+rand()*(max-min+1))}')"
-	hour="$(($(date +%H) + 1))"
+	hour="$(($(date +%-H) + 1))"
 	wday="$(date +%w)"
 
 	[ "$hour" -gt 23 ] && {
@@ -39,6 +39,11 @@ start_service() {
 stop_service() {
 	rm_cron_entry
 	[ $((RESTART)) -eq 0 ] || /etc/init.d/cron restart
+}
+
+reload_service() {
+	stop
+	start
 }
 
 restart() {

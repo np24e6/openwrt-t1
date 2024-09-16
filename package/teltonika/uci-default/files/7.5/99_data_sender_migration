@@ -1,0 +1,575 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+[ -f "/etc/config/modbus_data_sender" ] || return 0
+
+PLUGIN_SECTION=
+
+move_option() {
+	local option="$1"
+	local new_opt="$2"
+	local src_sec="$3"
+	local dst_sec="$4"
+	local default="$5"
+	local var
+
+	config_get var "$src_sec" "$option" "$default"
+	[ -n "$var" ] && uci_set data_sender "$dst_sec" "$new_opt" "$var"
+}
+
+move_file_option() {
+	local option="$1"
+	local new_opt="$2"
+	local src_sec="$3"
+	local dst_sec="$4"
+	local path new_path base_name
+
+	config_get path "$src_sec" "$option"
+	[ -z "$path" ] && return 0
+
+	base_name=$(echo "$path" | sed "s/^[^.]*\.[^.]*\.[^.]*\.$option//")
+	[ -n "$base_name" ] && {
+		new_path="/etc/vuci-uploads/cbid.data_sender.$dst_sec.$new_opt$base_name"
+		mv "$path" "$new_path"
+		uci_set data_sender "$dst_sec" "$new_opt" "$new_path"
+	}
+}
+
+modbus_format_str() {
+	local src_sec="$1"
+	local dst_sec="$2"
+	local name="$3"
+	local json_string
+
+	config_get json_string "$src_sec" json_string
+	[ -z "$json_string" ] && return 0
+
+	mew_format_str=$(echo "$json_string" | sed -e 's/%t\b/%timestamp%/g' | sed -e 's/%d\b/%date%/g' | \
+		sed -e 's/%T\b/%bdate%/g' | sed -e 's/%i\b/%server_id%/g' | sed -e 's/%I\b/%bserver_id%/g' | \
+		sed -e 's/%p\b/%ip%/g' | sed -e 's/%r\b/%name%/g' | sed -e 's/%s\b/%addr%/g' | \
+		sed -e 's/%S\b/%baddr%/g' | sed -e 's/%z\b/%full_addr%/g' | sed -e 's/%a\b/%data%/g' | \
+		sed -e "s/%n\b/$name/g" | sed -e 's/%N\b/%server_name%/g' )
+
+	uci_set data_sender "$dst_sec" format_str "$mew_format_str"
+}
+
+bluetooth_format_str() {
+	local src_sec="$1"
+	local dst_sec="$2"
+	local json_string
+
+	config_get json_string "$src_sec" json_string
+	[ -z "$json_string" ] && return 0
+
+	mew_format_str=$(echo "$json_string" | sed -e 's/%t\b/%timestamp%/g' | \
+		sed -e 's/%d\b/%date%/g' | sed -e 's/%m\b/%mac%/g' | sed -e 's/%n\b/%name%/g' | \
+		sed -e 's/%r\b/%rssi%/g' | sed -e 's/%b\b/%data%/g')
+
+	uci_set data_sender "$dst_sec" format_str "$mew_format_str"
+}
+
+wifiscan_format_str() {
+	local src_sec="$1"
+	local dst_sec="$2"
+	local json_string
+
+	config_get json_string "$src_sec" json_string
+	[ -z "$json_string" ] && return 0
+
+	mew_format_str=$(echo "$json_string" | sed -e 's/%t\b/%timestamp%/g' | \
+		sed -e 's/%d\b/%date%/g' | sed -e 's/%m\b/%mac%/g' | sed -e 's/%h\b/%host%/g' | \
+		sed -e 's/%s\b/%signal%/g')
+
+	uci_set data_sender "$dst_sec" format_str "$mew_format_str"
+}
+
+dnp3_format_str() {
+	local src_sec="$1"
+	local dst_sec="$2"
+	local json_string
+
+	config_get json_string "$src_sec" json_string
+	[ -z "$json_string" ] && return 0
+
+	mew_format_str=$(echo "$json_string" | sed -e 's/%t\b/%timestamp%/g' | sed -e 's/%T\b/%bdate%/g' | \
+		sed -e 's/%d\b/%date%/g' | sed -e 's/%i\b/%index%/g' | sed -e 's/%r\b/%address%/g' | \
+		sed -e 's/%p\b/%ip%/g' | sed -e 's/%y\b/%port%/g' | sed -e 's/%q\b/%q_bits%/g' | \
+		sed -e 's/%g\b/%group%/g' | sed -e 's/%o\b/%data%/g' | sed -e 's/%n\b/%name%/g')
+
+	uci_set data_sender "$dst_sec" format_str "$mew_format_str"
+}
+
+opcua_format_str() {
+	local src_sec="$1"
+	local dst_sec="$2"
+	local json_string
+
+	config_get json_string "$src_sec" json_string
+	[ -z "$json_string" ] && return 0
+
+	mew_format_str=$(echo "$json_string" | sed -e 's/%t\b/%timestamp%/g' | \
+		sed -e 's/%d\b/%date%/g' | sed -e 's/%T\b/%bdate%/g' | sed -e 's/%n\b/%name%/g' | \
+		sed -e 's/%x\b/%data%/g')
+
+	uci_set data_sender "$dst_sec" format_str "$mew_format_str"
+}
+
+mbus_format_str() {
+	local src_sec="$1"
+	local dst_sec="$2"
+	local json_string
+
+	config_get json_string "$src_sec" json_string
+	[ -z "$json_string" ] && return 0
+
+	mew_format_str=$(echo "$json_string" | sed -e 's/%t\b/%timestamp%/g' | \
+		sed -e 's/%d\b/%date%/g' | sed -e 's/%T\b/%bdate%/g' | sed -e 's/%n\b/%name%/g' | \
+		sed -e 's/%x\b/%data%/g')
+
+	uci_set data_sender "$dst_sec" format_str "$mew_format_str"
+}
+
+_set_custom_format() {
+	local sec="$1"
+
+	uci_set data_sender "$sec" format "custom"
+	uci_set data_sender "$sec" na_str "N/A"
+	uci_set data_sender "$sec" delimiter ","
+}
+
+set_segment_count() {
+	local sec="$1"
+	local new_sec="$2"
+	local opt="$3"
+	local json_segment_count
+
+	config_get json_segment_count "$sec" json_segment_count 1
+	[ "$json_segment_count" = "all" ] && json_segment_count=64
+
+	uci_set data_sender "$new_sec" "$opt" "$json_segment_count"
+}
+
+set_filter() {
+	local value="$1"
+	local new_sec="$2"
+	local opt="$3"
+
+	case "$value" in
+		server_id)
+			value="id"
+			;;
+		server_ip|dnp3_ip)
+			value="ip"
+			;;
+		wifi_mac|device_mac)
+			value="mac"
+			;;
+		wifi_signal)
+			value="signal"
+			;;
+		request_name|device_name|wifi_name|mbus_name|mbus_name_not|opcua_name|opcua_name_not|mbus_name|mbus_name_not)
+			value="name"
+			;;
+		dnp3_addr)
+			value="address"
+			;;
+	esac
+
+	uci_set data_sender "$new_sec" "$opt" "$value"
+}
+
+set_bluetooth_plugin() {
+	local sec="$1"
+	local new_sec="$2"
+	local filter device_filtering json_string format_non_array
+
+	config_get format_non_array "$sec" format_non_array
+	config_get device_filtering "$sec" device_filtering
+	config_get json_string "$sec" json_string
+
+	uci -q batch <<-EOF
+		set data_sender.$new_sec=input
+		set data_sender.$new_sec.plugin='bluetooth'
+		set data_sender.$new_sec.name='$new_sec'
+		set data_sender.$new_sec.bl_object='$format_non_array'
+EOF
+
+	set_segment_count "$sec" "$new_sec" bl_segments
+	set_filter "$device_filtering" "$new_sec" bl_filter
+	[ -n "$device_filtering" ] && [ "$device_filtering" != "all" ] && {
+		move_option filter_device_mac bl_filter_mac "$sec" "$new_sec"
+		move_option filter_device_name bl_filter_name "$sec" "$new_sec"
+	}
+
+	_set_custom_format "$new_sec"
+	bluetooth_format_str "$sec" $new_sec
+}
+
+set_modbus_plugin() {
+	local sec="$1"
+	local new_sec="$2"
+	local name="$3"
+	local device_filtering custom_header
+	local tls_type cafile certfile keyfile format_non_array
+	local host
+
+	config_get format_non_array "$sec" format_non_array
+	config_get device_filtering "$sec" device_filtering
+
+	uci_add data_sender input "$new_sec"
+	uci_set data_sender "$new_sec" name "$new_sec"
+	uci_set data_sender "$new_sec" plugin modbus
+	set_segment_count "$sec" "$new_sec" modbus_segments
+	uci_set data_sender "$new_sec" modbus_object "$format_non_array"
+
+	set_filter "$device_filtering" "$new_sec" modbus_filter
+	[ -n "$device_filtering" ] && [ "$device_filtering" != "all" ] && {
+		move_option filter_server_id modbus_filter_server_id "$sec" "$new_sec"
+		move_option filter_server_ip modbus_filter_server_ip "$sec" "$new_sec"
+		move_option filter_request_name modbus_filter_request "$sec" "$new_sec"
+	}
+
+	_set_custom_format "$new_sec"
+	modbus_format_str "$sec" "$new_sec" "$name"
+}
+
+set_wifi_scanner_plugin() {
+	local sec="$1"
+	local new_sec="$2"
+	local format_non_array device_filtering
+
+	config_get format_non_array "$sec" format_non_array
+	config_get device_filtering "$sec" device_filtering
+
+	uci_add data_sender input "$new_sec"
+	uci_set data_sender "$new_sec" plugin wifiscan
+	uci_set data_sender "$new_sec" name "$new_sec"
+	uci_set data_sender "$new_sec" wifi_object "$format_non_array"
+
+	set_segment_count "$sec" "$new_sec" wifi_segments
+	_set_custom_format "$new_sec"
+	wifiscan_format_str "$sec" "$new_sec"
+	set_filter "$device_filtering" "$new_sec" wifi_filter
+	[ -n "$device_filtering" ] && {
+		move_option filter_wifi_mac wifi_filter_mac "$sec" "$new_sec"
+		move_option filter_wifi_name wifi_filter_name "$sec" "$new_sec"
+		move_option filter_wifi_signal wifi_filter_signal "$sec" "$new_sec"
+	}
+}
+
+set_tlt() {
+	local tls_type="$1"
+	local sec="$2"
+	local new_sec="$3"
+	local prefix="$4"
+
+	case "$tls_type" in
+		cert)
+			move_file_option cafile "${prefix}_cafile" "$sec" "$new_sec"
+			move_file_option certfile "${prefix}_certfile" "$sec" "$new_sec"
+			move_file_option keyfile "${prefix}_keyfile" "$sec" "$new_sec"
+			;;
+		psk)
+			move_option psk "${prefix}_psk" "$sec" "$new_sec"
+			move_option identity "${prefix}_identity" "$sec" "$new_sec"
+			;;
+	esac
+}
+
+set_http_header_cb() {
+	local value="$1"
+	local sec="$2"
+
+	uci_add_list data_sender "$sec" http_header "$value"
+}
+
+set_http_plugin() {
+	local sec="$1"
+	local new_sec="$2"
+	local tls_enabled host tls_type _device_files
+
+	config_get tls_enabled "$sec" tls_enabled 0
+	config_get _device_files "$sec" _device_files
+
+	uci_add data_sender output "$new_sec"
+	uci_set data_sender "$new_sec" name "$new_sec"
+	uci_set data_sender "$new_sec" plugin http
+	move_option host http_host "$sec" "$new_sec"
+	uci_set data_sender "$new_sec" http_tls "$tls_enabled"
+	uci_set data_sender "$new_sec" http_device_files "$_device_files"
+
+	config_list_foreach "$sec" custom_header set_http_header_cb "$new_sec"
+	[ "$tls_enabled" -eq 1 ] && {
+		config_get tls_type "$sec" tls_type
+		set_tlt "$tls_type" "$sec" "$new_sec" http
+	}
+}
+
+set_mqtt_plugin() {
+	local sec="$1"
+	local new_sec="$2"
+	local tls_enabled tls_type  _device_files
+
+	config_get tls_enabled "$sec" tls_enabled 0
+	config_get use_credentials "$sec" use_credentials 0
+	config_get _device_files "$sec" _device_files
+
+	uci_add data_sender output "$new_sec"
+	uci_set data_sender "$new_sec" plugin mqtt
+	uci_set data_sender "$new_sec" name "$new_sec"
+	uci_set data_sender "$new_sec" mqtt_use_credentials "$use_credentials"
+	uci_set data_sender "$new_sec" mqtt_device_files "$_device_files"
+	move_option host mqtt_host "$sec" "$new_sec"
+	move_option port mqtt_port "$sec" "$new_sec"
+	move_option keepalive mqtt_keepalive "$sec" "$new_sec"
+	move_option topic mqtt_topic "$sec" "$new_sec"
+	move_option client_id mqtt_client_id "$sec" "$new_sec"
+	move_option qos mqtt_qos "$sec" "$new_sec"
+
+	uci_set data_sender "$new_sec" mqtt_tls "$tls_enabled"
+	[ "$tls_enabled" -eq 1 ] && {
+		config_get tls_type "$sec" tls_type
+		uci_set data_sender "$new_sec" mqtt_tls_type "$tls_type"
+		set_tlt "$tls_type" "$sec" "$new_sec" mqtt
+	}
+
+	[ "$use_credentials" -eq 1 ] && {
+		move_option username mqtt_username "$sec" "$new_sec"
+		move_option password mqtt_password "$sec" "$new_sec"
+	}
+}
+
+set_dnp3_plugin() {
+	local sec="$1"
+	local new_sec="$2"
+	local type="$3"
+	local format_non_array device_filtering
+
+	config_get format_non_array "$sec" format_non_array
+	config_get device_filtering "$sec" device_filtering
+
+	uci_add data_sender input "$new_sec"
+	uci_set data_sender "$new_sec" plugin dnp3
+	uci_set data_sender "$new_sec" name "$new_sec"
+	uci_set data_sender "$new_sec" dnp3_object "$format_non_array"
+
+	set_segment_count "$sec" "$new_sec" dnp3_segments
+	if [ "$type" = "dnp3_data_flash" ]; then
+			uci_set data_sender "$new_sec" dnp3_db /usr/share/dnp3.db
+	else
+			uci_set data_sender "$new_sec" dnp3_db /tmp/dnp3.db
+	fi
+
+	set_filter "$device_filtering" "$new_sec" dnp3_filter
+	[ -n "$device_filtering" ] && {
+		move_option filter_dnp3_addr dnp3_filter_address "$sec" "$new_sec"
+		move_option filter_dnp3_ip dnp3_filter_ip "$sec" "$new_sec"
+	}
+
+	_set_custom_format "$new_sec"
+	dnp3_format_str "$sec" "$new_sec"
+}
+
+set_opcua_filter() {
+	local sec="$1"
+	local old_sec="$2"
+	local filter_opcua_name device_filtering
+
+	config_get device_filtering "$old_sec" device_filtering "all"
+	config_get filter_opcua_name "$old_sec" filter_opcua_name
+	[ "$device_filtering" = "opcua_name_not" ] &&
+			uci_set data_sender "$sec" opcua_filter_invert 1
+
+	set_filter "$device_filtering" "$new_sec" opcua_filter
+	[ -n "$filter_opcua_name" ] &&
+			uci_set data_sender "$sec" opcua_filter_name "$filter_opcua_name"
+}
+
+set_opcua_plugin() {
+	local sec="$1"
+	local new_sec="$2"
+	local format_non_array
+
+	config_get format_non_array "$sec" format_non_array
+	
+	uci_add data_sender input "$new_sec"
+	uci_set data_sender "$new_sec" plugin opcua
+	uci_set data_sender "$new_sec" name "$new_sec"
+	uci_set data_sender "$new_sec" opcua_object "$format_non_array"
+	set_segment_count "$sec" "$new_sec" opcua_segments
+	set_opcua_filter $new_sec $sec
+
+	_set_custom_format "$new_sec"
+	opcua_format_str "$sec" "$new_sec"
+}
+
+set_mbus_filter() {
+	local sec="$1"
+	local old_sec="$2"
+	local filter_mbus_name device_filtering
+
+	config_get device_filtering "$old_sec" device_filtering "all"
+	config_get filter_mbus_name "$old_sec" filter_mbus_name
+	[ "$device_filtering" = "mbus_name_not" ] &&
+			uci_set data_sender "$sec" mbus_filter_invert 1
+
+	set_filter "$device_filtering" "$new_sec" mbus_filter
+	[ -n "$filter_mbus_name" ] &&
+			uci_set data_sender "$sec" mbus_filter_name "$filter_mbus_name"
+}
+
+set_mbus_plugin() {
+	local sec="$1"
+	local new_sec="$2"
+	local format_non_array flash_db
+
+	config_get format_non_array "$sec" format_non_array 0
+	config_get flash_db "$sec" flash_db 0
+	
+	uci_add data_sender input "$new_sec"
+	uci_set data_sender "$new_sec" plugin mbus
+	uci_set data_sender "$new_sec" name "$new_sec"
+	uci_set data_sender "$new_sec" mbus_object "$format_non_array"
+	set_segment_count "$sec" "$new_sec" mbus_segments
+	set_mbus_filter $new_sec $sec
+
+	_set_custom_format "$new_sec"
+	mbus_format_str "$sec" "$new_sec"
+
+	if [ "$flash_db" -eq 1 ]; then
+		uci_set data_sender "$new_sec" mbus_db /usr/share/mbus_db
+	else
+		uci_set data_sender "$new_sec" mbus_db /tmp/mbus_db
+	fi
+}
+
+set_azure_conf() {
+    local sec="$1"
+
+    config_get enabled "$sec" enabled
+    config_get host "$sec" host
+
+    uci_add azure_iothub azure_iothub "$new_sec"
+    uci_set azure_iothub "$CONFIG_SECTION" enabled "$enabled"
+    uci_set azure_iothub "$CONFIG_SECTION" connection_type 'iothub'
+    uci_set azure_iothub "$CONFIG_SECTION" connection_string "$host"
+}
+
+set_azure_plugin() {
+	local sec="$1"
+	local new_sec="$2"
+	
+	uci_add data_sender output "$new_sec"
+	uci_set data_sender "$new_sec" plugin ubus
+	uci_set data_sender "$new_sec" name "$new_sec"
+	uci_set data_sender "$new_sec" ubus_object "azure.$new_sec"
+	uci_set data_sender "$new_sec" ubus_method "message"
+
+	set_azure_conf "$sec" "$new_sec"
+}
+
+set_empty_output() {
+	local new_sec="$1"
+	uci_add data_sender output "${new_sec}_output"
+	uci_set data_sender "${new_sec}_output" name "${new_sec}_output"
+}
+
+set_plugin() {
+	local sec="$1"
+	local name="$3"
+	PLUGIN_SECTION=
+
+	case "$2" in
+		bluetooth_data)
+			PLUGIN_SECTION="bluetooth_$name"
+			set_bluetooth_plugin "$sec" "$PLUGIN_SECTION"
+			;;
+		modbus_data)
+			PLUGIN_SECTION="modbus_$name"
+			set_modbus_plugin "$sec" "$PLUGIN_SECTION" "$name"
+			;;
+		wifi_scanner)
+			PLUGIN_SECTION="wifiscan_$name"
+			set_wifi_scanner_plugin "$sec" "$PLUGIN_SECTION"
+			;;
+		http)
+			PLUGIN_SECTION="http_$name"
+			set_http_plugin "$sec" "$PLUGIN_SECTION"
+			;;
+		mqtt)
+			PLUGIN_SECTION="mqtt_$name"
+			set_mqtt_plugin "$sec" "$PLUGIN_SECTION"
+			;;
+		dnp3_data|dnp3_data_flash)
+			PLUGIN_SECTION="dnp3_$name"
+			set_dnp3_plugin "$sec" "$PLUGIN_SECTION" "$2"
+			;;
+		opcua)
+			PLUGIN_SECTION="opcua_$name"
+			set_opcua_plugin "$sec" "$PLUGIN_SECTION"
+			;;
+		mbus)
+			PLUGIN_SECTION="mbus_$name"
+			set_mbus_plugin "$sec" "$PLUGIN_SECTION"
+			;;
+		azure_mqtt)
+			PLUGIN_SECTION="azure_$name"
+			set_azure_plugin "$sec" "$PLUGIN_SECTION"
+			;;
+	esac
+}
+
+migrate_sender() {
+	local sec="$1"
+	local enabled data_source protocol name
+	local retry_sending sender_id json_segment_count format_non_array
+
+	config_get data_source "$sec" data_source "modbus_data"
+	config_get protocol "$sec" protocol
+	config_get enabled "$sec" enabled 0
+	config_get name "$sec" name
+	config_get retry_sending "$sec" retry_sending 0
+	config_get sender_id "$sec" sender_id
+	config_get json_segment_count "$sec" json_segment_count
+	config_get format_non_array "$sec" format_non_array 0
+
+	[ "$protocol" == "kinesis" ] && return 0
+
+	uci_add data_sender collection "${sender_id:-$sec}"
+	collection_sec=$CONFIG_SECTION
+	move_option period period "$sec" "$collection_sec" 60
+	uci_set data_sender "$collection_sec" enabled "$enabled"
+	uci_set data_sender "$collection_sec" retry "$retry_sending"
+	uci_set data_sender "$collection_sec" name "${name:-$sender_id}"
+	
+	set_plugin "$sec" "$data_source" ${name:-$sender_id}
+	if [ -n "$PLUGIN_SECTION" ]; then
+		uci_add_list data_sender "$collection_sec" input "$PLUGIN_SECTION"
+		collection_fmt="%${PLUGIN_SECTION}%"
+		[ "$json_segment_count" = "all" ] && json_segment_count=64
+		[ "$json_segment_count" -gt 1 ] || [ "$format_non_array" -eq 0 ] &&
+				collection_fmt="[%${PLUGIN_SECTION}%]"
+		uci_set data_sender "$collection_sec" format_str "$collection_fmt"
+		_set_custom_format "$collection_sec"
+	else
+		uci_set data_sender "$collection_sec" format "json"
+	fi
+
+	set_plugin "$sec" "$protocol" ${name:-$sender_id}
+	if [ -n "$PLUGIN_SECTION" ]; then
+		uci_set data_sender "$collection_sec" output "$PLUGIN_SECTION"
+	else
+		set_empty_output "$sender_id"
+		uci_set data_sender "$collection_sec" output "${sender_id}_output"
+	fi
+}
+
+
+config_load modbus_data_sender
+config_foreach migrate_sender data_sender
+
+uci -q commit data_sender
+rm -f /etc/config/modbus_data_sender
+
+uci commit

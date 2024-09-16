@@ -9,13 +9,14 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=coova-chilli
-PKG_VERSION:=2023-01-30
+PKG_VERSION:=2023-08-31
 PKG_MAINTAINER:=Jaehoon You <teslamint@gmail.com>
 PKG_LICENSE:=GPL-2.0+
 PKG_LICENSE_FILES:=COPYING
 PKG_RELEASE:=1
 
-PKG_SOURCE_VERSION:=4e642b974120df142bcc719d4163ec8aaf6ed664
+PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
+PKG_SOURCE_VERSION:=2.11
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_SOURCE_VERSION)-$(PKG_VERSION)
 PKG_SOURCE:=$(PKG_SOURCE_SUBDIR).tar.gz
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_SOURCE_SUBDIR)
@@ -45,7 +46,7 @@ define Package/coova-chilli
   SUBMENU:=Captive Portals
   SECTION:=net
   CATEGORY:=Network
-  DEPENDS:=+kmod-tun +librt +COOVACHILLI_CYASSL:libcyassl +COOVACHILLI_OPENSSL:libopenssl \
+  DEPENDS:=+libuci +libtlt_uci +kmod-tun +librt +COOVACHILLI_CYASSL:libcyassl +COOVACHILLI_OPENSSL:libopenssl \
 	+COOVACHILLI_DATABASE:libsqlite3 +COOVACHILLI_GSM:libgsm +libubus +libubox \
 	+vuci-app-coovachilli-ui +vuci-app-landingpage +WIFI_SUPPORT:vuci-app-hotspot2-ui +libtltchilli \
 	+tlt_hs_theme_default
@@ -56,6 +57,10 @@ define Package/coova-chilli
   	PKG_TLT_NAME:=Hotspot
   	PKG_ROUTER:=$(TLT_PLATFORM_NAME)
   endif
+endef
+
+define Package/coova-chilli/mdm9x07
+  PKG_ROUTER:=TRB140 TRB143
 endef
 
 define Package/coova-chilli/description

@@ -7,7 +7,7 @@
 +#ifdef RUT9_PLATFORM
 +	char kmod_loader[64];
 +	snprintf(kmod_loader, sizeof(kmod_loader),
-+	         "/sbin/kmodloader /etc/modules-late.d/mmc");
++	         "/sbin/kmodloader /etc/modules-late.d/mmc-spi");
 +	if (system(kmod_loader))
 +		ULOG_ERR("extroot: couldn't kmodload mmc\n");
 +#endif

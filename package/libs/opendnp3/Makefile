@@ -6,7 +6,7 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=opendnp3
-PKG_SOURCE_VERSION:=8c203a00c251065951ba4633cb04c3dfa6a7ade6
+PKG_SOURCE_VERSION:=7.5
 
 PKG_LICENSE:=Apache-2.0
 PKG_ORIGIN_URL:=https://github.com/dnp3/opendnp3

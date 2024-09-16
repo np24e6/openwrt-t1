@@ -4,121 +4,29 @@ START=07
 STOP=90
 
 USE_PROCD=1
-STATE_F_PATH="/tmp/state/network_md5state"
-LAN_TARGET=""
-
-get_dhcp_sections() {
-
-	local dhcp_state=""
-	local new_l=$'\n'
-
-	[ ! -f "/etc/config/dhcp" ] && echo "" && return 0
-
-	config_cb() {
-
-		[ "$1" != "dhcp" ] && return 1
-
-		dhcp_state="${dhcp_state:-}$1.$2 ${new_l}"
-
-		option_cb() {
-
-			[ "$1" = "interface" ] && LAN_TARGET="${LAN_TARGET:-}$2 "
-
-			dhcp_state="${dhcp_state}$1=$2 ${new_l}"
-		}
-	}
-
-	config_load dhcp
-	reset_cb
-
-	echo "${dhcp_state%?}"
-
-	return 0
-}
-
-get_lan_sections() {
-
-	local lan_state=""
-	local lan_sect=""
-	local new_l=$'\n'
-
-	[ ! -f "/etc/config/network" ] && echo "" && return 0
-
-	lan_cb() {
-
-		[[ "$LAN_TARGET" =~ "$1\b" ]] || return 1
-
-		config_get proto "$1" "proto"
-		[ "$proto" != "static" ] && return 1
-
-		lan_state="${lan_state:-}interface.$1 ${new_l}"
-
-		lan_state="${lan_state:-}ipaddr=$(config_get $1 "ipaddr") ${new_l}"
-		lan_state="${lan_state:-}netmask=$(config_get "$1" "netmask") ${new_l}"
-	}
-
-	switch_vlan_cb() {
-		lan_state="${lan_state:-}switch_vlan ${new_l}"
-
-		lan_state="${lan_state:-}vlan=$(config_get "$1" "vlan") ${new_l}"
-		lan_state="${lan_state:-}ports=$(config_get "$1" "ports") ${new_l}"
-		lan_state="${lan_state:-}vid=$(config_get "$1" "vid") ${new_l}"
-	}
-
-	switch_cb() {
-		lan_state="${lan_state:-}switch ${new_l}"
-		lan_state="${lan_state:-}fiber_priority=$(config_get "$1" "fiber_priority") ${new_l}"
-		lan_state="${lan_state:-}mirror_monitor_port=$(config_get "$1" "mirror_monitor_port") ${new_l}"
-		lan_state="${lan_state:-}mirror_source_port=$(config_get "$1" "mirror_source_port") ${new_l}"
-		lan_state="${lan_state:-}enable_mirror_rx=$(config_get "$1" "enable_mirror_rx") ${new_l}"
-		lan_state="${lan_state:-}enable_mirror_tx=$(config_get "$1" "enable_mirror_tx") ${new_l}"
-	}
-
-	config_load network
-	config_foreach lan_cb interface
-	config_foreach switch_vlan_cb switch_vlan
-	config_foreach switch_cb switch
-
-	echo "${lan_state%?}"
-
-	return 0
-}
-
-get_md5_state() {
-
-	local data_set=$(get_dhcp_sections ; get_lan_sections)
-	local md5_state=$(echo "$data_set" | md5sum | cut -d " " -f1)
-
-	echo "$md5_state"
-
-	return 0
-}
-
-save_lan_network_dhcp_state() {
-
-	echo "lan: $(get_md5_state)" > "$STATE_F_PATH"
-
-	return 0
-}
-
-compare_lan_dhcp_states() {
-
-	[ ! -f "$STATE_F_PATH" ] && save_lan_network_dhcp_state && return 0
-
-	local old_lan_md5=$(grep lan: "$STATE_F_PATH" | awk '{print $2}')
-	local new_lan_md5=$(get_md5_state)
-
-	[ "$old_lan_md5" != "$new_lan_md5" ] &&
-		$(sed -i 's/^lan: .*$/lan: '$new_lan_md5'/' "$STATE_F_PATH") && return 0
-
-	return 1
-}
 
 init_switch() {
 	setup_switch() { return 0; }
 
 	include /lib/network
 	setup_switch
+}
+
+compare_lan_dhcp_states() {
+
+	check_network_states() { return 1; }
+	include /lib/network
+
+	check_network_states "$1" && return 0
+
+	return 1
+}
+
+set_port_link() {
+	setup_port_links() { return 0; }
+
+	include /lib/network
+	setup_port_links "$1"
 }
 
 start_service() {
@@ -133,17 +41,28 @@ start_service() {
 	}
 	procd_close_instance
 
-	save_lan_network_dhcp_state
+	compare_lan_dhcp_states "init"
+	set_port_link "reset"
 }
 
 reload_service() {
 	local rv=0
+	local reset=""
 
-	compare_lan_dhcp_states && init_switch
+	compare_lan_dhcp_states && {
+			init_switch
+			reset="reset"
+	}
+
+	set_port_link "$reset"
 
 	[ -x /sbin/wifi ] && /sbin/wifi reload_legacy
 	ubus call network reload || rv=1
 	[ -x /sbin/wifi ] && /sbin/wifi kick_clients
+
+	# close '1000' file descriptor for child, because procd holds a lock on it and blocks subsequent calls until previous exits
+	[ -x /bin/trigger_vuci_routes_reload ] && /bin/trigger_vuci_routes_reload -d 3 -t "network / wireless config change" 1000>&- &
+
 	return $rv
 }
 

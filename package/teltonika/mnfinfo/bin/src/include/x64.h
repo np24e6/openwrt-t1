@@ -3,8 +3,8 @@
 #define MAX_SIM_ID 4
 #define SIM_SECTION_SIZE 0x10
 
-#define MTD_CONFIG_RO_DIR "/lib/firmware/mnfinfo.bin"
-#define MTD_CONFIG_RW_DIR MTD_CONFIG_RO_DIR
+#define MNF_PARTITION_NAME_RO "/lib/firmware/mnfinfo.bin"
+#define MNF_PARTITION_NAME_RW MNF_PARTITION_NAME_RO
 
 #define MAC_OFFSET 0x00
 #define MAC_LENGTH 6

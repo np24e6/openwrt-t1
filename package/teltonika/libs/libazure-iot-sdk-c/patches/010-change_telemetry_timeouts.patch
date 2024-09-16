@@ -1,0 +1,19 @@
+This lowers timeout and retry values since we do not want
+messages to be kept in internal SDK message queue for too long
+
+There is OPTION_MESSAGE_TIMEOUT that may be used in the SDK
+but it is deprecated
+
+--- a/iothub_client/src/iothubtransport_mqtt_common.c
++++ b/iothub_client/src/iothubtransport_mqtt_common.c
+@@ -46,8 +46,8 @@
+ #define DEFAULT_CONNACK_TIMEOUT             30 // 30 seconds
+ #define BUILD_CONFIG_USERNAME               24
+ #define SAS_TOKEN_DEFAULT_LEN               10
+-#define RESEND_TIMEOUT_VALUE_MIN            1*60
+-#define TELEMETRY_MSG_TIMEOUT_MIN           2*60
++#define RESEND_TIMEOUT_VALUE_MIN            5
++#define TELEMETRY_MSG_TIMEOUT_MIN           10
+ #define DEFAULT_CONNECTION_INTERVAL         30
+ #define FAILED_CONN_BACKOFF_VALUE           5
+ #define STATUS_CODE_FAILURE_VALUE           500

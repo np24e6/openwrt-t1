@@ -34,7 +34,7 @@
 #include "nat_helper_dt.h"
 #include "nat_helper_hsl.h"
 
-#define NAPT_CT_POLLING_SEC         3
+#define NAPT_CT_POLLING_SEC         1
 
 extern int nat_sockopts_init;
 extern uint32_t napt_set_default_route(fal_ip4_addr_t dst_addr, fal_ip4_addr_t src_addr);
@@ -1157,7 +1157,7 @@ napt_ct_hw_exit(void)
     a_uint8_t napt_ct_valid[NAPT_TABLE_SIZE];
 
     /*set all ct invalid to cleanup*/
-    memset(napt_ct_valid, 0, sizeof(napt_ct_valid));
+    memset(napt_ct_valid, 0, NAPT_TABLE_SIZE * sizeof(a_uint8_t));
 
     napt_ct_hw_sync(napt_ct_valid);
 }

@@ -20,6 +20,7 @@ export CONF_BACKUP_LIST=0
 export CONF_BACKUP_VALIDATE=0
 export CONF_BACKUP=
 export CONF_RESTORE=
+export CONF_PASSWORD=
 export NEED_IMAGE=
 export HELP=0
 export FORCE=0
@@ -40,6 +41,7 @@ while [ -n "$1" ]; do
 		-u) export SKIP_UNCHANGED=1;;
 		-b|--create-backup) export CONF_BACKUP="$2" NEED_IMAGE=1; shift;;
 		-r|--restore-backup) export CONF_RESTORE="$2" NEED_IMAGE=1; shift;;
+		--password) export CONF_PASSWORD="$2"; shift;;
 		-l|--list-backup) export CONF_BACKUP_LIST=1;;
 		-V|--validate) export CONF_BACKUP_VALIDATE=1;;
 		-f) export CONF_IMAGE="$2"; shift;;
@@ -90,11 +92,16 @@ backup-command:
 	-b | --create-backup <file>
 	             create .tar.gz of files specified in sysupgrade.conf
 	             then exit. Does not flash an image. If file is '-',
-	             i.e. stdout, verbosity is set to 0 (i.e. quiet).
+	             i.e. stdout, verbosity is set to 0 (i.e. quiet). If --password flag is used,
+		     file should be provided as <filename>.tar.7z
 	-r | --restore-backup <file>
 	             restore a .tar.gz created with sysupgrade -b
 	             then exit. Does not flash an image. If file is '-',
-	             the archive is read from stdin.
+	             the archive is read from stdin. If --password flag is used,
+		     file should be provided as <filename>.tar.7z
+	--password <password>
+		     provide password that encrypts backup file with AES 256
+		     encryption and archives it as .tar.7z
 	-l | --list-backup
 	             list the files that would be backed up when calling
 	             sysupgrade -b. Does not create a backup file.
@@ -241,13 +248,20 @@ do_save_conffiles() {
 		done
 	}
 
+	# Save user modified apn list
+	[ -e /usr/bin/backup_apn_db ] && lua /usr/bin/backup_apn_db -b
+
 	{
 		[ -z "$CONF_BACKUP" ] && [ -d "/etc/api" ] && echo "/etc/api"
 		[ -z "$CONF_BACKUP" ] && [ -e "/etc/ssl/certs/tlt-pairing.crt" ] && echo "/etc/ssl/certs/tlt-pairing.crt"
 		[ -z "$CONF_BACKUP" ] && [ -e "/etc/umdns/tlt_pair.json" ] && echo "/etc/umdns/tlt_pair.json"
+		[ -e /usr/share/mobifd/apn_backup.json ] && echo "/usr/share/mobifd/apn_backup.json" # APN db user backuped values
 		[ -d /etc/profiles ] && echo "/etc/profiles"
 		[ -d /etc/certificates ] && echo "/etc/certificates"
-		[ -e /etc/cacert.pem ] && echo "/etc/cacert.pem"
+
+		cmp -s /etc/ssl/certs/ca-certificates.crt /rom/etc/ssl/certs/ca-certificates.crt || 
+				echo "/etc/ssl/certs/ca-certificates.crt"
+
 		[ -e /etc/privoxy/user_action_luci ] && echo "/etc/privoxy/user_action_luci"
 		[ -d /etc/openvpn ] && {
 			find "/etc/openvpn/" -name "auth_*"							# OpenVPN username and password files
@@ -300,7 +314,20 @@ do_save_conffiles() {
 
 	v "Saving config files..."
 	[ "$VERBOSE" -gt 1 ] && TAR_V="v" || TAR_V=""
-	tar c${TAR_V}zf "$conf_tar" -T "$CONFFILES" 2>/dev/null
+
+	if [ -z "$CONF_PASSWORD" ]; then
+		tar c${TAR_V}zf "$conf_tar" -T "$CONFFILES" 2>/dev/null
+	else
+		local conf_tar_trimmed=$(echo "$conf_tar" | sed 's/\.7z$//')
+		tar -cf "$conf_tar_trimmed" -T "$CONFFILES" 2>/dev/null
+		which 7zr >/dev/null || {
+			echo "Could not create $conf_tar - 7zip package is not installed";
+			exit 1
+		}
+		7zr a -p"$CONF_PASSWORD" -mhe=on "$conf_tar" "$conf_tar_trimmed" >/dev/null 2>&1
+		rm "$conf_tar_trimmed"
+	fi
+
 	if [ "$?" -ne 0 ]; then
 		echo "Failed to create the configuration backup."
 		rm -f "$conf_tar"
@@ -374,8 +401,46 @@ missing_lines() {
 	IFS="$oIFS"
 }
 
+restore_sme_fstab() {
+	local rwm_device
+	local rwm_target
+	local overlay_uuid
+	local overlay_target
+	local overlay_sme
+	local log_enabled
+	local log_device
+
+	local rwm=$(uci -q get fstab.rwm)
+	local overlay=$(uci -q get fstab.overlay)
+	local log=$(uci -q get fstab.log)
+
+	if [ -n "$rwm" ] && [ -n "$overlay" ] && [ -n "$log" ]; then
+		config_load fstab
+		config_get rwm_device rwm device
+		config_get rwm_target rwm target
+		config_get overlay_uuid overlay uuid
+		config_get overlay_target overlay target
+		config_get overlay_sme overlay sme
+		config_get log_enabled log enabled
+		config_get log_device log device
+		uci -c "/tmp/new_config_dir/etc/config" batch <<-EOF
+			set fstab.rwm=$rwm
+			set fstab.rwm.device=$rwm_device
+			set fstab.rwm.target=$rwm_target
+			set fstab.overlay=$overlay
+			set fstab.overlay.uuid=$overlay_uuid
+			set fstab.overlay.target=$overlay_target
+			set fstab.overlay.sme=$overlay_sme
+			set fstab.log=$log
+			set fstab.log.enabled=$log_enabled
+			set fstab.log.device=$log_device
+			commit fstab
+		EOF
+	fi
+}
 
 apply_backup() {
+	restore_sme_fstab
 	/etc/init.d/mdcollectd stop
 	/etc/init.d/simcard reload >/dev/null 2>/dev/null
 	rm -f /tmp/new_config_dir/etc/config/hwinfo /tmp/new_config_dir/etc/inittab 2>/dev/null
@@ -442,9 +507,19 @@ if [ -n "$CONF_RESTORE" ]; then
 	[ "$VERBOSE" -gt 1 ] && TAR_V="v" || TAR_V=""
 
 	mkdir -p /tmp/new_config_dir
-	echo 'etc/rc.d/*' >/tmp/exclusions
-	tar -C /tmp/new_config_dir -x${TAR_V}zf "$CONF_RESTORE" -X '/tmp/exclusions'
-	rm /tmp/exclusions
+	if [ -z "$CONF_PASSWORD" ]; then
+		echo 'etc/rc.d/*' > /tmp/exclusions
+		echo 'etc/profile' >> /tmp/exclusions
+		tar -C /tmp/new_config_dir -x${TAR_V}zf "$CONF_RESTORE" -X '/tmp/exclusions'
+		rm /tmp/exclusions
+	else
+		conf_tar_dirname=$(dirname "$CONF_RESTORE")
+		7zr e -aoa -p"$CONF_PASSWORD" "$CONF_RESTORE" -o"$conf_tar_dirname"
+		rm -rf /tmp/new_config_dir/etc/rc.d/*
+		rm -rf /tmp/new_config_dir/etc/profile
+		conf_tar_trimmed=$(echo "$CONF_RESTORE" | sed 's/\.7z$//')
+		tar -C /tmp/new_config_dir -x${TAR_V}f "$conf_tar_trimmed"
+	fi
 	ret=$?
 	[ "$ret" -ne 0 ] && {
 		v "Error restoring backup"
@@ -536,7 +611,13 @@ json_get_var valid "valid"
 
 json_get_var is_downgrade "is_downgrade"
 [ "$is_downgrade" -eq 1 ] && {
-	SAVE_CONFIG=0
+	v "Detected firmware downgrade"
+}
+
+json_get_var allow_backup "allow_backup"
+[ "$allow_backup" -eq 0 ] && {
+	v "Cannot restore config due to firmware incompatibility"
+	export SAVE_CONFIG=0
 }
 
 if [ -n "$CONF_IMAGE" ]; then
@@ -563,6 +644,9 @@ if [ $TEST -eq 1 ]; then
 	clean_tmp_dir
 	exit 0
 fi
+
+# allow init(procd) to handle watchdog in cpu intensive tasks
+[ -e "/usr/bin/renice" ] && /usr/bin/renice -20 -p 1
 
 run_hooks "" $fwtool_pre_upgrade
 

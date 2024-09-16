@@ -59,5 +59,11 @@ which sshpass >/dev/null || TARGET_PASS=''
 
 for exe in "${!executables_dirs[@]}"; do
 	ssh_pass "scp" "-P" "${executables_dirs[$exe]}/${exe}" "root@${TARGET_IP}:/tmp/${exe}"
-	ssh_pass "ssh" "-p" "root@${TARGET_IP}" "chmod +x /tmp/${exe}; /tmp/${exe}"
+	ssh_pass "ssh" "-p" "root@${TARGET_IP}" "chmod +x /tmp/${exe}; GCOV_PREFIX=${GCOV_PREFIX} \
+		GCOV_PREFIX_STRIP=${GCOV_PREFIX_STRIP} /tmp/${exe}"
 done
+
+if [ "$GCOV_RUN" = "1" ];
+then
+	ssh_pass "scp" "-P" "-r" "root@${TARGET_IP}:${GCOV_PREFIX}*" "./build/gcov/out"
+fi

@@ -1,0 +1,12 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+max_requests="$(uci_get uhttpd main max_requests)"
+
+if [ "$max_requests" != 7 ]; then
+	uci_set "uhttpd" "main" "max_requests" "7"
+	uci_commit "uhttpd"
+fi
+
+exit 0

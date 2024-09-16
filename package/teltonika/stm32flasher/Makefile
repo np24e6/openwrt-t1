@@ -1,13 +1,13 @@
 #
-# Copyright (C) 2022 Teltonika
+# Copyright (C) 2023 Teltonika-Networks
 #
 
 include $(TOPDIR)/rules.mk
-include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=stm32flasher
 
-PKG_SOURCE_VERSION:=27623f730f1c0f4b1f31179d03d610e19897147b
+PKG_SOURCE_URL=$(TLT_GIT)/packages/r2ec.git
+PKG_SOURCE_VERSION:=2.6.2
 
 include $(INCLUDE_DIR)/package.mk
 

@@ -1,0 +1,80 @@
+#!/bin/sh /etc/rc.common
+
+. /lib/functions/teltonika-functions.sh
+
+USE_PROCD=1
+START=98
+STOP=99
+
+BIN=modbus_server
+CONFIG=modbus_server
+
+rename_custom_regfile() {
+	REGFILE_ON=$1
+	REGFILE=$(uci -q get modbus_server.modbus.regfile)
+
+	if [ "$REGFILE_ON" == "1" ]; then
+		OLD_REGFILE="$(grep '# REGISTER_BLOCK_FILE' /etc/sysupgrade.conf 2>/dev/null | head -n1 | sed 's/ #.*//')"
+		if [ "$OLD_REGFILE" != "$REGFILE" ]
+		then
+			rm -f "$OLD_REGFILE"
+			sed -i '/# REGISTER_BLOCK_FILE/d' /etc/sysupgrade.conf 2>/dev/null
+			echo "${REGFILE} # REGISTER_BLOCK_FILE" >> /etc/sysupgrade.conf
+		fi
+	fi
+}
+
+set_tcp_service() {
+	ENABLED=$(uci -q get modbus_server.modbus.enabled)
+	REGFILE_ON=$(uci -q get modbus_server.modbus.clientregs)
+
+	rename_custom_regfile "$REGFILE_ON"
+
+	if [ "$ENABLED" == "1" ]; then
+		procd_open_instance
+		procd_set_param command $BIN -s "modbus"
+		procd_set_param file /etc/config/modbus_server
+		procd_set_param respawn
+		procd_close_instance
+	fi
+}
+
+check_for_duplex() {
+	config_get DEVICE $1 device
+	config_get FULL_DUPLEX $1 full_duplex_enabled "1"
+
+	[ "$DEVICE" != "/dev/rs485" ] && return
+
+	set_tty_duplex "/dev/rs485" "$FULL_DUPLEX"
+}
+
+set_serial_service() {
+	local SECTION=$1
+
+	config_get ENABLED $SECTION enabled
+
+	if [ -n "$ENABLED" ] && [ "$ENABLED" -eq 1 ]; then
+		REGFILE_ON=$(uci -q get modbus_server.$SECTION.clientregs)
+		rename_custom_regfile "$REGFILE_ON"
+
+		check_for_duplex $SECTION
+
+		procd_open_instance
+		procd_set_param file /etc/config/$CONFIG
+		procd_set_param command "$BIN" -s "$SECTION"
+		procd_set_param respawn ${respawn_threshold:-3600} ${respawn_timeout:-60} ${respawn_retry:-0}
+		procd_close_instance
+	fi
+}
+
+start_service() {
+	config_load "$CONFIG"
+
+	set_tcp_service
+
+	config_foreach set_serial_service rtu_device
+}
+
+service_triggers() {
+	procd_add_reload_trigger "modbus_server"
+}

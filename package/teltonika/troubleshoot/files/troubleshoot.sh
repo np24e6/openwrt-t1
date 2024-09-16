@@ -6,7 +6,8 @@
 
 PACK_DIR="/tmp/troubleshoot/"
 ROOT_DIR="${PACK_DIR}root/"
-PACK_FILE="/tmp/troubleshoot.tar.gz"
+DELTA_DIR="/tmp/delta/"
+PACK_FILE="/tmp/troubleshoot.tar"
 CENSORED_STR="VALUE_REMOVED_FOR_SECURITY_REASONS"
 WHITE_LIST="
 dropbear.@dropbear[0].PasswordAuth
@@ -72,6 +73,7 @@ secure_config() {
 
 	OLD_IFS="$IFS"
 	IFS=$'\n'
+	mkdir "$DELTA_DIR"
 	for line in $lines; do
 		option="${line%%=\'*}"
 		value="${line#*=\'}"
@@ -83,11 +85,12 @@ secure_config() {
 		[ $? -ne 1 ] && continue
 
 		secuire_tmp_config "$value"
-		uci -c "${ROOT_DIR}etc/config" set "${option}=${CENSORED_STR}"
+		uci -c "${ROOT_DIR}etc/config" -t "$DELTA_DIR" set "${option}=${CENSORED_STR}"
 	done
 	IFS="$OLD_IFS"
 
-	uci -c "$ROOT_DIR/etc/config" commit
+	uci -c "$ROOT_DIR/etc/config" -t "$DELTA_DIR" commit
+	rm -rf "$DELTA_DIR"
 }
 
 get_mnf_info() {
@@ -108,7 +111,7 @@ system_hook() {
 
 	ubus list sim &>/dev/null && {
 		troubleshoot_init_log "Active SIM]" "$log_file"
-		troubleshoot_add_log "$(ubus call sim get)" "$log_file"
+		troubleshoot_add_log "$(ubus call gsm.modem0 get_sim_slot)" "$log_file"
 	}
 
 	troubleshoot_init_log "Firmware version" "$log_file"
@@ -158,9 +161,8 @@ switch_hook() {
 	local ethernet
 	local log_file="${PACK_DIR}switch.log"
 
-	config_load hwinfo
-	config_get ethernet hwinfo ethernet 0
-	[ "$ethernet" -eq 1 ] && [ -n "$(which swconfig)" ] || return
+	ethernet="$(jsonfilter -i /etc/board.json -e '@.hwinfo.ethernet')"
+	[ "$ethernet" = "true" ] && [ -n "$(which swconfig)" ] || return
 
 	troubleshoot_init_log "Switch configuration" "$log_file"
 	troubleshoot_add_log_ext "swconfig" "dev switch0 show" "$log_file"
@@ -170,10 +172,8 @@ wifi_hook() {
 	local wifi __tmp devname
 	local log_file="${PACK_DIR}wifi.log"
 
-	config_load hwinfo
-	config_get wifi hwinfo wifi 0
-
-	[ "$wifi" -eq 1 ] && [ -n "$(which iw)" ] || return
+	wifi="$(jsonfilter -i /etc/board.json -e '@.hwinfo.wifi')"
+	[ "$wifi" = "true" ] && [ -n "$(which iw)" ] || return
 
 	__tmp="$(ubus call network.wireless status 2>&1)"
 	__cmd="$(jsonfilter -s "$__tmp" -e "wifaces=@.*.interfaces[@].ifname")"
@@ -238,7 +238,9 @@ services_hook() {
 	troubleshoot_init_log "SERVICES" "$log_file"
 	troubleshoot_add_log "$(ubus call service list)" "$log_file"
 
-	services_secure_passwords "$log_file"
+	if [ -z "$1" ]; then
+		services_secure_passwords "$log_file"
+	fi
 }
 generate_root_hook() {
 	mkdir "$ROOT_DIR"
@@ -256,25 +258,44 @@ generate_root_hook() {
 
 generate_package() {
 	cd /tmp || return
-	tar -czf "$PACK_FILE" troubleshoot >/dev/null 2>&1
+
+	if [ -z "$1" ]; then
+		tar -czf "${PACK_FILE}.gz" troubleshoot >/dev/null 2>&1
+	else
+		tar -cf "$PACK_FILE" troubleshoot >/dev/null 2>&1
+		which 7zr >/dev/null || {
+			echo "Could not create troubleshoot.tar.7z - 7zip package is not installed";
+			rm -f "$PACK_FILE"
+			exit 1
+		}
+		7zr a -p"$1" -mhe=on "${PACK_FILE}.7z" "$PACK_FILE" >/dev/null 2>&1
+	fi
+
 	rm -r "$PACK_DIR"
+	rm -f "$PACK_FILE"
 	rm -f "$TMP_LOG_FILE"
 }
 
 init() {
 	rm -r "$PACK_DIR" >/dev/null 2>&1
-	rm "$PACK_FILE" >/dev/null 2>&1
+
+	if [ -z  "$1" ]; then
+		rm "${PACK_FILE}.gz" >/dev/null 2>&1
+	else
+		rm "${PACK_FILE}.7z" >/dev/null 2>&1	
+	fi
+
 	mkdir "$PACK_DIR"
 }
 
 lock /var/run/troubleshoot.lock
 
-init
+init "$1"
 
 troubleshoot_hook_init system_hook
 troubleshoot_hook_init switch_hook
 troubleshoot_hook_init wifi_hook
-troubleshoot_hook_init services_hook
+troubleshoot_hook_init services_hook "$1"
 troubleshoot_hook_init systemlog_hook
 
 #init external hooks
@@ -287,6 +308,6 @@ troubleshoot_hook_init systemlog_hook
 troubleshoot_hook_init generate_root_hook
 troubleshoot_run_hook_all
 
-generate_package
+generate_package "$1"
 
 lock -u /var/run/troubleshoot.lock

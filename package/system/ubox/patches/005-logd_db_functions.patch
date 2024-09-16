@@ -1,6 +1,8 @@
---- a/log/logd.c
-+++ b/log/logd.c
-@@ -25,8 +25,15 @@
+Index: ubox-2020-10-25-9ef88681/log/logd.c
+===================================================================
+--- ubox-2020-10-25-9ef88681.orig/log/logd.c
++++ ubox-2020-10-25-9ef88681/log/logd.c
+@@ -25,8 +27,15 @@
  #include <libubox/list.h>
  #include <libubox/ustream.h>
  #include <libubus.h>
@@ -16,7 +18,7 @@
  
  int debug = 0;
  static struct blob_buf b;
-@@ -40,12 +47,38 @@ enum {
+@@ -40,12 +49,38 @@ enum {
  	__READ_MAX
  };
  
@@ -55,7 +57,7 @@
  static const struct blobmsg_policy write_policy =
  	{ .name = "event", .type = BLOBMSG_TYPE_STRING };
  
-@@ -160,6 +193,118 @@ read_log(struct ubus_context *ctx, struc
+@@ -160,6 +195,101 @@ read_log(struct ubus_context *ctx, struc
  	return 0;
  }
  
@@ -131,11 +133,8 @@
 +{
 +	struct blob_attr *tb[READ_DB_MAX] = {0};
 +	char *table_name;
-+	char *tmp_var;
 +	char full_query[QUERY_SIZE];
-+	size_t len;
 +	int ret = 0;
-+	int c_idx = 0;
 +
 +	blobmsg_parse(read_db_policy, ARRAY_SIZE(read_db_policy), tb, blob_data(msg), blob_len(msg));
 +
@@ -144,30 +143,16 @@
 +
 +	table_name = blobmsg_data(tb[READ_DB_TABLE]);
 +
-+	sprintf(full_query, "select * from %s", table_name);
++	snprintf(full_query, sizeof(full_query), "select * from %s", table_name);
 +
-+	len = strlen(table_name);
-+
-+	while (table_name[c_idx] != ' ' && c_idx < len) {
-+		c_idx++;
-+	}
-+
-+	if (c_idx > sizeof(tmp_var)) {
-+		return UBUS_STATUS_UNKNOWN_ERROR;
-+	}
-+	tmp_var = strdup(table_name);
-+
-+	if ((ret = parse_query(full_query, tmp_var, ctx, req)) < 0) {
++	if ((ret = parse_query(full_query, table_name, ctx, req)) < 0) {
 +		fprintf(stderr, "Failed to parse given query\n");
-+		free(tmp_var);
 +		return UBUS_STATUS_UNKNOWN_ERROR;
 +	}
 +
 +	if (ret > 0){
-+		free(tmp_var);
 +		return UBUS_STATUS_NO_DATA;
 +	}
-+	free(tmp_var);
 +	return UBUS_STATUS_OK;
 +}
 +

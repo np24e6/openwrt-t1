@@ -1,0 +1,113 @@
+#!/bin/sh
+PPP_IPPARAM="$6"
+
+. /lib/netifd/netifd-proto.sh
+. /lib/functions.sh
+
+setup_regular () {
+	proto_init_update "$IFNAME" 1 1
+	proto_set_keep 1
+
+	[ -n "$PPP_IPPARAM" ] && {
+		[ -n "$IPLOCAL" ] && proto_add_ipv4_address "$IPLOCAL" 32 "" "${IPREMOTE:-2.2.2.2}"
+		[ -n "$IPREMOTE" ] && proto_add_ipv4_route 0.0.0.0 0 "$IPREMOTE"
+		[ -n "$DNS1" ] && proto_add_dns_server "$DNS1"
+		[ -n "$DNS2" ] && [ "$DNS1" != "$DNS2" ] && proto_add_dns_server "$DNS2"
+	}
+	proto_send_update "$PPP_IPPARAM"
+
+	[ -d /etc/ppp/ip-up.d ] && {
+
+		for SCRIPT in /etc/ppp/ip-up.d/*
+		do
+			[ -x "$SCRIPT" ] && "$SCRIPT" "$@"
+		done
+	}
+}
+
+setup_bridge() {
+	local zone
+	local mac=$(uci -q get network.$1.mac)
+	local leasetime=$(uci -q get network.$1.leasetime)
+	local passthrough_mode=$(uci -q get network.$1.passthrough_mode)
+	local dhcp_param_file="/tmp/dnsmasq.d/bridge"
+
+	json_load "$(ubus call network.interface.$PPP_IPPARAM status)"
+	json_select data
+	json_get_vars zone
+
+	proto_init_update "$IFNAME" 1
+	proto_set_keep 0
+	proto_send_update "$PPP_IPPARAM" 
+
+	json_init
+	json_add_string interface "$PPP_IPPARAM"
+	[ -n "$zone" ] && {
+		json_add_string zone "$zone"
+		iptables -A forwarding_${zone}_rule -m comment --comment "!fw3: Mobile bridge" -j zone_lan_dest_ACCEPT
+	}
+	ubus call network.interface set_data "$(json_dump)"
+
+	json_init
+	json_add_string interface "${interface}"
+	json_add_string bridge_ipaddr "$IPLOCAL"
+	json_add_string bridge_gateway "$IPREMOTE"
+	ubus call network.interface set_data "$(json_dump)"
+
+	json_init
+	json_add_string name "mobile_bridge"
+	json_add_string ifname "br-lan"
+	json_add_string proto "static"
+	json_add_string gateway "0.0.0.0"
+	json_add_array ipaddr
+	json_add_string "" "$IPREMOTE"
+	json_close_array
+	json_add_string ip4table "40"
+	ubus call network add_dynamic "$(json_dump)"
+
+	ip route add default dev "$IFNAME" table 42
+	ip route add default dev br-lan table 43
+	ip route add "$IPLOCAL" dev br-lan
+	
+	ip rule add pref 5042 from "$IPLOCAL" lookup 42
+	ip rule add pref 5043 iif "$IFNAME" lookup 43
+
+	iptables -A postrouting_rule -m comment --comment "Bridge mode" -o "$IFNAME" -j ACCEPT -tnat
+
+	if [ "$passthrough_mode" != "no_dhcp" ]; then
+		{
+			echo "dhcp-range=tag:mobbridge,$IPLOCAL,static,255.255.255.255,${leasetime:-1h}"
+			echo "shared-network=br-lan,$IPLOCAL"
+			echo "dhcp-host=${mac:-*:*:*:*:*:*},set:mobbridge,$IPLOCAL"
+			echo "dhcp-option=tag:mobbridge,br-lan,3,$IPREMOTE"
+
+			[ -n "$DNS1" ] || [ -n "$DNS2" ] && {
+				echo "dhcp-option=tag:mobbridge,br-lan,6${DNS1:+,$DNS1}${DNS2:+,$DNS2}"
+				echo "server=$DNS1"
+				echo "server=$DNS2"
+			}
+		} > $dhcp_param_file
+	else
+		{
+			echo "server=$DNS1"
+			echo "server=$DNS2"
+		} > $dhcp_param_file
+	fi
+
+	/etc/init.d/dnsmasq reload
+	swconfig dev 'switch0' set soft_reset 5 &
+
+	[ "$method" = "passthrough" ] && {
+		iptables -w -tnat -I postrouting_rule -o "$IFNAME" -j SNAT --to "$IPLOCAL"
+		ip route add default dev "$IFNAME"
+	}
+}
+
+interface=${PPP_IPPARAM%%_*}
+method=$(uci -q get network.$interface.method)
+
+if [ "$method" = "bridge" ] || [ "$method" = "passthrough" ]; then
+	setup_bridge "$interface"
+else
+	setup_regular
+fi

@@ -2,9 +2,8 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=ntrip_client_v2
-PKG_VERSION:=2023-02-13
 
-PKG_SOURCE_VERSION:=41a2e74ee35141623e6e5b353ed0953fbcff1eae
+PKG_SOURCE_VERSION:=7.5
 
 CMAKE_INSTALL:=1
 

@@ -1,0 +1,20 @@
+Index: libe4c-2021-01-28-cce53995/src/e4c.c
+===================================================================
+--- libe4c-2021-01-28-cce53995.orig/src/e4c.c
++++ libe4c-2021-01-28-cce53995/src/e4c.c
+@@ -219,15 +219,9 @@
+ #   define E4C_SIGNAL_MAPPING_SIGTRAP
+ # endif
+ 
+-# ifdef SIGPIPE
+-#   define DEFINE_SIGNAL_NAME_SIGPIPE           DEFINE_SIGNAL_NAME(SIGPIPE);
+-#   define WHEN_SIGNAL_SIGPIPE                  WHEN_SIGNAL(SIGPIPE)
+-#   define E4C_SIGNAL_MAPPING_SIGPIPE           E4C_SIGNAL_MAPPING(SIGPIPE,     BrokenPipeException),
+-# else
+ #   define DEFINE_SIGNAL_NAME_SIGPIPE
+ #   define WHEN_SIGNAL_SIGPIPE
+ #   define E4C_SIGNAL_MAPPING_SIGPIPE
+-# endif
+ 
+ /* unless otherwise stated, SIGSTOP and SIGKILL cannot be caught or ignored */
+ 

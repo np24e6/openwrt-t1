@@ -859,9 +859,10 @@ static int wear_leveling_worker(struct ubi_device *ubi, struct ubi_work *wrk,
 
 		if (err < 0)
 			goto out_error;
+/* leave this for linux kernel
 		if (err == 1)
 			goto out_not_moved;
-
+*/
 		/*
 		 * For some reason the LEB was not moved - it might be because
 		 * the volume is being deleted. We should prevent this PEB from

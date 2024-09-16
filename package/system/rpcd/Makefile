@@ -71,6 +71,13 @@ define Package/rpcd/install
 	$(INSTALL_BIN) ./files/superuser.json $(1)/usr/share/rpcd/acl.d/superuser.json
 	$(INSTALL_DIR) $(1)/etc/config
 	$(INSTALL_CONF) ./files/rpcd.config $(1)/etc/config/rpcd
+	if [ $(CONFIG_WIFI_SUPPORT) ]; then \
+		$(SED) "s@%%WIRELESS_CHANNEL_ANALYSIS%%@list read 'status/wireless/channel_analysis'@g" \
+			$(1)/etc/config/rpcd; \
+	else \
+		$(SED) "/%%WIRELESS_CHANNEL_ANALYSIS%%/d" $(1)/etc/config/rpcd; \
+	fi
+
 	if [ $(TLT_PLATFORM_RUTX) ]; then \
 		$(SED) "s@%%USER_SCRIPTS_HOTSPOT%%@list read 'services/hotspot/general/userscripts'@g" \
 			$(1)/etc/config/rpcd; \
@@ -79,7 +86,7 @@ define Package/rpcd/install
 	fi
 
 	if [ ! $(TLT_PLATFORM_RUT30X) ]; then \
-		$(SED) "s@%%MOBILE_UTILS_SMS_SEND%%@list read 'services/mobile_utilities/sms/send'@g" \
+		$(SED) "s@%%MOBILE_UTILS_SMS_SEND%%@list read 'services/mobile_utilities/sms_messages/send'@g" \
 			$(1)/etc/config/rpcd; \
 	else \
 		$(SED) "/%%MOBILE_UTILS_SMS_SEND%%/d" $(1)/etc/config/rpcd; \
@@ -114,6 +121,7 @@ define BuildPlugin
 endef
 
 CMAKE_OPTIONS += -DPAM_SUPPORT=$(if $(CONFIG_RPCD_PAM),"ON","OFF")
+CMAKE_OPTIONS += -DIWINFO_SUPPORT=$(if $(CONFIG_PACKAGE_libiwinfo),"ON","OFF")
 
 $(eval $(call BuildPackage,rpcd))
 $(eval $(call BuildPlugin,file,,Provides ubus calls for file and directory operations.))

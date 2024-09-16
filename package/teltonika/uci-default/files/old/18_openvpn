@@ -50,7 +50,6 @@ fix_section() {
 	fi
 
 	[ -n "$tls_crypt" ] && uci_set "openvpn" "$1" "tls_crypt" "${tls_crypt% *}"
-	[ "$type" = "client" ] && uci_set "openvpn" "$1" "status" "/tmp/openvpn-status_${1}.log"
 
 	[ -z "$keepalive" ] && [ -n "$_keepalive_tls" ] && {
 		uci_set "openvpn" "$1" "keepalive" "$_keepalive_tls"

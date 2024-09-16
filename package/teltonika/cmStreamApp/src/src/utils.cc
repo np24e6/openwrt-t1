@@ -16,7 +16,9 @@ extern "C" {
 
 #include "integrate.h"
 #include "utils.h"
+#ifdef MOBILE_SUPPORT
 #include "modem.h"
+#endif
 
 using namespace std;
 
@@ -109,7 +111,7 @@ int get_router_data(config *cnf)
 	tmp = lmnfinfo_get_sn();
 	len += snprintf(cnf->router_str + len, BUFF_LEN - 1, "%s,", tmp ? tmp : "");
 
-	tmp = get_config_value("system", "system", "routername");
+	tmp = get_config_value("system", "system", "devicename");
 	len += snprintf(cnf->router_str + len, BUFF_LEN - 1, "%s,", tmp);
 
 	tmp = get_config_value("system", "system", "device_fw_version");
@@ -124,6 +126,7 @@ int get_router_data(config *cnf)
 	return EXIT_SUCCESS;
 }
 
+#ifdef MOBILE_SUPPORT
 static int get_modem_data(cloud_service *service)
 {
 	struct ubus_context *ctx = NULL;
@@ -187,6 +190,7 @@ end:
 
 	return ret;
 }
+#endif // MOBILE_SUPPORT
 
 static void release_service(cloud_service *cloud)
 {
@@ -212,11 +216,11 @@ int connect_to(cloud_service *service, char *router_str)
 	if (get_conn_vals(&conn_vals, service)) {
 		return CONN_VAL_ERR;
 	}
-	
+#ifdef MOBILE_SUPPORT
 	if (get_modem_data(service)) {
 		syslog(LOG_INFO, "Couldn't retrieve modem data");
 	}
-
+#endif
 	srLogSetLevel(SRLOG_INFO);
 
 	SrAgent agnt(conn_vals.addr, conn_vals.serial, &igt);

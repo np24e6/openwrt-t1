@@ -5,16 +5,18 @@ config TLT_VERSIONING_PREFIX
 		Teltonika VERSIONING PREFIX
 	default RUTM if TARGET_ramips_mt7621_DEVICE_teltonika_rutm
 	default RUTX if TARGET_ipq40xx_generic_DEVICE_teltonika_rutx
-	default TRB2 if TARGET_ath79_generic_DEVICE_teltonika_trb2xx
-	default RUT2 if TARGET_ath79_generic_DEVICE_teltonika_rut2xx
+	default TRB2 if TARGET_ath79_24kc_DEVICE_teltonika_trb2xx
+	default TRB2M if TARGET_ramips_mt76x8_DEVICE_teltonika_trb2m
+	default RUT2 if TARGET_ath79_24kc_DEVICE_teltonika_rut2xx
 	default RUT2M if TARGET_ramips_mt76x8_DEVICE_teltonika_rut2m
 	default TAP100 if TARGET_ramips_mt76x8_DEVICE_teltonika_tap100
-	default TCR1 if TARGET_ath79_generic_DEVICE_teltonika_tcr1xx
-	default RUT9 if TARGET_ath79_generic_DEVICE_teltonika_rut9xx
+	default TAP200 if TARGET_ramips_mt7621_DEVICE_teltonika_tap200
+	default TCR1 if TARGET_ath79_24kc_DEVICE_teltonika_tcr1xx
+	default RUT9 if TARGET_ath79_74kc_DEVICE_teltonika_rut9xx
 	default RUT9M if TARGET_ramips_mt76x8_DEVICE_teltonika_rut9m
-	default RUT30X if TARGET_ath79_generic_DEVICE_teltonika_rut30x
+	default RUT30X if TARGET_ath79_24kc_DEVICE_teltonika_rut30x
 	default RUT301 if TARGET_ramips_mt76x8_DEVICE_teltonika_rut301
-	default RUT36X if TARGET_ath79_generic_DEVICE_teltonika_rut36x
+	default RUT36X if TARGET_ath79_24kc_DEVICE_teltonika_rut36x
 	default RUT361 if TARGET_ramips_mt76x8_DEVICE_teltonika_rut361
 	default OTD140 if TARGET_ramips_mt76x8_DEVICE_teltonika_otd140
 	default TRB5 if TARGET_sdxprairie_DEVICE_teltonika_trb5xx

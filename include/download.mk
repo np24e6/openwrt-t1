@@ -126,7 +126,8 @@ hash_var = $(if $(filter-out x,$(1)),MD5SUM,HASH)
 endif
 
 define DownloadMethod/unknown
-	echo "ERROR: No download method available"; false
+	$(if $(shell [ -d ./bin ] || [ -d ./src ] && echo "1"),true, \
+		echo "ERROR: No download method available"; false)
 endef
 
 define DownloadMethod/default

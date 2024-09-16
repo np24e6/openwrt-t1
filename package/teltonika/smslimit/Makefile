@@ -7,7 +7,7 @@ include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=smslimit
 
-PKG_SOURCE_VERSION:=d0725a58c8ae632068f60ebdc779ef2fae2aa87d
+PKG_SOURCE_VERSION:=4.0
 
 GPL_INCLUDE_HEADERS:=1
 
@@ -19,7 +19,7 @@ define Package/rpcd-mod-smslimit
   SECTION:=libs
   CATEGORY:=Libraries
   TITLE:=SMS Limit rpcd module
-  DEPENDS:=+rpcd +lsqlite3 +libubus +rpcd-mod-simd
+  DEPENDS:=+rpcd +lsqlite3 +libubus +libgsm
 endef
 
 define Build/InstallDev

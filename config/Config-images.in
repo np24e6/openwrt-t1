@@ -15,6 +15,11 @@ menu "Target Images"
 		bool "Build Factory image with verified boot bootloader"
 		depends on VERIFIED_BOOT_SUPPORT
 
+	config BUILD_FACTORY_TEST_IMAGE
+		bool "Build Factory test image"
+		select BUILD_MINIMAL_IMAGE
+		select TARGET_ROOTFS_INITRAMFS
+
 	menuconfig TARGET_ROOTFS_INITRAMFS
 		bool "ramdisk"
 		default y if USES_INITRAMFS

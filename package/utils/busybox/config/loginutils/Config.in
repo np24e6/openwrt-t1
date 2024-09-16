@@ -327,4 +327,8 @@ config BUSYBOX_CONFIG_VLOCK
 	Note that busybox binary must be setuid root for this applet to
 	work properly.
 
+config BUSYBOX_CONFIG_FEATURE_IP_BLOCKD
+	bool "Support for IP block daemon"
+	default BUSYBOX_DEFAULT_FEATURE_IP_BLOCKD
+
 endmenu

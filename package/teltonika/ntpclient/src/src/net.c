@@ -70,19 +70,27 @@ end:
 
 int net_setup(char *host, short port, short local_port)
 {
+	int ret = -1;
+
 	int usd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 	if (usd == -1) {
 		LOG("Could not create socket");
 		goto end;
 	}
 	if (setup_receive(usd, INADDR_ANY, local_port)) {
-		usd = -1;
+		ret = -2;
 		goto end;
 	}
 	if (setup_transmit(usd, host, port)) {
-		usd = -1;
+		ret = -2;
 		goto end;
 	}
+
+	ret = 0;
 end:
+	if (ret < -1) {
+		close(usd);
+	}
+	usd = ret < 0 ? -1 : usd;
 	return usd;
 }

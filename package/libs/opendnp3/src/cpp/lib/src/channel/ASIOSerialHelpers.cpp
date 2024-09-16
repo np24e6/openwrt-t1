@@ -88,6 +88,12 @@ asio::serial_port_base::parity ConvertParity(Parity parity)
     case (Parity::Odd):
         t = asio::serial_port_base::parity::odd;
         break;
+    case (Parity::Mark):
+        t = asio::serial_port_base::parity::mark;
+       break;
+    case (Parity::Space):
+        t = asio::serial_port_base::parity::space;
+       break;
     default:
         break;
     }

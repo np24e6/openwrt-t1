@@ -1,5 +1,6 @@
 
 config defaults '1'
+	option flow_offloading '1'
 	option syn_flood '1'
 	option input 'REJECT'
 	option output 'ACCEPT'

@@ -784,7 +784,7 @@ config BUSYBOX_DEFAULT_FEATURE_STAT_FILESYSTEM
 	default n
 config BUSYBOX_DEFAULT_STTY
 	bool
-	default n if TARGET_ath79_generic_DEVICE_teltonika_rut36x
+	default n if TARGET_ath79_24kc_DEVICE_teltonika_rut36x
 	default y
 config BUSYBOX_DEFAULT_SUM
 	bool
@@ -1318,7 +1318,7 @@ config BUSYBOX_DEFAULT_FEATURE_CHECK_NAMES
 	default n
 config BUSYBOX_DEFAULT_LAST_ID
 	int
-	default 0
+	default 65535
 config BUSYBOX_DEFAULT_FIRST_SYSTEM_ID
 	int
 	default 0
@@ -1366,7 +1366,7 @@ config BUSYBOX_DEFAULT_FEATURE_SECURETTY
 	default n
 config BUSYBOX_DEFAULT_PASSWD
 	bool
-	default y
+	default n
 config BUSYBOX_DEFAULT_FEATURE_PASSWD_WEAK_CHECK
 	bool
 	default y
@@ -1729,7 +1729,7 @@ config BUSYBOX_DEFAULT_READPROFILE
 	default n
 config BUSYBOX_DEFAULT_RENICE
 	bool
-	default n
+	default HIGH_WATCHDOG_PRIORITY
 config BUSYBOX_DEFAULT_REV
 	bool
 	default n
@@ -2480,10 +2480,12 @@ config BUSYBOX_DEFAULT_FEATURE_NSLOOKUP_OPENWRT_LONG_OPTIONS
 	default n
 config BUSYBOX_DEFAULT_NTPD
 	bool
-	default y if !TARGET_ramips_mt76x8_DEVICE_teltonika_tap100
+	default y if !TARGET_ramips_mt76x8_DEVICE_teltonika_tap100 &&\
+			     !TARGET_ramips_mt7621_DEVICE_teltonika_tap200
 config BUSYBOX_DEFAULT_FEATURE_NTPD_SERVER
 	bool
-	default y if !TARGET_ramips_mt76x8_DEVICE_teltonika_tap100
+	default y if !TARGET_ramips_mt76x8_DEVICE_teltonika_tap100 &&\
+			     !TARGET_ramips_mt7621_DEVICE_teltonika_tap200
 config BUSYBOX_DEFAULT_FEATURE_NTPD_CONF
 	bool
 	default n
@@ -2594,7 +2596,7 @@ config BUSYBOX_DEFAULT_VCONFIG
 	default n
 config BUSYBOX_DEFAULT_WGET
 	bool
-	default y
+	default n
 config BUSYBOX_DEFAULT_FEATURE_WGET_LONG_OPTIONS
 	bool
 	default y
@@ -3166,5 +3168,8 @@ config BUSYBOX_DEFAULT_FEATURE_IPC_SYSLOG_BUFFER_SIZE
 	int
 	default 0
 config BUSYBOX_DEFAULT_FEATURE_KMSG_SYSLOG
+	bool
+	default n
+config BUSYBOX_DEFAULT_FEATURE_IP_BLOCKD
 	bool
 	default n

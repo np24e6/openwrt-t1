@@ -27,7 +27,20 @@ delete_network_section() {
 	}
 }
 
-config_load "quota_limit"
-config_foreach delete_network_section "interface"
+fix_period_cb() {
+	local sec="$1"
+	local period
 
-exit 0
+	config_get period "$sec" period 0
+	[ "$period" -gt 0 ] && return
+
+	config_get restart "$sec" restart 0
+	[ "$restart" -gt 0 ] && {
+		uci_set quota_limit "$sec" period "$restart"
+		uci_remove quota_limit "$sec" restart
+	}
+}
+
+config_load "quota_limit"
+config_foreach fix_period_cb interface
+config_foreach delete_network_section "interface"

@@ -2,13 +2,8 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=dnp3
-PKG_VERSION:=2023-06-23
-PKG_RELEASE:=1
 
-PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
-PKG_SOURCE_VERSION:=5fcd1f0bcbe1b2c96c6e53cc712a411a4c86850f
-PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
-PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_SOURCE_SUBDIR)
+PKG_SOURCE_VERSION:=7.5
 
 include $(INCLUDE_DIR)/package.mk
 
@@ -17,7 +12,8 @@ define Package/dnp3
 	CATEGORY:=Network
 	TITLE:=dnp3 stack
 	DEPENDS:=+libstdcpp +libuci +libubus +libopenssl +libsqlite3 +libgsm +GPS_SUPPORT:libgps \
-		+libtlt_uci +libmdcollect +libjson-c +opendnp3 +vuci-app-dnp3-ui +libubox +libblobmsg-json +libmnfinfo
+		+libtlt_uci +libmdcollect +libjson-c +opendnp3 +vuci-app-dnp3-ui +libubox \
+		+libblobmsg-json +libmnfinfo +data-sender-mod-dnp3
 	PKG_TLT_NAME:=DNP3
 	PKG_ROUTER:=$(TLT_PLATFORM_NAME)
 endef
@@ -26,8 +22,12 @@ ifeq ($(CONFIG_GPS_SUPPORT),y)
 CMAKE_OPTIONS=-DGPS_SUPPORT=TRUE
 endif
 
+ifeq ($(CONFIG_MOBILE_SUPPORT),y)
+CMAKE_OPTIONS=+ -DMOBILE_SUPPORT=TRUE
+endif
+
 define Package/dnp3/conffiles
-/etc/config/dnp3_master
+/etc/config/dnp3_client
 /etc/config/dnp3_outstation
 endef
 
@@ -39,16 +39,29 @@ endef
 define Package/dnp3/install
 	$(INSTALL_DIR) $(1)/usr/lib
 	$(INSTALL_DIR) $(1)/usr/sbin
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/dnp3_master $(1)/usr/sbin/
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/dnp3_client $(1)/usr/sbin/
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/dnp3_outstation $(1)/usr/sbin/
 
 	$(INSTALL_DIR) $(1)/etc/config/
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/files/dnp3_master.conf $(1)/etc/config/dnp3_master
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/files/dnp3_client.conf $(1)/etc/config/dnp3_client
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/files/dnp3_outstation.conf $(1)/etc/config/dnp3_outstation
 
 	$(INSTALL_DIR) $(1)/etc/init.d
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/files/dnp3_client.init $(1)/etc/init.d/dnp3_client
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/files/dnp3_outstation.init $(1)/etc/init.d/dnp3_outstation
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/files/dnp3_master.init $(1)/etc/init.d/dnp3_master
+endef
+
+define Package/dnp3/postinst
+	#!/bin/sh
+
+	[ -z "$${IPKG_INSTROOT}" ] || exit 0
+	[ -e /lib/data_sender/libdata_sender.sh ] || exit 0
+
+	. /lib/data_sender/libdata_sender.sh
+
+	ds_find_plugin dnp3 && /etc/init.d/data_sender restart
+	
+	exit 0
 endef
 
 $(eval $(call BuildPackage,dnp3))

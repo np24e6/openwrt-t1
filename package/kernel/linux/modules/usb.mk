@@ -593,6 +593,20 @@ endef
 
 $(eval $(call KernelPackage,usb-serial-ch341))
 
+define KernelPackage/usb-serial-ch343
+  TITLE:=Support for CH343 devices
+  KCONFIG:=CONFIG_USB_SERIAL_CH343
+  FILES:=$(LINUX_DIR)/drivers/usb/serial/ch343.ko
+  AUTOLOAD:=$(call AutoProbe,ch343)
+  $(call AddDepends/usb-serial)
+endef
+
+define KernelPackage/usb-serial-ch343/description
+ Kernel support for Winchiphead CH343 USB-to-Serial converters
+endef
+
+$(eval $(call KernelPackage,usb-serial-ch343))
+
 
 define KernelPackage/usb-serial-edgeport
   TITLE:=Support for Digi Edgeport devices

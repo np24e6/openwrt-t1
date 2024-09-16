@@ -40,7 +40,7 @@ endif
 define Package/base-files
   SECTION:=base
   CATEGORY:=Base system
-  DEPENDS:=+netifd +libc +jsonfilter +SIGNATURE_CHECK:usign +SIGNATURE_CHECK:openwrt-keyring +NAND_SUPPORT:ubi-utils +fstools +fwtool
+  DEPENDS:=+netifd +libc +jsonfilter +SIGNATURE_CHECK:usign +SIGNATURE_CHECK:openwrt-keyring +NAND_SUPPORT:ubi-utils +fstools +!BUILD_FACTORY_TEST_IMAGE:fwtool
   TITLE:=Base filesystem for OpenWrt
   URL:=http://openwrt.org/
   VERSION:=$(PKG_RELEASE)-$(REVISION)
@@ -99,6 +99,29 @@ ifdef CONFIG_INSTALL_LOCAL_KEY
   endef
 endif
 
+define Package/base-files/generate-banner
+	(\
+		max_line_len="$$$$($(TOPDIR)/scripts/get_tlt_version.sh | wc -c)"; \
+		max_line_len="$$$$((max_line_len + 18))"; \
+		label="$$$$(echo "Teltonika $(TLT_PLATFORM_NAME) series $$$$(date +'%Y')")"; \
+		label_len="$$$$(echo $$$$label | wc -c)"; \
+		pad="$$$$(((max_line_len - label_len) / 2))"; \
+		blen="$$$$(cat ./files/etc/banner.logo | awk '{ print length }' | sort -n | tail -1)"; \
+		bpad="$$$$(((max_line_len - blen) / 2))"; \
+		perl -pe "\$$$$_=\" \"x$$$${bpad} .\$$$$_" ./files/etc/banner.logo > $(1)/etc/banner; \
+		printf "%$$$${max_line_len}s\n" |tr " " "-" >> $(1)/etc/banner; \
+		printf "%$$$${pad}s $$$${label}\n" >> $(1)/etc/banner; \
+		printf "%$$$${max_line_len}s\n" |tr " " "-" >> $(1)/etc/banner; \
+		printf "%3sDevice:%5s{DEVICE_NAME}\n" >> $(1)/etc/banner; \
+		printf "%3sKernel:%5s%%%%KERNEL%%%%\n" >> $(1)/etc/banner; \
+		printf "%3sFirmware:%3s%%%%FIRMWARE%%%%\n" >> $(1)/etc/banner; \
+		printf "%3sBuild:%6s%%%%BUILD_REV%%%%\n" >> $(1)/etc/banner; \
+		printf "%3sBuild date:%1s%%%%BUILT%%%%\n" >> $(1)/etc/banner; \
+		printf "%$$$${max_line_len}s\n" |tr " " "-" >> $(1)/etc/banner; \
+		$(RM) $(1)/etc/banner.logo; \
+	)
+endef
+
 define Package/base-files/install
 	$(CP) ./files/* $(1)/
 	$(Package/base-files/install-local-key)
@@ -114,6 +137,8 @@ define Package/base-files/install
 			$(CP) $(PLATFORM_SUBDIR)/base-files/* $(1)/; \
 		fi; \
 	)
+
+	$(Package/base-files/generate-banner)
 
 	$(VERSION_SED_SCRIPT) \
 		$(1)/etc/banner \
@@ -179,11 +204,19 @@ define Package/base-files/install
 	# set target name
 	$(SED) "s#%%NAME%%#$(TLT_PLATFORM_NAME)#g" \
 		$(1)/bin/config_generate \
-		$(1)/etc/banner \
 		$(1)/etc/init.d/system
 
 	# set year in banner
 	$(SED) "s#%%YEAR%%#$$$$(date +'%Y')#g" $(1)/etc/banner
+
+	# set kernel version in banner
+	$(SED) "s#%%KERNEL%%#$(LINUX_VERSION)#g" $(1)/etc/banner
+
+	# set firmware in banner
+	$(SED) "s#%%FIRMWARE%%#$$$$($(TOPDIR)/scripts/get_tlt_version.sh)#g" $(1)/etc/banner
+
+	# set build-rev in banner
+	$(SED) "s#%%BUILD_REV%%#$$$$(git rev-parse --short HEAD)#g" $(1)/etc/banner
 
 	# set lan ip
 	$(SED) "s#%%LAN_IP%%#$(CONFIG_DEVICE_DEFAULT_IP)#g" $(1)/bin/config_generate \
@@ -191,6 +224,9 @@ define Package/base-files/install
 
 	# add compile time timestamp
 	date +%s > $(1)/etc/firmware-date
+
+	# set build date in banner
+	$(SED) "s#%%BUILT%%#$$$$(date +'%Y-%m-%d %H:%M:%S' -d @$$$$(cat $(1)/etc/firmware-date))#g" $(1)/etc/banner
 
 	# remove rfkill script if not supported
 	$(if $(CONFIG_RFKILL_SUPPORT),,\
@@ -201,7 +237,7 @@ define Package/base-files/install
 		$(RM) $(1)/sbin/mctl $(1)/bin/board_modem; \
 	fi;
 
-	if [ ! $(CONFIG_MOBILE_SUPPORT) ] || [ ! $(CONFIG_SERIAL) ]; then \
+	if [ ! $(CONFIG_MOBILE_SUPPORT) ] || [ ! $(CONFIG_SERIAL_SUPPORT) ]; then \
 		$(RM) $(1)/etc/init.d/rs_modem $(1)/etc/config/rs_modem; \
 	fi;
 
@@ -209,7 +245,7 @@ define Package/base-files/install
 		$(RM) $(1)/sbin/wifi; \
 	fi;
 
-	if [ ! $(CONFIG_SERIAL) ]; then \
+	if [ ! $(CONFIG_SERIAL_SUPPORT) ]; then \
 		$(RM) $(1)/etc/hotplug.d/tty/01-serial-symlink.sh; \
 		$(RM) $(1)/etc/init.d/rs_console $(1)/etc/config/rs_console; \
 		$(RM) $(1)/sbin/usb_serial_adapters.sh; \

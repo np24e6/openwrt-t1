@@ -1,3 +1,42 @@
+# Trap group members
+
+traps_mib_group_gsm='signalChangeNotification,
+		networkTypeNotification,'
+
+traps_mib_group_hotspot='clientConnectedNotification,
+		clientDisconnectedNotification,'
+
+traps_mib_group_din1='digitalInputNotification,
+'
+traps_mib_group_din2='digitalInput2Notification,
+'
+traps_mib_group_dout1='digitalOutputNotification,
+'
+traps_mib_group_dout2='digitalOutput2Notification,
+'
+traps_mib_group_dio0='digitalio0Notification,
+'
+traps_mib_group_dio1='digitalio1Notification,
+'
+traps_mib_group_dio2='digitalio2Notification,
+'
+traps_mib_group_dwi0='drywetio0Notification,
+'
+traps_mib_group_dwi1='drywetio1Notification,
+'
+traps_mib_group_relay0='relay0Notification,
+'
+traps_mib_group_relay1='relay1Notification,
+'
+traps_mib_group_acl0='acl0Notification,
+'
+traps_mib_group_adc0='adc0Notification,
+'
+traps_mib_group_iio='digitalIioNotification,
+'
+
+# Trap definitions
+
 traps_mib_gsm='
 signalChangeNotification NOTIFICATION-TYPE
 	STATUS		current
@@ -106,4 +145,23 @@ digitalOutput2Notification NOTIFICATION-TYPE
 	STATUS		current
 	DESCRIPTION	"Digital output2 trap"
 	::= { ioNotifications 14 }
+'
+
+traps_mib_eventlog='
+eventLogNotification NOTIFICATION-TYPE
+	STATUS		current
+	DESCRIPTION	"Event log notification trap"
+	::= { eventNotifications 1 }
+'
+
+traps_mib_hotspot='
+clientConnectedNotification NOTIFICATION-TYPE
+	STATUS		current
+	DESCRIPTION	"Client connection to Hotspot trap"
+	::= { hotspotNotifications 1 }
+
+clientDisconnectedNotification NOTIFICATION-TYPE
+	STATUS		current
+	DESCRIPTION	"Client disconnection from Hotspot trap"
+	::= { hotspotNotifications 2 }
 '

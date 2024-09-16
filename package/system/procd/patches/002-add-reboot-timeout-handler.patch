@@ -1,0 +1,55 @@
+Index: procd-2021-02-23-37eed131/state.c
+===================================================================
+--- procd-2021-02-23-37eed131.orig/state.c
++++ procd-2021-02-23-37eed131/state.c
+@@ -29,6 +29,8 @@
+ #include "service/service.h"
+ #include "utils/utils.h"
+ 
++#define REBOOT_TIMEOUT_MS 60 * 1000 // how long to wait before forced syshalt
++
+ enum {
+ 	STATE_NONE = 0,
+ 	STATE_EARLY,
+@@ -42,6 +44,18 @@ enum {
+ 
+ static int state = STATE_NONE;
+ static int reboot_event;
++static struct uloop_timeout g_reboot_tm;
++
++static void p(const char *msg)
++{
++	int fd = open("/dev/kmsg", O_WRONLY);
++	if (fd == -1) {
++		return;
++	}
++
++	write(fd, msg, strlen(msg));
++	close(fd);
++}
+ 
+ static void set_stdio(const char* tty)
+ {
+@@ -209,6 +223,13 @@ static void state_enter(void)
+ 	};
+ }
+ 
++static void reboot_timeout_cb(struct uloop_timeout *timeout)
++{
++	LOG("Warning: reached reboot timeout handler\n");
++	p("Warning: reached reboot timeout handler\n");
++	perform_halt();
++}
++
+ void procd_state_next(void)
+ {
+ 	DEBUG(4, "Change state %d -> %d\n", state, state + 1);
+@@ -227,6 +248,8 @@ void procd_shutdown(int event)
+ 	if (state >= STATE_SHUTDOWN)
+ 		return;
+ 	DEBUG(2, "Shutting down system with event %x\n", event);
++	g_reboot_tm.cb = reboot_timeout_cb;
++	uloop_timeout_set(&g_reboot_tm, REBOOT_TIMEOUT_MS);
+ 	reboot_event = event;
+ 	state = STATE_SHUTDOWN;
+ 	state_enter();

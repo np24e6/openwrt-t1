@@ -1,9 +1,32 @@
 -- Hotspot --
 
-hsState	OBJECT-TYPE
-	SYNTAX		INTEGER {
-		enabled(1),	-- Hotspot service enabled
-		disabled(0)	-- Hotspot service disabled
+hotspotGroup OBJECT-GROUP
+	OBJECTS { hsState,
+		  hsIP,
+		  hsNet,
+		  hsAuth,
+		  hsSessionCount,
+		  hssIndex,
+		  hssMAC,
+		  hssIP,
+		  hssID,
+		  hssUsername,
+		  hssState,
+		  hssDwLimit,
+		  hssUpLimit,
+		  hssTimeLimit,
+		  hssIdleTimeout,
+		  hssDwBandwidth,
+		  hssUpBandwidth,
+		  hssURL }
+	STATUS current
+	DESCRIPTION "Hotspot SNMP group defined according to RFC 2580"
+	::= { teltonikaSnmpGroups 5 }
+
+hsState OBJECT-TYPE
+	SYNTAX	INTEGER {
+		disabled(0),	-- Hotspot service disabled
+		enabled(1)	-- Hotspot service enabled
 	}
 	MAX-ACCESS	read-only
 	STATUS		current
@@ -62,7 +85,7 @@ HsSessionEntry ::=
 	hssIP		IpAddress,
 	hssID		DisplayString,
 	hssUsername	DisplayString,
-	hssState	TruthValue,
+	hssState	INTEGER,
 	hssDwLimit	Counter64,
 	hssUpLimit	Counter64,
 	hssTimeLimit	Counter64,
@@ -73,7 +96,7 @@ HsSessionEntry ::=
 	}
 
 hssIndex OBJECT-TYPE
-	SYNTAX		INTEGER
+	SYNTAX		INTEGER (0..65535)
 	MAX-ACCESS	read-only
 	STATUS		current
 	DESCRIPTION	"A unique value, greater than zero, for each session."

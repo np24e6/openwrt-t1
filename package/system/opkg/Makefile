@@ -91,7 +91,7 @@ define Package/opkg/install
   endif
 	$(INSTALL_DIR) $(1)/usr/sbin
 	$(INSTALL_BIN) ./files/opkg-key $(1)/usr/sbin/
-	echo src/gz tlt_packages http://opkg.teltonika-networks.com/55e249d4de5fdeb492ebd74581d90592505643b2b1c2663818150aed37ac2713 > $(1)/etc/opkg/teltonikafeeds.conf
+	echo src/gz tlt_packages http://opkg.teltonika-networks.com/f9345d3b138e057471e0e83079932a1c022caccf0b7b71cbe6d460350a398854 > $(1)/etc/opkg/teltonikafeeds.conf
 endef
 
 define Host/Install
@@ -99,6 +99,7 @@ define Host/Install
 endef
 
 
+OPKG_TARGET_UPPER:=$(shell echo $(CONFIG_TLT_VERSIONING_PREFIX) | tr '[:lower:]' '[:upper:]')
 
 $(eval $(call BuildPackage,opkg))
 $(eval $(call HostBuild))

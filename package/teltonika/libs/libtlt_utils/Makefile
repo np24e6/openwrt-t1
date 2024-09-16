@@ -7,7 +7,7 @@ include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=libtlt_utils
 
-PKG_SOURCE_VERSION:=a6355c49811b85fba450f369ebaf52e703b07976
+PKG_SOURCE_VERSION:=1.3
 
 GPL_INCLUDE_HEADERS:=1
 
@@ -18,7 +18,7 @@ define Package/libtlt_utils
 	CATEGORY:=Libraries
 	TITLE:=Utils library by Teltonika
 	MENU:=1
-	DEPENDS:=+libubox
+	DEPENDS:=+libubox +libuci
 endef
 
 define Package/libtlt_utils/description

@@ -1,5 +1,21 @@
 -- I/O --
 
+ioGroup OBJECT-GROUP
+	OBJECTS { ioCount,
+		  ioIndex,
+		  ioSystemName,
+		  ioName,
+		  ioType,
+		  ioBidirectional,
+		  ioState,
+		  ioInput,
+		  ioInverted,
+		  ioCurrent,
+		  ioPercentage }
+	STATUS current
+	DESCRIPTION "I/O SNMP group defined according to RFC 2580"
+	::= { teltonikaSnmpGroups 6 }
+
 ioCount OBJECT-TYPE
 	SYNTAX		INTEGER
 	MAX-ACCESS	read-only
@@ -26,20 +42,20 @@ ioEntry OBJECT-TYPE
 
 IOEntry ::=
 	SEQUENCE {
-	ioIndex		INTEGER,
+	ioIndex	INTEGER,
 	ioSystemName	DisplayString,
 	ioName		DisplayString,
 	ioType		DisplayString,
-	ioBidirectional	INTEGER,
-	ioState		DisplayString,
-	ioInput		INTEGER,
+	ioBidirectional INTEGER,
+	ioState	DisplayString,
+	ioInput	INTEGER,
 	ioInverted	INTEGER,
 	ioCurrent	DisplayString,
 	ioPercentage	DisplayString
 	}
 
 ioIndex OBJECT-TYPE
-	SYNTAX		INTEGER
+	SYNTAX		INTEGER (0..65535)
 	MAX-ACCESS	read-only
 	STATUS		current
 	DESCRIPTION	"A unique value, greater than zero, for each session."

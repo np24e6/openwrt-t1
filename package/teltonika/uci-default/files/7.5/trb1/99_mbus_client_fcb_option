@@ -1,0 +1,26 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+CONFIG="mbus_client"
+
+config_cb() {
+	local type="$1"
+	local section="$2"
+
+	if [[ "$type" != request* ]]; then
+		return
+	fi
+
+	local fcb_exist=$(uci_get "$CONF" "$section" "fcb" "-1")
+
+	if [ "$fcb_exist" = "-1" ]; then
+		uci_set "$CONFIG" "$section" "fcb" "1"
+	fi
+}
+
+
+config_load "$CONFIG"
+uci_commit "$CONFIG"
+
+exit 0

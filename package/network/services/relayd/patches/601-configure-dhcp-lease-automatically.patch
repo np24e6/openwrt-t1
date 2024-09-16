@@ -1,0 +1,330 @@
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -9,7 +9,7 @@
+ ENDIF()
+ 
+ ADD_EXECUTABLE(relayd main.c dhcp.c route.c)
+-TARGET_LINK_LIBRARIES(relayd ubox)
++TARGET_LINK_LIBRARIES(relayd ubox ubus)
+ 
+ SET(CMAKE_INSTALL_PREFIX /usr)
+
+
+--- a/relayd.h
++++ b/relayd.h
+@@ -40,6 +40,8 @@
+ #else
+ #define DPRINTF(...) do {} while(0)
+ #endif
++
++#define RELAYD_BFR 255
+ 
+ #ifndef __packed
+ #define __packed __attribute__((packed))
+
+
+--- a/main.c
++++ b/main.c
+@@ -28,12 +28,14 @@
+ #include <errno.h>
+ #include <signal.h>
+ #include <string.h>
+-
++#include <libubus.h>
++#include <libubox/blobmsg.h>
+ #include "relayd.h"
+ 
+ static LIST_HEAD(pending_routes);
+ LIST_HEAD(interfaces);
+ int debug;
++struct ubus_context *g_ubus_ctx = NULL;
+ 
+ static int host_timeout;
+ static int host_ping_tries;
+@@ -42,6 +44,7 @@
+ static int forward_dhcp;
+ static int parse_dhcp;
+ 
++char *local_ifname = NULL;
+ uint8_t local_addr[4];
+ int local_route_table;
+ 
+@@ -50,6 +53,238 @@
+ 	struct uloop_timeout timeout;
+ 	uint8_t gateway[4];
+ };
++
++enum {
++	DUMP_IFACE,
++	__DUMP_MAX,
++};
++
++static const struct blobmsg_policy dump_policy[__DUMP_MAX] = {
++	[DUMP_IFACE] = { .name = "interface", .type = BLOBMSG_TYPE_ARRAY },
++	};
++
++enum {
++	IFACE_UP,
++	IFACE_DEVICE,
++	IFACE_L3DEVICE,
++	IFACE_NAME,
++	IFACE_ROUTE,
++	__IFACE_MAX,
++};
++
++const struct blobmsg_policy iface_policy[__IFACE_MAX] = {
++	[IFACE_UP] = { .name = "up", .type = BLOBMSG_TYPE_INT8 },
++	[IFACE_DEVICE] = { .name = "device", .type = BLOBMSG_TYPE_STRING },
++	[IFACE_L3DEVICE] = { .name = "l3_device", .type = BLOBMSG_TYPE_STRING },
++	[IFACE_NAME] = { .name = "interface", .type = BLOBMSG_TYPE_STRING },
++	[IFACE_ROUTE] = { .name = "route", .type = BLOBMSG_TYPE_ARRAY},
++};
++
++enum {
++	IFACE_ROUTE_SOURCE,
++	__IFACE_ROUTE_MAX,
++};
++
++const struct blobmsg_policy iface_route_policy[__IFACE_ROUTE_MAX] = {
++	[IFACE_ROUTE_SOURCE] = { .name = "source", .type = BLOBMSG_TYPE_STRING },
++};
++
++static int parse_source(struct blob_attr *msg)
++{
++	struct blob_attr *tb[__IFACE_ROUTE_MAX];
++	struct in_addr addr = { 0 };
++
++	char *leased_ip = NULL;
++
++	if (!msg) {
++		return EXIT_FAILURE;
++	}
++
++	blobmsg_parse(iface_route_policy, __IFACE_ROUTE_MAX, tb, blobmsg_data(msg), blobmsg_data_len(msg));
++	if (!tb[IFACE_ROUTE_SOURCE]) {
++		return EXIT_FAILURE;
++	}
++
++	leased_ip = strtok(blobmsg_get_string(tb[IFACE_ROUTE_SOURCE]), "/");
++
++	if (!inet_aton(leased_ip, &addr)) {
++		return EXIT_FAILURE;
++	}
++
++	memcpy(&local_addr, &addr.s_addr, sizeof(local_addr));
++
++	return EXIT_SUCCESS;
++}
++
++static int parse_route_info(struct blob_attr *msg, char *wlan_device)
++{
++
++	struct blob_attr *tbd[__IFACE_ROUTE_MAX], *cur;
++	struct blob_attr *tb[__IFACE_MAX];
++	int rem = 0;
++
++	if (!msg || !wlan_device) { 
++		return EXIT_FAILURE;
++	}
++
++	blobmsg_parse(iface_policy, __IFACE_MAX, tb, blobmsg_data(msg), blobmsg_data_len(msg));
++	if (!tb[IFACE_L3DEVICE] || !tb[IFACE_NAME]) {
++		return EXIT_FAILURE;
++	}
++
++	if (strcmp(wlan_device, blobmsg_get_string(tb[IFACE_L3DEVICE]))) {
++		return EXIT_FAILURE;
++	}
++
++	if (!tb[IFACE_ROUTE]) {
++		return EXIT_FAILURE;
++	}
++
++	if (!local_ifname) {
++		local_ifname = strdup(blobmsg_get_string(tb[IFACE_NAME]));
++	}
++
++	blobmsg_parse(iface_route_policy, __IFACE_ROUTE_MAX, tbd,
++			blobmsg_data(tb[IFACE_ROUTE]), blobmsg_data_len(tb[IFACE_ROUTE]));
++	
++	blobmsg_for_each_attr(cur, tb[IFACE_ROUTE], rem) {
++		parse_source(cur);
++	}
++
++	return EXIT_SUCCESS;
++}
++
++static void interfaces_cb(struct ubus_request *req, int type,
++			  struct blob_attr *msg)
++{
++	(void)type;
++
++	char *wlan_device = (char *)req->priv;
++	struct blob_attr *tb[__DUMP_MAX], *cur;
++	int rem = 0;
++
++	if (!msg || !wlan_device) {
++		return;
++	}
++
++	blobmsg_parse(dump_policy, __DUMP_MAX, tb, blobmsg_data(msg), blobmsg_data_len(msg));
++	if (!tb[DUMP_IFACE]) {
++		return;
++	}
++
++	blobmsg_for_each_attr(cur, tb[DUMP_IFACE], rem) {
++
++		if (blobmsg_type(cur) != BLOBMSG_TYPE_TABLE) {
++			continue;
++		}
++
++		parse_route_info(cur, wlan_device);
++	}
++}
++
++static int find_dev_ifname(char *wlan_device)
++{
++	uint32_t id = 0;
++
++	if (!wlan_device) {
++		return EXIT_FAILURE;
++	}
++
++	if (ubus_lookup_id(g_ubus_ctx, "network.interface", &id)) {
++		return EXIT_FAILURE;
++	}
++	
++	if (ubus_invoke(g_ubus_ctx, id, "dump", NULL, interfaces_cb, wlan_device,
++			  10 * 1000)) {
++		return EXIT_FAILURE;
++	}
++
++	return EXIT_SUCCESS;
++}
++
++static void interface_cb(struct ubus_request *req, int type,
++			  struct blob_attr *msg)
++{
++	struct blob_attr *tbd[__IFACE_ROUTE_MAX], *cur;
++	struct blob_attr *tb[__IFACE_MAX];
++	int rem = 0;
++
++	if (!msg) {
++		return;
++	}
++
++	blobmsg_parse(iface_policy, __IFACE_MAX, tb, blobmsg_data(msg), blobmsg_data_len(msg));
++	if (!tb[IFACE_ROUTE]) {
++		return;
++	}
++
++	blobmsg_parse(iface_route_policy, __IFACE_ROUTE_MAX, tbd,
++			blobmsg_data(tb[IFACE_ROUTE]), blobmsg_data_len(tb[IFACE_ROUTE]));
++	
++	blobmsg_for_each_attr(cur, tb[IFACE_ROUTE], rem) {
++		parse_source(cur);
++	}
++}
++
++static int update_info()
++{
++	uint32_t id = 0;
++	char ubus_if_obj[RELAYD_BFR] = { 0 };
++
++	if (!local_ifname) {
++		return EXIT_FAILURE;
++	}
++
++	snprintf(ubus_if_obj, RELAYD_BFR, "network.interface.%s", local_ifname);
++
++	if (ubus_lookup_id(g_ubus_ctx, ubus_if_obj, &id)) {
++		return EXIT_FAILURE;
++	}
++	
++	if (ubus_invoke(g_ubus_ctx, id, "status", NULL, interface_cb, NULL,
++			  10 * 1000)) {
++		return EXIT_FAILURE;
++	}
++
++	return EXIT_SUCCESS;
++}
++
++enum {
++	NET_ACTION,
++	NET_INTERFACE,
++	__NET_MAX,
++};
++
++static void listen_network(struct ubus_context *ctx, struct ubus_event_handler *ev, const char *type,
++			  struct blob_attr *msg)
++{
++	struct blob_attr *tb[__NET_MAX];
++
++	static const struct blobmsg_policy network_change_policy[__NET_MAX] = {
++		[NET_ACTION]   = { "action", BLOBMSG_TYPE_STRING },
++		[NET_INTERFACE] = { "interface", BLOBMSG_TYPE_STRING },
++	};
++
++	if (blobmsg_parse(network_change_policy, __NET_MAX, tb, blobmsg_data(msg), blobmsg_len(msg))) {
++		return;
++	}
++
++	if (!tb[NET_ACTION] || !tb[NET_INTERFACE]) {
++		return;
++	}
++
++	if (strcmp(blobmsg_get_string(tb[NET_INTERFACE]), local_ifname)) {
++		return;
++	}
++
++	if (strcmp(blobmsg_get_string(tb[NET_ACTION]), "ifup")) {
++		return;
++	}
++
++	update_info();
++}
++
++struct ubus_event_handler network_change = { .cb = listen_network };
+ 
+ static struct relayd_host *find_host_by_ipaddr(struct relayd_interface *rif, const uint8_t *ipaddr)
+ {
+@@ -642,6 +877,10 @@
+ 		relayd_del_interface_routes(rif);
+ 		list_del(&rif->list);
+ 		free(rif);
++	}
++
++	if (local_ifname) {
++		free(local_ifname);
+ 	}
+ }
+ 
+@@ -720,6 +959,11 @@
+ 		return 1;
+ 	}
+ 
++	g_ubus_ctx = ubus_connect(NULL);
++	if (!g_ubus_ctx) {
++		return EXIT_FAILURE;
++	}
++
+ 	host_timeout = 30;
+ 	host_ping_tries = 5;
+ 	forward_bcast = 0;
+@@ -831,8 +1075,14 @@
+ 	signal(SIGUSR1, die);
+ 	signal(SIGUSR2, die);
+ 
+-	if (local_addr_valid)
++	find_dev_ifname(rif->ifname);
++
++	ubus_register_event_handler(g_ubus_ctx, &network_change, "network.interface");
++	ubus_add_uloop(g_ubus_ctx);
++
++	if (local_addr_valid || local_ifname) {
+ 		local_route_table = route_table++;
++	}
+ 
+ 	if (relayd_rtnl_init() < 0)
+ 		return 1;
+

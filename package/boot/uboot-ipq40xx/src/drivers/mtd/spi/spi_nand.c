@@ -55,7 +55,7 @@ int spi_nand_die_select(struct mtd_info *mtd, struct spi_flash *flash,
 
 static struct spi_nand_flash_params spi_nand_flash_tbl[] = {
 	{
-		.id = { 0x00, 0xc8, 0xd2, 0xc8 }, 
+		.id = { 0x00, 0xc8, 0xd2, 0xc8 },
 		.page_size = 2048,
 		.erase_size = 0x00020000, // block size (page size * number of pages in block)
 		.no_of_dies = 1,
@@ -69,6 +69,23 @@ static struct spi_nand_flash_params spi_nand_flash_tbl[] = {
 		.verify_ecc = verify_3bit_ecc,
 		.die_select = NULL,
 		.name = "GD5F2GQ4XB",
+		.no_of_planes = 1,
+	},
+	{
+		.id = { 0x00, 0xc8, 0x52, 0xc8 },
+		.page_size = 2048,
+		.erase_size = 0x00020000, // block size (page size * number of pages in block)
+		.no_of_dies = 1,
+		.prev_die_id = INT_MAX,
+		.pages_per_die = 0x20000, // pages * blocks (pages_per_sector * nr_sectors)
+		.pages_per_sector = 64, // pages per block
+		.nr_sectors = 2048, // number of blocks
+		.oob_size = 128, // slice of page size
+		.protec_bpx = 0xC7, // write protect bit mask
+		.norm_read_cmd = winbond_norm_read_cmd, // 03h, (dummy<3-0>)A15-A8, A7-A0, dummy
+		.verify_ecc = verify_2bit_ecc,
+		.die_select = NULL,
+		.name = "GD5F2GQ5xE",
 		.no_of_planes = 1,
 	},
 	{
@@ -100,10 +117,10 @@ static struct spi_nand_flash_params spi_nand_flash_tbl[] = {
 		.oob_size = 128, // slice of page size
 		.protec_bpx = 0x83, //write protect bit mask
 		.norm_read_cmd = xtx_plane_norm_read_cmd,
-		.verify_ecc = verify_4bit_ecc,
+		.verify_ecc = verify_3bit_ecc,
 		.die_select = NULL,
 		.name = "XT26G02E",
-		.no_of_planes = 2,		
+		.no_of_planes = 2,
 	},
 
 	{
@@ -121,7 +138,7 @@ static struct spi_nand_flash_params spi_nand_flash_tbl[] = {
 		.verify_ecc = verify_3bit_ecc,
 		.die_select = NULL,
 		.name = "FM25G02-DND",
-		.no_of_planes = 1,		
+		.no_of_planes = 1,
 	},
 	{
 		.id = { 0xc8, 0xb1, 0x48, 0xc8 },
@@ -138,7 +155,7 @@ static struct spi_nand_flash_params spi_nand_flash_tbl[] = {
 		.verify_ecc = verify_3bit_ecc,
 		.die_select = NULL,
 		.name = "GD5F1GQ4XC",
-		.no_of_planes = 1,		
+		.no_of_planes = 1,
 	},
 	{
 		.id = { 0xc8, 0xb4, 0x68, 0xc8 },
@@ -155,7 +172,7 @@ static struct spi_nand_flash_params spi_nand_flash_tbl[] = {
 		.verify_ecc = verify_3bit_ecc,
 		.die_select = NULL,
 		.name = "GD5F4GQ4XC",
-		.no_of_planes = 1,		
+		.no_of_planes = 1,
 	},
 	{
 		.id = { 0xff, 0x9b, 0x12 , 0x9b },
@@ -172,7 +189,7 @@ static struct spi_nand_flash_params spi_nand_flash_tbl[] = {
 		.verify_ecc = verify_dummy_ecc,
 		.die_select = NULL,
 		.name = "ATO25D1GA",
-		.no_of_planes = 1,		
+		.no_of_planes = 1,
 	},
 	{
 		.id = { 0x00, 0xc2, 0x12, 0xc2 },
@@ -189,7 +206,7 @@ static struct spi_nand_flash_params spi_nand_flash_tbl[] = {
 		.verify_ecc = verify_2bit_ecc,
 		.die_select = NULL,
 		.name = "MX35LFxGE4AB",
-		.no_of_planes = 1,		
+		.no_of_planes = 1,
 	},
 	{
 		.id = { 0x00, 0xef, 0xaa, 0x21 },
@@ -206,7 +223,7 @@ static struct spi_nand_flash_params spi_nand_flash_tbl[] = {
 		.verify_ecc = verify_2bit_ecc,
 		.die_select = NULL,
 		.name = "W25N01GV",
-		.no_of_planes = 1,		
+		.no_of_planes = 1,
         },
 	{
 		.id = { 0x00, 0xef, 0xab, 0x21 },
@@ -234,7 +251,7 @@ static struct spi_nand_flash_params spi_nand_flash_tbl[] = {
 		.pages_per_die = 0x20000,
 		.pages_per_sector = 64,
 		.nr_sectors = 2048,
-		.oob_size = 64,
+		.oob_size = 128,
 		.protec_bpx = 0x87,
 		.norm_read_cmd = winbond_norm_read_cmd,
 		.verify_ecc = verify_2bit_ecc,
@@ -533,7 +550,7 @@ static int spinand_write_oob_std(struct mtd_info *mtd, struct nand_chip *chip,
 			column |= (0x01 << 12);
 		}
 	}
-	
+
 	cmd[0] = IPQ40XX_SPINAND_CMD_PLOAD;
 	cmd[1] = (u8)(column >> 8);
 	cmd[2] = (u8)(column);
@@ -761,7 +778,7 @@ static int spi_nand_read_std(struct mtd_info *mtd, loff_t from, struct mtd_oob_o
 			if(info->params->no_of_planes == 2) {
 				if(page & (0x01 << 6)) {
 					column |= (0x1 << 12);
-				}		
+				}
 			}
 			info->params->norm_read_cmd(cmd, column);
 			ret = spi_flash_cmd_read(flash->spi, cmd, 4, ops->oobbuf, ops->ooblen);
@@ -782,6 +799,7 @@ static int spi_nand_read_std(struct mtd_info *mtd, loff_t from, struct mtd_oob_o
 
 	if ((ret == 0) && (ecc_corrected))
 		ret = -EUCLEAN;
+
 out:
 	spi_release_bus(flash->spi);
 	return ret;
@@ -838,6 +856,7 @@ static int spi_nand_write_std(struct mtd_info *mtd, loff_t to, struct mtd_oob_op
 
 	realpage = (int)(to >> chip->page_shift);
 	page = realpage & chip->pagemask;
+	ops->retlen = 0;
 
 	ret = spi_claim_bus(flash->spi);
 	if (ret) {
@@ -905,7 +924,10 @@ static int spi_nand_write_std(struct mtd_info *mtd, loff_t to, struct mtd_oob_op
 		}
 		if (ops->ooblen)
 			ret = spi_nand_write_oob_data(mtd, to, ops);
+
 		write_len -= bytes;
+		ops->retlen += bytes;
+
 		if (!write_len)
 			break;
 		buf += bytes;
@@ -928,7 +950,7 @@ static int spi_nand_write(struct mtd_info *mtd, loff_t to, size_t len,
 	ops.len = len;
 	ops.datbuf = (uint8_t *)buf;
 	ret = spi_nand_write_std(mtd, to, &ops);
-
+	*retlen = ops.retlen;
 	return ret;
 }
 

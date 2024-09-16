@@ -128,9 +128,10 @@ define Package/ulogd/install
 	$(CP) $(PKG_INSTALL_DIR)/usr/sbin/ulogd $(1)/usr/sbin/
 	$(INSTALL_DIR) $(1)/usr/lib/ulogd
 	$(CP) $(PKG_INSTALL_DIR)/usr/lib/ulogd/ulogd_raw2packet_BASE.so $(1)/usr/lib/ulogd/
-	$(INSTALL_DIR) $(1)/etc/init.d $(1)/etc/config
+	$(INSTALL_DIR) $(1)/etc/init.d $(1)/etc/config $(1)/sbin
 	$(INSTALL_BIN) ./files/ulogd.init $(1)/etc/init.d/ulogd
 	$(INSTALL_BIN) ./files/ulogd.conf $(1)/etc/config/ulogd
+	$(INSTALL_BIN) ./files/ftp_upload.sh $(1)/sbin/
 endef
 
 define BuildPlugin

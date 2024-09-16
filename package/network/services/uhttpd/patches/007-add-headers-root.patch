@@ -22,7 +22,7 @@
 +		ustream_printf(cl->us, "Content-Security-Policy: \
 +				default-src 'self'; frame-src * 'self'; \
 +				img-src * 'self'; \
-+				script-src https://cdn.jsdelivr.net 'unsafe-eval' 'self' 'sha256-8yE2w7Bv8/Il8SvtEkB35j3QNRei9CKtdX8HgqblU04=' 'nonce-pbfMmwrsnzqz1rg86SUDb6A+NvckQ8U3s4almwle63M' 'sha256-3/SyFyEV0Y/9yrhH8vNQqUrPTjxumNcaYo5gRtJvm2c='; \
++				script-src https://cdn.jsdelivr.net 'unsafe-eval' 'self' 'sha256-8yE2w7Bv8/Il8SvtEkB35j3QNRei9CKtdX8HgqblU04=' 'nonce-pbfMmwrsnzqz1rg86SUDb6A+NvckQ8U3s4almwle63M' 'sha256-Pv4HyWUIdh/mQalp8JMzRdM1eTkfzYhRRnW/9m4pzQ8='; \
 +				style-src https://cdn.jsdelivr.net 'unsafe-hashes' 'sha256-4Su6mBWzEIFnH4pAGMOuaeBrstwJN4Z3pq/s1Kn4/KQ=' 'sha256-kwpt3lQZ21rs4cld7/uEm9qI5yAbjYzx+9FGm/XmwNU=' 'self'\r\n");
 +	}
 +}

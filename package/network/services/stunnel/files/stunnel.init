@@ -396,10 +396,7 @@ start_service() {
 		config_foreach validate_service_section service service_section
 	}
 
-	[ -n "$SERVICE_SECTION_FOUND" ] || {
-		logger -t stunnel -p daemon.info "No uci service section enabled or found!"
-		return 1
-	}
+	[ -n "$SERVICE_SECTION_FOUND" ] || return
 
 	procd_open_instance
 	procd_set_param command "$BIN"

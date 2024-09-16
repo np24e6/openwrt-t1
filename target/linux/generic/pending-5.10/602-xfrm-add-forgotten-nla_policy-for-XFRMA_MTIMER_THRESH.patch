@@ -1,0 +1,41 @@
+From: Lin Ma @ 2023-07-23  7:41 UTC (permalink / raw)
+  To: steffen.klassert, herbert, davem, edumazet, kuba, pabeni, netdev,
+	linux-kernel
+  Cc: Lin Ma
+
+The previous commit 4e484b3e969b ("xfrm: rate limit SA mapping change
+message to user space") added one additional attribute named
+XFRMA_MTIMER_THRESH and described its type at compat_policy
+(net/xfrm/xfrm_compat.c).
+
+However, the author forgot to also describe the nla_policy at
+xfrma_policy (net/xfrm/xfrm_user.c). Hence, this suppose NLA_U32 (4
+bytes) value can be faked as empty (0 bytes) by a malicious user, which
+leads to 4 bytes overflow read and heap information leak when parsing
+nlattrs.
+
+To exploit this, one malicious user can spray the SLUB objects and then
+leverage this 4 bytes OOB read to leak the heap data into
+x->mapping_maxage (see xfrm_update_ae_params(...)), and leak it to
+userspace via copy_to_user_state_extra(...).
+
+The above bug is assigned CVE-2023-3773. To fix it, this commit just 
+completes the nla_policy description for XFRMA_MTIMER_THRESH, which 
+enforces the length check and avoids such OOB read.
+
+Fixes: 4e484b3e969b ("xfrm: rate limit SA mapping change message to user space")
+Signed-off-by: Lin Ma <linma@zju.edu.cn>
+---
+ net/xfrm/xfrm_user.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+--- a/net/xfrm/xfrm_user.c
++++ b/net/xfrm/xfrm_user.c
+@@ -2748,6 +2748,7 @@ const struct nla_policy xfrma_policy[XFR
+ 	[XFRMA_SET_MARK]	= { .type = NLA_U32 },
+ 	[XFRMA_SET_MARK_MASK]	= { .type = NLA_U32 },
+ 	[XFRMA_IF_ID]		= { .type = NLA_U32 },
++	[XFRMA_MTIMER_THRESH]   = { .type = NLA_U32 },
+ };
+ EXPORT_SYMBOL_GPL(xfrma_policy);
+ 

@@ -1,6 +1,11 @@
 [ -e /tmp/.failsafe ] && export FAILSAFE=1
 
-[ -f /etc/banner ] && cat /etc/banner
+[ -f /etc/banner ] && {
+	DEVICE="$(mnf_info -n 2>/dev/null | cut -c -6)"
+	[ -n "$DEVICE" ] || DEVICE="Unknown"
+
+	cat /etc/banner | sed "s/{DEVICE_NAME}/${DEVICE}/"
+}
 [ -n "$FAILSAFE" ] && cat /etc/banner.failsafe
 
 fgrep -sq '/ overlay ro,' /proc/mounts && {

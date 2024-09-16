@@ -1,5 +1,5 @@
 /*
- * Copyright © Stéphane Raimbault <stephane.raimbault@gmail.com>
+ * Copyright © 2008-2014 Stéphane Raimbault <stephane.raimbault@gmail.com>
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -92,7 +92,7 @@ int main(int argc, char*argv[])
 
     /* Initialize values of INPUT REGISTERS */
     for (i=0; i < UT_INPUT_REGISTERS_NB; i++) {
-        mb_mapping->tab_input_registers[i] = UT_INPUT_REGISTERS_TAB[i];
+        mb_mapping->tab_input_registers[i] = UT_INPUT_REGISTERS_TAB[i];;
     }
 
     if (use_backend == TCP) {

@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2023 Teltonika
+# Copyright (C) 2022 Teltonika
 #
 
 include $(TOPDIR)/rules.mk
@@ -7,7 +7,7 @@ include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=ledman
 
-PKG_SOURCE_VERSION:=ac3974390ab23bd2386d408117f3bc8c0a2bd4bc
+PKG_SOURCE_VERSION:=2.13
 
 include $(INCLUDE_DIR)/package.mk
 
@@ -18,9 +18,7 @@ define Package/ledman-full
 	PROVIDES:=ledman
 	VARIANT:=full
 	DEPENDS:= +libubus +libubox +libgsm +libuci +libmnfinfo +libnl-tiny
-	DEPENDS+= +TARGET_ipq40xx_generic_DEVICE_teltonika_rutx:rpcd-mod-simd
-	DEPENDS+= +TARGET_ramips_mt7621_DEVICE_teltonika_rutm:rpcd-mod-simd
-	DEPENDS+= +TARGET_ramips_mt76x8_DEVICE_teltonika_otd140:libpoeman
+	DEPENDS+= +POE_SUPPORT:libpoeman
 endef
 
 # TODO SOMEHOW DEPS FROM 'FULL' IS NEEDED TO COMPILE 'TINY'

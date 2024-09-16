@@ -28,7 +28,7 @@ include $(INCLUDE_DIR)/package.mk
 define Package/tinc
   SECTION:=net
   CATEGORY:=Network
-  DEPENDS:=+liblzo +libopenssl +kmod-tun +zlib
+  DEPENDS:=+liblzo +libopenssl +kmod-tun +zlib +vuci-app-tinc-ui
   TITLE:=VPN tunneling daemon
   URL:=http://www.tinc-vpn.org/
   MAINTAINER:=Saverio Proto <zioproto@gmail.com>
@@ -63,35 +63,6 @@ define Package/tinc/install
 	$(INSTALL_DIR) $(1)/etc/tinc
 	$(INSTALL_DIR) $(1)/lib/upgrade/keep.d
 	$(INSTALL_DATA) files/tinc.upgrade $(1)/lib/upgrade/keep.d/tinc
-endef
-
-define Package/tinc/preinst
-	#!/bin/sh
-
-	add_zone() {
-		sec=$$(uci add firewall zone)
-		uci set firewall.$$sec.name="tinc"
-		uci set firewall.$$sec.src="wan"
-		uci set firewall.$$sec.device="tinc+"
-		uci set firewall.$$sec.input="ACCEPT"
-		uci set firewall.$$sec.output="ACCEPT"
-		uci set firewall.$$sec.forward="REJECT"
-	}
-
-	add_rule() {
-		sec=$$(uci add firewall rule)
-		uci set firewall.$$sec.dest_port="655"
-		uci set firewall.$$sec.src="wan"
-		uci set firewall.$$sec.name="Allow-tinc-traffic"
-		uci set firewall.$$sec.target="ACCEPT"
-		uci set firewall.$$sec.proto="tcp udp"
-	}
-
-	add_zone
-	add_rule
-	uci commit firewall
-	/etc/init.d/firewall reload > /dev/null 2>&1
-	exit 0
 endef
 
 define Package/tinc/prerm

@@ -1,0 +1,14 @@
+Index: linux-5.10.191/net/core/flow_dissector.c
+===================================================================
+--- linux-5.10.191.orig/net/core/flow_dissector.c
++++ linux-5.10.191/net/core/flow_dissector.c
+@@ -1527,8 +1527,7 @@ static inline u32 __flow_hash_from_keys(
+ 
+ 	__flow_hash_consistentify(keys);
+ 
+-	hash = siphash(flow_keys_hash_start(keys),
+-		       flow_keys_hash_length(keys), keyval);
++	hash = jhash(flow_keys_hash_start(keys), flow_keys_hash_length(keys), *(u32*)keyval);
+ 	if (!hash)
+ 		hash = 1;
+ 

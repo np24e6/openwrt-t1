@@ -17,8 +17,8 @@ parser = ArgumentParser()
 #   are counted in this dictionary and printed at the end
 #   of the script.
 failure_count = {
-    'Parse': 0,
-    'AWS': 0,
+    "Parse": 0,
+    "AWS": 0,
     "DB": 0
 }
 
@@ -42,7 +42,7 @@ def log(*args):
 
 def error_and_exit(help_method, message=""):
     """
-    Prints a message, then calls the help method if it's callable and exits with code 1.
+    Prints a message, then calls the help method and exits with 1.
 
     Parameters
     ----------
@@ -58,7 +58,7 @@ def error_and_exit(help_method, message=""):
     exit(1)
 
 
-def getenv_or_raise_error(env_variable):
+def getenv_or_error(env_variable):
     """
     Retrieves specified environment variable.
     If that environment variable is not found or empty, prints error and raises 'EnvironmentError'.
@@ -77,7 +77,7 @@ def getenv_or_raise_error(env_variable):
     Raises
     ------
     EnvironmentError
-        If value of 'env_variable' is not found or empty and 'dry_run' is not enabled.
+        If value of 'env_variable' is not found or is empty and 'dry_run' is not enabled.
     """
 
     value = getenv(env_variable)
@@ -123,37 +123,25 @@ class MySQL:
     """
     Compilation targets mapped to device names in FOTA.
     If target matches the device name exactly (e.g. "RUT2"), then specifying
-      it here is optional (hence all the commented-out values).
+      it here is optional.
     """
     device_map = {
-        # 'OTD1': ('OTD1',),
         # 'RUT2': ('RUT2',),
         'RUT2M': ('RUT200', 'RUT241', 'RUT260'),
-        'RUT30': ('RUT300',),
-        # 'RUT301': ('RUT301',),
-        'RUT36': ('RUT360',),
-        # 'RUT361': ('RUT361',),
-        # 'RUT9': ('RUT9',),
+        'RUT30X': ('RUT300',),
+        'RUT36X': ('RUT360',),
         'RUT9M': ('RUT901', 'RUT906', 'RUT951', 'RUT956'),
-        # 'RUTM': ('RUTM',),
-        # 'RUTX': ('RUTX',),
-        # 'TAP100': ('TAP100',),
-        # 'TCR1': ('TCR1',),
-        # 'TRB1': ('TRB1',),
-        # 'TRB2': ('TRB2',),
-        'TRB2M': ('TRB246', 'TRB256'),
-        # 'TRB5': ('TRB5',),
-        # 'TSW2': ('TSW2',)
+        'TRB2M': ('TRB246', 'TRB256')
     }
 
     def __init__(self, prefix_env, fw_table, files_table, user=None, password=None, host=None, database=None, port=3306):
         # Enforce all parameters to be either passed in or read from the environment
         if not (user and password and host and database):
             # Construct environment variable names and get their values
-            user = getenv_or_raise_error(prefix_env + self.prefix_mysql + 'USER')
-            password = getenv_or_raise_error(prefix_env + self.prefix_mysql + 'PASSWORD')
-            host = getenv_or_raise_error(prefix_env + self.prefix_mysql + 'SERVER')
-            database = getenv_or_raise_error(prefix_env + self.prefix_mysql + 'DATABASE')
+            user = getenv_or_error(prefix_env + self.prefix_mysql + 'USER')
+            password = getenv_or_error(prefix_env + self.prefix_mysql + 'PASSWORD')
+            host = getenv_or_error(prefix_env + self.prefix_mysql + 'SERVER')
+            database = getenv_or_error(prefix_env + self.prefix_mysql + 'DATABASE')
 
         env_port = getenv(prefix_env + self.prefix_mysql + 'PORT')
         if env_port:
@@ -278,10 +266,8 @@ class AWS:
 
     def __init__(self, prefix_env):
         # Get values of environment variables
-        self.bucket_path = getenv_or_raise_error(prefix_env + "BUCKET_PATH")
-        self.s3_bucket = getenv_or_raise_error(prefix_env + "S3_BUCKET")
-
-        log(f"bucket_path={self.bucket_path}, s3_bucket={self.s3_bucket}")
+        self.s3_bucket = getenv_or_error(prefix_env + "S3_BUCKET")
+        log(f"s3_bucket={self.s3_bucket}")
 
         self.s3_client = boto3.client('s3')
 
@@ -307,14 +293,14 @@ class AWS:
         if not (file_path and file_name and subdir):
             return None
 
-        # Replace two or more '/' with a single '/'
-        aws_path = re.sub('\/{2,}', '/', f'{self.bucket_path}/{subdir}/{file_name}')
+        aws_path = path.normpath(f'{subdir}/{file_name}')
 
-        # Upload the file
+        # Upload the file and print URL
         try:
-            print(f"Uploading {file_path + file_name} to {self.s3_bucket}/{aws_path}")
+            log(f"Uploading to {self.s3_bucket}/{aws_path}")
             if not dry_run:
                 self.s3_client.upload_file(file_path + file_name, self.s3_bucket, aws_path)
+                print(f"https://firmware.teltonika-networks.com/{aws_path}")
         except ClientError as e:
             error(e)
             return None
@@ -371,21 +357,21 @@ def parse_client_and_version(fw_name):
     Returns
     -------
     tuple
-        A tuple containing client code and version string without any preceding zeros. If version was not found, both tuple members are None.
+        A tuple containing client code and version string without any preceding zeros. If version was not found, tuple members are -1 and None.
     """
 
     if fw_name is None:
-        return (None, None)
+        return (-1, None)
 
     # RUT36X_R_00.07.02.1_WEBUI.bin -> 07.02.1
-    match = re.search("_([0-9]{2})\.([0-9.]+)(_[0-9]+)?(_WEBUI(_FAKE)?)?\.bin", fw_name.split("/")[-1])
+    match = re.search("_(GPL_)?([0-9]{2})\.([0-9.]+)(_[0-9]+)?(?(1)\.tar\.gz|_((WEBUI|(?:UBOOT.+)?MASTER_STENDUI|)\.bin|Packages\.tar\.gz))", fw_name.split("/")[-1])
     if match is None:
-        return (None, None)
+        return (-1, None)
 
-    log(f"match={match.group(0)}, code={match.group(1)}, version={match.group(2)}")
-    version = match.group(2)
-    #                                                                 07.02.1 -> 7.2.1
-    return (None, None) if version is None else (int(match.group(1)), re.sub(r"0*([1-9]*)([0-9])", "\g<1>\g<2>", version))
+    version = match.group(3)
+    log(f"match={match.group(0)}, code={match.group(2)}, version={version}")
+    #                                                               07.02.1 -> 7.2.1
+    return (-1, None) if version is None else (int(match.group(2)), re.sub(r"0*([1-9]*)([0-9])", "\g<1>\g<2>", version))
 
 
 def split_path(file):
@@ -410,69 +396,47 @@ def split_path(file):
     return file[:idx], file[idx:]
 
 
-def main():
-    parser.add_argument("-f", "--dry_run",
-                        help="Don't make any actual changes to the DB or AWS. Forces debug output", action="store_true")
-    parser.add_argument("-t", "--debug", help="Print some more verbose logs", action="store_true")
-    parser.add_argument("-d", "--demo", help="Upload to demo FOTA", action="store_true")
-    parser.add_argument("-p", "--production", help="Upload to production FOTA", action="store_true")
-    parser.add_argument("target", help="Device target")
-    args = parser.parse_args()
-
-    if not (args.demo or args.production):
-        error_and_exit("no FOTA type specified")
-
-    global debug
-    global dry_run
-    debug = args.debug or args.dry_run
-    dry_run = args.dry_run
-
-    fw_table = "suggested_firmwares"
-    files_table = "files"
-
-    # Construct dynamic string based on FOTA type
-    prefix_env = ("PRODUCTION" if args.production else "DEMO") + "_RUT_FOTA_"
-
-    scripts_dir = path.dirname(path.realpath(__file__))
-    log(f"scripts_dir={scripts_dir}")
-
+def upload_to_AWS(args, fw_files, prefix_env, dir_prefix="", dir_postfix="", fw_table=None, files_table=None):
     try:
         # We don't need these values directly, but we need to check them because they're later used by AWS
-        getenv_or_raise_error("AWS_ACCESS_KEY_ID")
-        getenv_or_raise_error("AWS_SECRET_ACCESS_KEY")
+        getenv_or_error("AWS_ACCESS_KEY_ID")
+        getenv_or_error("AWS_SECRET_ACCESS_KEY")
 
         aws = AWS(prefix_env)
-        mysql = MySQL(prefix_env, fw_table, files_table)
+        mysql = MySQL(prefix_env, fw_table, files_table) if fw_table and files_table else None
     except EnvironmentError:
         error_and_exit(parser.print_help, "Not found required variables in the environment")
 
-    # Get list of tuples (file path, file name) of all FW files in 'scripts_dir/../bin/'
-    fw_files = [split_path(fw_file) for fw_file in glob(f'{scripts_dir}/../bin/**/*[0-9]_WEBUI*.bin', recursive=True)]
+    if dir_prefix:
+        dir_prefix += "/"
+    if dir_postfix:
+        dir_postfix = "/" + dir_postfix
 
+    print()
     for file_path, fw_file in fw_files[:]:
         log(f"file_path={file_path}, fw_file={fw_file}")
 
         client_code, version = parse_client_and_version(fw_file)
-        if version is None:
+        if not version:
             print(f"Failed to parse version of '{fw_file}'")
             failure_count["Parse"] += 1
             fw_files.remove((file_path, fw_file))
             continue
 
-        log(f"version={version}")
-
-        # Use FW version as a subdirectory
-        aws_path = aws.upload(version, file_path, fw_file, dry_run)
+        aws_path = aws.upload(f"{dir_prefix}{version}{dir_postfix}", file_path, fw_file, args.dry_run)
         if aws_path is None:
             print(f"Failed to upload '{fw_file}'")
             failure_count["AWS"] += 1
             fw_files.remove((file_path, fw_file))
             continue
 
-        description = (f"{client_code} client " if client_code > 0 else "") + \
-            ("release " if len(version.split('.')) < 3 else "hotfix ") + version
+        if mysql is None:
+            continue
 
         try:
+            description = (f"{client_code} client " if client_code > 0 else "") + \
+                ("release " if len(version.split('.')) < 3 else "hotfix ") + version
+
             fw_file_id = mysql.insert_fw_file(fw_file, aws_path, path.getsize(file_path + fw_file), description)
             log(f"fw_file_id={fw_file_id}")
             mysql.set_fw_file_index_for_devices(fw_file_id, args.target, construct_version_db(version), client_code)
@@ -482,24 +446,63 @@ def main():
             fw_files.remove((file_path, fw_file))
             continue
 
-    print("Successfully uploaded FWs: ")
-    print([_dir + name for _dir, name in fw_files])
+    log("Successfully uploaded FWs: ")
+    log([_dir + name for _dir, name in fw_files])
 
     for type in failure_count:
         if failure_count[type] > 0:
-            print(f"{type} failed {failure_count[type]} time(s)")
+            print(f"{type} failed {failure_count[type]} time{'' if failure_count[type] == 1 else 's'}")
 
     success = sum(failure_count.values()) == 0
-    if success and not dry_run:
-        mysql.connection.commit()
-        return 0
+
+    if mysql is not None:
+        if success and not args.dry_run:
+            mysql.connection.commit()
+        else:
+            mysql.connection.rollback()
+
+    return not success
+
+
+def find_by_glob(glob_pattern, recursive=True):
+    return [split_path(f) for f in glob(glob_pattern, recursive=recursive)]
+
+
+def main():
+    parser.add_argument("-f", "--dry-run",
+                        help="Don't make any actual changes to the DB or AWS. Forces debug output", action="store_true")
+    parser.add_argument("-t", "--debug", help="Print some more verbose logs", action="store_true")
+    parser.add_argument("-d", "--demo", help="Upload to demo FOTA", action="store_true")
+    parser.add_argument("-p", "--production", help="Upload to production FOTA", action="store_true")
+    parser.add_argument("-l", "--public", help="Upload to public AWS storage", action="store_true")
+    parser.add_argument("target", help="Device target")
+    args = parser.parse_args()
+
+    global debug
+    global dry_run
+    debug = args.debug or args.dry_run
+    dry_run = args.dry_run
+
+    args.target = args.target.upper()
+
+    scripts_dir = path.dirname(path.realpath(__file__))
+    log(f"scripts_dir={scripts_dir}")
+
+    # Get list of tuples (type, path, name) of all FW files in '<scripts dir>/../bin/'
+    fw_files = find_by_glob(f'{scripts_dir}/../bin/**/{args.target}*[0-9]_WEBUI.bin')
+
+    if args.public:
+        fw_files.extend(find_by_glob(f'{scripts_dir}/../bin/**/{args.target}*[0-9]_MASTER_STENDUI.bin'))
+        fw_files.extend(find_by_glob(f'{scripts_dir}/../{args.target}*_GPL_*[0-9].tar.gz'))
+        fw_files.extend(find_by_glob(f'{scripts_dir}/../bin/**/zipped_packages/{args.target}*[0-9]_Packages.tar.gz'))
+
+        return upload_to_AWS(args, fw_files, "FIRMWARE_CDN_", "", args.target)
+    elif args.demo or args.production:
+        env_prefix = ("DEMO" if args.demo else "PRODUCTION") + "_RUT_FOTA_"
+
+        return upload_to_AWS(args, fw_files, env_prefix, getenv(env_prefix + "BUCKET_PATH"), "", "suggested_firmwares", "files")
     else:
-        mysql.connection.rollback()
-        #     success (1) and not dry_run (0) -> 0 (won't get here) -> return 0
-        #     success (1) and     dry_run (1) -> 1 -> return 0
-        # not success (0) and not dry_run (0) -> 0 -> return 1
-        # not success (0) and     dry_run (1) -> 0 -> return 1
-        return not (success and dry_run)
+        error_and_exit("no FOTA type specified")
 
 
 if __name__ == "__main__":

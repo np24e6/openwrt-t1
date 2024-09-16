@@ -8,11 +8,11 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=ddns-scripts
-PKG_VERSION:=2023-02-13
+PKG_VERSION:=2023-08-31
 PKG_RELEASE:=1
 
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
-PKG_SOURCE_VERSION:=51c647be5591d6c2da6b8c33ce4e2a02408306de
+PKG_SOURCE_VERSION:=1.4
 GPL_INCLUDE_SRC:=1
 
 PKG_LICENSE:=GPL-2.0
@@ -134,7 +134,7 @@ define Package/tlt-ddns
 	$(call Package/ddns-scripts/Default)
 	TITLE:=Dynamic DNS Client scripts (with IPv6 support)
 	DEPENDS:=+vuci-app-ddns-ui +ddns-scripts +!SMALL_FLASH:ddns-scripts_nsupdate \
-		+ddns-scripts_no-ip_com +ddns-scripts_cloudflare.com-v4
+		+ddns-scripts_no-ip_com +ddns-scripts_cloudflare.com-v4 +libatomic
 	ifeq (m, $(CONFIG_PACKAGE_tlt-ddns))
 		PKG_TLT_NAME:=DDNS
 		PKG_ROUTER:=$(TLT_PLATFORM_NAME)

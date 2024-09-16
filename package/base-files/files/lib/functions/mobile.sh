@@ -8,7 +8,6 @@ find_mdm_ubus_obj() {
 	local mdm_list curr_id
 
 	mdm_list="$(ubus list gsm.modem*)"
-
 	[ -z "$mdm_list" ] && echo "" && return
 
 	for val in $mdm_list; do
@@ -26,7 +25,7 @@ find_mdm_ubus_obj() {
 find_mdm_mobifd_obj() {
 	local modem_id="$1"
 	mdm_ubus_obj="$(find_mdm_ubus_obj "$modem_id")"
-	echo "${mdm_ubus_obj:4}"
+	[ -z "$mdm_ubus_obj" ] && echo "" || echo "${mdm_ubus_obj:4}"
 }
 
 handle_retry() {
@@ -36,6 +35,7 @@ handle_retry() {
 	if [ "$retry" -ge 5 ]; then
 		rm /tmp/conn_retry_$interface >/dev/null 2>/dev/null
 		object=$(find_mdm_mobifd_obj $modem)
+		[ -z "$object" ] && echo "Can't find modem $modem gsm object" && return
 		echo "$modem $interface reloading mobifd"
 		ubus -t 180 call mobifd.$object reload
 	else
@@ -51,11 +51,14 @@ check_pdp_context() {
 	local mdm_ubus_obj list cid found
 
 	mdm_ubus_obj="$(find_mdm_ubus_obj "$modem_id")"
+	[ -z "$mdm_ubus_obj" ] && echo "gsm.modem object not found" && return 1
 	found=0
 
 	json_load "$(ubus call "$mdm_ubus_obj" get_pdp_ctx_list)"
 	json_get_keys list list
 	json_select list
+
+	[ -z "$list" ] && echo "PDP list empty" && return
 
 	for ctx in $list; do
 		json_select "$ctx"
@@ -78,6 +81,7 @@ check_pdp_context() {
 
 		ubus call "$mdm_ubus_obj" set_func "{\"func\":\"full\",\"reset\":false}" >/dev/null 2>/dev/null
 	}
+	return 0
 }
 
 gsm_soft_reset() {
@@ -85,6 +89,7 @@ gsm_soft_reset() {
 	local mdm_ubus_obj
 
 	mdm_ubus_obj="$(find_mdm_ubus_obj "$modem_id")"
+	[ -z "$mdm_ubus_obj" ] && echo "gsm.modem object not found" && return
 
 	ubus call "$mdm_ubus_obj" set_func "{\"func\":\"rf\",\"reset\":false}" >/dev/null 2>/dev/null
 
@@ -133,6 +138,7 @@ qmi_error_handle() {
 			uqmi -s -d "$device" --sync
 			return 1
 	}
+
 	echo "$error" | grep -qi "Call Failed" && {
 		[ "$skip_reset" != "true" ] && {
 			logger -t "mobile.sh" "Device not responding, resetting mobile network"
@@ -248,7 +254,7 @@ setup_bridge_v4() {
 	ip rule add pref 5043 iif "$dev" lookup 43
 	#sysctl -w net.ipv4.conf.br-lan.proxy_arp=1 #2>/dev/null
 	model="$(gsmctl --model ${modem_num:+-O "$modem_num"})"
-	[ "${model:0:4}" = "UC20" ] || [ "${model:0:6}" = "RG500U" ] && ip neighbor add proxy "$bridge_ipaddr" dev "$dev" 2>/dev/null
+	[ "${model:0:4}" = "UC20" ] && ip neighbor add proxy "$bridge_ipaddr" dev "$dev" 2>/dev/null
 
 	iptables -A postrouting_rule -m comment --comment "Bridge mode" -o "$dev" -j ACCEPT -tnat
 
@@ -357,12 +363,15 @@ setup_static_v6() {
 	echo "Setting up $dev V6 static"
 	echo "$parameters6"
 
+        local custom="$(uci get network.${interface}.dns)"
+
 	[[ "$dev" = "rmnet_data"* ]] && { ## TRB5 uses qmicli - different format
 		ip6_with_prefix="$(echo "$parameters6" | sed -n "s_.*IPv6 address: \([0-9a-f:]*\)_\1_p")"
-		ip6_gateway_with_prefix="$(echo "$parameters6" | sed -n "s_.*IPv6 gateway address: \([0-9a-f:]*\)_\1_p")"
-		gateway_6="${ip6_gateway_with_prefix%/*}"
-		dns1_6="$(echo "$parameters6" | sed -n "s_.*IPv6 primary DNS: \([0-9a-f:]*\)_\1_p")"
-		dns2_6="$(echo "$parameters6" | sed -n "s_.*IPv6 secondary DNS: \([0-9a-f:]*\)_\1_p")"
+		ip_6="${ip6_with_prefix%/*}"
+		[[ -z "$custom" ]] && {
+                        dns1_6="$(echo "$parameters6" | sed -n "s_.*IPv6 primary DNS: \([0-9a-f:]*\)_\1_p")"
+		        dns2_6="$(echo "$parameters6" | sed -n "s_.*IPv6 secondary DNS: \([0-9a-f:]*\)_\1_p")"
+                }
 	} || {
 		json_load "$parameters6"
 		json_select "ipv6"
@@ -370,10 +379,10 @@ setup_static_v6() {
 		json_get_var ip_prefix_length ip-prefix-length
 		ip_6="${ip_6%/*}"
 		ip6_with_prefix="$ip_6/$ip_prefix_length"
-		json_get_var gateway_6 gateway
-		gateway_6="${gateway_6%/*}"
-		json_get_var dns1_6 dns1
-		json_get_var dns2_6 dns2
+                [[ -z "$custom" ]] && {
+                        json_get_var dns1_6 dns1
+                        json_get_var dns2_6 dns2
+                }
 		json_get_var ip_pre_len ip-prefix-length
 	}
 
@@ -381,14 +390,14 @@ setup_static_v6() {
 	json_add_string name "${interface}_6"
 	json_add_string ifname "$dev"
 	json_add_string proto static
-	json_add_string ip6gw "$gateway_6"
+	json_add_string ip6gw "::0"
 
 	json_add_array ip6prefix
 		json_add_string "" "$ip6_with_prefix"
 	json_close_array
 
 	json_add_array ip6addr
-		json_add_string "" "$ip6_with_prefix"
+		json_add_string "" "${ip_6}/128"
 	json_close_array
 
 	json_add_array dns
@@ -427,4 +436,24 @@ get_pdp() {
 	config_load network
 	config_get pdp "$1" "pdp" "1"
 	echo "$pdp"
+}
+
+get_config_sim() {
+	local sim
+	local DEFAULT_SIM="1"
+	config_load network
+	config_get sim "$1" "sim" "1"
+	[ -z "$sim" ] && logger -t "mobile.sh" "sim option not found in config. Taking default: $DEFAULT_SIM" \
+	              && sim="$DEFAULT_SIM"
+	echo "$sim"
+}
+
+notify_mtu_diff(){
+	local operator_mtu="$1"
+	local interface_name="$2"
+	local current_mtu="$3"
+	[ -n "$operator_mtu" ] && [ "$operator_mtu" != "$current_mtu" ] && {
+		echo "Notifying WebUI that operator ($operator_mtu) and configuration MTU ($current_mtu) differs"
+		touch "/tmp/vuci/mtu_${interface_name}_${operator_mtu}"
+	}
 }

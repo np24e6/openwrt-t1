@@ -44,10 +44,15 @@
 #include "gsm.h"
 #ifdef HAVE_OPENSSL
 #include "passwd_md5crypt.h"
+#include "passwd_shacrypt.h"
 #endif
 
 #ifndef HAVE_STRLCPY
 extern size_t strlcpy(char *dst, const char *src, size_t dsize);
+#endif
+
+#ifdef ENABLE_UBUS
+  struct ubus_context *ubus_ctx;
 #endif
 
 /*#define XXX_IO_DAEMON 1*/

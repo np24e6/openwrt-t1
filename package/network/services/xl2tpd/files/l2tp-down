@@ -11,3 +11,6 @@ proto_send_update "$PPP_IPPARAM"
 		[ -x "$SCRIPT" ] && "$SCRIPT" "$@"
 	done
 }
+
+rm /tmp/state/l2tp/"${1#l2tp-}".status
+exit 0

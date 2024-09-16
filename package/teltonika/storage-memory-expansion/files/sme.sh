@@ -12,6 +12,7 @@ usb_msd_label="RUTOS_overlay"
 pending_reboot="/tmp/.sme_pending_reboot"
 orig_overlay="/rwm"
 conf_backup="pre_sme.tgz"
+mmc_driver='/etc/modules-late.d/mmc-spi'
 
 must_expand_in_bg() {
 	[ ${expand_in_bg:-0} -eq 1 ]
@@ -182,7 +183,6 @@ expand_prelude() {
 	}
 
 	expand_wrapper
-	return $?
 }
 
 shrink() {
@@ -228,6 +228,14 @@ device_present() {
 	exit 0
 }
 
+mk_sd_node() {
+	local maj_min='/sys/block/mmcblk0/mmcblk0p1/dev' dev='/dev/mmcblk0p1'
+	[[ ! -e $mmc_driver || ! -e $maj_min || -e $dev ]] && return 0
+
+	local mm="$(cat $maj_min)"
+	mknod $dev b ${mm%%:*} ${mm##*:}
+}
+
 operation() {
 	# intended for webui: to be called every few seconds to get operation status
 	local ongoing_file="/tmp/.sme_ongoing"
@@ -267,8 +275,16 @@ preboot() {
 
 	[ "$(uci -q get fstab.overlay.sme)" = "1" ] || return 0
 
-	local $(block_info_vars "$(uci -q get fstab.overlay.uuid)")
-	[ -b "$DEVICE" ] || return 1
+	[ -e "$mmc_driver" ] && /sbin/kmodloader "$mmc_driver"
+
+	local c=0
+	while [ $c -lt 15 ]; do
+		: $((++c))
+		mk_sd_node
+		local $(block_info_vars "$(uci -q get fstab.overlay.uuid)")
+		[ -b "$DEVICE" ] && break
+		sleep 1; ! :
+	done || return 1
 
 	local mnt="/tmp/.tmp_overlay"
 	mkdir -p $mnt

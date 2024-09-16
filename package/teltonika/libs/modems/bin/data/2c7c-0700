@@ -1,0 +1,17 @@
+{
+	"desc": "Quectel BG95",
+	"type": "PPP",
+	"serial_control": 2,
+	"boudrate": 115200,
+	"stop_bits": 8,
+	"gps": 1,
+	"data": 2,
+	"ep_iface": 4,
+	"dl_max_size": 2048,
+	"dl_max_datagrams": 8,
+	"ul_max_size": 2048,
+	"ul_max_datagrams": 8,
+	"power_on_ms": 750,
+	"power_off_ms": 1000,
+	"reset_ms": 3000
+}

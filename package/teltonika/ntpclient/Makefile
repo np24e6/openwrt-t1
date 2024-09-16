@@ -6,12 +6,12 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=ntpclient
-PKG_VERSION:=2023-03-21
+PKG_VERSION:=2023-09-01
 PKG_RELEASE:=1
 
 GPL_INCLUDE_SRC:=1
 
-PKG_SOURCE_VERSION:=a8c068e2016f23b5fd00d081e43a2b9702c925a7
+PKG_SOURCE_VERSION:=1.4
 
 PKG_ORIGIN_URL:=https://github.com/Telconet/ntpclient
 PKG_LICENSE:=GPL-2.0

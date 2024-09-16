@@ -76,6 +76,30 @@ _fal_ip_host_del(a_uint32_t dev_id, a_uint32_t del_mode,
 }
 
 static sw_error_t
+_fal_ip_host_del_all(a_uint32_t dev_id)
+{
+    sw_error_t rv;
+    hsl_api_t *p_api;
+    adpt_api_t *p_adpt_api;
+
+    if((p_adpt_api = adpt_api_ptr_get(dev_id)) != NULL) {
+        if (NULL == p_adpt_api->adpt_ip_host_del_all)
+            return SW_NOT_SUPPORTED;
+
+        rv = p_adpt_api->adpt_ip_host_del_all(dev_id);
+        return rv;
+    }
+
+    SW_RTN_ON_NULL(p_api = hsl_api_ptr_get(dev_id));
+
+    if (NULL == p_api->ip_host_del_all)
+        return SW_NOT_SUPPORTED;
+
+    rv = p_api->ip_host_del_all(dev_id);
+    return rv;
+}
+
+static sw_error_t
 _fal_ip_host_get(a_uint32_t dev_id, a_uint32_t get_mode,
                  fal_host_entry_t * host_entry)
 {
@@ -1244,6 +1268,17 @@ fal_ip_host_del(a_uint32_t dev_id, a_uint32_t del_mode,
 
     FAL_API_LOCK;
     rv = _fal_ip_host_del(dev_id, del_mode, host_entry);
+    FAL_API_UNLOCK;
+    return rv;
+}
+
+sw_error_t
+fal_ip_host_del_all(a_uint32_t dev_id)
+{
+    sw_error_t rv;
+
+    FAL_API_LOCK;
+    rv = _fal_ip_host_del_all(dev_id);
     FAL_API_UNLOCK;
     return rv;
 }

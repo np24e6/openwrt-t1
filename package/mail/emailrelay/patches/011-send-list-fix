@@ -1,0 +1,21 @@
+--- a/src/gpop/gpopstore.cpp
++++ b/src/gpop/gpopstore.cpp
+@@ -287,11 +287,17 @@ GPop::StoreLock::List GPop::StoreLock::l
+ 	G_ASSERT( locked() ) ;
+ 	List list ;
+ 	int i = 1 ;
++	int tmp = 0 ;
++	auto p0 = m_current.begin() ;
+ 	for( auto p = m_current.begin() ; p != m_current.end() ; ++p , i++ )
+ 	{
+-		if( id == -1 || id == i )
++		if( id == -1 || id == i ) {
+ 			list.push_back( Entry(i,(*p).size,(*p).name) ) ;
++			tmp = 1 ;
++		}
+ 	}
++	if (!tmp)
++		list.push_back( Entry(id,(*p0).size,(*p0).name) ) ;
+ 	return list ;
+ }
+ 

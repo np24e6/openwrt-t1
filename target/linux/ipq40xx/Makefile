@@ -3,12 +3,12 @@ include $(TOPDIR)/rules.mk
 ARCH:=arm
 BOARD:=ipq40xx
 BOARDNAME:=Qualcomm Atheros IPQ40XX
-FEATURES:=squashfs fpu nand smp
+FEATURES:=squashfs fpu nand smp hnat
 CPU_TYPE:=cortex-a7
 CPU_SUBTYPE:=neon-vfpv4
 SUBTARGETS:=generic
 
-KERNEL_PATCHVER:=5.4
+KERNEL_PATCHVER:=5.10
 
 KERNELNAME:=zImage Image dtbs
 

@@ -1,7 +1,5 @@
-Index: dropbear-2020.81/ip_block.c
-===================================================================
 --- /dev/null
-+++ dropbear-2020.81/ip_block.c
++++ b/ip_block.c
 @@ -0,0 +1,70 @@
 +#include "ip_block.h"
 +
@@ -73,10 +71,8 @@ Index: dropbear-2020.81/ip_block.c
 +	ubus_shutdown(&ubus_ctx);
 +	uci_free_context(ctx);
 +}
-Index: dropbear-2020.81/ip_block.h
-===================================================================
 --- /dev/null
-+++ dropbear-2020.81/ip_block.h
++++ b/ip_block.h
 @@ -0,0 +1,6 @@
 +#ifndef __IP_BLOCK_H
 +#define __IP_BLOCK_H
@@ -84,10 +80,8 @@ Index: dropbear-2020.81/ip_block.h
 +void signal_ip_block(char *op, char *ip, char *local_ip);
 +
 +#endif
-Index: dropbear-2020.81/Makefile.in
-===================================================================
---- dropbear-2020.81.orig/Makefile.in
-+++ dropbear-2020.81/Makefile.in
+--- a/Makefile.in
++++ b/Makefile.in
 @@ -40,7 +40,7 @@ COMMONOBJS=dbutil.o buffer.o dbhelpers.o
  		dbmalloc.o \
  		gensignkey.o gendss.o genrsa.o gened25519.o
@@ -106,10 +100,8 @@ Index: dropbear-2020.81/Makefile.in
  LDFLAGS=@LDFLAGS@
  
  EXEEXT=@EXEEXT@
-Index: dropbear-2020.81/svr-auth.c
-===================================================================
---- dropbear-2020.81.orig/svr-auth.c
-+++ dropbear-2020.81/svr-auth.c
+--- a/svr-auth.c
++++ b/svr-auth.c
 @@ -36,6 +36,7 @@
  #include "auth.h"
  #include "runopts.h"

@@ -1,0 +1,52 @@
+--- a/drivers/usb/serial/Makefile
++++ b/drivers/usb/serial/Makefile
+@@ -15,6 +15,7 @@ obj-$(CONFIG_USB_SERIAL_AIRCABLE)		+= ai
+ obj-$(CONFIG_USB_SERIAL_ARK3116)		+= ark3116.o
+ obj-$(CONFIG_USB_SERIAL_BELKIN)			+= belkin_sa.o
+ obj-$(CONFIG_USB_SERIAL_CH341)			+= ch341.o
++obj-$(CONFIG_USB_SERIAL_CH343)			+= ch343.o
+ obj-$(CONFIG_USB_SERIAL_CP210X)			+= cp210x.o
+ obj-$(CONFIG_USB_SERIAL_CYBERJACK)		+= cyberjack.o
+ obj-$(CONFIG_USB_SERIAL_CYPRESS_M8)		+= cypress_m8.o
+--- a/drivers/usb/serial/Kconfig
++++ b/drivers/usb/serial/Kconfig
+@@ -112,6 +112,15 @@ config USB_SERIAL_CH341
+ 	  To compile this driver as a module, choose M here: the
+ 	  module will be called ch341.
+ 
++config USB_SERIAL_CH343
++	tristate "USB Winchiphead CH343 Single Port Serial Driver"
++	help
++	  Say Y here if you want to use a Winchiphead CH343 single port
++	  USB to serial adapter.
++
++	  To compile this driver as a module, choose M here: the
++	  module will be called ch343.
++
+ config USB_SERIAL_WHITEHEAT
+ 	tristate "USB ConnectTech WhiteHEAT Serial Driver"
+ 	select USB_EZUSB_FX2
+--- a/drivers/usb/class/cdc-acm.c
++++ b/drivers/usb/class/cdc-acm.c
+@@ -1929,6 +1929,21 @@ static const struct usb_device_id acm_id
+ 	},
+ #endif
+ 
++	/* Ignore CH9101 usb serail, it have own cdc driver  */
++	{ USB_DEVICE(0x1A86, 0x55d8),
++	.driver_info = IGNORE_DEVICE,
++	},
++
++	/* Ignore CH343 usb serail, it have own cdc driver  */
++	{ USB_DEVICE(0x1A86, 0x55d3),
++	.driver_info = IGNORE_DEVICE,
++	},
++
++	/* Ignore CH9102 usb serail, it have own cdc driver  */
++	{ USB_DEVICE(0x1A86, 0x55d4),
++	.driver_info = IGNORE_DEVICE,
++	},
++
+ 	/*Samsung phone in firmware update mode */
+ 	{ USB_DEVICE(0x04e8, 0x685d),
+ 	.driver_info = IGNORE_DEVICE,

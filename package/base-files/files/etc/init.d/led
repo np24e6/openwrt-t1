@@ -153,7 +153,7 @@ start_service() {
 			rm /var/run/led.state
 			procd_close_instance
 		}
-		/etc/init.d/ledman restart
+		/etc/init.d/ledman restart 2>/dev/null
 		config_foreach load_led led $led_enabl
 	}
 }

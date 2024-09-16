@@ -73,6 +73,7 @@
 
 static a_uint32_t dess_mac_snap[SW_MAX_NR_DEV] = { 0 };
 static fal_intf_mac_entry_t dess_intf_snap[SW_MAX_NR_DEV][DESS_INTF_MAC_ADDR_NUM];
+static sw_error_t _dess_ip_host_next(a_uint32_t dev_id, a_uint32_t next_mode, fal_host_entry_t * entry);
 
 struct ip_host_route_ip4 {
 	a_uint8_t valid;
@@ -1033,6 +1034,25 @@ _dess_ip_host_next(a_uint32_t dev_id, a_uint32_t next_mode,
     }
 
     SW_GET_FIELD_BY_REG(HOST_ENTRY7, TBL_IDX, entry->entry_id, reg[7]);
+    return SW_OK;
+}
+
+static sw_error_t
+_dess_ip_host_del_all(a_uint32_t dev_id)
+{
+    fal_host_entry_t hostentry;
+	sw_error_t ret;
+	int entry_num = 0;
+
+	while (entry_num++ < DESS_HOST_ENTRY_NUM) {
+		memset(&hostentry, 0, sizeof(fal_host_entry_t));
+		hostentry.entry_id = entry_num;
+		ret		   = _dess_ip_host_next(0, FAL_IP_ENTRY_ID_EN, &hostentry);
+		if ((SW_OK == ret)) {
+			_dess_ip_host_del(0, FAL_IP_ENTRY_IPADDR_EN, &hostentry);
+		}
+	}
+
     return SW_OK;
 }
 
@@ -2925,6 +2945,17 @@ dess_ip_host_del(a_uint32_t dev_id, a_uint32_t del_mode,
     return rv;
 }
 
+HSL_LOCAL sw_error_t
+dess_ip_host_del_all(a_uint32_t dev_id)
+{
+    sw_error_t rv;
+
+    HSL_API_LOCK;
+    rv = _dess_ip_host_del_all(dev_id);
+    HSL_API_UNLOCK;
+    return rv;
+}
+
 /**
  * @brief Get one host entry from one particular device.
  *   @details Comments:
@@ -3780,6 +3811,7 @@ dess_ip_init(a_uint32_t dev_id)
 
         p_api->ip_host_add = dess_ip_host_add;
         p_api->ip_host_del = dess_ip_host_del;
+        p_api->ip_host_del_all = dess_ip_host_del_all;
         p_api->ip_host_get = dess_ip_host_get;
         p_api->ip_host_next = dess_ip_host_next;
         p_api->ip_host_counter_bind = dess_ip_host_counter_bind;

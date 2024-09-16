@@ -1,0 +1,20 @@
+Index: libdlms-c65175ef/development/src/date.c
+===================================================================
+--- libdlms-c65175ef.orig/development/src/date.c
++++ libdlms-c65175ef/development/src/date.c
+@@ -320,7 +320,7 @@ void time_init(
+     if (gxmktime(&time->value) == (time_t)-1)
+     {
+ #if defined(_WIN32) || defined(_WIN64) || defined(__linux__)
+-        assert(0);
++        return ;
+ #endif
+     }
+ #endif //DLMS_USE_EPOCH_TIME
+@@ -1659,4 +1659,4 @@ uint32_t time_getNextScheduledDate(uint3
+         }
+     }
+     return start;
+-}
+\ No newline at end of file
++}

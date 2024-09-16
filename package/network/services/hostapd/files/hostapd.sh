@@ -320,15 +320,14 @@ hostapd_common_add_bss_config() {
 	config_add_boolean interworking internet asra esr uesa
 	config_add_int access_network_type venue_group venue_type
 	config_add_int ipaddr_type_availability ipaddr6_type_availability iw_gas_address3
-	config_add_string hessid network_auth_type iw_qos_map_set osu_friendly_name
-	config_add_array roaming_consortium venue_name venue_url domain_name anqp_3gpp_cell_net nai_realm
+	config_add_string hessid network_auth_type redirect_url iw_qos_map_set osu_friendly_name osu_ssid osu_server_uri osu_nai osu_service_desc
+	config_add_array roaming_consortium venue_name venue_url domain_name anqp_3gpp_cell_net nai_realm osu_method_list
 	config_add_array anqp_elem
 
 	config_add_boolean hs20 disable_dgaf osen
 	config_add_int anqp_domain_id
 	config_add_int hs20_deauth_req_timeout
 	config_add_array hs20_oper_friendly_name
-	config_add_array osu_provider
 	config_add_array operator_icon
 	config_add_array hs20_conn_capab
 	config_add_string hs20_operating_class hs20_t_c_filename hs20_t_c_timestamp hs20_wan_status hs20_wan_dw_speed hs20_wan_up_speed
@@ -398,10 +397,6 @@ append_anqp_elem() {
 	[ -n "$1" ] && append bss_conf "anqp_elem=$1" "$N"
 }
 
-append_osu_provider_service_desc() {
-	append bss_conf "osu_service_desc=$1" "$N"
-}
-
 append_hs20_icon() {
 	local width height lang type path
 	config_get width "$1" width "0"
@@ -422,140 +417,92 @@ append_operator_icon() {
 	append bss_conf "operator_icon=$1" "$N"
 }
 
-append_osu_icon() {
-	append bss_conf "osu_icon=$1" "$N"
-}
-
-append_osu_provider() {
-	local cfgtype osu_server_uri osu_friendly_name osu_nai osu_nai2 osu_method_list
-
-	config_load wireless
-	config_get cfgtype "$1" TYPE
-	[ "$cfgtype" != "osu-provider" ] && return
-
-	append bss_conf "# provider $1" "$N"
-	config_get osu_server_uri "$1" osu_server_uri
-	config_get osu_nai "$1" osu_nai
-	config_get osu_nai2 "$1" osu_nai2
-	config_get osu_method_list "$1" osu_method
-	config_get osu_friendly_name "$1" osu_friendly_name
-
-	append bss_conf "osu_server_uri=$osu_server_uri" "$N"
-	append bss_conf "osu_nai=$osu_nai" "$N"
-	append bss_conf "osu_nai2=$osu_nai2" "$N"
-	append bss_conf "osu_method_list=$osu_method_list" "$N"
-	[ -n "$osu_friendly_name" ] && \
-		append bss_conf "osu_friendly_name=$osu_friendly_name" "$N"
-
-	config_list_foreach "$1" osu_service_desc append_osu_provider_service_desc
-	config_list_foreach "$1" osu_icon append_osu_icon
-
-	append bss_conf "$N"
-}
-
 append_airtime_sta_weight() {
 	[ -n "$1" ] && append bss_conf "airtime_sta_weight=$1" "$N"
 }
 
 append_venue() {
-	[ -n $1 ] && [ -n "$2" ] && {
-		config_get wifi_id $1 wifi_id
-		[ "$wifi_id" = "$2" ] && {
-			config_get url $1 url "http://null.nl"
-			config_get name $1 name "null"
+	local key="$1"
+	local object_num="$2"
+	local url name
 
-			logger -t hostapd "Adding venue ($name $url) to $wifi_id"
-			append bss_conf "venue_name=$name" "$N"
-			append bss_conf "venue_url=$url" "$N"
-		}
-	}
-}
+	json_select "$object_num"
+		json_get_vars url name
 
-append_venues() {
-	config_load wireless
-	config_foreach append_venue venue $1
+		set_default url "http://null.nl"
+		set_default name "eng:null"
+
+		append bss_conf "venue_name=$name" "$N"
+		append bss_conf "venue_url=$venue_count:$url" "$N"
+	json_select ..
+	venue_count=$((venue_count + 1))
 }
 
 append_nai_realm() {
-	[ -n $1 ] && [ -n "$2" ] && {
-		config_get wifi_id $1 wifi_id
-		[ "$wifi_id" = "$2" ] && {
-			config_get number $1 number "0"
-			config_get hostname $1 hostname "null"
-			config_get eap_method $1 eap_method "0"
-			config_get eap_auth_param $1 eap_auth_param "[0:0]"
+	local key="$1"
+	local object_num="$2"
+	local number hostname auth_num param
 
-			# config format: 0,foobar,13[2:2]
-			logger -t hostapd "Adding nai-realm to $wifi_id"
-			append bss_conf "nai_realm=${number},${hostname},${eap_method}${eap_auth_param}" "$N"
-		}
-	}
-}
+	json_select "$object_num"
+		json_get_vars number hostname auth_num param
 
-append_nai_realms() {
-	config_load wireless
-	config_foreach append_nai_realm nai-realm $1
+		set_default number 0
+		set_default hostname "null"
+		set_default auth_num 0
+		set_default param "[0:0]"
+
+		append bss_conf "nai_realm=${number},${hostname},${auth_num}${param}" "$N"
+	json_select ..
 }
 
 append_conn_capab() {
-	[ -n $1 ] && [ -n "$2" ] && {
-		config_get wifi_id $1 wifi_id
-		[ "$wifi_id" = "$2" ] && {
-			config_get proto $1 proto "null"
-			config_get port $1 port "0"
-			config_get state $1 state "0"
+	local key="$1"
+	local object_num="$2"
+	local proto port state
 
-			logger -t hostapd "Adding hs20_conn_capab to $wifi_id"
-			append bss_conf "hs20_conn_capab=${proto}:${port}:${state}" "$N"
-		}
-	}
-}
+	json_select "$object_num"
+		json_get_vars proto port state
 
-append_conn_capabs() {
-	config_load wireless
-	config_foreach append_conn_capab hs20_conn_capab $1
+		set_default proto "null"
+		set_default port 0
+		set_default state 0
+
+		append bss_conf "hs20_conn_capab=${proto}:${port}:${state}" "$N"
+	json_select ..
 }
 
 append_oper_friendly_name() {
-	[ -n $1 ] && [ -n "$2" ] && {
-		config_get wifi_id $1 wifi_id
-		[ "$wifi_id" = "$2" ] && {
-			config_get country_code $1 country_code "xx"
-			config_get name $1 name "null"
+	local key="$1"
+	local object_num="$2"
+	local country_code name
 
-			logger -t hostapd "Adding hs20_oper_friendly_name to $wifi_id"
-			append bss_conf "hs20_oper_friendly_name=${country_code}:${name}" "$N"
-		}
-	}
-}
+	json_select "$object_num"
+		json_get_vars country_code name
 
-append_oper_friendly_names() {
-	config_load wireless
-	config_foreach append_oper_friendly_name hs20_oper_friendly_name $1
+		set_default country_code "eng"
+		set_default name "null"
+
+		append bss_conf "hs20_oper_friendly_name=${country_code}:${name}" "$N"
+	json_select ..
 }
 
 append_anqp_3gpp_cell_net() {
-	[ -n $1 ] && [ -n "$2" ] && {
-		config_get wifi_id $1 wifi_id
-		[ "$wifi_id" = "$2" ] && {
-			config_get mobile_country_code $1 mobile_country_code "0"
-			config_get mobile_network_code $1 mobile_network_code "0"
+	local key="$1"
+	local object_num="$2"
+	local mobile_country_code mobile_network_code
 
-			logger -t hostapd "Adding hs20_oper_friendly_name to $wifi_id"
+	json_select "$object_num"
+		json_get_vars mobile_country_code mobile_network_code
 
-			if [ -z "$anqp_3gpp_cell_net_conf" ]; then
-				anqp_3gpp_cell_net_conf="${mobile_country_code},${mobile_network_code}"
-			else
-				anqp_3gpp_cell_net_conf="$anqp_3gpp_cell_net_conf;${mobile_country_code},${mobile_network_code}"
-			fi
-		}
-	}
-}
+		set_default mobile_country_code "000"
+		set_default mobile_network_code "00"
 
-append_anqp_3gpp_cell_nets() {
-	config_load wireless
-	wifi_id=$1
-	config_foreach append_anqp_3gpp_cell_net anqp_3gpp_cell_net $1
+		if [ -z "$anqp_3gpp_cell_net_conf" ]; then
+			anqp_3gpp_cell_net_conf="${mobile_country_code},${mobile_network_code}"
+		else
+			anqp_3gpp_cell_net_conf="$anqp_3gpp_cell_net_conf;${mobile_country_code},${mobile_network_code}"
+		fi
+	json_select ..
 }
 
 hostapd_set_bss_options() {
@@ -984,8 +931,7 @@ hostapd_set_bss_options() {
 	json_get_vars roaming_consortium domain_name anqp_3gpp_cell_net nai_realm
 
 	json_get_vars anqp_elem iw_qos_map_set ipaddr_type_availability iw_gas_address3
-	json_get_vars redirect_url ipaddr6_type_availability
-	json_get_vars venue_name venue_url
+	json_get_vars redirect_url ipaddr6_type_availability venue
 
 	set_default interworking 0
 
@@ -1001,7 +947,8 @@ hostapd_set_bss_options() {
 		append bss_conf "esr=$esr" "$N"
 		append bss_conf "uesa=$uesa" "$N"
 
-		append_venues $wifi_id
+		local venue_count=1
+		json_for_each_item append_venue venue
 
 		[ -n "$access_network_type" ] && \
 			append bss_conf "access_network_type=$access_network_type" "$N"
@@ -1026,8 +973,7 @@ hostapd_set_bss_options() {
 
 		json_for_each_item append_roaming_consortium roaming_consortium
 		json_for_each_item append_anqp_elem anqp_elem
-
-		append_nai_realms $wifi_id
+		json_for_each_item append_nai_realm nai_realm
 
 		domain_name_conf=
 		json_for_each_item append_domain_name domain_name
@@ -1035,7 +981,7 @@ hostapd_set_bss_options() {
 			append bss_conf "domain_name=$domain_name_conf" "$N"
 
 		anqp_3gpp_cell_net_conf=
-		append_anqp_3gpp_cell_nets $wifi_id
+		json_for_each_item append_anqp_3gpp_cell_net anqp_3gpp_cell_net
 		[ -n "$anqp_3gpp_cell_net_conf" ] && \
 			append bss_conf "anqp_3gpp_cell_net=$anqp_3gpp_cell_net_conf" "$N"
 	fi
@@ -1044,12 +990,38 @@ hostapd_set_bss_options() {
 		osu_server_uri osu_service_desc osu_friendly_name osu_nai osu_ssid \
 		hs20_operating_class hs20_t_c_filename hs20_t_c_timestamp \
 		hs20_t_c_server_url  hs20_wan_status hs20_wan_dw_speed \
-		hs20_wan_up_speed
+		hs20_wan_up_speed osu_method_list hs20_conn_capab hs20_oper_friendly_name
 	json_get_vars hs20 disable_dgaf osen anqp_domain_id hs20_deauth_req_timeout \
 		osu_server_uri osu_service_desc osu_friendly_name osu_nai osu_ssid \
 		hs20_operating_class hs20_t_c_filename hs20_t_c_timestamp \
 		hs20_t_c_server_url hs20_wan_status hs20_wan_dw_speed \
-		hs20_wan_up_speed
+		hs20_wan_up_speed osu_method_list hs20_conn_capab hs20_oper_friendly_name
+
+	[ -n "$osu_ssid" ] && append bss_conf "osu_ssid=\"$osu_ssid\"" "$N"
+	[ -n "$osu_server_uri" ] && append bss_conf "osu_server_uri=$osu_server_uri" "$N"
+	[ -n "$osu_friendly_name" ] && {
+		[ "$osu_friendly_name" != ":" ] && append bss_conf "osu_friendly_name=$osu_friendly_name" "$N"
+	}
+	[ -n "$osu_nai" ] && {
+		append bss_conf "osu_nai=$osu_nai" "$N"
+		append bss_conf "osu_nai2=$osu_nai" "$N"
+	}
+	[ -n "$osu_method_list" ] && {
+		osu_method_string=""
+		json_select osu_method_list
+			json_get_keys osu_method_list_idxs
+			for key in $osu_method_list_idxs; do 
+				json_get_var value "$key"
+				osu_method_string="$osu_method_string $value"
+			done
+		json_select ".."
+		osu_method_string="$(echo "$osu_method_string" | xargs)"
+
+		append bss_conf "osu_method_list=$osu_method_string" "$N"
+	}
+	[ -n "$osu_service_desc" ] && {
+		[ "$osu_service_desc" != ":" ] && append bss_conf "osu_service_desc=$osu_service_desc" "$N"
+	} 
 
 	set_default hs20 0
 	set_default disable_dgaf $hs20
@@ -1071,9 +1043,8 @@ hostapd_set_bss_options() {
 			append bss_conf "hs20_wan_metrics=${hs20_wan_status}:${hs20_wan_dw_speed:-0}:${hs20_wan_up_speed:-0}:0:0:0" "$N"
 		}
 
-		append_conn_capabs $wifi_id
-		append_oper_friendly_names $wifi_id
-
+		json_for_each_item append_oper_friendly_name hs20_oper_friendly_name
+		json_for_each_item append_conn_capab hs20_conn_capab
 		json_for_each_item append_operator_icon operator_icon
 	fi
 
@@ -1559,10 +1530,13 @@ EOF
 wpa_supplicant_run() {
 	local ifname="$1"
 	local hostapd_ctrl="$2"
+	local hostapd_primary_ap="$3"
+	local add_ap="$4"
 
 	_wpa_supplicant_common "$ifname"
 
 	ubus wait_for wpa_supplicant
+	[ -n "$hostapd_primary_ap" ] && [ "$has_ap" != 0 ] && ubus -t 10 wait_for hostapd.$primary_ap
 	local supplicant_res="$(ubus call wpa_supplicant config_add "{ \
 		\"driver\": \"${_w_driver:-wext}\", \"ctrl\": \"$_rpath\", \
 		\"iface\": \"$ifname\", \"config\": \"$_config\" \

@@ -1,0 +1,115 @@
+Index: netifd-2022-01-12-5ca5e0b4/config.c
+===================================================================
+--- netifd-2022-01-12-5ca5e0b4.orig/config.c
++++ netifd-2022-01-12-5ca5e0b4/config.c
+@@ -597,6 +597,38 @@ config_parse_wireless_station(struct wir
+ }
+ 
+ static void
++config_parse_wireless_section(struct wireless_device *wdev, struct uci_element *e, struct uci_section *s, const char *dev_name)
++{
++	struct uci_element *f;
++	struct wireless_interface *vif = config_parse_wireless_interface(wdev, s);
++
++	if (!vif || s->anonymous) {
++		return;
++	}
++
++	uci_foreach_element(&uci_wireless->sections, f) {
++		struct uci_section *s = uci_to_section(f);
++		const char *vif_name;
++
++		if (strcmp(s->type, "wifi-vlan") == 0) {
++			vif_name = uci_lookup_option_string(uci_ctx, s, "iface");
++			if (!(!vif_name && strcmp(e->name, vif_name) == 0)) {
++				config_parse_wireless_vlan(wdev, vif->name, s);
++				continue;
++			}
++		}
++
++		if (strcmp(s->type, "wifi-station") == 0) {
++			vif_name = uci_lookup_option_string(uci_ctx, s, "iface");
++			if (!(!vif_name && strcmp(e->name, vif_name) == 0)) {
++				config_parse_wireless_station(wdev, vif->name, s);
++				continue;
++			}
++		}
++	}
++}
++
++static void
+ config_init_wireless(void)
+ {
+ 	struct wireless_device *wdev;
+@@ -631,15 +663,31 @@ config_init_wireless(void)
+ 
+ 	uci_foreach_element(&uci_wireless->sections, e) {
+ 		struct uci_section *s = uci_to_section(e);
+-		struct wireless_interface *vif;
+-		struct uci_element *f;
+ 
+ 		if (strcmp(s->type, "wifi-iface") != 0)
+ 			continue;
+ 
+ 		dev_name = uci_lookup_option_string(uci_ctx, s, "device");
+-		if (!dev_name)
++		if (!dev_name) {
++			struct uci_option *opt = uci_lookup_option(uci_ctx, s, "device");
++			struct uci_element *el;
++
++			if(opt->type != UCI_TYPE_LIST) {
++				continue;
++			}
++
++			uci_foreach_element(&opt->v.list, el) {
++				dev_name = el->name;
++				wdev = vlist_find(&wireless_devices, dev_name, wdev, node);
++				if (!wdev) {
++					DPRINTF("device %s not found!\n", dev_name);
++					continue;
++				}
++
++				config_parse_wireless_section(wdev, e, s, dev_name);
++			}
+ 			continue;
++		}
+ 
+ 		wdev = vlist_find(&wireless_devices, dev_name, wdev, node);
+ 		if (!wdev) {
+@@ -647,35 +695,7 @@ config_init_wireless(void)
+ 			continue;
+ 		}
+ 
+-		vif = config_parse_wireless_interface(wdev, s);
+-
+-		if (!vif || s->anonymous)
+-			continue;
+-		uci_foreach_element(&uci_wireless->sections, f) {
+-			struct uci_section *s = uci_to_section(f);
+-			const char *vif_name;
+-
+-			if (strcmp(s->type, "wifi-vlan") != 0)
+-				continue;
+-
+-			vif_name = uci_lookup_option_string(uci_ctx, s, "iface");
+-			if (vif_name && strcmp(e->name, vif_name))
+-				continue;
+-			config_parse_wireless_vlan(wdev, vif->name, s);
+-		}
+-
+-		uci_foreach_element(&uci_wireless->sections, f) {
+-			struct uci_section *s = uci_to_section(f);
+-			const char *vif_name;
+-
+-			if (strcmp(s->type, "wifi-station") != 0)
+-				continue;
+-
+-			vif_name = uci_lookup_option_string(uci_ctx, s, "iface");
+-			if (vif_name && strcmp(e->name, vif_name))
+-				continue;
+-			config_parse_wireless_station(wdev, vif->name, s);
+-		}
++		config_parse_wireless_section(wdev, e, s, dev_name);
+ 	}
+ 
+ 	vlist_for_each_element(&wireless_devices, wdev, node) {

@@ -1,0 +1,146 @@
+{
+   "api": {
+      "bulk": false
+   },
+   "jwt_login": false,
+   "refresh": false,
+   "firewall": {
+      "custom_rules": {
+         "actions": {
+            "reset": false
+         },
+         "config": false
+      }
+   },
+   "mobile": {
+      "modems": {
+         "actions": {
+            "exec_at": false
+         }
+      }
+   },
+   "email_relay": {
+      "config": false
+   },
+   "hotspot": {
+      "user_management": {
+         "config": false
+      }
+   },
+   "io": {
+      "juggler": {
+         "config": {
+            "general": {
+               "actions": false
+            }
+         }
+      }
+   },
+   "modbus": {
+      "serial": {
+         "slaves": {
+            "actions": {
+               "*": {
+                  "requests": {
+                     "test_request": false
+                  }
+               }
+            }
+         }
+      },
+      "tcp": {
+         "actions": {
+            "*": {
+               "requests": {
+                  "test_request": false
+               }
+            }
+         }
+      }
+   },
+   "packages": {
+      "actions": {
+         "delete_install_files": false,
+         "install_package": false
+      }
+   },
+   "usb_tools": {
+      "general": {
+         "actions": {
+            "format": false,
+            "safe_remove": false
+         }
+      }
+   },
+   "wireguard": {
+      "actions": {
+         "generate_keys": false
+      }
+   },
+   "mobile_utilities": {
+      "sms_rules": {
+         "config": false
+      }
+   },
+   "topology": {
+      "devices": false,
+      "devices_lan": false,
+      "devices_wan": false
+   },
+   "access_control": {
+      "device_pairing": {
+         "actions": {
+            "unpair": false
+         },
+         "config": {
+            "general": false
+         },
+         "status": false
+      }
+   },
+   "backup": {
+      "actions": {
+         "remove_backup": false,
+         "remove_default": false
+      },
+      "config": false,
+      "files": false
+   },
+   "base": {
+      "actions": {
+         "change_password_firstlogin": false
+      }
+   },
+   "certificates": {
+      "config": false,
+      "files": false
+   },
+   "firmware": {
+      "device": false,
+      "modem": false
+   },
+   "logging": {
+      "actions": {
+         "delete_log": false
+      }
+   },
+   "root_ca": {
+      "actions": {
+         "reset": false
+      },
+      "config": false
+   },
+   "troubleshoot": {
+      "files": {
+         "troubleshoot": false
+      },
+      "kernel_log": false,
+      "system_log": false
+   },
+   "users": {
+      "config": false
+   },
+   "events_log": {
+      "log": false
+   }
+}

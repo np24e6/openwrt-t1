@@ -14,8 +14,9 @@ TTY_PORT=""
 modem_n=""
 modem_usb_id=""
 MEIG_FLASHER="meig_firehose"
+MEIG_ASR_FLASHER="fbfdownloader"
 QUECTEL_FLASHER="quectel_flash"
-ASK_FLASHER="QDLoader"
+QUECTEL_ASR_FLASHER="QDLoader"
 JUST_LIST="0"
 PRODUCT_NAME=$(mnf_info -n | cut -b 1-4)
 CPU_NAME=$( < /proc/cpuinfo grep -e model)
@@ -170,108 +171,50 @@ debug() {
     fi
 }
 
-make_ram_symlinks() {
-    debug "[INFO] making symlinks for all temp packages installed in /tmp/"
-    
-    ln -sf /tmp/usr/lib/* /usr/lib/ > /dev/null 2>&1
-    ln -sf /tmp/usr/bin/* /usr/bin/ > /dev/null 2>&1
-    ln -sf /tmp/usr/sbin/* /usr/sbin/ > /dev/null 2>&1
-}
-
-download_file_forced() {
-    local architecture_name="$1"
-    local file_path="$2"
-    local file_name="$3"
-    if [ "$pkg_name" = "kmod-fuse" ]; then #Cant install to ram.
-        dest="/$file_path/$file_name"
-    else
-        dest="/tmp/$file_name"
-    fi
-    
-    if [ ! -f "$dest" ]; then
-        debug "[INFO] Downloading $file_name"
-        curl -Ss --ssl-reqd https://$HOSTNAME/dl/"$current_version"/"$architecture_name"/"$file_name" \
-        --output "$dest" --connect-timeout 90
-    fi
-    
-    if grep -Fq '<head><title>404 Not Found</title></head>' "$dest"; then
-        echo "[ERROR] forced $file_name installation failed. Package not found."
-        rm "$dest"
-        graceful_exit
-    else
-        echo "[INFO] $file_name downloaded."
-    fi
-    
-    if [ ! -f "/$file_path/$file_name" ]; then
-        debug "[INFO] Creating symlink /$file_path/$file_name"
-        ln -s "$dest" /"$file_path"/"$file_name"
-    fi
-}
-
-download_file_opkg() {
-    local pkg_name="$1"
-    local result
-    OPKG_RESULT=1
-
-    if [ "$pkg_name" = "kmod-fuse" ]; then #Cant install to ram.
-        result=$(opkg --force-depends install "$pkg_name") > /dev/null 2>&1
-    else
-        result=$(opkg install "$pkg_name" -d ram) > /dev/null 2>&1
-    fi
-
-    case "$result" in
-        *Configuring*)
-            debug "[INFO] "$pkg_name" installed with opkg"
-            OPKG_RESULT=0
-        ;;
-        *"installed in"*)
-            debug "[INFO] "$pkg_name" is already installed."
-            OPKG_RESULT=0
-        ;;
-        *"Cannot install"* | *Unknown*)
-            #fail
-            echo "$result"
+is_modem_live() {
+    result=$(gsmctl ${modem_n:+-N "$modem_n"} -A "AT")
+    case "$result" in 
+    *OK*)
+        live="1"
+        return
         ;;
     esac
+    live="0"
 }
 
-download_file_any() {
-    architecture_name="$1"
-    file_path="$2"
-    file_name="$3"
-    pkg_name="$4"
-    
-    #try opkg download
-    download_file_opkg "$pkg_name"
-    if [ $OPKG_RESULT = 1 ]; then
-        #opkg download failed try to get the file from the web.
-        download_file_forced "$architecture_name" "$file_path" "$file_name"
-    fi
-}
-
+restarted="0"
 graceful_exit() {
-    #in case device was in 9008 mode.
-    if [ "$NEED_MODEM_RESTART" = "1" ]; then
-        echo "[INFO] restarting modem $modem_n"
-        mctl -r -m "$modem_n" > /dev/null 2>&1
-    fi
-    if [ "$NEED_SERVICE_RESTART" = "1" ]; then
-        echo "[INFO] Starting services:"
-        /etc/init.d/gsmd start
-        /etc/init.d/ledman start
-        /etc/init.d/modem_trackd start
-    fi
 
-    exit 0
-}
+    [ "$NEED_SERVICE_RESTART" = "1" ] && sleep 10 && start_services
+    # If we don't need to restart we just exit here
+    [ "$NEED_MODEM_RESTART" = "0" ] && exit 0
 
-check_if_tempdir_added() {
-    temp_dest="dest ram /tmp"
-    
-    if ! grep -Fxq "$temp_dest" /etc/opkg.conf; then
-        echo "$temp_dest" >>/etc/opkg.conf
-        debug "[INFO] written $temp_dest to /etc/opkg.conf"
-    fi
+    # Wait for modem to turn ON, if it doesn't restart it
+    # Most modems will power by themselves
+    retries=10
+    live=0
+    echo "[INFO] Waiting for modem: $modem_n"
+    while [ $retries != 0 ]; do
+        echo "."
+        retries=$((retries-1))
+        is_modem_live
+        [ "$live" = "1" ] && exit 0
+
+        sleep 5
+    done
+
+    result=$(mctl -r -m "$modem_n")
+    [ "$result" = "Unable to find specified modem" ] && {
+        echo "[INFO] Restart failed. Trying to restart default modem"
+        mctl -r
+
+        [ "$restarted" = "0" ] && {
+            restarted=1
+            NEED_SERVICE_RESTART=0
+            graceful_exit
+        }
+        exit 0
+    }
 }
 
 helpFunction() {
@@ -280,7 +223,7 @@ helpFunction() {
     printf "\t-g \t List all available modems and versions available for them.\n"
     printf "\t-v \t <version> Modem firmware version to install.\n"
     printf "\t-p \t <path> Specify a custom firmware path. Remote mounting with sshfs will not be used by the script.\n"
-    printf "\t-r \t <fwver> Install missing dependencies into tmp folder.\n"
+    printf "\t-r \t <fwver> Install missing dependencies into tmp folder. (Deprecated)\n"
     printf "\t-s \t Search for EDL devices.\n"
     printf "\t \t Use \"-r show\" to show available versions on the server.\n"
     printf "\t-h \t Print help.\n"
@@ -290,23 +233,24 @@ helpFunction() {
     printf "\t-i \t <modem_n> Modem USB ID. eg.: 1-1 3-1 etc.\n"
     printf "\t-f \t Force upgrade start without extra validation. USE AT YOUR OWN RISK.\n"
     printf "\t-l \t Legacy mode for quectel modems(Fastboot).\n"
-    printf "\t-d \t <name> Manually set device Vendor (Quectel, QuectelASK, QuectelUNISOC or Meiglink).\n"
+    printf "\t-d \t <name> Manually set device Vendor (Quectel, QuectelASR, QuectelUNISOC or Meiglink, MeiglinkASR).\n"
     printf "\t-t \t <ttyUSBx> ttyUSBx port(for legacy mode).\n"
     printf "\t-D \t debug\n"
 }
 
 nvresultcheck() {
     case "$NV_RESULT" in
-        *"nvburs: 0"*)
-            debug "[INFO] nvburs:0"
-            NV_FAILED=0
+        *"nvburs: 0"* | *"NVBURS: 0"* | *"OK"*)
         ;;
         *)
             echo "[ERROR] NVBURS failed!"
             echo "$NV_RESULT"
             NV_FAILED=1
+            return
         ;;
     esac
+    debug "[INFO] NVBURS:0"
+    NV_FAILED=0
 }
 
 setDevice() {
@@ -323,16 +267,29 @@ setDevice() {
         graceful_exit
     fi
 
-    # Change Quectel to QuectelASK here
+    # Change Quectel to QuectelASR here
     if [ "$DEVICE" = "Quectel" ]; then
         exec_ubus_call "$modem_n" "get_firmware"
         MODEM=$(parse_from_ubus_rsp "firmware")
         case $MODEM in
         EC200*) 
-            DEVICE="QuectelASK"
+            DEVICE="QuectelASR"
             ;;
         RG500U*) 
             DEVICE="QuectelUNISOC"
+            ;;
+        *) 
+            ;;
+        esac
+    fi
+    # Change Meiglink to MeiglinkASR here
+    if [ "$DEVICE" = "Meiglink" ]; then
+        exec_ubus_call "$modem_n" "get_firmware"
+        MODEM=$(parse_from_ubus_rsp "firmware")
+        echo "fw: $MODEM"
+        case $MODEM in
+        SLM770*) 
+            DEVICE="MeiglinkASR"
             ;;
         *) 
             ;;
@@ -344,18 +301,20 @@ setFlasherPath() {
     #setdevice
     if [ "$DEVICE" = "Quectel" ]; then
         FLASHER_PATH="/usr/bin/$QUECTEL_FLASHER"
-    elif [ "$DEVICE" = "QuectelASK" ] || [ "$DEVICE" = "QuectelUNISOC" ]; then
-        FLASHER_PATH="/usr/bin/$ASK_FLASHER"
+    elif [ "$DEVICE" = "QuectelASR" ] || [ "$DEVICE" = "QuectelUNISOC" ]; then
+        FLASHER_PATH="/usr/bin/$QUECTEL_ASR_FLASHER"
     elif [ "$DEVICE" = "Meiglink" ]; then
         FLASHER_PATH="/usr/bin/$MEIG_FLASHER"
+    elif [ "$DEVICE" = "MeiglinkASR" ]; then
+        FLASHER_PATH="/usr/bin/$MEIG_ASR_FLASHER"
     fi
 }
 
+retry_backup=0
 backupnvr() {
     debug "[INFO] Meiglink device lets backup NVRAM"
     NV_RESULT=$(gsmctl -N "$modem_n" -A AT+NVBURS=2)
     exec_ubus_call "$modem_n" "info" 
-    DEVICE=$(parse_from_ubus_rsp "manuf")
     nvresultcheck
     #if no backup exists then we make one.
     if [ $NV_FAILED = 1 ]; then
@@ -363,8 +322,15 @@ backupnvr() {
         nvresultcheck
         if [ $NV_FAILED = 1 ]; then
             #failed to make a backup.
-            echo "[ERROR] Failed to make NV ram backup. Updating without a backup may cause you to lose your IMEI and SN. Exiting..."
+            echo "[ERROR] Failed to make NV ram backup..."
+            [ "$retry_backup" = 0 ] && {
+                retry_backup=1
+                sleep 5
+                backupnvr
+            }
             graceful_exit
+        else
+            echo "[INFO] NVRAM backup successful"
         fi
     fi
 }
@@ -375,8 +341,8 @@ get_compatible_fw_list() {
         echo "[ERROR] Cannot get firmware list from the server."
     else
         FW_LIST=$(curl -Ss --ssl-reqd https://$HOSTNAME/"$1")
-        FOUND_FW=$(echo "$FW_LIST" | grep ^"$MODEM_SHORT")
-        echo "Available versions:"
+        FOUND_FW=$(echo "$FW_LIST" | grep ^"$MODEM_SHORT" | sort -Vr)
+        echo "Available versions (highest version number first):"
         echo "$FOUND_FW"
     fi
 }
@@ -393,10 +359,12 @@ get_fw_list() {
 
     if [ "$DEVICE" = "Quectel" ]; then
         MODEM_SHORT=$(echo "$MODEM" | cut -b -7)
-    elif [ "$DEVICE" = "QuectelASK" ] || [ "$DEVICE" = "QuectelUNISOC" ]; then
+    elif [ "$DEVICE" = "QuectelASR" ] || [ "$DEVICE" = "QuectelUNISOC" ]; then
         MODEM_SHORT=$(echo "$MODEM" | cut -b -8)
     elif [ "$DEVICE" = "Meiglink" ]; then
         #Currently meiglink uses only 3 letter device names so this should be fine for now.
+        MODEM_SHORT=$(echo "$MODEM" | cut -b -6)
+    elif [ "$DEVICE" = "MeiglinkASR" ]; then
         MODEM_SHORT=$(echo "$MODEM" | cut -b -6)
     fi
 
@@ -404,182 +372,15 @@ get_fw_list() {
         get_compatible_fw_list "TRB1/fwlist.txt"
     elif [ "$PRODUCT_NAME" = "TRB5" ]; then
         get_compatible_fw_list "TRB5/fwlist.txt"
-    elif [ "$DEVICE" = "QuectelASK" ]; then
+    elif [ "$DEVICE" = "QuectelASR" ]; then
         get_compatible_fw_list "EC200/fwlist.txt"
+    elif [ "$DEVICE" = "MeiglinkASR" ]; then
+        get_compatible_fw_list "SLM770/fwlist.txt"
     elif [ "$DEVICE" = "QuectelUNISOC" ]; then
         get_compatible_fw_list "RG500U/fwlist.txt"
     else
         get_compatible_fw_list "fwlist.txt"
     fi
-}
-
-file_check() {
-    full_path="$1"
-    found_in_path="0"
-    if [ -L "${full_path}" ] ; then
-        if [ -e "${full_path}" ] ; then
-            debug "[INFO] $full_path Good link"
-            found_in_path="1"
-        else
-            debug "[INFO] $full_path Broken link"
-            debug "[INFO] Removing: $full_path"
-            rm "$full_path"
-        fi
-    elif [ -e "${full_path}" ] ; then
-        debug "[INFO] $full_path Not a link"
-        found_in_path="1"
-    else
-        debug "[INFO] $full_path Missing"
-    fi
-}
-
-verify_needed_files() {
-    architecture_name="$1"
-    file_path="usr/bin"
-    file_name=""
-    pkg_name=""
-    full_path=""
-    #Set the flasher name depending on the router.
-    find_modem_n "get_any"
-    if [ "$DEVICE" = "" ]; then
-        setDevice
-    fi
-
-    echo "[INFO] Downloading dependencies."
-
-    if [ "$DEVICE" = "Quectel" ]; then
-        file_name="$QUECTEL_FLASHER"
-    elif [ "$DEVICE" = "Meiglink" ]; then
-        file_name="$MEIG_FLASHER"
-    elif [ "$DEVICE" = "QuectelASK" ]; then
-        file_name="$ASK_FLASHER"
-    fi
-    pkg_name="modem_updater"
-    full_path="/$file_path/$file_name"
-    
-    file_check "$full_path"
-    if [ "$found_in_path" = "0" ]; then
-        download_file_any "$architecture_name" "$file_path" "$file_name" "$pkg_name"
-    fi
-    setFlasherPath
-    chmod 755 $FLASHER_PATH
-    
-    # sshfs depends
-    # libstdc++.so.6
-    file_path="usr/lib"
-    file_name="libstdc++.so.6"
-    pkg_name="libstdcpp6"
-    full_path="/$file_path/$file_name"
-    
-    file_check "$full_path"
-    if [ "$found_in_path" = "0" ]; then
-        download_file_any "$architecture_name" "$file_path" "$file_name" "$pkg_name"
-    fi
-    
-    # libglib-2.0.so.0
-    file_path="usr/lib"
-    file_name="libglib-2.0.so.0"
-    pkg_name="glib2"
-    full_path="/$file_path/$file_name"
-    
-    file_check "$full_path"
-    if [ "$found_in_path" = "0" ]; then
-        download_file_any "$architecture_name" "$file_path" "$file_name" "$pkg_name"
-    fi
-    
-    # fuse.ko
-    file_path="lib/modules/$KERNEL_VERSION"
-    file_name="fuse.ko"
-    pkg_name="kmod-fuse"
-    full_path="/$file_path/$file_name"
-    
-    file_check "$full_path"
-    if [ "$found_in_path" = "0" ]; then
-        download_file_any "$architecture_name" "$file_path" "$file_name" "$pkg_name"
-    fi
-    #inserting module
-    look_module=$(lsmod | grep -w fuse)
-    if [ "$look_module" = "" ]; then
-        debug "[INFO] Inserting $file_name module"
-        insmod $file_name
-    fi
-    
-    # libfuse.so.2
-    file_path="usr/lib"
-    file_name="libfuse.so.2"
-    pkg_name="libfuse1"
-    full_path="/$file_path/$file_name"
-    
-    file_check "$full_path"
-    if [ "$found_in_path" = "0" ]; then
-        download_file_any "$architecture_name" "$file_path" "$file_name" "$pkg_name"
-    fi
-    
-    # libgthread-2.0.so.0
-    file_path="usr/lib"
-    file_name="libgthread-2.0.so.0"
-    pkg_name="glib2"
-    full_path="/$file_path/$file_name"
-    
-    file_check "$full_path"
-    if [ "$found_in_path" = "0" ]; then
-        download_file_any "$architecture_name" "$file_path" "$file_name" "$pkg_name"
-    fi
-    
-    # sshfs
-    file_path="usr/bin"
-    file_name="sshfs"
-    pkg_name="$file_name"
-    full_path="/$file_path/$file_name"
-    
-    file_check "$full_path"
-    if [ "$found_in_path" = "0" ]; then
-        download_file_any "$architecture_name" "$file_path" "$file_name" "$pkg_name"
-    fi
-    chmod 755 $SSHFS_PATH
-
-    echo "[INFO] Downloading finished."
-}
-
-get_requirements() {
-    if [ "$GET_REQUIREMENTS_ARG" = "show" ]; then
-        curl -Ss --ssl-reqd "https://$HOSTNAME/dl/ver.txt"
-        graceful_exit
-    fi
-
-    if [ "$GET_REQUIREMENTS_ARG" = "" ]; then
-        current_version="$(curl -Ss --ssl-reqd "https://$HOSTNAME/dl/ver.txt" | tail -1)"
-        echo "[INFO] Firmware version auto-selected: $current_version"
-    else
-        current_version="$GET_REQUIREMENTS_ARG"
-        echo "[INFO] Firmware version forced to $GET_REQUIREMENTS_ARG"
-    fi
-    
-    check_if_tempdir_added
-    echo "[INFO] Updating OPKG"
-    opkg update &>/dev/null
-    
-    case "$CPU_NAME" in
-        *MIPSEL* | *mipsel* | *mips32el* | *"MIPS 24KEc"* )
-            echo "[INFO] device is running mipsel architechture"
-            verify_needed_files "mipsel"
-        ;;
-        *MIPS* | *mips*)
-            echo "[INFO] device is running mips architechture"
-            verify_needed_files "mips"
-        ;;
-        
-        *ARM* | *arm*)
-            echo "[INFO] device is running ARM architechture"
-            verify_needed_files "arm"
-        ;;
-        *)
-            echo "[ERROR] Cannot get architechture or unknown architechture. exiting.."
-            graceful_exit
-        ;;
-    esac
-    make_ram_symlinks
-    graceful_exit
 }
 
 get_modem_usb_id() {
@@ -670,7 +471,8 @@ common_validation() {
         setDevice
     fi
 
-    if [ "$DEVICE" = "Quectel" ] || [ "$DEVICE" = "Meiglink" ] || [ "$DEVICE" = "QuectelASK" ] || [ "$DEVICE" = "QuectelUNISOC" ]; then
+    if [ "$DEVICE" = "Quectel" ] || [ "$DEVICE" = "Meiglink" ] || [ "$DEVICE" = "QuectelASR" ] ||
+    [ "$DEVICE" = "MeiglinkASR" ] || [ "$DEVICE" = "QuectelUNISOC" ]; then
         debug "[INFO] DEVICE is compatible."
     else
         if [ "$SKIP_VALIDATION" = "0" ]; then
@@ -694,9 +496,12 @@ common_validation() {
             exec_ubus_call "$modem_n" "get_firmware"
             DEV_MOD=$(parse_from_ubus_rsp "firmware" | cut -c 1-8)
             if [ "$DEV_MODULE" != "$DEV_MOD" ]; then
-                echo "$DEV_MODULE != $DEV_MOD"
-                echo "[ERROR] Specified firmware is not intended for this module. Exiting.."
-                graceful_exit
+                [ "$(echo "$DEV_MODULE" | cut -c 1-4)" != "$(echo "$DEV_MOD" | cut -c 1-4)" ] ||
+                ( ! ( [[ "$DEV_MODULE" =~ "AFF[AD]" ]] && [[ "$DEV_MOD" =~ "AFF[AD]" ]] )) && {
+                    echo "$DEV_MODULE != $DEV_MOD"
+                    echo "[ERROR] Specified firmware is not intended for this module. Exiting.."
+                    graceful_exit
+                }
             fi
             if check_blocked "$MODEM_FW" "$VERSION"; then
                 echo "[ERROR] Modem firmware upgrade is disabled for this modem version. Exiting.."
@@ -733,7 +538,6 @@ confirm_modem_usb_id() {
 }
 
 generic_validation()  {
-
     if [ "$TTY_PORT" != "" ] &&
     [ "$LEGACY_MODE" = "0" ]; then
         echo "[WARN] Warning you specified ttyUSB port but it will not be used for non legacy(fastboot) flash!"
@@ -753,13 +557,28 @@ generic_validation()  {
     fi
 }
 
+start_services() {
+    echo "[INFO] Starting services:"
+    /etc/init.d/gsmd start
+    /etc/init.d/modem_trackd start
+    /etc/init.d/ledman start
+}
+
+stop_services() {
+    echo "[INFO] Stopping services.."
+    /etc/init.d/gsmd stop
+    /etc/init.d/modem_trackd stop
+    /etc/init.d/ledman stop
+    NEED_SERVICE_RESTART="1"
+}
+
 generic_prep()  {
     /etc/init.d/modem_trackd stop
     NEED_SERVICE_RESTART="1"
     
     #backup NVRAM
     #its in the flasher now, but just in case..
-    if [ "$DEVICE" = "Meiglink" ]; then
+    if [ "$DEVICE" = "Meiglink" ] && [ "$SKIP_VALIDATION" = "0" ]; then
         backupnvr
     fi
     
@@ -805,10 +624,8 @@ generic_prep()  {
         helpFunction
         graceful_exit
     fi
-    
-    echo "[INFO] Stopping services.."
-    /etc/init.d/ledman stop
-    /etc/init.d/gsmd stop
+
+    stop_services
 }
 
 generic_flash()  {
@@ -903,14 +720,14 @@ trb_start()  {
     trb_flash
 }
 
-ask_validation() {
+ASR_validation() {
     if [ "$TTY_PORT" != "" ] &&
     [ "$LEGACY_MODE" = "0" ]; then
         echo "[WARN] Warning! You specified ttyUSB port but it will not be used for non legacy(fastboot) flash!"
     fi
       
     if [ "$LEGACY_MODE" = "1" ]; then
-        echo "[ERROR] QuectelASK modems don't have a legacy mode."
+        echo "[ERROR] ASR modems don't support legacy mode."
         graceful_exit
     fi
     
@@ -923,14 +740,11 @@ ask_validation() {
     fi
 }
 
-ask_prep() {
-    echo "[INFO] Stopping services.."
-    /etc/init.d/modem_trackd stop
-    /etc/init.d/ledman stop
-    /etc/init.d/gsmd stop
-    NEED_SERVICE_RESTART="1"
-
+ASR_prep() {
     setFlasherPath
+    if [ "$DEVICE" = "MeiglinkASR" ] && [ "$SKIP_VALIDATION" = "0" ]; then
+        backupnvr
+    fi
     
     if [ "$USER_PATH" = "0" ]; then
         UPDATE_BIN="/tmp/modem_update.bin"
@@ -940,8 +754,16 @@ ask_prep() {
             echo "[INFO] Overwriting $UPDATE_BIN"
         fi
 
-        curl -Ss --ssl-reqd https://$HOSTNAME/EC200/"$VERSION" \
-        --output "$UPDATE_BIN" --connect-timeout 300
+        if [ "$DEVICE" = "QuectelASR" ]; then
+            curl -Ss --ssl-reqd https://$HOSTNAME/EC200/"$VERSION" \
+            --output "$UPDATE_BIN" --connect-timeout 300
+        elif [ "$DEVICE" = "MeiglinkASR" ]; then
+            curl -Ss --ssl-reqd https://$HOSTNAME/SLM770/"$VERSION" \
+            --output "$UPDATE_BIN" --connect-timeout 300    
+        else
+            echo "[ERROR] Unknown device($DEVICE)."
+            graceful_exit
+        fi
 
         if grep -Fq '<head><title>404 Not Found</title></head>' "$UPDATE_BIN"; then
             echo "[ERROR] firmware download failed."
@@ -949,21 +771,34 @@ ask_prep() {
         fi
     else
         UPDATE_BIN="$FW_PATH"
+        [ "$DEVICE" = "MeiglinkASR" ] && [ ! -f "$FW_PATH" ] && {
+            echo "[ERROR] MeiglinkASR modems require path to be a firmware file instead of a directory."
+            echo "[INFO] Eg. $0 -p update/firmware.bin"
+            graceful_exit
+        }
     fi
+
+    #We need to turn on EDL mode via AT command
+    if [ "$DEVICE" = "MeiglinkASR" ]; then
+        gsmctl ${modem_n:+-N "$modem_n"} -A "AT+MEIGEDL"
+        NEED_MODEM_RESTART="1" 
+    fi
+
+    stop_services
 }
 
-ask_flash() {
+ASR_flash() {
     "$FLASHER_PATH" -f "$UPDATE_BIN"
 }
 
-ask_start() {
-    ask_validation
-    ask_prep
+ASR_start() {
+    ASR_validation
+    ASR_prep
     echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
     echo " DO NOT TURN OFF YOUR DEVICE DURING THE UPDATE PROCESS!"
     echo "          YOUR DEVICE WILL RESTART ITSELF!             "
     echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
-    ask_flash
+    ASR_flash
 }
 
 while [ -n "$1" ]; do
@@ -1049,14 +884,10 @@ while [ -n "$1" ]; do
         -l)
             LEGACY_MODE="1"
         ;;
-        -r) shift
-            if [ "$1" != "" ] && [ "${1:0:1}" != "-" ]; then
-                GET_REQUIREMENTS_ARG="$1"
-                JUST_REQUIREMENTS="1"
-            else
-                JUST_REQUIREMENTS="1"
-                continue
-            fi
+        -r)
+            echo "[INFO] This option is longer available as the package is distrubuted via OPKG package manager"
+            echo "[INFO] To install this package use: \"opkg update && opkg install sshfs modem_updater\" command"
+            graceful_exit
         ;;
 		-*)
 			helpFunction
@@ -1090,13 +921,11 @@ common_validation
 
 if [ "$PRODUCT_NAME" = "TRB1" ] || [ "$PRODUCT_NAME" = "TRB5" ]; then
     trb_start
-elif [ "$DEVICE" = "QuectelASK" ]; then
-    ask_start
+elif [ "$DEVICE" = "QuectelASR" ] || [ "$DEVICE" = "MeiglinkASR" ]; then
+    ASR_start
 else
     generic_start
 fi
 
-#If we start gsmd too early it fails to init the modem properly.
-sleep 20
 echo "[INFO] Script finished"
 graceful_exit

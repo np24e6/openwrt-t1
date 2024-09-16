@@ -172,6 +172,31 @@ static int set_freq(int new_freq)
 #endif
 }
 
+static void run_script(char *hotplug_script)
+{
+	pid_t pid;
+	char *envp[] = { "ACTION=stratum", NULL };
+
+	if (!hotplug_script) {
+		DBG("No hotplug script provided");
+		return;
+	}
+
+	if (access(hotplug_script, F_OK)) {
+		DBG("Cannot find hotplug script %s", hotplug_script);
+		return;
+	}
+
+	pid = fork();
+
+	if (pid == 0) {
+		execvpe(hotplug_script, NULL, envp);
+		exit(EXIT_SUCCESS);
+	} else if (pid == -1) {
+		DBG("Hotplug script fork failed");
+	}
+}
+
 static void set_time(struct ntptime *new, struct ntp_control *ntpc)
 {
 #ifndef USE_OBSOLETE_GETTIMEOFDAY
@@ -190,6 +215,7 @@ static void set_time(struct ntptime *new, struct ntp_control *ntpc)
 	if (ntpc->save_time == 1) {
 		utime(SYSFIXTIME_PATH, NULL);
 	}
+	run_script(ntpc->hotplug_script);
 	DBG("set time to %" PRId64 ".%.9" PRId64 "", (int64_t)tv_set.tv_sec, (int64_t)tv_set.tv_nsec);
 #else
 	/* Traditional Linux way to set the system clock
@@ -207,6 +233,7 @@ static void set_time(struct ntptime *new, struct ntp_control *ntpc)
 	if (ntpc->save_time == 1) {
 		utime(SYSFIXTIME_PATH, NULL);
 	}
+	run_script(ntpc->hotplug_script);
 	DBG("set time to %" PRId64 ".%.6" PRId64 "", (int64_t)tv_set.tv_sec, (int64_t)tv_set.tv_usec);
 #endif
 }
@@ -449,7 +476,7 @@ static int find_server(struct ntp_control *ntpc)
 
 	for (int i = 0; i < ntpc->hosts; i++) {
 		socket = net_setup(ntpc->hostnames[i], NTP_PORT, ntpc->udp_local_port);
-		if (socket != -1) {
+		if (socket > -1) {
 			LOG("Working with server %s", ntpc->hostnames[i]);
 			break;
 		}
@@ -856,7 +883,7 @@ int main(int argc, char *argv[])
 	memset(ntpc.hostnames, 0, sizeof(ntpc.hostnames));
 
 	for (;;) {
-		c = getopt(argc, argv, "c:" DEBUG_OPTION "f:g:h:i:lp:q:k:" REPLAY_OPTION "stmzDS");
+		c = getopt(argc, argv, "c:" DEBUG_OPTION "f:e:g:h:i:lp:q:k:" REPLAY_OPTION "stmzDS");
 		if (c == EOF)
 			break;
 		switch (c) {
@@ -868,6 +895,9 @@ int main(int argc, char *argv[])
 			++g_debug;
 			break;
 #endif
+		case 'e':
+			ntpc.hotplug_script = optarg;
+			break;
 		case 'f':
 			initial_freq = atoi(optarg);
 			DBG("initial frequency %d", initial_freq);
@@ -932,10 +962,8 @@ int main(int argc, char *argv[])
 			goto end;
 		}
 	}
-	if (ntpc.hosts == 0) {
-		usage(argv[0]);
-		ret = 1;
-		goto end;
+	if (!ntpc.hosts) {
+		ntpc.failover_cnt = 0;
 	}
 
 #ifdef MOBILE_SUPPORT
@@ -983,6 +1011,7 @@ int main(int argc, char *argv[])
 	DBG("Compiled with NTP_MAX_SERVERS = %d", NTP_MAX_SERVERS);
 
 	signal(SIGINT, exit);
+	signal(SIGTERM, exit);
 
 	primary_loop(&ntpc);
 

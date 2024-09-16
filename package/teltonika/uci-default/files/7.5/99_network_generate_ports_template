@@ -1,0 +1,36 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+NETWORK_CFG="network"
+BRD_CFG=/etc/board.json
+EXISTS=0
+
+config_load "$NETWORK_CFG"
+
+apply_port_settings() {
+
+	generate_ports_template() { return 1; }
+
+	. /lib/network/config.sh
+
+	json_init
+	json_load_file $BRD_CFG
+
+	generate_ports_template
+}
+
+check_port_conf() {
+
+	EXISTS=1
+
+	return 0
+}
+
+config_foreach check_port_conf port
+
+[ $EXISTS -eq 0 ] && apply_port_settings
+
+uci_commit "$NETWORK_CFG"
+
+exit 0

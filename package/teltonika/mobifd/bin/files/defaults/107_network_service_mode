@@ -1,0 +1,48 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+SIMCARD_CFG="simcard"
+
+convert_service(){
+        local old_service=$1
+
+        case "$old_service" in
+                "2g") echo "$old_service"
+                ;;
+                "3g") echo "$old_service"
+                ;;
+                "2g_3g") echo "3g_pref"
+                ;;
+                "lte") echo "$old_service"
+                ;;
+                "2g_lte") echo "lte_pref"
+                ;;
+                "3g_lte") echo "lte_pref"
+                ;;
+                "2g_nr5g") echo "nr5g_pref"
+                ;;
+                "nr5g") echo "nr5g_pref"
+                ;;
+                "3g_nr5g") echo "nr5g_pref"
+                ;;
+                "lte_nr5g") echo "nr5g_pref"
+                ;;
+                "auto"|*) echo "$old_service"
+                ;;
+        esac
+}
+
+set_service() {
+    local section="$1"
+    config_get service "$section" "service"
+
+    [ -n "$service" ] && uci_set "$SIMCARD_CFG" "$section" "service" $(convert_service "$service")
+}
+
+config_load "$SIMCARD_CFG"
+config_foreach set_service sim
+
+uci_commit "$SIMCARD_CFG"
+
+exit 0

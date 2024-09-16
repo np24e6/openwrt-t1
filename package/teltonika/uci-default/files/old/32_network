@@ -1,8 +1,31 @@
 #!/bin/sh
 
 . /lib/functions.sh
-CONFIG="network"
 
+CONFIG="network"
+config_load "$CONFIG"
+
+# From old file: 14_network-netifd
+migrate_release() {
+	local config="$1"
+	local proto
+	local release
+
+	config_get proto "$config" "proto"
+	config_get release "$config" "release"
+
+	[ "$proto" = "dhcp" ] && [ -n "$release" ] && {
+		norelease="$((!$release))"
+		uci_set "network" "$config" "norelease" "$norelease"
+		uci_remove "network" "$config" "release"
+	}
+
+}
+
+config_foreach migrate_release "interface"
+# End
+
+# Original 32_network file content
 update_pdp() {
 	local section="$1"
 
@@ -58,7 +81,57 @@ remove_auto() {
 	}
 }
 
-config_load "$CONFIG"
 config_foreach update_pdp "interface"
 config_foreach remove_auto "interface"
+# End
+
+# From old file: 86_network
+change_l2tpv3() {
+	local section="$1"
+	local proto bridge_to ifname_list list
+
+	config_get proto "$section" "proto"
+	config_get bridge_to "$section" "bridge_to"
+
+	[ "$proto" = "l2tpv3" ] && [ -n "$bridge_to" ] && \
+	[ "$bridge_to" != "none" ] || return
+
+	ifname_list=$(uci_get network "$bridge_to" ifname)
+
+	list_contains "ifname_list" "l2tp-${section}" && {
+		list="${ifname_list/l2tp-$section/@$section}"
+		uci_set "network" "$bridge_to" "ifname" "$list"
+	}
+}
+
+config_foreach change_l2tpv3 "interface"
+# End
+
+# From old file: 95_network
+rename_l2tp_client() {
+	config_get proto "$1" "proto"
+	[ "$proto" = "l2tp" ] && {
+		config_get name "$1" "_name"
+		uci_rename "network" "$1" "$name"
+	}
+}
+
+config_foreach rename_l2tp_client "interface"
+# End
+
+# From old file: 99_network-pptpd
+check_pptp_routes() {
+	local section="$1"
+	local interface
+
+	config_get interface "$section" "interface"
+
+	uci_get network "client_${interface}" >/dev/null && {
+		uci_set "network" "$section" "interface" "client_${interface}"
+	}
+}
+
+config_foreach check_pptp_routes "route"
+# End
+
 uci_commit "$CONFIG"

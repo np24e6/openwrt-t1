@@ -30,6 +30,8 @@ curdir:=toolchain
 
 # subdirectories to descend into
 $(curdir)/builddirs := $(if $(CONFIG_GDB),gdb) $(if $(CONFIG_EXTERNAL_TOOLCHAIN),wrapper,kernel-headers binutils gcc/initial gcc/final $(LIBC) fortify-headers) $(if $(CONFIG_NASM),nasm)
+$(curdir)/builddirs += $(if $(CONFIG_TARGET_sdxprairie),python2)
+$(curdir)/builddirs += $(if $(CONFIG_TARGET_mdm9x07),python2)
 
 # builddir dependencies
 ifeq ($(CONFIG_EXTERNAL_TOOLCHAIN),)

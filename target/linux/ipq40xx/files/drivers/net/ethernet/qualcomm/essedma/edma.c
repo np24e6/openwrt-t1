@@ -22,6 +22,9 @@ extern struct net_device *edma_netdev[EDMA_MAX_PORTID_SUPPORTED];
 bool edma_stp_rstp;
 u16 edma_ath_eth_type;
 
+/* Void pointer used to call qssdk function in host_helper.c */
+void (*flush_hostentry_cb)(void);
+
 /* edma_skb_priority_offset()
  * 	get edma skb priority
  */
@@ -1326,12 +1329,24 @@ void edma_adjust_link(struct net_device *netdev)
 		if (netif_running(netdev))
 			netif_tx_wake_all_queues(netdev);
 	} else if (status == __EDMA_LINKDOWN && adapter->link_state == __EDMA_LINKUP) {
+		/* Flush hostentry in ipq4018 HNAT */
+		if(flush_hostentry_cb != NULL) {
+			flush_hostentry_cb();
+		}
 		phy_print_status(phydev);
 		adapter->link_state = __EDMA_LINKDOWN;
 		netif_carrier_off(netdev);
 		netif_tx_stop_all_queues(netdev);
 	}
 }
+
+/* Gets called from host_helper.c in qssdk */
+void edma_register_flush_hostentry(void *ptr)
+{
+	flush_hostentry_cb = ptr;
+}
+
+EXPORT_SYMBOL(edma_register_flush_hostentry);
 
 void edma_get_stats64(struct net_device *net, struct rtnl_link_stats64 *stats)
 {

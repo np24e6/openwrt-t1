@@ -9,6 +9,7 @@ proto_set_keep 1
 	[ -n "$IPREMOTE" ] && proto_add_ipv4_route 0.0.0.0 0 "$IPREMOTE"
 	[ -n "$DNS1" ] && proto_add_dns_server "$DNS1"
 	[ -n "$DNS2" -a "$DNS1" != "$DNS2" ] && proto_add_dns_server "$DNS2"
+	ubus call network reload
 }
 proto_send_update "$PPP_IPPARAM"
 
@@ -19,3 +20,19 @@ proto_send_update "$PPP_IPPARAM"
 	done
 }
 
+set_status() {
+	mkdir -p /tmp/state/l2tp
+
+	json_init
+	json_add_string "conndate" "$(date +%s)"
+	json_add_string "local_ip" "$1"
+	json_add_string "remote_ip" "$2"
+	json_add_string "interface" "$3"
+
+	json_dump > /tmp/state/l2tp/"${3#l2tp-}".status
+
+}
+
+if [ -n "$IPLOCAL" ] || [ -n "$IPREMOTE" ]; then
+	set_status "$IPLOCAL" "$IPREMOTE" "$1"
+fi

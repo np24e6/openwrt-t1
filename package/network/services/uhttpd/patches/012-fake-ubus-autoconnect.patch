@@ -1,0 +1,29 @@
+Index: uhttpd-2021-03-21-15346de8/ubus_uhttpd.c
+===================================================================
+--- uhttpd-2021-03-21-15346de8.orig/ubus_uhttpd.c
++++ uhttpd-2021-03-21-15346de8/ubus_uhttpd.c
+@@ -38,6 +38,15 @@ static int show(struct ubus_context *ctx
+ 	return UBUS_STATUS_OK;
+ }
+ 
++static void ubus_connection_lost(struct ubus_context *ctx)
++{
++	if (ctx->sock.registered)
++		uloop_end();
++
++	exit(1);
++}
++
++
+ // uloop_init() must be executed before this
+ int init_uhttpd_ubus()
+ {
+@@ -47,6 +56,8 @@ int init_uhttpd_ubus()
+ 		return EXIT_FAILURE;
+ 	}
+ 
++	g_ubus_ctx->connection_lost = ubus_connection_lost;
++
+ 	static const struct ubus_method methods[] = {
+ 		[METHOD_NONCE] = UBUS_METHOD_NOARG("nonce", show)
+ 	};

@@ -180,6 +180,22 @@ move_section_id_to_section_name() {
 	esac
 }
 
+add_frequency_option() {
+	local section=$1
+	local config_name=$2
+	local section_name=$(uci_get "$config_name" "$section")
+
+	case "$section_name" in
+	"tcp_slave"|"rs232_slave"|"rs485_slave")
+		config_get frequency "$section" frequency "period"
+		uci_set "$config_name" "$section" "frequency" "$frequency"
+		;;
+	*)
+		return 1
+		;;
+	esac
+}
+
 rename_request_section() {
 	local section=$1
 	local sec_name=$(uci_get "modbus_tcp_master" "$section")
@@ -210,6 +226,7 @@ migrate_master_settings() {
 	local config_name="$2"
 
 	uci_set "$config_name" "$section" "reconnect" "1" # keep old modbus behavior
+	add_frequency_option "$section" "$config_name"
 	rename_request_section "$section"
 	move_section_id_to_section_name "$section" "$config_name"
 }
@@ -340,6 +357,28 @@ convert_schedules() {
 	done
 }
 
+convert_flowcontrol() {
+	local section=$1
+	config_get flowcontrol "$section" "flowctrl"
+
+	[ -z $flowcontrol ] && return
+
+	case "$flowcontrol" in
+	"RTSCTS")
+		flowcontrol="rts/cts"
+		;;
+	"XonXoff")
+		flowcontrol="xon/xoff"
+		;;
+	*)
+		flowcontrol="none"
+		;;
+	esac
+
+	uci delete "$RSCFG.$section.flowctrl"
+	uci_set "$RSCFG" "$section" "flowcontrol" "$flowcontrol"
+}
+
 config_load "modbus_master_alarms"
 config_foreach convert_alarm_options
 uci_commit
@@ -359,6 +398,7 @@ uci_commit
 
 config_load "$RSCFG"
 config_foreach convert_schedules rtu_slave
+config_foreach convert_flowcontrol
 uci_commit
 
 [ -f /etc/config/$RSCFG ] && {
@@ -366,24 +406,5 @@ uci_commit
 }
 
 rm -f /etc/config/modbus_tcp_master /etc/config/$RSCFG /etc/config/modbus_master_alarms
-
-# Temporary hotfix for 7.3 only. Remove for 7.4 and newer.
-remove_scheduling() {
-	local section section_type frequency
-	section="$1"
-	config_get section_type "$section" TYPE
-	if [ "$section_type" = "tcp_slave" ] || [ "$section_type" = "rtu_slave" ]; then
-		config_get frequency "$section" "frequency" "period"
-		if [ "$frequency" != "period" ]; then
-			uci_set "modbus_master" "$section" "frequency"
-			uci_set "modbus_master" "$section" "period"
-			uci_set "modbus_master" "$section" "schedule"
-			uci_set "modbus_master" "$section" "enabled" "0"
-		fi
-	fi
-}
-config_load "modbus_master"
-config_foreach remove_scheduling
-uci_commit
 
 exit 0

@@ -1,15 +1,15 @@
 #
-# Copyright (C) 2022 Teltonika
+# Copyright (C) 2023 Teltonika
 #
 
 include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=quota_limit
-PKG_VERSION:=2023-04-06
-PKG_RELEASE:=1
+PKG_VERSION:=2023-09-04
+PKG_RELEASE:=2
 
-PKG_SOURCE_VERSION:=4ecbd71015bef71029ced8b9bc0c34651f0bac36
+PKG_SOURCE_VERSION:=7.5
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_SOURCE_VERSION)-$(PKG_VERSION)
 PKG_SOURCE:=$(PKG_SOURCE_SUBDIR).tar.gz
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_SOURCE_SUBDIR)
@@ -22,6 +22,8 @@ define Package/quota_limit
 	TITLE:=quota_limit
 	DEPENDS:=+libuci +libtlt_uci +libgsm +libtlt-logger +iptables-mod-quota2 +libmdcollect +libnftnl
 endef
+
+TARGET_CFLAGS += -D_GNU_SOURCE
 
 define Package/quota_limit/description
 	3G data counter

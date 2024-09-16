@@ -1,0 +1,20 @@
+--- a/drivers/net/usb/usbnet.c
++++ b/drivers/net/usb/usbnet.c
+@@ -346,7 +346,7 @@ void usbnet_update_max_qlen(struct usbne
+ 	switch (speed) {
+ 	case USB_SPEED_HIGH:
+ 		dev->rx_qlen = MAX_QUEUE_MEMORY / dev->rx_urb_size;
+-		dev->tx_qlen = MAX_QUEUE_MEMORY / dev->hard_mtu;
++		dev->tx_qlen = MAX_QUEUE_MEMORY / dev->hard_mtu / 2;
+ 		break;
+ 	case USB_SPEED_SUPER:
+ 	case USB_SPEED_SUPER_PLUS:
+@@ -356,7 +356,7 @@ void usbnet_update_max_qlen(struct usbne
+ 		 * work well
+ 		 */
+ 		dev->rx_qlen = 5 * MAX_QUEUE_MEMORY / dev->rx_urb_size;
+-		dev->tx_qlen = 5 * MAX_QUEUE_MEMORY / dev->hard_mtu;
++		dev->tx_qlen = MAX_QUEUE_MEMORY / dev->hard_mtu;
+ 		break;
+ 	default:
+ insanity:

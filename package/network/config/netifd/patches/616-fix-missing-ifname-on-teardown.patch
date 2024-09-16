@@ -1,0 +1,14 @@
+Index: netifd-2022-01-12-5ca5e0b4/wireless.c
+===================================================================
+--- netifd-2022-01-12-5ca5e0b4.orig/wireless.c	2023-04-27 09:38:28.264315259 +0300
++++ netifd-2022-01-12-5ca5e0b4/wireless.c	2023-04-27 09:41:22.803033249 +0300
+@@ -627,6 +627,9 @@
+ 	netifd_log_message(L_NOTICE, "Wireless device '%s' is now up\n", wdev->name);
+ 	wdev->retry = WIRELESS_SETUP_RETRY;
+ 	wdev->state = IFS_UP;
++	free(wdev->prev_config);
++	wdev->prev_config = NULL;
++
+ 	vlist_for_each_element(&wdev->interfaces, vif, node)
+ 		wireless_interface_handle_link(vif, NULL, true);
+ 	vlist_for_each_element(&wdev->vlans, vlan, node)

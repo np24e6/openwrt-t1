@@ -163,6 +163,14 @@ uci_reorder() {
         /sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} reorder "$PACKAGE.$CONFIG=$OPTION"
 }
 
+uci_revert() {
+	local PACKAGE="$1"
+	local CONFIG="$2"
+	local OPTION="$3"
+
+	/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} revert "$PACKAGE${CONFIG:+.$CONFIG}${OPTION:+.$OPTION}"
+}
+
 uci_commit() {
 	local PACKAGE="$1"
 	/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} commit $PACKAGE

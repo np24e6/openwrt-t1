@@ -1,0 +1,82 @@
+diff --git a/ucert.c b/ucert.c
+index 5523b02..55b7db2 100644
+--- a/ucert.c
++++ b/ucert.c
+@@ -24,6 +24,7 @@
+ #include <stdint.h>
+ #include <unistd.h>
+ #include <inttypes.h>
++#include <limits.h>
+ #include <sys/stat.h>
+ #include <sys/wait.h>
+ 
+@@ -273,6 +274,15 @@ static int cert_verify_blob(struct blob_attr *cert[CERT_ATTR_MAX],
+ 	return ret;
+ }
+ 
++static uint64_t handle_overflow(time_t secs) {
++	// this check will be correct until 2091-09-18 10:34:00 AM GMT (3840950040 epoch seconds)
++	if (secs > 0) {
++		return secs;
++	}
++
++	return (uint64_t)secs + LONG_MAX - LONG_MIN + 1; // assumption that time_t = long
++}
++
+ /* verify cert chain (and message) */
+ static int chain_verify(const char *msgfile, const char *pubkeyfile,
+ 			const char *pubkeydir, struct list_head *chain) {
+@@ -294,12 +304,14 @@ static int chain_verify(const char *msgfile, const char *pubkeyfile,
+ 		checkmsg = -1;
+ 
+ 	gettimeofday(&tv, NULL);
++	// fix time_t overflow
++	uint64_t epoch_sec = handle_overflow(tv.tv_sec);
+ 
+ 	list_for_each_entry(cobj, chain, list) {
+ 		/* blob has payload, verify that using signature */
+ 		if (cobj->cert[CERT_ATTR_PAYLOAD]) {
+-			time_t validfrom;
+-			time_t expiresat;
++			uint64_t validfrom;
++			uint64_t expiresat;
+ 			uint32_t certtype;
+ 
+ 			ret = cert_verify_blob(cobj->cert, chainedpubkey[0]?chainedpubkey:pubkeyfile, pubkeydir);
+@@ -340,8 +352,7 @@ static int chain_verify(const char *msgfile, const char *pubkeyfile,
+ 				goto clean_and_return;
+ 			}
+ 
+-			if (tv.tv_sec < validfrom ||
+-			    tv.tv_sec >= expiresat) {
++			if (epoch_sec < validfrom || epoch_sec >= expiresat) {
+ 				ret = 3;
+ 				DPRINTF("certificate expired\n");
+ 				goto clean_and_return;
+@@ -531,7 +542,7 @@ static int cert_process_revoker(const char *certfile, const char *pubkeydir) {
+ 	struct blob_attr *payloadtb[CERT_PL_ATTR_MAX];
+ 	struct stat st;
+ 	struct timeval tv;
+-	time_t validfrom;
++	uint64_t validfrom;
+ 	enum certtype_id certtype;
+ 	char *fingerprint;
+ 	char rfname[512];
+@@ -544,6 +555,8 @@ static int cert_process_revoker(const char *certfile, const char *pubkeydir) {
+ 	}
+ 
+ 	gettimeofday(&tv, NULL);
++	// fix time_t overflow
++	uint64_t epoch_sec = handle_overflow(tv.tv_sec);
+ 
+ 	list_for_each_entry(cobj, &certchain, list) {
+ 		if (!cobj->cert[CERT_ATTR_PAYLOAD])
+@@ -586,7 +599,7 @@ static int cert_process_revoker(const char *certfile, const char *pubkeydir) {
+ 			return 2;
+ 		}
+ 
+-		if (tv.tv_sec < validfrom) {
++		if (epoch_sec < validfrom) {
+ 			return 3;
+ 		}
+ 

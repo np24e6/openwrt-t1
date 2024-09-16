@@ -1,0 +1,150 @@
+Index: ethtool-5.10/ethtool.c
+===================================================================
+--- ethtool-5.10.orig/ethtool.c
++++ ethtool-5.10/ethtool.c
+@@ -87,6 +87,13 @@ typedef enum {
+ 	CMDL_MAC,
+ } cmdline_type_t;
+ 
++enum ethtool_link_status {
++	LINK_STATUS_SPEED,
++	LINK_STATUS_DUPLEX,
++	LINK_STATUS_AUTO_NEGOTIATION,
++	LINK_STATUS_SPEED_ADVERTISEMENT,
++};
++
+ struct cmdline_info {
+ 	const char *name;
+ 	cmdline_type_t type;
+@@ -3623,6 +3630,115 @@ static int do_test(struct cmd_context *c
+ 	return err;
+ }
+ 
++static void dump_link_caps_simplified(const u32 *mask)
++{
++	unsigned int i;
++	u8 advertised = 0, cnt = 0;
++
++	unsigned int mode_defs[] = {
++		ETHTOOL_LINK_MODE_10baseT_Half_BIT,
++		ETHTOOL_LINK_MODE_10baseT_Full_BIT,
++		ETHTOOL_LINK_MODE_100baseT_Half_BIT,
++		ETHTOOL_LINK_MODE_100baseT_Full_BIT,
++		ETHTOOL_LINK_MODE_1000baseT_Full_BIT};
++
++	for (i = 0; i < ARRAY_SIZE(mode_defs); i++) {
++		if (ethtool_link_mode_test_bit(mode_defs[i], mask)) {
++			advertised |= 1 << mode_defs[i];
++			cnt++;
++		}
++	}
++	if (cnt == 0) {
++		fprintf(stdout, "unknown");
++	} else {
++		fprintf(stdout, "0x%x", advertised);
++	}
++	fprintf(stdout, "\n");
++}
++
++static int dump_link_stats(const struct ethtool_link_usettings *link_usettings, u8 kommand)
++{
++	switch (kommand) {
++	case LINK_STATUS_SPEED:
++		if (link_usettings->base.speed == 0 || link_usettings->base.speed == (u16)(-1) ||
++		    link_usettings->base.speed == (u32)(-1)) {
++			fprintf(stdout, "unknown\n");
++		} else {
++			fprintf(stdout, "%u\n", link_usettings->base.speed);
++		}
++		break;
++	case LINK_STATUS_DUPLEX:
++		switch (link_usettings->base.duplex) {
++		case DUPLEX_HALF:
++			fprintf(stdout, "half\n");
++			break;
++		case DUPLEX_FULL:
++			fprintf(stdout, "full\n");
++			break;
++		default:
++			fprintf(stdout, "unknown");
++			break;
++		};
++		break;
++	case LINK_STATUS_AUTO_NEGOTIATION:
++		fprintf(stdout, "%s\n", (link_usettings->base.autoneg == AUTONEG_DISABLE) ? "off" : "on");
++		break;
++	case LINK_STATUS_SPEED_ADVERTISEMENT:
++		dump_link_caps_simplified(link_usettings->link_modes.advertising);
++		break;
++	default:
++		break;
++	}
++
++	return 0;
++}
++
++static int parse_link_stats(struct cmd_context *ctx)
++{
++	u8 command;
++	if (strstr(*(ctx->argp), "speed") != NULL) {
++                command = LINK_STATUS_SPEED;
++        } else if (strstr(*(ctx->argp), "duplex") != NULL) {
++                command = LINK_STATUS_DUPLEX;
++        } else if (strstr(*(ctx->argp), "aneg") != NULL) {
++                command = LINK_STATUS_AUTO_NEGOTIATION;
++        } else if (strstr(*(ctx->argp), "advert") != NULL) {
++                command = LINK_STATUS_SPEED_ADVERTISEMENT;
++        } else {
++                exit_bad_args();
++        }
++
++	return command;
++}
++
++static int get_link_stats(struct cmd_context *ctx)
++{
++	struct ethtool_link_usettings *link_usettings;
++	int err;
++	u8 command;
++
++	if (ctx->argc != 1)
++		exit_bad_args();
++
++	command = parse_link_stats(ctx);
++
++	link_usettings = do_ioctl_glinksettings(ctx);
++	if (link_usettings == NULL) {
++		fprintf(stdout, "Error: Null settings\n");
++		exit_bad_args();
++	}
++	if (link_usettings != NULL) {
++		err = dump_link_stats(link_usettings, command);
++		free(link_usettings);
++		if (err)
++			return err;
++	} else if (errno != EOPNOTSUPP) {
++		perror("Cannot get device settings");
++	}
++
++	return 0;
++}
++
+ static int do_phys_id(struct cmd_context *ctx)
+ {
+ 	int err;
+@@ -5762,6 +5878,15 @@ static const struct option args[] = {
+ 		.help	= "Show adapter statistics"
+ 	},
+ 	{
++		.opts	= "--link-stats",
++		.func	= get_link_stats,
++		.help	= "Show link status",
++		.xhelp	= "		[speed]\n"
++			  "		[duplex]\n"
++			  "		[aneg]\n"
++			  "		[advert]\n"
++	},
++	{
+ 		.opts	= "--phy-statistics",
+ 		.func	= do_gphystats,
+ 		.help	= "Show phy statistics"

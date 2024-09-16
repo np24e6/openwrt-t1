@@ -6,7 +6,7 @@ BACKUP_PACKAGES="/etc/backup_packages/"
 FAILED_PACKAGES="/etc/failed_packages"
 TIME_OF_SLEEP=10
 PKG_REBOOT=0
-ROUTERNAME=$(uci -q get system.system.routername)
+DEVICENAME=$(mnf_info --name)
 PLATFORM="$(jsonfilter -i /etc/board.json -e @.model.platform)"
 
 [ -d "$BACKUP_PACKAGES" ] && {
@@ -71,7 +71,7 @@ for i in $needed_packets; do
 		router_check=1
 	else
 		for r in $router; do
-			[ $(echo "$ROUTERNAME" | grep -c "$r") -ne 0 ] && {
+			[ $(echo "$DEVICENAME" | grep -c "$r") -ne 0 ] && {
 				router_check=1
 				break;
 			}

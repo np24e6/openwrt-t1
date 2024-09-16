@@ -1,0 +1,40 @@
+Index: ubox-2020-10-25-9ef88681/log/logd.c
+===================================================================
+--- ubox-2020-10-25-9ef88681.orig/log/logd.c
++++ ubox-2020-10-25-9ef88681/log/logd.c
+@@ -437,6 +437,18 @@ void ubus_notify_log_extended(struct log
+ 	blob_buf_free(&b);
+ }
+ 
++static void logd_die(struct ubus_context *ctx)
++{
++	(void)ctx;
++
++	fprintf(stderr, "Logd: ubus connection was lost\n");
++	log_shutdown();
++	uloop_done();
++	ubus_auto_shutdown(&conn);
++
++	exit(EXIT_FAILURE);
++}
++
+ static void
+ ubus_connect_handler(struct ubus_context *ctx)
+ {
+@@ -472,6 +484,16 @@ main(int argc, char **argv)
+ 	log_init(log_size);
+ 	conn.cb = ubus_connect_handler;
+ 	ubus_auto_connect(&conn);
++
++	/*
++	 * Looks like autoconnect feature here is broken on this version of ubox.
++	 * After lost connection it should try to reconnect. It succeeds
++	 * but as `logd` user not `root`. In this case `log` ubus object becomes
++	 * invisible to other processes. This kills logd and forces procd to restart
++	 * it again. Ubus id of object changes but it is still better than having no
++	 * `log` object
++	 */
++	conn.ctx.connection_lost = logd_die;
+ 	p = getpwnam("logd");
+ 	if (p) {
+ 		setuid(p->pw_uid);

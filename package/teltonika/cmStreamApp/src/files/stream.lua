@@ -75,7 +75,7 @@ function init()
 	local modem_id  = nil
 
 	SERVICE = get_service()
-	local device = uci:get("system", "system", "routername") or ""
+	local device = uci:get("system", "system", "devicename") or ""
 	if device == "" then
 		device = mnf:get_name() or ""
 		device = device:sub(1, 6)

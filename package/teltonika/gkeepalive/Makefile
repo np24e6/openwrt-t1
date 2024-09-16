@@ -5,7 +5,7 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=gkeepalive
-PKG_VERSION:=1.0
+PKG_VERSION:=2023-04-07
 PKG_RELEASE:=1
 
 

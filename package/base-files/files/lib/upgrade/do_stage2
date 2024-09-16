@@ -5,7 +5,7 @@
 include /lib/upgrade
 
 v "Performing system upgrade..."
-ledman --flash --daemon --force >/dev/null 2>&1 &
+ledman --flash --daemon >/dev/null 2>&1 &
 if type 'platform_do_upgrade' >/dev/null 2>/dev/null; then
 	platform_do_upgrade "$IMAGE"
 else

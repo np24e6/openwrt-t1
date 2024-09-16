@@ -70,20 +70,20 @@ set_service() {
 	MODBUS_IP=$(uci -q get "$CONFIG"."$section".modbus_ip)
 	MODBUS_PORT=$(uci -q get "$CONFIG"."$section".modbus_port)
 
-	SLAVE_ID=$(uci -q get "$CONFIG"."$section".slave_id)
-	SLAVE_ID_CONFIG=$(uci -q get "$CONFIG"."$section".slave_id_config)
-	MULTI_SLAVE_ID=$(uci -q get "$CONFIG"."$section".multi_slave_id)
-	SINGLE_SLAVE_ID=$(uci -q get "$CONFIG"."$section".single_slave_id)
+	SERVER_ID=$(uci -q get "$CONFIG"."$section".server_id)
+	SERVER_ID_CONFIG=$(uci -q get "$CONFIG"."$section".server_id_config)
+	MULTI_SERVER_ID=$(uci -q get "$CONFIG"."$section".multi_server_id)
+	SINGLE_SERVER_ID=$(uci -q get "$CONFIG"."$section".single_server_id)
 
 	CRC_ENABLED=$(uci -q get "$CONFIG"."$section".crc_enabled)
 	CRC_REPEAT=$(uci -q get "$CONFIG"."$section".crc_repeat)
 
 	procd_open_instance
 	procd_set_param file /etc/config/"$CONFIG"
-	if [ "$SLAVE_ID_CONFIG" = "single" ]; then
-		procd_set_param command $PROGRAM -p "$DEVICE" -s "$SPEED" -b "$DBITS" -a "$PARITY" -t "$SBITS" -g "$SINGLE_SLAVE_ID" -i "$MODBUS_IP" -m "$MODBUS_PORT"
+	if [ "$SERVER_ID_CONFIG" = "single" ]; then
+		procd_set_param command $PROGRAM -p "$DEVICE" -s "$SPEED" -b "$DBITS" -a "$PARITY" -t "$SBITS" -g "$SINGLE_SERVER_ID" -i "$MODBUS_IP" -m "$MODBUS_PORT"
 		else
-		procd_set_param command $PROGRAM -p "$DEVICE" -s "$SPEED" -b "$DBITS" -a "$PARITY" -t "$SBITS" -r "$MULTI_SLAVE_ID" -i "$MODBUS_IP" -m "$MODBUS_PORT"
+		procd_set_param command $PROGRAM -p "$DEVICE" -s "$SPEED" -b "$DBITS" -a "$PARITY" -t "$SBITS" -r "$MULTI_SERVER_ID" -i "$MODBUS_IP" -m "$MODBUS_PORT"
 	fi
 
 	if [ "$CRC_ENABLED" = "1" ]; then

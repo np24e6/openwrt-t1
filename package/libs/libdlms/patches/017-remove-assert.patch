@@ -1,0 +1,16 @@
+Index: libdlms-e5cc16e1/development/src/variant.c
+===================================================================
+--- libdlms-e5cc16e1.orig/development/src/variant.c
++++ libdlms-e5cc16e1/development/src/variant.c
+@@ -1203,10 +1203,7 @@ int var_toInteger(dlmsVARIANT* data)
+     break;
+ #endif //DLMS_IGNORE_MALLOC
+     default:
+-#if defined(_WIN32) || defined(_WIN64) || defined(__linux__)
+-        assert(0);
+-#endif
+-        ret = 0;
++        ret = -1;
+         break;
+     }
+     return ret;

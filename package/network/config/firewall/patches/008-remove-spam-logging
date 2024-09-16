@@ -1,0 +1,62 @@
+--- a/options.c
++++ b/options.c
+@@ -1012,7 +1012,7 @@
+                   struct uci_section *section)
+ {
+ 	char *p, *v;
+-	bool known, inv;
++	bool inv;
+ 	struct uci_element *e, *l;
+ 	struct uci_option *o;
+ 	const struct fw3_option *opt;
+@@ -1022,7 +1022,6 @@
+ 	uci_foreach_element(&section->options, e)
+ 	{
+ 		o = uci_to_option(e);
+-		known = false;
+ 
+ 		for (opt = opts; opt->name; opt++)
+ 		{
+@@ -1116,12 +1115,9 @@
+ 				}
+ 			}
+ 
+-			known = true;
+ 			break;
+ 		}
+ 
+-		if (!known)
+-			warn_elem(e, "is unknown");
+ 	}
+ 
+ 	return valid;
+@@ -1133,7 +1129,6 @@
+                        struct blob_attr *a, const char *name)
+ {
+ 	char *p, *v, buf[16];
+-	bool known;
+ 	unsigned rem, erem;
+ 	struct blob_attr *o, *e;
+ 	const struct fw3_option *opt;
+@@ -1142,7 +1137,6 @@
+ 
+ 	blobmsg_for_each_attr(o, a, rem)
+ 	{
+-		known = false;
+ 
+ 		for (opt = opts; opt->name; opt++)
+ 		{
+@@ -1228,12 +1222,9 @@
+ 				}
+ 			}
+ 
+-			known = true;
+ 			break;
+ 		}
+ 
+-		if (!known && strcmp(blobmsg_name(o), "type"))
+-			fprintf(stderr, "%s: '%s' is unknown\n", name, blobmsg_name(o));
+ 	}
+ 
+ 	return valid;
+

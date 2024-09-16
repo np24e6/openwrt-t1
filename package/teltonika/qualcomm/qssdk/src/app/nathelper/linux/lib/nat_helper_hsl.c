@@ -459,8 +459,8 @@ _arp_host_route_hw_add(fal_host_entry_t *arp_entry)
 a_int32_t
 arp_hw_add(a_uint32_t port, a_uint32_t intf_id, a_uint8_t *ip, a_uint8_t *mac, int is_ipv6_entry)
 {
-    fal_host_entry_t arp_entry;
-
+    fal_host_entry_t arp_entry, temp_arp_entry;
+    int ret = 0;
 
 #ifdef ISIS /* Only for AR8337(S17) */
     if (NF_S17_WAN_TYPE_PPPOEV6 == nf_athrs17_hnat_wan_type)
@@ -483,68 +483,70 @@ arp_hw_add(a_uint32_t port, a_uint32_t intf_id, a_uint8_t *ip, a_uint8_t *mac, i
 #endif /* not ISIS */
     {
         memset(&arp_entry,0,sizeof(arp_entry));
-        if (0 == is_ipv6_entry)
-        {
+        memset(&temp_arp_entry,0,sizeof(temp_arp_entry));
+        if (0 == is_ipv6_entry) {
             memcpy(&arp_entry.ip4_addr, ip, 4);
             arp_entry.ip4_addr = ntohl(arp_entry.ip4_addr);
             arp_entry.flags = FAL_IP_IP4_ADDR;
-        }
-        else
-        {
+        } else {
             memcpy(&arp_entry.ip6_addr, ip, 16);
             arp_entry.flags = FAL_IP_IP6_ADDR;
         }
+
         memcpy(arp_entry.mac_addr.uc, mac, 6);
         if ((NF_S17_WAN_TYPE_PPPOE == nf_athrs17_hnat_wan_type) && \
-            (S17_WAN_PORT == port))
-        {
+            (S17_WAN_PORT == port)) {
             arp_entry.status = ARP_AGE_NEVER;
-        }
-        else
-        {
+        } else {
             arp_entry.status = ARP_AGE;
         }
         arp_entry.port_id = port;
     }
 
     arp_entry.intf_id = intf_id;
-
     arp_entry.counter_en = 1;
-    if (S17_WAN_PORT == port)
-    {
+    if (S17_WAN_PORT == port) {
         arp_entry.counter_id = 0xf;
-    }
-    else
-    {
+    } else {
         arp_entry.counter_id = arp_hw_debug_counter_get();
     }
 
-	if (IP_HOST_GET(0, 0x10, &arp_entry)) {
-		HNAT_PRINTK("new arp for 0x%x\n", arp_entry.ip4_addr);
-		if(_arp_hw_add(&arp_entry) != 0)
-		{
-			HNAT_ERR_PRINTK("%s: fail\n", __func__);
+    memcpy(&temp_arp_entry, &arp_entry, sizeof(fal_host_entry_t));
+    ret = IP_HOST_GET(0, 0x10, &temp_arp_entry);
+    if (ret == SW_OK) {
+        for(int i = 0; i < 6; i++) {
+            if(*(arp_entry.mac_addr.uc+i) != *(temp_arp_entry.mac_addr.uc+i)) {
+                HNAT_PRINTK("MAC's dont match, cleaning host_entry\n");
+                IP_HOST_DEL(0, FAL_IP_ENTRY_IPADDR_EN, &temp_arp_entry);
+                ret = SW_NOT_FOUND;
+                break;
+			}
+		}
+    }
+
+    if (ret == SW_NOT_FOUND) {
+        HNAT_PRINTK("New arp from 0x%x mac 0x%pM\n", arp_entry.ip4_addr, arp_entry.mac_addr.uc);
+        if(_arp_hw_add(&arp_entry) != 0) {
+			HNAT_PRINTK("%s:%d fail\n", __func__, __LINE__);
 			return -1;
 		}
 
-		if(DESS_CHIP(nat_chip_ver)) {
-			if(_arp_host_route_hw_add(&arp_entry) != 0)
-			{
-				HNAT_ERR_PRINTK("%s: fail\n", __func__);
+        if(DESS_CHIP(nat_chip_ver)) {
+			if(_arp_host_route_hw_add(&arp_entry) != 0) {
+				HNAT_PRINTK("%s:%d fail\n", __func__, __LINE__);
 				return -1;
 			}
 		}
-	}
+    }
 
-    if (0 == is_ipv6_entry)
-    {
+
+    if (0 == is_ipv6_entry) {
         HNAT_PRINTK("%s: index:%x  port:%d ip:%d.%d.%d.%d\n",
                     __func__, arp_entry.entry_id, port,
                     *(ip), *(ip+1), *(ip+2), *(ip+3));
     }
     
-    if (0 != (arp_entry.entry_id & 0xFFFFFC00))
-    {
+    if (0 != (arp_entry.entry_id & 0xFFFFFC00)) {
         pr_debug("Warning: arp_entry id should be only 10 bits!\n");
     }
 

@@ -3,6 +3,7 @@
 # Licensed to the public under the Apache License 2.0.
 
 DEFAULT_ROUTE=0
+DEFAULT_STATUS="/tmp/wireguard/default-status"
 
 WG=/usr/bin/wg
 if [ ! -x $WG ]; then
@@ -62,7 +63,7 @@ proto_wireguard_setup_peer() {
 		if [ "${route_allowed_ips}" -ne 0 ]
 		then
 			DEFAULT_ROUTE=1
-			echo "$peer_config" >> "/tmp/wireguard/default-status"
+			echo "$peer_config" > "$DEFAULT_STATUS"
 		fi
 	done
 	if [ "${endpoint_host}" ]; then
@@ -211,18 +212,19 @@ proto_wireguard_setup() {
 		sed -E 's/\[?([0-9.:a-f]+)\]?:([0-9]+)/\1 \2/' | \
 		while IFS=$'\t ' read -r key address port; do
 			[ -n "${port}" ] || continue
-			echo "$config" >> "/tmp/wireguard/default-status"
+			echo "$config" >> "$DEFAULT_STATUS"
 	
-			peer_config="$(cat /tmp/wireguard/default-status | sed '1q;d')"
+			peer_config="$(cat "$DEFAULT_STATUS" | sed '1q;d')"
 			config_get peer "$peer_config" endpoint_host
 			defaults="$(ip route show default | grep -v tata | awk -F"dev " '{print $2}' | sed 's/\s.*$//')"
 
 			for dev in ${defaults}; do
 				metric="$(ip route show default dev $dev | awk -F"metric " '{print $2}' | sed 's/\s.*$//')"
 				gw="$(ip route show default dev $dev | awk -F"via " '{print $2}' | sed 's/\s.*$//')"
-
-				[ -n "$gw" ] && ip route add "$peer" via "$gw" dev "$dev" metric "$metric" || ip route add "$peer" dev "$dev" metric "$metric"
-				echo "ip route del "$peer" dev "$dev" metric $metric" >> "/tmp/wireguard/default-status"
+				for ip in $(resolveip -4 "$peer");do
+					ip route add "$ip" ${gw:+via "$gw"} dev "$dev" metric "$metric"
+					echo "ip route del "$ip" dev "$dev" metric $metric" >> "$DEFAULT_STATUS"
+				done
 			done
 		done
 	fi
@@ -232,10 +234,11 @@ proto_wireguard_setup() {
 
 proto_wireguard_teardown() {
 	local config="$1"
-	ip link del dev "${config}" >/dev/null 2>&1
-	[ -n "$(grep -w "$config" /tmp/wireguard/default-status)" ] || return 0
-	eval "$(tail -n +3 "/tmp/wireguard/default-status")"
-	rm "/tmp/wireguard/default-status" >/dev/null 2>&1
+	ip link del dev "${config}" >/dev/null 2>&1	
+	if [ -e "$DEFAULT_STATUS" ] && grep -qw "$config" "$DEFAULT_STATUS" ;then
+		eval "$(tail -n +3 "$DEFAULT_STATUS")"
+		rm "$DEFAULT_STATUS" >/dev/null 2>&1
+	fi
 }
 
 [ -n "$INCLUDE_ONLY" ] || {

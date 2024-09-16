@@ -43,15 +43,19 @@ if [ "$hotspot_enabled" = "true" ] && [ "$rule_exists" = "false" ]; then
 
 fi
 
-enable=$(uci_get firewall pscan port_scan)
-[ -z "$enable" ] && enable="0"
+device=$(uci_get system system devicename)
 
-uci -q batch <<-EOT
-	set firewall.pscan=include
-	set firewall.pscan.port_scan="$enable"
-	set firewall.pscan.type=script
-	set firewall.pscan.reload='1'
-	set firewall.pscan.path=/usr/bin/port-scan-prevention
-EOT
+[ "${device:0:3}" != "TAP" ] && {
+	enable=$(uci_get firewall pscan port_scan)
 
+	[ -z "$enable" ] && enable="0"
+
+	uci -q batch <<-EOT
+		set firewall.pscan=include
+		set firewall.pscan.port_scan="$enable"
+		set firewall.pscan.type=script
+		set firewall.pscan.reload='1'
+		set firewall.pscan.path=/usr/bin/attack_prevention
+	EOT
+}
 uci_commit "firewall"

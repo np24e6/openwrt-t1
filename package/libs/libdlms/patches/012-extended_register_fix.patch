@@ -1,0 +1,13 @@
+Index: libdlms-c65175ef/development/src/gxobjects.c
+===================================================================
+--- libdlms-c65175ef.orig/development/src/gxobjects.c
++++ libdlms-c65175ef/development/src/gxobjects.c
+@@ -1536,7 +1536,7 @@ int obj_getAttributeIndexToRead(gxObject
+     else if (object->objectType == DLMS_OBJECT_TYPE_EXTENDED_REGISTER)
+     {
+ #ifndef DLMS_IGNORE_EXTENDED_REGISTER
+-        if (!((gxExtendedRegister*)object)->unit == 0)
++        if (((gxExtendedRegister*)object)->unit == 0)
+         {
+             ret = bb_setUInt8(ba, 3);
+         }

@@ -40,11 +40,14 @@ typedef enum {
 	LGSM_INFO_VIDPID,
 	LGSM_INFO_TTY,
 	LGSM_INFO_GPS_TTY,
+	LGSM_INFO_DATA_TTY,
 	LGSM_INFO_BAUDRATE,
 	LGSM_INFO_AUX,
 	LGSM_INFO_SIMCOUNT,
 	LGSM_INFO_BAND,
+	LGSM_INFO_SERVICE,
 	LGSM_INFO_CACHE,
+	LGSM_INFO_MFUNC,
 	LGSM_INFO_FEATURE_OPER_SCAN,
 	LGSM_INFO_FEATURE_IPV6,
 	LGSM_INFO_FEATURE_VOLTE,
@@ -54,8 +57,8 @@ typedef enum {
 	LGSM_INFO_FEATURE_ECM,
 	LGSM_INFO_FEATURE_DYNAMIC_MTU,
 	LGSM_INFO_FEATURE_AUTO_IMS,
-	LGSM_INFO_FEATURE_DHCP_FILTER,
 	LGSM_INFO_FEATURE_EXTENDED_TIMEOUT,
+	LGSM_INFO_FEATURE_DHCP_FILTER,
 	LGSM_INFO_MAX,
 } lgsm_info_t;
 
@@ -66,12 +69,26 @@ typedef enum {
 	LGSM_CACHE_IMSI,
 	LGSM_CACHE_PIN_STATE,
 	LGSM_CACHE_PIN_STR,
+	LGSM_CACHE_ICCID,
+	LGSM_CACHE_VOLTE_ST,
+	LGSM_CACHE_NET_MODE,
+	LGSM_CACHE_NET_MODE_SEL,
+	LGSM_CACHE_BAND,
+	LGSM_CACHE_OP_FORMAT,
+	LGSM_CACHE_OP_NAME,
+	LGSM_CACHE_REG_STAT,
+	LGSM_CACHE_REG_LAC,
+	LGSM_CACHE_REG_CI,
+	LGSM_CACHE_REG_ACT,
+	LGSM_CACHE_SIM_PIN1,
+	LGSM_CACHE_SIM_PUK1,
 	LGSM_CACHE_MAX,
 } lgsm_cache_t;
 
 typedef enum {
 	LGSM_EXEC_REQUEST,
 	LGSM_EXEC_RESPONSE,
+	LGSM_EXEC_ERROR,
 	LGSM_EXEC_MAX,
 } lgsm_exec_t;
 
@@ -130,6 +147,8 @@ typedef enum {
 typedef enum {
 	LGSM_NET_REG_MODE_ID,
 	LGSM_NET_REG_MODE_STR,
+	LGSM_NET_REG_MAX_MODE_ID,
+	LGSM_NET_REG_MAX_MODE_STR,
 	LGSM_NET_REG_STAT_ID,
 	LGSM_NET_REG_STAT_STR,
 	LGSM_NET_REG_LAC,
@@ -170,6 +189,11 @@ typedef enum {
 	LGSM_MBN_RELEASE_DATE,
 	LGSM_MBN_MAX,
 } lgsm_mbn_t;
+
+typedef enum {
+	LGSM_INDEX,
+	LGSM_INDEX_MAX,
+} lgsm_index_t;
 
 typedef enum {
 	LGSM_PDP_CTX_CID,
@@ -219,10 +243,10 @@ typedef enum {
 } lgsm_state_t;
 
 typedef enum {
-	LGSM_PCNT_S1_PIN,
-	LGSM_PCNT_S1_PUK,
-	LGSM_PCNT_S2_PIN,
-	LGSM_PCNT_S2_PUK,
+	LGSM_PCNT_SIM_PIN1,
+	LGSM_PCNT_SIM_PUK1,
+	LGSM_PCNT_SIM_PIN2,
+	LGSM_PCNT_SIM_PUK2,
 	LGSM_PCNT_MAX,
 } lgsm_pin_cnt_t;
 
@@ -279,6 +303,9 @@ typedef enum {
 	LGSM_MSG_STORAGE_ZONE1,
 	LGSM_MSG_STORAGE_ZONE2,
 	LGSM_MSG_STORAGE_ZONE3,
+	LGSM_MSG_STORAGE_ALT_ZONE1,
+	LGSM_MSG_STORAGE_ALT_ZONE2,
+	LGSM_MSG_STORAGE_ALT_ZONE3,
 	LGSM_MSG_STORAGE_ZONE_MAX,
 } lgsm_msg_storage_zone_t;
 
@@ -387,10 +414,14 @@ typedef enum {
 typedef enum {
 	LGSM_IMS_MODE_ID,
 	LGSM_IMS_MODE,
-	LGSM_IMS_VOLTE_ST,
 	LGSM_IMS_APPLY,
 	LGSM_IMS_MAX,
 } lgsm_ims_attrs_t;
+
+typedef enum {
+	LGSM_M2M_STATE,
+	LGSM_M2M_MAX,
+} lgsm_m2m_attrs_t;
 
 typedef enum {
 	LGSM_SET_IMS_RESTART,
@@ -402,6 +433,11 @@ typedef enum {
 	LGSM_VOLTE_MAN_MODE,
 	LGSM_VOLTE_MAN_MAX,
 } lgsm_volte_attrs_t;
+
+typedef enum {
+	LGSM_VOLTE_READY,
+	LGSM_VOLTE_READY_MAX,
+} lgsm_volte_ready_attrs_t;
 
 typedef enum {
 	LGSM_SET_VOLTE_RESTART,
@@ -544,11 +580,28 @@ typedef enum {
 } lgsm_pdp_reg_info_attrs_t;
 
 typedef enum {
+	LGSM_EFS_VERSION_RESPONSE,
+	LGSM_EFS_VERSION_MAX,
+} lgsm_efs_version_t;
+
+typedef enum {
 	LGSM_SIM_SOFT_HOTPLUG_RECOVERY_CNT,
 	LGSM_SIM_SOFT_HOTPLUG_DETECT_PERIOD,
 	LGSM_SIM_SOFT_HOTPLUG_DETECT_CNT,
 	LGSM_SIM_SOFT_HOTPLUG_MAX,
 } lgsm_sim_soft_hotplug_attrs_t;
+
+typedef enum {
+	LGSM_CPU_SN,
+	LGSM_CPU_SN_MAX,
+} lgsm_cpu_sn_attrs_t;
+
+typedef enum {
+	LGSM_SIM_UNKNOWN,
+	LGSM_SIM_ONE,
+	LGSM_SIM_TWO,
+	LGSM_SIM_MAX,
+} lgsm_sim_t;
 
 typedef enum {
 	LGSM_UBUS_INFO,
@@ -647,6 +700,9 @@ typedef enum {
 	LGSM_UBUS_GET_IMS_STATE,
 	LGSM_UBUS_SET_VOLTE_MAN_STATE,
 	LGSM_UBUS_GET_VOLTE_MAN_STATE,
+	LGSM_UBUS_GET_M2M_STATE,
+	LGSM_UBUS_SET_M2M_STATE,
+	LGSM_UBUS_GET_VOLTE_READY,
 	LGSM_UBUS_SET_LTE_NAS_BACK_TIMER,
 	LGSM_UBUS_GET_LTE_NAS_BACK_TIMER,
 	LGSM_UBUS_GET_MOD_STATUS,
@@ -654,6 +710,9 @@ typedef enum {
 	LGSM_UBUS_GET_SIM_INITDELAY,
 	LGSM_UBUS_SET_SIM_HOTSWAP,
 	LGSM_UBUS_GET_SIM_HOTSWAP,
+	LGSM_UBUS_GET_SIM_SLOT,
+	LGSM_UBUS_CHANGE_SIM_SLOT,
+	LGSM_UBUS_SET_SIM_SLOT,
 	LGSM_UBUS_SET_WAN_PING,
 	LGSM_UBUS_GET_WAN_PING,
 	LGSM_UBUS_SET_PS_ATT_STATE,
@@ -686,6 +745,8 @@ typedef enum {
 	LGSM_UBUS_GNSS_STOP,
 	LGSM_UBUS_SET_URC_IND_CFG,
 	LGSM_UBUS_GET_URC_IND_CFG,
+	LGSM_UBUS_GET_SEC_BOOT_CFG,
+	LGSM_UBUS_GET_CPU_SN,
 	LGSM_UBUS_UPDATE_MODEM_FUNC,
 	LGSM_UBUS_GET_DEFAULT_MODEM_FUNC,
 	LGSM_UBUS_GET_FLASH_STATE,
@@ -697,12 +758,19 @@ typedef enum {
 	LGSM_UBUS_GET_PDP_PROFILE_REGISTRY,
 	LGSM_UBUS_GET_LTESMS_FORMAT,
 	LGSM_UBUS_SET_LTESMS_FORMAT,
+	LGSM_UBUS_GET_EFS_VERSION,
 	LGSM_UBUS_GET_PROD_LINE_MODE,
 	LGSM_UBUS_SET_PROD_LINE_MODE,
 	LGSM_UBUS_GET_AUTO_TZ_UPDATE,
 	LGSM_UBUS_SET_AUTO_TZ_UPDATE,
 	LGSM_UBUS_GET_GNSS_OPER_MODE,
 	LGSM_UBUS_SET_GNSS_OPER_MODE,
+	LGSM_UBUS_GET_URC_CAUSE,
+	LGSM_UBUS_SET_URC_CAUSE,
+	LGSM_UBUS_GET_DPO_MODE,
+	LGSM_UBUS_SET_DPO_MODE,
+	LGSM_UBUS_GET_NR5G_DISABLE_MODE,
+	LGSM_UBUS_SET_NR5G_DISABLE_MODE,
 	//------
 	__LGSM_UBUS_MAX,
 } lgsm_method_t;
@@ -714,10 +782,11 @@ typedef struct {
 
 typedef struct {
 	enum net_reg_mode_id net_mode_id;
+	enum net_reg_mode_id net_max_mode_id; // Highest verbosity level the modem allows
 	enum net_reg_stat_id net_stat_id;
 	enum net_reg_act_id net_act_id;
 	char net_lac[7]; // tac (three bytes) for 5greg
-	char net_ci[9];
+	char net_ci[21]; // cell id (u64 in decimal) for 5greg
 } lgsm_net_reg_info_t;
 
 typedef struct {
@@ -837,16 +906,21 @@ typedef struct {
 } lgsm_urc_port_t;
 
 typedef struct {
-	uint8_t sim1_pin;
-	uint8_t sim1_puk;
-	uint8_t sim2_pin;
-	uint8_t sim2_puk;
+	uint8_t sim_pin1;
+	uint8_t sim_puk1;
+	uint8_t sim_pin2;
+	uint8_t sim_puk2;
 } lgsm_pin_count_t;
 
 typedef struct {
 	char **band_arr;
 	uint32_t band_cnt;
 } lgsm_band_t;
+
+typedef struct {
+	char **service_mode_arr;
+	uint32_t service_mode_cnt;
+} lgsm_service_mode_t;
 
 typedef struct {
 	enum msg_storage_id storage_id;
@@ -887,45 +961,6 @@ typedef struct {
 } lgsm_sms_evt_rep_cfg_t;
 
 typedef struct {
-	lgsm_band_t band_list;
-
-	char name[32];
-	char model[32];
-	char manuf[32];
-	char product_num[32];
-	char firmware[64];
-	char usb_id[10];
-	char vid_pid[10];
-	char tty_port[32];
-	char gps_port[32];
-	char aux_port[32];
-	char serial_num[32];
-	char imei[16];
-	char imsi[16];
-	bool volte_ready;
-	bool oper_scan_support;
-	bool ipv6_support;
-	bool volte_support;
-	bool multi_apn_support;
-	bool dpo_support;
-	bool rmnet_support;
-	bool ecm_support;
-	bool dynamic_mtu_support;
-	bool auto_ims_support;
-	bool dhcp_filter_support;
-	bool extended_timeout;
-	uint32_t baudrate;
-	uint32_t simcount;
-	uint32_t ubus_obj_id;
-	enum pin_state_id pin_t;
-} lgsm_t;
-
-typedef struct {
-	lgsm_t *gsm_arr;
-	uint32_t modem_cnt;
-} lgsm_arr_t;
-
-typedef struct {
 	enum net_mode_id net_mode;
 	enum net_mode_id nm_sel; //determines union field
 	union {
@@ -939,11 +974,64 @@ typedef struct {
 } lgsm_net_info_t;
 
 typedef struct {
+	int id;
+	char type[32];
+} lgsm_modem_func_t;
+
+typedef struct {
+	lgsm_band_t band_list;
+	lgsm_service_mode_t service_mode_list;
+
+	char name[32];
+	char model[32];
+	char manuf[32];
+	char product_num[32];
+	char firmware[64];
+	char usb_id[10];
+	char vid_pid[10];
+	char tty_port[32];
+	char gps_port[32];
+	char data_port[32];
+	char aux_port[32];
+	char serial_num[32];
+	char imei[16];
+	char imsi[16];
+	uint32_t baudrate;
+	uint32_t simcount;
+	uint32_t ubus_obj_id;
+	enum pin_state_id pin_t;
+	char iccid[32];
+	bool volte_ready;
+	bool oper_scan_support;
+	bool ipv6_support;
+	bool volte_support;
+	bool multi_apn_support;
+	bool dpo_support;
+	bool rmnet_support;
+	bool ecm_support;
+	bool dynamic_mtu_support;
+	bool auto_ims_support;
+	bool extended_timeout;
+	bool dhcp_filter_support;
+	lgsm_net_info_t net_info;
+	lgsm_op_slc_mode_t op_slc;
+	lgsm_net_reg_info_t net_reg_info;
+	lgsm_pin_count_t pin_cnt;
+	lgsm_modem_func_t mfunc;
+
+} lgsm_t;
+
+typedef struct {
+	lgsm_t *gsm_arr;
+	uint32_t modem_cnt;
+} lgsm_arr_t;
+
+typedef struct {
 	uint32_t ue_state;
 	char access_tech[16];
 	char tdd_mode[8];
-	uint32_t mcc;
-	uint32_t mnc;
+	char mcc[8];
+	char mnc[8];
 	char unparsed[64];
 } lgsm_serv_cell_t;
 
@@ -985,12 +1073,15 @@ typedef struct {
 
 typedef struct {
 	enum ims_state_t state;
-	bool is_volte_ready;
 } lgsm_ims_t;
 
 typedef struct {
 	enum volte_state_t state;
 } lgsm_volte_t;
+
+typedef struct {
+	bool volte_ready;
+} lgsm_volte_rdy_t;
 
 typedef struct {
 	enum polarity_id polarity;
@@ -1052,6 +1143,7 @@ typedef struct {
 		enum modem_wcdma_band_id wcdma;
 		enum modem_lte_band_id lte;
 		enum modem_5g_band_id nr5g; //SA bands
+		enum modem_nsa5g_band_id nsa5g;
 	} band;
 	union {
 		enum pcell_state_t pcell_st;
@@ -1107,11 +1199,6 @@ typedef struct {
 } lgsm_lte_nas_back_timer_t;
 
 typedef struct {
-	int id;
-	char type[32];
-} lgsm_modem_func_t;
-
-typedef struct {
 	int restore_cnt;
 	enum cefs_restore_state_id restore_state;
 } lgsm_flash_state_t;
@@ -1142,6 +1229,7 @@ typedef struct {
 typedef enum {
 	LGSM_LABEL_STRING,
 	LGSM_LABEL_INT,
+	LGSM_LABEL_INT64,
 	LGSM_LABEL_ERR_MSG_FMT,
 	LGSM_LABEL_FUNC_ID,
 	LGSM_LABEL_CLIP_T,
@@ -1182,7 +1270,9 @@ typedef enum {
 	LGSM_LABEL_IMS_STATE_T,
 	LGSM_LABEL_SET_IMS_STATE_T,
 	LGSM_LABEL_VOLTE_STATE_T,
+	LGSM_LABEL_VOLTE_READY_T,
 	LGSM_LABEL_SET_VOLTE_STATE_T,
+	LGSM_LABEL_M2M_STATE_T,
 	LGSM_LABEL_SIM_HOTSWAP_T,
 	LGSM_LABEL_PS_ATT_STATE_T,
 	LGSM_LABEL_NET_CAT_T,
@@ -1199,6 +1289,7 @@ typedef enum {
 	LGSM_LABEL_GET_NMEA_TYPE_T,
 	LGSM_LABEL_SRVC_PROVIDER_T,
 	LGSM_LABEL_GET_URC_IND_CFG_T,
+	LGSM_LABEL_GET_SEC_BOOT_CFG_T,
 	LGSM_LABEL_LTE_NAS_BACK_TIMER,
 	LGSM_LABEL_MODEM_DEFAULT_FUNC_T,
 	LGSM_LABEL_UPDATE_MODEM_FUNC_T,
@@ -1208,12 +1299,15 @@ typedef enum {
 	LGSM_LABEL_SIM_SOFT_HOTPLUG_T,
 	LGSM_LABEL_URC_PORT_T,
 	LGSM_LABEL_GNSS_OPER_MODE_T,
+	LGSM_LABEL_DPO_MODE_T,
+	LGSM_LABEL_DISABLE_5G_MODE_T,
 	LGSM_LABEL_ERROR,
 } lgsm_resp_label_t;
 
 typedef union {
 	char *s;
 	uint32_t u;
+	uint64_t u64;
 	func_t status;
 	enum err_msg_fmt_id err_fmt;
 	enum phone_func_id func_mode;
@@ -1254,10 +1348,12 @@ typedef union {
 	lgsm_sim_hotswap_t sim_hotswap;
 	lgsm_ims_t ims;
 	lgsm_volte_t volte;
+	lgsm_volte_rdy_t volte_rdy;
 	bool restart;
 	enum mod_act_stat_id mod_status;
 	lgsm_ps_att_t ps_att;
 	enum net_cat_t net_cat;
+	enum secboot_mode_id sec_boot;
 	enum sim_stat_t sim_stat;
 	lgsm_time_t time;
 	lgsm_attached_pdp_ctx_arr_t attached_pdp_list;
@@ -1278,6 +1374,8 @@ typedef union {
 	lgsm_sim_soft_hotplug_t sim_soft_hotplug;
 	lgsm_urc_port_t urc_port;
 	enum gnss_operation_mode_id gnss_oper_mode;
+	enum dpo_mode_id dpo_mode;
+	enum disable_nr5g_mode_id disable_5g_mode;
 } lgsm_resp_data;
 
 typedef struct {
@@ -1285,11 +1383,8 @@ typedef struct {
 	lgsm_resp_data data;
 } lgsm_structed_info_t;
 
-typedef struct {
-	struct blob_attr *msg;
-	struct ubus_context uctx;
-	bool parsed_ok;
-} lgsm_defer;
+extern const struct blobmsg_policy g_oper_scan_attrs[];
+extern const struct blobmsg_policy g_oper_attrs[];
 
 /****************
 *  PREP FUNCS  *
@@ -1493,10 +1588,20 @@ struct blob_buf prepare_read_sms(int32_t index, bool single, bool strip);
 
 /**
  * Convert given arguments to prepared blob for gsmd ubus set sms storage method.
- * @param[in]   mem[]    Message storage cfg array for each zone.
+ * @param[in]   mem1    Message storage zone 1.
+ * @param[in]   mem2    Message storage zone 2.
+ * @param[in]   mem3    Message storage zone 3.
  * @return blob_buf. Allocated blob that's used for communication. (Need to be freed via blob_buf_free).
  */
-struct blob_buf prepare_sms_strg(enum msg_storage_id mem[LGSM_MSG_STORAGE_ZONE_MAX]);
+struct blob_buf prepare_sms_strg(enum msg_storage_id mem1, enum msg_storage_id mem2,
+				 enum msg_storage_id mem3);
+
+/**
+ * Convert given arguments to prepared blob for gsmd ubus get sms storage method.
+ * @param[in]   bool    Do you want to query, both sms storage locations
+ * @return blob_buf. Allocated blob that's used for communication. (Need to be freed via blob_buf_free).
+ */
+struct blob_buf prepare_get_msg_strg(bool full);
 
 /**
  * Convert given arguments to prepared blob for gsmd ubus set sms event reporting configuration method.
@@ -1774,8 +1879,7 @@ struct blob_buf prepare_sim_soft_hotplug(int recovery_count, int detect_period, 
 
 /**
  * Convert given arguments to prepared blob for gsmd ubus set authentication corresponding bit method.
- * @param[in]   urc    	    URC type.
- * @param[in]   enambed     Is URC enabled.
+ * @param[in]   enabled     Is authentication corresponding bit enabled.
  * @return blob_buf. Allocated blob that's used for communication. (Need to be freed via blob_buf_free).
  */
 struct blob_buf prepare_auth_corr_bit(bool enabled);
@@ -2116,8 +2220,8 @@ static inline lgsm_err_t lgsm_delete_sms(struct ubus_context *ctx, int32_t sms_i
  * @param[in]   timeout     Time to wait for the response from the modem.
  * @return lgsm_err_t. Return function status code.
  */
-lgsm_err_t lgsm_set_msg_strg(struct ubus_context *ctx, enum msg_storage_id mem[LGSM_MSG_STORAGE_ZONE_MAX],
-			     func_t *resp, uint32_t modem_num);
+lgsm_err_t lgsm_set_msg_strg(struct ubus_context *ctx, enum msg_storage_id mem[3], func_t *resp,
+			     uint32_t modem_num);
 
 /**
  * Set URC port
@@ -2314,6 +2418,17 @@ lgsm_err_t lgsm_set_volte_state(struct ubus_context *ctx, enum ims_state_t state
 				uint32_t modem_num);
 
 /**
+ * Set M2M state
+ * @param[ptr]  ctx   	    Ubus ctx.
+ * @param[char] resp   	    Response from modem for the executed AT command.
+ * @param[in]   id 	    	M2M state to be set.
+ * @param[in]   modem_num   Modem identification number.
+ * @return lgsm_err_t. Return function status code.
+ */
+lgsm_err_t lgsm_set_m2m_state(struct ubus_context *ctx, enum m2m_state_id id, func_t *resp,
+			      uint32_t modem_num);
+
+/**
  * Set SIM initdelay
  * @param[ptr]  ctx   	    Ubus ctx.
  * @param[char] resp   	    Response from modem for the executed AT command.
@@ -2362,6 +2477,25 @@ lgsm_err_t lgsm_reject_call(struct ubus_context *ctx, func_t *resp, uint32_t mod
  */
 lgsm_err_t lgsm_set_sim_hotswap(struct ubus_context *ctx, func_t *resp, bool enabled,
 				enum polarity_id polarity, uint32_t modem_num);
+
+/**
+ * Set SIM slot
+ * @param[ptr]  ctx   	    Ubus ctx.
+ * @param[char] resp   	    Response from modem for the executed AT command.
+ * @param[in]   index       SIM slot to be set.
+ * @param[in]   modem_num   Modem identification number.
+ * @return lgsm_err_t. Return function status code.
+ */
+lgsm_err_t lgsm_set_sim_slot(struct ubus_context *ctx, func_t *resp, int index, uint32_t modem_num);
+
+/**
+ * Change SIM slot
+ * @param[ptr]  ctx   	    Ubus ctx.
+ * @param[char] resp   	    Response from modem for the executed AT command.
+ * @param[in]   modem_num   Modem identification number.
+ * @return lgsm_err_t. Return function status code.
+ */
+lgsm_err_t lgsm_change_sim_slot(struct ubus_context *ctx, func_t *resp, uint32_t modem_num);
 
 /**
  * Set WAN ping state
@@ -2688,7 +2822,7 @@ lgsm_err_t lgsm_mbn_deactivate(struct ubus_context *ctx, func_t *resp, uint32_t 
  * @param[in]   mbn_name    MBN name to be selected.
  * @param[in]   modem_num   Modem identification number.
  */
-lgsm_err_t lgsm_mbn_select(struct ubus_context *ctx, func_t *resp, const char* mbn_name, uint32_t modem_num);
+lgsm_err_t lgsm_mbn_select(struct ubus_context *ctx, func_t *resp, const char *mbn_name, uint32_t modem_num);
 
 /**
  * Get URC indication configuration
@@ -2700,7 +2834,6 @@ lgsm_err_t lgsm_mbn_select(struct ubus_context *ctx, func_t *resp, const char* m
 lgsm_err_t lgsm_set_auth_corr_bit(struct ubus_context *ctx, bool enabled, func_t *resp, uint32_t modem_num);
 
 /**
- * Get production line mode status
  * @param[ptr]  ctx         Ubus ctx.
  * @param[in]   enabled	    Is production line mode enabled.
  * @param[char] resp        Response from modem for the executed AT command.
@@ -2727,6 +2860,38 @@ lgsm_err_t lgsm_set_auto_tz_update(struct ubus_context *ctx, bool enabled, func_
  */
 lgsm_err_t lgsm_set_gnss_oper_mode(struct ubus_context *ctx, func_t *resp, enum gnss_operation_mode_id mode,
 				   uint32_t modem_num);
+
+/**
+ * Set urc cause support configuration
+ * @param[ptr]  ctx         Ubus ctx.
+ * @param[in]   enabled	    Is urc cause support enabled.
+ * @param[char] resp        Response from modem for the executed AT command.
+ * @param[in]   modem_num   Modem identification number.
+ */
+lgsm_err_t lgsm_set_urc_cause_support(struct ubus_context *ctx, bool enabled, func_t *resp,
+				      uint32_t modem_num);
+
+/**
+ * Set DPO operation mode
+ * @param[ptr]  ctx   	    Ubus ctx.
+ * @param[char] resp   	    Response from modem for the executed AT command.
+ * @param[in]   mode 	    DPO mode enum type.
+ * @param[in]   modem_num   Modem identification number.
+ * @return lgsm_err_t. Return function status code.
+ */
+lgsm_err_t lgsm_set_dpo_mode(struct ubus_context *ctx, func_t *resp, enum dpo_mode_id mode,
+			     uint32_t modem_num);
+
+/**
+ * Set DISABLE 5G mode
+ * @param[ptr]  ctx   	    Ubus ctx.
+ * @param[char] resp   	    Response from modem for the executed AT command.
+ * @param[in]   mode 	    Disable 5G mode enum type.
+ * @param[in]   modem_num   Modem identification number.
+ * @return lgsm_err_t. Return function status code.
+ */
+lgsm_err_t lgsm_quectel_set_nr5g_disable_mode(struct ubus_context *ctx, func_t *resp,
+					      enum disable_nr5g_mode_id mode, uint32_t modem_num);
 
 /******************
 *  GET HANDLERS  *
@@ -3034,6 +3199,20 @@ void handle_set_ims_state_rsp(struct blob_attr *info, lgsm_structed_info_t *pars
 void handle_get_volte_man_state_rsp(struct blob_attr *info, lgsm_structed_info_t *parsed);
 
 /**
+   * Parse M2M state retrival method response
+   * @param[ptr]   info      Blob from gsmd.
+   * @param[ptr]   parsed    Parsed union readable information.
+   */
+void handle_get_m2m_state_rsp(struct blob_attr *info, lgsm_structed_info_t *parsed);
+
+/**
+   * Parse VoLTE ready retrival method response
+   * @param[ptr]   info      Blob from gsmd.
+   * @param[ptr]   parsed    Parsed union readable information.
+   */
+void handle_get_volte_ready_rsp(struct blob_attr *info, lgsm_structed_info_t *parsed);
+
+/**
    * Parse VoLTE set state method response
    * @param[ptr]   info      Blob from gsmd.
    * @param[ptr]   parsed    Parsed union readable information.
@@ -3053,6 +3232,13 @@ void handle_get_sim_initdelay_rsp(struct blob_attr *info, lgsm_structed_info_t *
    * @param[ptr]   parsed    Parsed union readable information.
    */
 void handle_get_sim_hotswap_rsp(struct blob_attr *info, lgsm_structed_info_t *parsed);
+
+/**
+   * Parse sim slot retrival method response
+   * @param[ptr]   info      Blob from gsmd.
+   * @param[ptr]   parsed    Parsed union readable information.
+   */
+void handle_get_sim_slot_rsp(struct blob_attr *info, lgsm_structed_info_t *parsed);
 
 /**
    * Parse wan ping retrival method response
@@ -3174,6 +3360,20 @@ void handle_get_nmea_rsp(struct blob_attr *info, lgsm_structed_info_t *parsed);
 void handle_get_urc_ind_cfg_rsp(struct blob_attr *info, lgsm_structed_info_t *parsed);
 
 /**
+   * Parse get secure boot configuration method response
+   * @param[ptr]   info      Blob from gsmd.
+   * @param[ptr]   parsed    Parsed union readable information.
+   */
+void handle_get_sec_boot_cfg_rsp(struct blob_attr *info, lgsm_structed_info_t *parsed);
+
+/**
+   * Parse get cpu serial number method response
+   * @param[ptr]   info      Blob from gsmd.
+   * @param[ptr]   parsed    Parsed union readable information.
+   */
+void handle_get_cpu_sn_rsp(struct blob_attr *info, lgsm_structed_info_t *parsed);
+
+/**
    * Parse MODEM FUNCTIONALITY indication information retrival method response
    * @param[ptr]   info      Blob from gsmd.
    * @param[ptr]   parsed    Parsed union readable information.
@@ -3216,6 +3416,13 @@ void handle_get_sim_soft_hotplug_rsp(struct blob_attr *info, lgsm_structed_info_
 void handle_get_auth_corr_bit_rsp(struct blob_attr *info, lgsm_structed_info_t *parsed);
 
 /**
+   * Parse efs version method response
+   * @param[ptr]   info      Blob from gsmd.
+   * @param[ptr]   parsed    Parsed union readable information.
+   */
+void handle_get_efs_verion_rsp(struct blob_attr *info, lgsm_structed_info_t *parsed);
+
+/**
    * Parse production line mode information method response
    * @param[ptr]   info      Blob from gsmd.
    * @param[ptr]   parsed    Parsed union readable information.
@@ -3235,6 +3442,27 @@ void handle_get_auto_tz_update_rsp(struct blob_attr *info, lgsm_structed_info_t 
    * @param[ptr]   parsed    Parsed union readable information.
    */
 void handle_get_gnss_oper_mode_rsp(struct blob_attr *info, lgsm_structed_info_t *parsed);
+
+/**
+   * Parse URC cause support method response
+   * @param[ptr]   info      Blob from gsmd.
+   * @param[ptr]   parsed    Parsed union readable information.
+   */
+void handle_get_urc_cause_support(struct blob_attr *info, lgsm_structed_info_t *parsed);
+
+/**
+   * Parse DPO mode method response
+   * @param[ptr]   info      Blob from gsmd.
+   * @param[ptr]   parsed    Parsed union readable information.
+   */
+void handle_get_dpo_mode_rsp(struct blob_attr *info, lgsm_structed_info_t *parsed);
+
+/**
+   * Parse DISABLE 5G mode method response
+   * @param[ptr]   info      Blob from gsmd.
+   * @param[ptr]   parsed    Parsed union readable information.
+   */
+void handle_get_disable_5g_mode_rsp(struct blob_attr *info, lgsm_structed_info_t *parsed);
 
 /*********************
 *  STRUCT HANDLERS  *
@@ -3329,18 +3557,6 @@ lgsm_err_t lgsm_subscribe_name(struct ubus_context *ctx, struct ubus_subscriber 
 lgsm_err_t lgsm_handle_get(struct ubus_context *ctx, lgsm_method_t method_n, uint32_t obj,
 			   struct blob_attr **info);
 
-/*
- * Execute given method and get blob info. Internaly uses subscription to
- * retreive values. Note that not currently only LGSM_UBUS_GET_TEMPERATURE
- * supports this method
- * @param[ptr]  ctx      Ubus context.
- * @param[in]   method_n method table method id.
- * @param[in]   obj      Modems ubus object id.
- * @param[ptr]  info     Blob where the response will be put.
- * @return lgsm_err_t. Return function status code.
- */
-lgsm_err_t lgsm_handle_defer_get(struct ubus_context *ctx, lgsm_method_t method_n, uint32_t obj,
-				 struct blob_attr **info);
 /*
  * Set given method information
  * @param[ptr]  ctx      Ubus context.

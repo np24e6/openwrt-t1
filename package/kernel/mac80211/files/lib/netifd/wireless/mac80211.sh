@@ -657,7 +657,7 @@ mac80211_setup_supplicant() {
 	NEW_MD5_SP=$(test -e "${_config}" && md5sum ${_config})
 	OLD_MD5_SP=$(uci -q -P /var/state get wireless._${phy}.md5_${ifname})
 	if [ "$add_sp" = "1" ]; then
-		wpa_supplicant_run "$ifname" "$hostapd_ctrl"
+		wpa_supplicant_run "$ifname" "$hostapd_ctrl" "$primary_ap" "$add_ap"
 	else
 		[ "${NEW_MD5_SP}" == "${OLD_MD5_SP}" ] || ubus call $spobj reload
 	fi
@@ -1006,7 +1006,7 @@ drv_mac80211_setup() {
 		mac80211_vap_cleanup hostapd "${OLDAPLIST}"
 	fi
 	[ -n "${NEWAPLIST}" ] && mac80211_iw_interface_add "$phy" "${NEWAPLIST%% *}" __ap
-	local add_ap=0
+	add_ap=0
 	local primary_ap=${NEWAPLIST%% *}
 	[ -n "$hostapd_ctrl" ] && {
 		local no_reload=1
@@ -1032,6 +1032,13 @@ drv_mac80211_setup() {
 			ret="$?"
 			[ "$ret" != 0 -o -z "$hostapd_res" ] && {
 				wireless_setup_failed HOSTAPD_START_FAILED
+				return
+			}
+
+			ret="$(jsonfilter -s "$hostapd_res" -e @.errno)"
+			[ -n "$ret" ] && {
+				ubus call hostapd config_remove "{\"iface\":\"$primary_ap\"}"
+				wireless_set_retry 1
 				return
 			}
 			wireless_add_process "$(jsonfilter -s "$hostapd_res" -l 1 -e @.pid)" "/usr/sbin/hostapd" 1 1
@@ -1061,6 +1068,20 @@ drv_mac80211_setup() {
 		[ "$foundvap" = "0" ] && dropvap="$dropvap $oldvap"
 	done
 	[ -n "$dropvap" ] && mac80211_vap_cleanup wpa_supplicant "$dropvap"
+
+	grep -q "0x7615" /sys/class/ieee80211/${phy}/device/device 2>/dev/null && {
+		[ "$hwmode" = "a" ] && {
+			iw reg get | grep -q "FCC" && {
+				local fcc_oob_db=13
+				iw phy "$phy" set sar_specs 0 \
+					1:"$((fcc_oob_db * 4))" \
+					2:"$((fcc_oob_db * 4))" \
+					3:"$((fcc_oob_db * 4))" \
+					4:"$(((fcc_oob_db + 1)* 4))"
+			}
+		}
+	}
+
 	wireless_set_up
 }
 

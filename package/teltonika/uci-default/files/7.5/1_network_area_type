@@ -1,0 +1,79 @@
+#!/bin/sh
+
+. /lib/functions.sh
+. /lib/functions/network.sh
+
+lan_zones=
+wan_zones=
+get_zones() {
+	config_get zone "$1" "name"
+	config_get network "$1" "network"
+
+	case "$zone" in
+		"lan")
+			lan_zones="$network"
+			;;
+		"wan")
+			wan_zones="$network"
+			;;
+	esac
+}
+
+add_area_type() {
+	section="$1"
+	lan=0
+	wan=0
+	config_get device "$section" "device"
+	config_get proto "$section" "proto"
+	config_get gateway "$section" "gateway"
+	config_get dns "$section" "dns"
+
+	# checking to which firewall zone interface belongs to
+	for iface in $lan_zones; do
+		[ "$iface" = "$section" ] && lan=$((lan + 1))
+	done
+	for iface in $wan_zones; do
+		[ "$iface" = "$section" ] && wan=$((wan + 1))
+	done
+
+	# checking whether interface device is eth0 = lan, eth1 = wan or bridge
+	case "$device" in
+		"eth0")
+			lan=$((lan + 1))
+			;;
+		"eth1" | "wan")
+			wan=$((wan + 1))
+			;;
+		*)
+			[ "${device:0:2}" = "br" ] && {
+				ports=$(uci_get "network" "$device" "ports")
+				if echo "$ports" | grep -iq "lan"; then
+					lan=$((lan + 1))
+				elif echo "$ports" | grep -iq "wan"; then
+					wan=$((wan + 1))
+				fi
+			}
+			;;
+	esac
+
+	# checking interface protocol, assuming that static = lan and everything else = wan
+	[ "$proto" = "static" ] && lan=$((lan + 1)) || wan=$((wan + 1))
+
+	# checking if interface name starts with lan, wan or mob (mobile)
+	[ "${section:0:3}" = "lan" ] && lan=$((lan + 1))
+	[ "${section:0:3}" = "wan" ] || [ "${section:0:3}" = "mob" ] && wan=$((wan + 1))
+
+	# checking if network.sh is able to retrieve wan interface
+	network_find_wan wanif && [ "${wanif%%_4}" = "$section" ] && wan=$((wan + 1))
+
+	# finally we try to assume interfaces type by comparing their probabilities
+	[ "$lan" -ge "$wan" ] && area_type="lan" || area_type="wan"
+	uci_set "network" "$section" "_area_type" "$area_type"
+}
+
+config_load "firewall"
+config_foreach get_zones "zone"
+
+config_load "network"
+config_foreach add_area_type "interface"
+uci_commit "network"

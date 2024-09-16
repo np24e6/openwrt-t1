@@ -1,5 +1,15 @@
 -- GPS --
 
+gpsGroup OBJECT-GROUP
+	OBJECTS { latitude,
+		  longitude,
+		  accuracy,
+		  datetime,
+		  numSatellites }
+	STATUS current
+	DESCRIPTION "GPS SNMP group defined according to RFC 2580"
+	::= { teltonikaSnmpGroups 3 }
+
 latitude OBJECT-TYPE
 	SYNTAX		DisplayString (SIZE (0..255))
 	MAX-ACCESS	read-only

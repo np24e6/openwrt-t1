@@ -6,10 +6,10 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=libbrand
-PKG_VERSION:=2020-01-06
+PKG_VERSION:=2023-08-31
 PKG_RELEASE:=1
 
-PKG_SOURCE_VERSION:=5888477baec6581e3a052958bda5564294257586
+PKG_SOURCE_VERSION:=1.1
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_SOURCE_VERSION)-$(PKG_VERSION)
 PKG_SOURCE:=$(PKG_SOURCE_SUBDIR).tar.gz
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_SOURCE_SUBDIR)
@@ -37,7 +37,7 @@ endef
 
 define Package/libbrand-versioning/install
 	@-rm $(PKG_BUILD_DIR)/.built; \
-	echo $$(CONFIG_TLT_VERS) > $(PKG_BUILD_DIR)/version; \
+	echo $(TLT_VERSION) > $(PKG_BUILD_DIR)/version; \
 	$(INSTALL_DIR) $(1)/etc/
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/version $(1)/etc/version; \
 	rm -f $(PKG_BUILD_DIR)/version;

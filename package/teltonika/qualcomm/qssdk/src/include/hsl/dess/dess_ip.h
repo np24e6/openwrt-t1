@@ -56,6 +56,9 @@ extern "C" {
                      fal_host_entry_t * host_entry);
 
     HSL_LOCAL sw_error_t
+    dess_ip_host_del_all(a_uint32_t dev_id);
+
+    HSL_LOCAL sw_error_t
     dess_ip_host_get(a_uint32_t dev_id, a_uint32_t get_mode,
                      fal_host_entry_t * host_entry);
 

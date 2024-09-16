@@ -1,0 +1,451 @@
+--- a/interface-ip.c
++++ b/interface-ip.c
+@@ -21,7 +21,6 @@
+ #include <limits.h>
+ #include <arpa/inet.h>
+ #include <netinet/in.h>
+-
+ #include "netifd.h"
+ #include "device.h"
+ #include "interface.h"
+@@ -29,23 +28,6 @@
+ #include "proto.h"
+ #include "ubus.h"
+ #include "system.h"
+-
+-enum {
+-	ROUTE_INTERFACE,
+-	ROUTE_TARGET,
+-	ROUTE_MASK,
+-	ROUTE_GATEWAY,
+-	ROUTE_METRIC,
+-	ROUTE_MTU,
+-	ROUTE_VALID,
+-	ROUTE_TABLE,
+-	ROUTE_SOURCE,
+-	ROUTE_ONLINK,
+-	ROUTE_TYPE,
+-	ROUTE_PROTO,
+-	ROUTE_DISABLED,
+-	__ROUTE_MAX
+-};
+ 
+ static const struct blobmsg_policy route_attr[__ROUTE_MAX] = {
+ 	[ROUTE_INTERFACE] = { .name = "interface", .type = BLOBMSG_TYPE_STRING },
+@@ -61,6 +43,7 @@
+ 	[ROUTE_TYPE] = { .name = "type", .type = BLOBMSG_TYPE_STRING },
+ 	[ROUTE_PROTO] = { .name = "proto", .type = BLOBMSG_TYPE_STRING },
+ 	[ROUTE_DISABLED] = { .name = "disabled", .type = BLOBMSG_TYPE_BOOL },
++	[ROUTE_V6] = { .name = "v6", .type = BLOBMSG_TYPE_BOOL },
+ };
+ 
+ const struct uci_blob_param_list route_attr_list = {
+@@ -388,26 +371,25 @@
+ 	free(neighbor);
+ }
+ 
+-void
++int
+ interface_ip_add_route(struct interface *iface, struct blob_attr *attr, bool v6)
+ {
+ 	struct interface_ip_settings *ip;
+ 	struct blob_attr *tb[__ROUTE_MAX], *cur;
+ 	struct device_route *route;
+ 	int af = v6 ? AF_INET6 : AF_INET;
+-
+ 	blobmsg_parse(route_attr, __ROUTE_MAX, tb, blobmsg_data(attr), blobmsg_data_len(attr));
+ 
+ 	if ((cur = tb[ROUTE_DISABLED]) != NULL && blobmsg_get_bool(cur))
+-		return;
++		return 1;
+ 
+ 	if (!iface) {
+ 		if ((cur = tb[ROUTE_INTERFACE]) == NULL)
+-			return;
++			return 1;
+ 
+ 		iface = vlist_find(&interfaces, blobmsg_data(cur), iface, node);
+ 		if (!iface)
+-			return;
++			return 1;
+ 
+ 		ip = &iface->config_ip;
+ 	} else {
+@@ -416,7 +398,7 @@
+ 
+ 	route = calloc(1, sizeof(*route));
+ 	if (!route)
+-		return;
++		return 1;
+ 
+ 	route->flags = v6 ? DEVADDR_INET6 : DEVADDR_INET4;
+ 	route->mask = v6 ? 128 : 32;
+@@ -508,10 +490,11 @@
+ 
+ 	interface_set_route_info(iface, route);
+ 	vlist_add(&ip->route, &route->node, route);
+-	return;
++	return 0;
+ 
+ error:
+ 	free(route);
++	return 1;
+ }
+ 
+ static int
+ 
+ --- a/interface-ip.h
++++ b/interface-ip.h
+@@ -16,6 +16,24 @@
+ 
+ #include "interface.h"
+ 
++enum {
++	ROUTE_INTERFACE,
++	ROUTE_TARGET,
++	ROUTE_MASK,
++	ROUTE_GATEWAY,
++	ROUTE_METRIC,
++	ROUTE_MTU,
++	ROUTE_VALID,
++	ROUTE_TABLE,
++	ROUTE_SOURCE,
++	ROUTE_ONLINK,
++	ROUTE_TYPE,
++	ROUTE_PROTO,
++	ROUTE_DISABLED,
++	ROUTE_V6,
++	__ROUTE_MAX
++};
++
+ enum device_addr_flags {
+ 	/* address family for routes and addresses */
+ 	DEVADDR_INET4		= (0 << 0),
+@@ -176,7 +194,7 @@
+ void interface_add_dns_search_list(struct interface_ip_settings *ip, struct blob_attr *list);
+ void interface_write_resolv_conf(const char *jail);
+ 
+-void interface_ip_add_route(struct interface *iface, struct blob_attr *attr, bool v6);
++int interface_ip_add_route(struct interface *iface, struct blob_attr *attr, bool v6);
+ void interface_ip_add_neighbor(struct interface *iface, struct blob_attr *attr, bool v6);
+ void interface_ip_update_start(struct interface_ip_settings *ip);
+ void interface_ip_update_complete(struct interface_ip_settings *ip);
+
+--- a/ubus.c
++++ b/ubus.c
+@@ -31,6 +31,261 @@
+ /* global object */
+ 
+ static int
++parse_route_info(struct interface *iface, struct device_route *route, struct blob_buf *blob_buf,
++			    const char *origin)
++{
++	int af = AF_INET;
++	char buff[NETIFD_BFR] = { 0 };
++
++	if (!iface || !route || !blob_buf) {
++		return EXIT_FAILURE;
++	}
++
++	time_t now = system_get_rtime();
++
++	void *r = blobmsg_open_table(blob_buf, "route");
++
++	if ((route->flags & DEVADDR_FAMILY) == DEVADDR_INET6) {
++		af = AF_INET6;
++	}
++
++	if (inet_ntop(af, &route->addr, buff, NETIFD_BFR - 1)) {
++		blobmsg_add_string(blob_buf, "target", buff);
++		memset(buff, 0, NETIFD_BFR);
++	}
++
++	blobmsg_add_u32(blob_buf, "mask", route->mask);
++
++	if (inet_ntop(af, &route->nexthop, buff, NETIFD_BFR - 1)) {
++		blobmsg_add_string(blob_buf, "nexthop", buff);
++		memset(buff, 0, NETIFD_BFR);
++	}
++
++	blobmsg_add_u32(blob_buf, "mtu", route->mtu);
++
++	blobmsg_add_u64(blob_buf, "metric", route->metric);
++
++	blobmsg_add_u32(blob_buf, "table", route->table);
++
++	if (route->valid_until)
++		blobmsg_add_u32(blob_buf, "valid_until", route->valid_until - now);
++
++	if (inet_ntop(af, &route->source, buff, NETIFD_BFR - 1)) {
++		snprintf(buff + strlen(buff), (NETIFD_BFR - 1) - strlen(buff), "/%u", route->sourcemask);
++		blobmsg_add_string(blob_buf, "source", buff);
++		memset(buff, 0, NETIFD_BFR);
++	}
++
++	if (iface->name) {
++		blobmsg_add_string(blob_buf, "interface", iface->name);
++	}
++
++	if (iface->main_dev.dev) {
++		blobmsg_add_string(blob_buf, "device", iface->main_dev.dev->ifname);
++	}
++
++	if (origin) {
++		blobmsg_add_string(blob_buf, "origin", origin);
++	}
++
++	if (route->enabled && !route->failed) {
++		blobmsg_add_string(blob_buf, "status", "active");
++	} else if (route->failed) {
++		blobmsg_add_string(blob_buf, "status", "down");
++	} else {
++		blobmsg_add_string(blob_buf, "status", "assigned");
++	}
++
++	blobmsg_close_table(blob_buf, r);
++
++	return EXIT_SUCCESS;
++}
++
++static void
++get_interfaces_routes(struct blob_buf *blob_buf)
++{
++	struct interface *iface = NULL;
++
++	vlist_for_each_element(&interfaces, iface, node)
++	{
++		struct device_route *route = NULL;
++		struct device_addr *addr   = NULL;
++
++		// Find assigned routes
++		vlist_for_each_element(&iface->proto_ip.route, route, node)
++		{
++			parse_route_info(iface, route, blob_buf, "dynamic");
++		}
++
++		// Find routes from /etc/config/network -> "config route" sections
++		vlist_for_each_element(&iface->config_ip.route, route, node)
++		{
++			parse_route_info(iface, route, blob_buf, "config");
++		}
++
++		// Find applied static routes
++		vlist_for_each_element(&iface->proto_ip.addr, addr, node)
++		{
++			parse_route_info(iface, &addr->subnet, blob_buf, "address");
++		}
++	}
++}
++
++static int
++netifd_get_all_routes(struct ubus_context *ctx, struct ubus_object *obj,
++				 struct ubus_request_data *req, const char *method, struct blob_attr *msg)
++{
++	struct blob_buf blob_buf = { 0 };
++	int rc = UBUS_STATUS_OK;
++
++	if (blob_buf_init(&blob_buf, 0)) {
++		return UBUS_STATUS_UNKNOWN_ERROR;
++	}
++
++	get_interfaces_routes(&blob_buf);
++
++	if (ubus_send_reply(ctx, req, blob_buf.head)) {
++		rc = UBUS_STATUS_UNKNOWN_ERROR;
++	}
++
++	blob_buf_free(&blob_buf);
++
++	return rc;
++}
++
++static int
++netifd_set_route(struct ubus_context *ctx, struct ubus_object *obj, struct ubus_request_data *req,
++					const char *method, struct blob_attr *msg)
++{
++	struct blob_attr *tb[route_attr_list.n_params];
++	struct interface *iface = NULL;
++
++	if (blobmsg_parse(route_attr_list.params, route_attr_list.n_params, tb, blob_data(msg),
++			  blob_len(msg))) {
++		return UBUS_STATUS_INVALID_ARGUMENT;
++	}
++
++	if (!tb[ROUTE_INTERFACE] || !tb[ROUTE_TARGET] || !tb[ROUTE_V6]) {
++		return UBUS_STATUS_INVALID_ARGUMENT;
++	}
++
++	if (!(iface = vlist_find(&interfaces, blobmsg_data(tb[ROUTE_INTERFACE]), iface, node))) {
++		return UBUS_STATUS_NOT_FOUND;
++	}
++
++	if (interface_ip_add_route(iface, msg, blobmsg_get_bool(tb[ROUTE_V6]))) {
++		return UBUS_STATUS_UNKNOWN_ERROR;
++	}
++
++	return UBUS_STATUS_OK;
++}
++
++static int
++compare_route_with_blob(struct device_route *route, struct blob_attr **tb, bool ipv6)
++{
++	int af = ipv6 ? AF_INET6 : AF_INET;
++	unsigned int route_mask = ipv6 ? 128 : 32;
++
++	union if_addr route_target = { 0 };
++	union if_addr route_source = { 0 };
++
++	/* Check if target ip matches */
++	if (!parse_ip_and_netmask(af, blobmsg_data(tb[ROUTE_TARGET]), &route_target, &route_mask)) {
++		return EXIT_FAILURE;
++	}
++
++	if (memcmp(&route->addr, &route_target, sizeof(route->addr))) {
++		return EXIT_FAILURE;
++	}
++
++	if (!tb[ROUTE_SOURCE]) {
++		goto skip_source;
++	}
++
++	/* Check if source ip matches */
++	char *saveptr, *source = alloca(blobmsg_data_len(tb[ROUTE_SOURCE]));
++	memcpy(source, blobmsg_data(tb[ROUTE_SOURCE]), blobmsg_data_len(tb[ROUTE_SOURCE]));
++
++	const char *addr = strtok_r(source, "/", &saveptr);
++	const char *mask = strtok_r(NULL, "/", &saveptr);
++
++	if (!addr || inet_pton(af, addr, &route_source) < 1) {
++		return EXIT_FAILURE;
++	}
++
++	if (memcmp(&route->source, &route_source, sizeof(route->source))) {
++		return EXIT_FAILURE;
++	}
++
++	unsigned int sourcemask = (mask) ? atoi(mask) : ((af == AF_INET6) ? 128 : 32);
++	if (route->sourcemask != sourcemask) {
++		return EXIT_FAILURE;
++	}
++
++skip_source:
++
++	if (tb[ROUTE_METRIC] && route->metric != blobmsg_get_u32(tb[ROUTE_METRIC])) {
++		return EXIT_FAILURE;
++	}
++
++	if (tb[ROUTE_TABLE] && route->table != blobmsg_get_u32(tb[ROUTE_TABLE])) {
++		return EXIT_FAILURE;
++	}
++
++	if (tb[ROUTE_MASK] && route->mask != blobmsg_get_u32(tb[ROUTE_MASK])) {
++		return EXIT_FAILURE;
++	}
++
++	return EXIT_SUCCESS;
++}
++
++static int
++remove_route_from_list(struct interface *iface, struct blob_attr **tb)
++{
++	struct device_route *route = NULL;
++
++	vlist_for_each_element(&iface->proto_ip.route, route, node)
++	{
++		if (compare_route_with_blob(route, tb, blobmsg_get_bool(tb[ROUTE_V6]))) {
++			continue;
++		}
++
++		vlist_delete(&iface->proto_ip.route, &route->node);
++
++		return EXIT_SUCCESS;
++	}
++
++	return EXIT_FAILURE;
++}
++
++static int 
++netifd_delete_route(struct ubus_context *ctx, struct ubus_object *obj,
++			struct ubus_request_data *req, const char *method, struct blob_attr *msg)
++{
++	struct blob_attr *tb[route_attr_list.n_params];
++	struct interface *iface = NULL;
++
++	if (blobmsg_parse(route_attr_list.params, route_attr_list.n_params, tb, blob_data(msg),
++			  blob_len(msg))) {
++		return UBUS_STATUS_INVALID_ARGUMENT;
++	}
++
++	if (!tb[ROUTE_INTERFACE] || !tb[ROUTE_TARGET] || !tb[ROUTE_V6]) {
++		return UBUS_STATUS_INVALID_ARGUMENT;
++	}
++
++	if (!(iface = vlist_find(&interfaces, blobmsg_data(tb[ROUTE_INTERFACE]), iface, node))) {
++		return UBUS_STATUS_NOT_FOUND;
++	}
++
++	if (remove_route_from_list(iface, tb)) {
++		return UBUS_STATUS_NOT_FOUND;
++	}
++
++	return UBUS_STATUS_OK;
++}
++
++static int
+ netifd_handle_restart(struct ubus_context *ctx, struct ubus_object *obj,
+ 		      struct ubus_request_data *req, const char *method,
+ 		      struct blob_attr *msg)
+@@ -199,7 +454,38 @@
+	return UBUS_STATUS_OK;
+ }
+ 
++enum { _DR_INTERFACE, _DR_V6, _DR_TARGET, _DR_SOURCE, _DR_METRIC, _DR_TABLE, _DR_MASK, __DR_MAX };
++static const struct blobmsg_policy del_route_policy[__DR_MAX] = {
++	[_DR_INTERFACE]	= { .name = "interface", 	.type = BLOBMSG_TYPE_STRING },
++	[_DR_V6]		= { .name = "v6", 		.type = BLOBMSG_TYPE_BOOL },
++	[_DR_TARGET]		= { .name = "target", 		.type = BLOBMSG_TYPE_STRING },
++	[_DR_SOURCE]		= { .name = "source", 		.type = BLOBMSG_TYPE_STRING },
++	[_DR_METRIC]		= { .name = "metric", 		.type = BLOBMSG_TYPE_INT32 },
++	[_DR_TABLE]		= { .name = "table", 		.type = BLOBMSG_TYPE_INT32 },
++	[_DR_MASK]		= { .name = "mask", 		.type = BLOBMSG_TYPE_INT32 },
++};
++
++static const struct blobmsg_policy set_route_policy[__ROUTE_MAX] = {
++	[ROUTE_INTERFACE] = { .name = "interface", .type = BLOBMSG_TYPE_STRING },
++	[ROUTE_TARGET] = { .name = "target", .type = BLOBMSG_TYPE_STRING },
++	[ROUTE_MASK] = { .name = "netmask", .type = BLOBMSG_TYPE_STRING },
++	[ROUTE_GATEWAY] = { .name = "gateway", .type = BLOBMSG_TYPE_STRING },
++	[ROUTE_METRIC] = { .name = "metric", .type = BLOBMSG_TYPE_INT32 },
++	[ROUTE_MTU] = { .name = "mtu", .type = BLOBMSG_TYPE_INT32 },
++	[ROUTE_TABLE] = { .name = "table", .type = BLOBMSG_TYPE_STRING },
++	[ROUTE_VALID] = { .name = "valid", .type = BLOBMSG_TYPE_INT32 },
++	[ROUTE_SOURCE] = { .name = "source", .type = BLOBMSG_TYPE_STRING },
++	[ROUTE_ONLINK] = { .name = "onlink", .type = BLOBMSG_TYPE_BOOL },
++	[ROUTE_TYPE] = { .name = "type", .type = BLOBMSG_TYPE_STRING },
++	[ROUTE_PROTO] = { .name = "proto", .type = BLOBMSG_TYPE_STRING },
++	[ROUTE_DISABLED] = { .name = "disabled", .type = BLOBMSG_TYPE_BOOL },
++	[ROUTE_V6] = { .name = "v6", .type = BLOBMSG_TYPE_BOOL },
++};
++
+ static struct ubus_method main_object_methods[] = {
++	{ .name = "routes", .handler = netifd_get_all_routes },
++	UBUS_METHOD("set_route", netifd_set_route, set_route_policy),
++	UBUS_METHOD("delete_route", netifd_delete_route, del_route_policy),
+ 	{ .name = "restart", .handler = netifd_handle_restart },
+ 	{ .name = "reload", .handler = netifd_handle_reload },
+ 	UBUS_METHOD("add_host_route", netifd_add_host_route, route_policy),
+
+--- a/ubus.h
++++ b/ubus.h
+@@ -14,8 +14,9 @@
+ #ifndef __NETIFD_UBUS_H
+ #define __NETIFD_UBUS_H
+ 
++#define NETIFD_BFR 256
++
+ extern struct ubus_context *ubus_ctx;
+-
+ int netifd_ubus_init(const char *path);
+ void netifd_ubus_done(void);
+ 
+

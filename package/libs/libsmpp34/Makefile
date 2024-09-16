@@ -22,7 +22,7 @@ define Package/libsmpp34
   SECTION:=libs
   CATEGORY:=Libraries
   TITLE:=C library for SMPP 3.4
-  DEPENDS:=+libpthread +librt
+  DEPENDS:=+libpthread +librt +zlib +libxml2
   URL:=http://git.osmocom.org/libsmpp34
 endef
 

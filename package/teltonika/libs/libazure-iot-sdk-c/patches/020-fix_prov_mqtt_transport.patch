@@ -1,0 +1,28 @@
+--- a/provisioning_client/CMakeLists.txt
++++ b/provisioning_client/CMakeLists.txt
+@@ -204,14 +204,14 @@ if(WIN32)
+     add_definitions(-D_CRT_SECURE_NO_WARNINGS)
+ ENDIF(WIN32)
+ 
+-add_library(hsm_security_client ${HSM_CLIENT_C_FILES} ${HSM_CLIENT_H_FILES})
++add_library(hsm_security_client SHARED ${HSM_CLIENT_C_FILES} ${HSM_CLIENT_H_FILES})
+ applyXcodeBuildFlagsIfNeeded(hsm_security_client)
+ linkSharedUtil(hsm_security_client)
+ target_link_libraries(hsm_security_client ${HSM_CLIENT_LIBRARY})
+ set(provisioning_libs ${provisioning_libs} hsm_security_client)
+ set(provisioning_headers ${provisioning_headers} ${HSM_CLIENT_H_FILES})
+ 
+-add_library(prov_auth_client ${AUTH_CLIENT_C_FILES} ${AUTH_CLIENT_H_FILES})
++add_library(prov_auth_client SHARED ${AUTH_CLIENT_C_FILES} ${AUTH_CLIENT_H_FILES})
+ applyXcodeBuildFlagsIfNeeded(prov_auth_client)
+ linkSharedUtil(prov_auth_client)
+ target_link_libraries(prov_auth_client hsm_security_client)
+@@ -354,7 +354,7 @@ if(${use_prov_client} OR (${use_prov_cli
+         set(provisioning_headers ${provisioning_headers} ${PROV_MQTT_WS_CLIENT_H_FILES})
+ 
+         # Provisioning mqtt Transport Client library
+-        add_library(prov_mqtt_transport ${PROV_MQTT_CLIENT_C_FILES} ${PROV_MQTT_CLIENT_H_FILES})
++        add_library(prov_mqtt_transport SHARED ${PROV_MQTT_CLIENT_C_FILES} ${PROV_MQTT_CLIENT_H_FILES})
+         applyXcodeBuildFlagsIfNeeded(prov_mqtt_transport)
+         linkSharedUtil(prov_mqtt_transport)
+         target_link_libraries(prov_mqtt_transport umqtt)

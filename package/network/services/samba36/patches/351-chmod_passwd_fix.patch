@@ -1,0 +1,40 @@
+--- a/source3/passdb/pdb_smbpasswd.c
++++ b/source3/passdb/pdb_smbpasswd.c
+@@ -246,6 +246,7 @@ creating file %s\n", pfile));
+ 				if ((fp = sys_fopen(pfile, "a+")) != NULL) {
+ 					DEBUG(0, ("startsmbfilepwent_internal: file %s did not \
+ exist. File successfully created.\n", pfile));
++					chmod(pfile, 0600);
+ 				} else {
+ 					DEBUG(0, ("startsmbfilepwent_internal: file %s did not \
+ exist. Couldn't create new one. Error was: %s",
+@@ -322,19 +322,6 @@ Error was %s\n", pfile, strerror(errno))
+ 	/* Set a buffer to do more efficient reads */
+ 	setvbuf(fp, (char *)NULL, _IOFBF, 1024);
+ 
+-	/* Make sure it is only rw by the owner */
+-#ifdef HAVE_FCHMOD
+-	if(fchmod(fileno(fp), S_IRUSR|S_IWUSR) == -1) {
+-#else
+-	if(chmod(pfile, S_IRUSR|S_IWUSR) == -1) {
+-#endif
+-		DEBUG(0, ("startsmbfilepwent_internal: failed to set 0600 permissions on password file %s. \
+-Error was %s\n.", pfile, strerror(errno) ));
+-		pw_file_unlock(fileno(fp), lock_depth);
+-		fclose(fp);
+-		return NULL;
+-	}
+-
+ 	/* We have a lock on the file. */
+ 	return fp;
+ }
+@@ -779,9 +766,6 @@ static bool mod_smbfilepwd_entry(struct
+ 		return False;
+ 	}
+ 
+-	/* Make sure it is only rw by the owner */
+-	chmod(pfile, 0600);
+-
+ 	/* We have a write lock on the file. */
+ 	/*
+ 	 * Scan the file, a line at a time and check if the name matches.

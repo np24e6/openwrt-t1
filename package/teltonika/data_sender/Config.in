@@ -1,0 +1,45 @@
+config PACKAGE_DATA_SENDER_DEBUG
+	bool "Enable debug"
+	depends on PACKAGE_data-sender
+	default n
+    help
+        Enables deep debuging
+
+menu "Advanced options"
+	depends on PACKAGE_data-sender
+
+config PACKAGE_DATA_SENDER_COLLECTIONS
+    int "Maximum number of collections supported"
+    default 10 
+    help
+        Maximum number of collections supported
+
+config PACKAGE_DATA_SENDER_INPUTS
+    int "Maximum inputs per collection"
+    default 10 
+    help
+        Maximum number of inputs per collection supported
+
+endmenu
+
+menu "Encoders"
+	depends on PACKAGE_data-sender
+
+config PACKAGE_DATA_SENDER_BASE64
+	bool "base64 encoder"
+	default n
+    help
+        Compile with base64 encoder
+
+endmenu
+
+menu "Timers"
+	depends on PACKAGE_data-sender
+
+config PACKAGE_DATA_SENDER_SCHEDULER
+	bool "scheduler support"
+	default n
+    help
+        Compile with scheduler support
+
+endmenu

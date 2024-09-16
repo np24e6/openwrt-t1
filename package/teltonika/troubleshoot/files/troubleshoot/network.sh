@@ -52,6 +52,11 @@ firewall_hook() {
 		troubleshoot_init_log "EBtables BROUTE" "$log_file"
 		troubleshoot_add_log "$(ebtables -t broute -L --Lc)" "$log_file"
 	}
+
+	troubleshoot_init_log "NF Conntrack entry count" "$log_file"
+	troubleshoot_add_log "$(wc -l /proc/net/nf_conntrack | awk '{print $1}')" "$log_file"
+	troubleshoot_init_log "NF Conntrack first entries (up to 1000)" "$log_file"
+	troubleshoot_add_log "$(head -1000 /proc/net/nf_conntrack)" "$log_file"
 }
 
 interfaces_hook() {

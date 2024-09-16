@@ -9,19 +9,18 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=c-ares
-PKG_VERSION:=1.17.2
+PKG_VERSION:=1.19.1
 PKG_RELEASE:=1
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
-PKG_SOURCE_URL:=https://c-ares.haxx.se/download
-PKG_HASH:=4803c844ce20ce510ef0eb83f8ea41fa24ecaae9d280c468c582d2bb25b3913d
+PKG_SOURCE_URL:=https://c-ares.org/download
+PKG_HASH:=321700399b72ed0e037d0074c629e7741f6b2ec2dda92956abe3e9671d3e268e
 
 PKG_LICENSE:=MIT
 PKG_LICENSE_FILES:=LICENSE.md
 PKG_CPE_ID:=cpe:/a:c-ares_project:c-ares
 
 CMAKE_INSTALL:=1
-PKG_BUILD_PARALLEL:=1
 
 include $(INCLUDE_DIR)/package.mk
 include $(INCLUDE_DIR)/cmake.mk
@@ -48,6 +47,13 @@ CMAKE_OPTIONS += \
 	-DCARES_STATIC_PIC=ON \
 	-DCARES_BUILD_TESTS=OFF \
 	-DCARES_BUILD_TOOLS=OFF
+
+define Build/InstallDev
+	$(call Build/InstallDev/cmake,$(1))
+	$(SED) 's,/usr/bin,$$$${prefix}/lib,g' $(1)/usr/lib/pkgconfig/libcares.pc
+	$(SED) 's,/usr/include,$$$${prefix}/include,g' $(1)/usr/lib/pkgconfig/libcares.pc
+	$(SED) 's,/usr/lib,$$$${prefix}/lib,g' $(1)/usr/lib/pkgconfig/libcares.pc
+endef
 
 define Package/libcares/install
 	$(INSTALL_DIR) $(1)/usr/lib

@@ -118,7 +118,12 @@ ucidef_set_hwinfo() {
 	sd_card
 	sw_rst_on_init
 	dsa
+	nat_offloading
 	hw_nat
+	vcert
+	port_link
+	multi_tag
+	micro_usb
 	'
 
 	json_select_object hwinfo

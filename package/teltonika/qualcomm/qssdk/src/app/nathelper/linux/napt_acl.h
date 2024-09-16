@@ -54,6 +54,7 @@
 #define S17_ACL_ICMP_FROM_WAN 27
 #define S17_ACL_LIST_IPV6DROUTE 28
 #define S17_ACL_LIST_DSCP_REMAP 29
+#define S17_ACL_UDP_FROM_WAN 30
 
 
 /* port # of WAN, 1 for DB120 demo board */
@@ -92,3 +93,5 @@ void upnp_ssdp_add_acl_rules(void);
 unsigned int isis_set_pppoe_passthrough(int enable);
 unsigned int isis_enable_pppoe_discovery_acl(void);
 int pppoe_passthrough_acl_rules(uint32_t gw_entry_id, unsigned char *mac);
+void icmp_from_wan_acl_rule(void);
+void udp_from_wan_acl_rule(void);

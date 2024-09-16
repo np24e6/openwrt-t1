@@ -11,11 +11,7 @@ check_for_duplex() {
 
 	{ [ "$ENABLED" == 0 ] || [ "$DEVICE" != "/dev/rs485" ]; } && return
 
-	case "$FULL_DUPLEX" in
-	0 | 1)
-		echo "$FULL_DUPLEX" >/sys/class/gpio/rs485_rx_en/value
-		;;
-	esac
+	set_tty_duplex "/dev/rs485" "$FULL_DUPLEX"
 }
 
 run_ntrip_instance() {
@@ -25,7 +21,7 @@ run_ntrip_instance() {
 	config_get device $1 device
 
 	check_for_duplex "$enabled" "$device"
-	
+
 	if [ "$enabled" = "1" ] && [ -n "$device" ] && [ -e "$device" ]; then
 		procd_open_instance
 			procd_set_param file /etc/config/rs_ntrip

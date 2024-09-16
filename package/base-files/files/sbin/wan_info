@@ -1,27 +1,9 @@
 #!/bin/sh
 . /lib/functions/network.sh
 
-tempinterf=$(uci -q get mwan3.globals.mode)
-
-if [ "$tempinterf" == "balance" ]; then
-	interface="balance_default:"
-elif [ "$tempinterf" == "mwan" ]; then
-	interface="mwan_default:"
-fi
-
-mwanpolicies="$(/usr/sbin/mwan3 policies 2>&1 | grep % | awk '!seen[$1]++ {print $1}')"
-
-for value in $mwanpolicies; do
-	wanintr="$value $wanintr"
-done
-
-if { [ -z "$wanintr" ] || [ "$wanintr" == "unreachable" ] ;}; then
-	if [ -z "$wanif" ] && ! network_find_wan wanif "" 10; then
+if ! network_find_wan wanif "" 10; then
 	echo "$cfg" "NO_WAN_LINK"
 	exit
-	fi
-else
-	wanif="$wanintr"
 fi
 
 min_wanif=$(echo "$wanif" | awk '{print $1;}')
@@ -29,12 +11,12 @@ network_get_metric min_metric "$min_wanif"
 for i in $wanif
 do
         network_get_metric metric "$i"
-        if [ $metric -lt $min_metric ]; then
-                min_metric=$metric
-                min_wanif=$i
+        if [ "$metric" -lt "$min_metric" ]; then
+                min_metric="$metric"
+                min_wanif="$i"
         fi
 done
-wanif=$min_wanif
+wanif="$min_wanif"
 
 case "$1" in
 	"ip")
@@ -46,13 +28,13 @@ case "$1" in
 	"state")
 		network_get_device wandev "$wanif"
 		case "$wandev" in
-			"wwan"* | "rmnet"* | "qmimux"* | "usb"*)
+			"wwan"* | "rmnet"* | "qmimux"* | "usb"* | "ppp-"*)
 				echo "Mobile"
 				;;
-			"eth"* | "wan"*)
+			"eth"* | "wan"* | "pppoe-"* | *"_to_wan")
 				echo "Wired"
 				;;
-			"wlan0")
+			"wlan"* | "apcli"*)
 				echo "WiFi"
 				;;
 		esac

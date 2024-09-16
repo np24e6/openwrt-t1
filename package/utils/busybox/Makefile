@@ -46,7 +46,7 @@ define Package/busybox/Default
   MAINTAINER:=Felix Fietkau <nbd@nbd.name>
   TITLE:=Core utilities for embedded Linux
   URL:=http://busybox.net/
-  DEPENDS:=+BUSYBOX_CONFIG_PAM:libpam +BUSYBOX_CONFIG_NTPD:jsonfilter +libubus +libubox +libuci +liblog
+  DEPENDS:=+BUSYBOX_CONFIG_PAM:libpam +BUSYBOX_CONFIG_NTPD:jsonfilter +libubus +libubox +libuci +BUSYBOX_CONFIG_FEATURE_IP_BLOCKD:liblog +BUSYBOX_CONFIG_PASSWD:liblog +BUSYBOX_CONFIG_FEATURE_IP_BLOCKD:libtlt_utils
   USERID:=ntp=123:ntp=123
 endef
 
@@ -80,8 +80,12 @@ ifeq ($(CONFIG_USE_GLIBC),y)
   LDLIBS += $(call BUSYBOX_IF_ENABLED,NSLOOKUP_OPENWRT,resolv)
 endif
 
+ifdef CONFIG_BUSYBOX_CONFIG_FEATURE_IP_BLOCKD
+LDLIBS += -ltlt_utils
+endif
+
 TARGET_CFLAGS += -flto
-TARGET_LDFLAGS += -flto=jobserver -fuse-linker-plugin 
+TARGET_LDFLAGS += -flto=jobserver -fuse-linker-plugin
 
 MAKE_VARS :=
 MAKE_FLAGS += \

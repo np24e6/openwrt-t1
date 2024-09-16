@@ -5,7 +5,7 @@
  				envp[j++] = error_buf;
  			}
 -			uloop_timeout_set(&state->teardown_timeout, 5000);
-+			uloop_timeout_set(&state->teardown_timeout, 10000);
++			uloop_timeout_set(&state->teardown_timeout, 15000);
  			break;
- 
+
  		case S_TEARDOWN:

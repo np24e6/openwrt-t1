@@ -2,10 +2,10 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=sim_switch
-PKG_VERSION:=2023-07-13
-PKG_RELEASE:=2
+PKG_VERSION:=2023-09-15
+PKG_RELEASE:=1
 
-PKG_SOURCE_VERSION:=f94d8643aa44adc8006d405d34892368f8c8d868
+PKG_SOURCE_VERSION:=3.1
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_SOURCE_VERSION)-$(PKG_VERSION)
 PKG_SOURCE:=$(PKG_SOURCE_SUBDIR).tar.gz
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_SOURCE_SUBDIR)
@@ -17,7 +17,7 @@ define Package/sim_switch
 	CATEGORY:=Base system
 	TITLE:=SIM Switch management daemon
 	DEPENDS:=+libubus +libubox +libblobmsg-json +libuci +libgsm +liblog \
-			+rpcd-mod-simd +libboardjson
+			  +libboardjson
 endef
 
 define Package/sim_switch/description

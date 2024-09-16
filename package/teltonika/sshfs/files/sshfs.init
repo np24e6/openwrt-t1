@@ -20,7 +20,7 @@ stop_service() {
 	config_load sshfs
 	config_get mount_point "sshfs" mount_point "$DEF_MOUNT_POINT"
 
-	fusermount -uzq "$mount_point" 2> /dev/null
+	fusermount3 -uzq "$mount_point" 2> /dev/null
 	check_pid=$(pgrep sshfs)
 	if [ "$check_pid" != "" ]; then
 		killall -9 sshfs

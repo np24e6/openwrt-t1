@@ -20,7 +20,6 @@ typedef enum {
 	ACT_NOT_SUPPORTED, /*!< Functionality not supported */
 	ACT_TIMEOUT, /*!< Request timeout expired */
 	ACT_SMS_LIMIT, /*!< SMS limit reached */
-	ACT_PENDING_RESPONSE, /*!< Waiting for more data */
 
 	__ACT_MAX,
 } func_t;
@@ -35,6 +34,7 @@ typedef enum {
 	EVT_CLIP_VALUE, /*!< Incoming voice call event */
 	EVT_RING, /*!< Incoming call event */
 	EVT_NO_CARRIER, /*!< The connection has been terminated or the attempt to establish a connection failed*/
+	EVT_SND_SMS, /*!< Event called on successfull sms sending */
 
 	EVT_RSSI_SIGNAL, /*!< RSSI signal event */
 	EVT_RSCP_SIGNAL, /*!< RSCP signal event */
@@ -43,7 +43,6 @@ typedef enum {
 	EVT_SINR_SIGNAL, /*!< SINR signal event */
 	EVT_RSRQ_SIGNAL, /*!< RSRQ signal event */
 	EVT_BER_SIGNAL, /*!< BER signal event */
-	EVT_TEMP_VALUE, /*!< QTEMP state event*/
 
 	EVT_CMTI_VALUE, /*!< CMTI value event */
 	EVT_CUSD_VALUE, /*!< CUSD value event */
@@ -55,7 +54,10 @@ typedef enum {
 	EVT_NEW_MDM, /*!< New modem event */
 	EVT_SIM_STAT, /*!< SIM status event */
 	EVT_FILE_UPLOAD, /*!< File upload event */
+	EVT_EMM, /*!< EMM reject cause event */
+	EVT_ESM, /*!< ESM reject cause event */
 
+	EVT_OPERATOR, /*!< Operator change event */
 	EVT_SIM_CHANGE, /*!< SIM change event */
 
 	__EVT_MAX,
@@ -76,8 +78,8 @@ enum pin_state_id {
 	PIN_STATE_REQUIRED_PH_NETSUB_PUK, /*!< Network subset personalization unlocking password required to use simcard */
 	//CME ERROR:
 	PIN_STATE_NOT_INSERTED = 10, /*!< Simcard is not inserted */
-	PIN_STATE_SIM_FAILURE = 13, /*!< Simcard failure */
-	PIN_STATE_SIM_BUSY = 14, /*!< Simcard busy */
+	PIN_STATE_SIM_FAILURE  = 13, /*!< Simcard failure */
+	PIN_STATE_SIM_BUSY     = 14, /*!< Simcard busy */
 	PIN_STATE_PUK_BLOCKED  = 15, /*!< Simcard PUK is blocked */
 
 	__PIN_STATE_MAX,
@@ -136,6 +138,8 @@ enum net_mode_id {
 	// NB
 	NET_MODE_CAT_M1, /*!< CAT-M1 mode */
 	NET_MODE_CAT_NB, /*!< CAT-NB mode */
+	NET_MODE_EMTC, /*!< eMTC mode */
+	NET_MODE_NBIOT, /*!< NBIoT mode */
 
 	// combined network modes
 	NET_MODE_2G_3G, /*!< 2G and 3G mode */
@@ -161,6 +165,21 @@ enum sms_format_id {
 	SMS_MODE_TEXT, /*!< Text message format */
 
 	__SMS_MODE_MAX,
+};
+
+/**
+ * Enumeration of AT capabilities
+ */
+enum cap_set_id {
+	CAP_SET_UNKNOWN, /*!< Unknown capability set*/
+	CAP_SET_GSM, /*!< GSM ETSI capability set*/
+	CAP_SET_FAX, /*!< Fax capability set*/
+	CAP_SET_DS, /*!< Data compression capability set*/
+	CAP_SET_MS, /*!< Modulation control capability set*/
+	CAP_SET_ES, /*!< Error control capability set*/
+	CAP_SET_MV18S, /*!< V18 modulation capability set*/
+
+	__CAP_SET_MAX,
 };
 
 /**
@@ -247,6 +266,9 @@ enum net_reg_stat_id {
 	NET_REG_STAT_DENIED, /*<! Denied */
 	NET_REG_STAT_UNKNOWN, /*<! Unknown stat */
 	NET_REG_STAT_ROAMING, /*<! Roaming */
+	NET_REG_STAT_SMS_ONLY_HOME, /*<! SMS only, home network */
+	NET_REG_STAT_SMS_ONLY_ROAMING, /*<! SMS only, Roaming */
+	NET_REG_STAT_EMERGENCY, /*<! Emergency services only */
 
 	__NET_REG_STAT_MAX,
 };
@@ -294,6 +316,17 @@ enum roaming_svc_id {
 	ROAMING_SVC_AUTO, /*<! Auto mode */
 
 	__ROAMING_SVC_MAX,
+};
+
+/**
+ * Enumeration of M2M service values
+ */
+enum m2m_state_id {
+	M2M_STATE_UNKNOWN, /*<! Unknown value */
+	M2M_STATE_DISABLED, /*<! Disable service */
+	M2M_STATE_ENABLED, /*<! Enable service */
+
+	__M2M_STATE_MAX,
 };
 
 /**
@@ -455,6 +488,17 @@ enum ue_usage_id {
 	UE_USAGE_DATA_CENTRIC, /*<! data centric mode */
 
 	__UE_USAGE_MAX,
+};
+
+/**
+ * Enumeration of secure boot setting values
+ */
+enum secboot_mode_id {
+	SEC_BOOT_UNKNOWN, /*<! Unknown value */
+	SEC_BOOT_DISABLED, /*<! Secure boot disabled mode */
+	SEC_BOOT_ENABLED, /*<! Secure boot enabled mode */
+
+	__SEC_BOOT_MAX,
 };
 
 /**
@@ -849,6 +893,29 @@ enum bandwidth_id {
 };
 
 /**
+ * Enumeration of bandwidth values for 5G connection, used in cell_info
+ */
+enum bandwidth_5G_id {
+	BANDWIDTH_5G_5,
+	BANDWIDTH_5G_10,
+	BANDWIDTH_5G_15,
+	BANDWIDTH_5G_20,
+	BANDWIDTH_5G_25,
+	BANDWIDTH_5G_30,
+	BANDWIDTH_5G_40,
+	BANDWIDTH_5G_50,
+	BANDWIDTH_5G_60,
+	BANDWIDTH_5G_70,
+	BANDWIDTH_5G_80,
+	BANDWIDTH_5G_90,
+	BANDWIDTH_5G_100,
+	BANDWIDTH_5G_200,
+	BANDWIDTH_5G_400,
+
+	__BANDWIDTH_5G_MAX,
+};
+
+/**
  * Enumeration of storage types
  */
 enum storage_type_id {
@@ -887,6 +954,7 @@ enum nmea_sata_type_id {
 	NMEA_SATA_GLONASS, /*<! GLONASS satellite type */
 	NMEA_SATA_BEIDOU, /*<! BEIDOU satellite type */
 	NMEA_SATA_GN, /*<! COMBINED satellite type */
+	NMEA_SATA_QZSS, /*<! QZSS satellite type */
 
 	__SATA_MAX,
 };
@@ -940,6 +1008,11 @@ enum gnss_operation_mode_id {
 	GNSS_OPER_BDS, /*<! BDS operation mode */
 	GNSS_OPER_GPS_GL_GA_SBAS_QZSS, /*<! GPS+GLONASS+GALILEO+SBAS+QZSS operation mode */
 	GNSS_OPER_GPS_BDS_GL_SBAS_QZSS, /*<! GPS+BDS+GALILEO+SBAS+QZSS operation mode */
+	GNSS_OPER_GPS_GL, /*<! GPS+GLONASS operation mode */
+	GNSS_OPER_GPS_BDS, /*<! GPS+BeiDou operation mode */
+	GNSS_OPER_GPS_GA, /*<! GPS+GALILEO operation mode */
+	GNSS_OPER_GPS_QZSS, /*<! GPS+QZSS operation mode */
+	GNSS_OPER_CAMPED, /*<! Selected on MCC operation mode */
 
 	__GNSS_OPER_MAX,
 };
@@ -1000,11 +1073,11 @@ enum urc_lte_sms_format {
  * Enumeration of Modem functionality
  */
 enum modem_func_t {
-	MODEM_FULL_MODE, 	/* <! Standard modem functionality */
-	MODEM_DATA_ONLY, 	/* <! Modem without call functionality */
-	MODEM_DYNAMIC_MODE, 	/* <! Modem has dynamic mode which depends by network */
-	MODEM_LOW_POWER, 	/* <! Modem without operator scan functionality */
-	MODEM_AUTO_VOLTE_MODE, 	/* <! Modem without VoLTE management (auto on)*/
+	MODEM_FULL_MODE, /* <! Standard modem functionality */
+	MODEM_DATA_ONLY, /* <! Modem without call functionality */
+	MODEM_DYNAMIC_MODE, /* <! Modem has dynamic mode which depends by network */
+	MODEM_LOW_POWER, /* <! Modem without operator scan functionality */
+	MODEM_AUTO_VOLTE_MODE, /* <! Modem without VoLTE management (auto on)*/
 
 	__MODEM_MODE_MAX,
 };
@@ -1018,6 +1091,121 @@ enum cefs_restore_state_id {
 	CEFS_RESTORE_MAXIMUM, /* <! CEFS restore maximum range */
 
 	__CEFS_RESTORE_MAX,
+};
+
+/**
+ * Enumeration of DPO modes
+ */
+enum dpo_mode_id {
+	DPO_MODE_UNKNOWN, /*<! Unknown DPO mode */
+	DPO_MODE_DISABLE, /*<! Disable DPO */
+	DPO_MODE_ENABLE_DDC, /*<! Enable DPO with dynamic duty cycle */
+	DPO_MODE_ENABLE_NO_EPS, /*<! Enable DPO only when the module is not connected to an external power supply */
+
+	__DPO_MODE_MAX,
+};
+
+/**
+ * Enumeration of NR5G disable mode
+ */
+enum disable_nr5g_mode_id {
+	DISABLE_NR5G_MODE_NONE, /*<! None 5G network is disabled */
+	DISABLE_NR5G_MODE_SA, /*<! Disabled SA */
+	DISABLE_NR5G_MODE_NSA, /*<! Disabled NSA */
+	DISABLE_NR5G_MODE_UNKNOWN, /*<! Unknown */
+
+	__DISABLE_NR5G_MODE_MAX,
+};
+
+/**
+ * Enumeration of EMM causes
+ */
+enum emm_cause_id {
+	EMM_CAUSE_IMSI_UNKKNOWN_IN_HSS,
+	EMM_CAUSE_ILLEGAL_UE,
+	EMM_CAUSE_ILLEGAL_ME,
+	EMM_CAUSE_EPS_SERVICES_NOT_ALLOWED,
+	EMM_CAUSE_SERVICES_NOT_ALLOWED,
+	EMM_CAUSE_UE_ID_CANT_BE_DERRIVED,
+	EMM_CAUSE_IMPLICITLY_DETACHED,
+	EMM_CAUSE_PLMN_NOT_ALLOWED,
+	EMM_CAUSE_TRACKING_AREA_NOT_ALLOWED,
+	EMM_CAUSE_ROAMING_NOT_ALLOWED,
+	EMM_CAUSE_EPS_NOT_ALLOWED_IN_THIS_PLMN,
+	EMM_CAUSE_NO_SUITABLE_CELLS,
+	EMM_CAUSE_MSC_NOT_REACHABLE,
+	EMM_CAUSE_NETWORK_FAILURE,
+	EMM_CAUSE_CS_DOMAIN_NOT_AVAILABLE,
+	EMM_CAUSE_ESM_FAIL,
+	EMM_CAUSE_MAC_FAIL,
+	EMM_CAUSE_SYNCH_FAIL,
+	EMM_CAUSE_CONGESTION,
+	EMM_CAUSE_UE_SECURITY_MISMATCH,
+	EMM_CAUSE_SECURITY_MODE_REJECTED,
+	EMM_CAUSE_NOT_AUTHORIZED_FOR_THIS_CGS,
+	EMM_CAUSE_NON_EPS_AUTH_UNACCEPTABLE,
+	EMM_CAUSE_5GCN_REDIRECT_REQUIRED,
+	EMM_CAUSE_SERVICE_OPT_NOT_AUTHORIZED,
+	EMM_CAUSE_CS_SERVICE_UNAVAILABLE,
+	EMM_CAUSE_NO_ACTIVE_EPS_BEARER,
+	EMM_CAUSE_SEVERE_NETWORK_FAIL,
+
+	__EMM_CAUSE_MAX,
+};
+
+/**
+ * Enumeration of ESM causes
+ */
+enum esm_cause_id {
+	ESM_CAUSE_OPER_DETER_BARR,
+	ESM_CAUSE_INSUFF_RESOURCES,
+	ESM_CAUSE_MISSING_APN,
+	ESM_CAUSE_UNKNOWN_PDN_TYPE,
+	ESM_CAUSE_USR_AUTH_FAIL,
+	ESM_CAUSE_REQ_REJECTED_BY_GW,
+	ESM_CAUSE_REQ_REJECTED,
+	ESM_CAUSE_SERVICE_OPT_UNSUPPORTED,
+	ESM_CAUSE_SERVICE_OPT_NOT_SUBSCRIBED,
+	ESM_CAUSE_SERVICE_OPT_OUT_OF_ORDER,
+	ESM_CAUSE_PTI_ALREADY_IN_USE,
+	ESM_CAUSE_REGULAR_REACTIVATION,
+	ESM_CAUSE_EPS_QOS_NOT_ACCEPTED,
+	ESM_CAUSE_NETWORK_FAIL,
+	ESM_CAUSE_REACTIVATION_REQUESTED,
+	ESM_CAUSE_SEMANTIC_ERR_IN_TFT,
+	ESM_CAUSE_SYNTACT_ERR_IN_TFT,
+	ESM_CAUSE_INVALID_EPS_BEARER_ID,
+	ESM_CAUSE_SEMANTIC_ERR_IN_PCKT_FILTER,
+	ESM_CAUSE_SYNTACT_ERR_IN_PCKT_FILTER,
+	ESM_CAUSE_PTI_MISMATCH,
+	ESM_CAUSE_LAST_PDN_DISCONN_NOT_ALLOWED,
+	ESM_CAUSE_PDN_IPV4_ONLY_ALLOWED,
+	ESM_CAUSE_PDN_IPV6_ONLY_ALLOWED,
+	ESM_CAUSE_SINGLE_ADDR_BARR_ONLY_ALLOWED,
+	ESM_CAUSE_ESM_INFO_NOT_RECEIVED,
+	ESM_CAUSE_PDN_CONN_NOT_EXISTS,
+	ESM_CAUSE_MULTI_PDN_NOT_ALLOWED,
+	ESM_CAUSE_REQUEST_COLLISION,
+	ESM_CAUSE_PDN_IPV4V6_ONLY_ALLOWED,
+	ESM_CAUSE_PDN_NON_IP_ONLY_ALLOWED,
+	ESM_CAUSE_UNSUPPORTED_QCI_VAL,
+	ESM_CAUSE_BEARER_NOT_SUPPORTED,
+	ESM_CAUSE_PDN_TYPE_ETH_ONLY_ALLOWED,
+	ESM_CAUSE_MAX_EPS_BEARER_COUNT_REACHED,
+	ESM_CAUSE_REQ_APN_NOT_SUPPORTED,
+	ESM_CAUSE_INVALID_PTI,
+	ESM_CAUSE_SEMANTICALLY_INCORRECT,
+	ESM_CAUSE_INVALID_MAND_INFO,
+	ESM_CAUSE_MSG_TYPE_INVALID,
+	ESM_CAUSE_MSG_TYPE_NOT_COMP,
+	ESM_CAUSE_INFO_EL_NON_EXISTANT,
+	ESM_CAUSE_COND_IE_ERR,
+	ESM_CAUSE_MSG_NOT_COMP,
+	ESM_CAUSE_PROTOCOL_ERR,
+	ESM_CAUSE_APN_RESTR_VAL_INCOMP,
+	ESM_CAUSE_MULTI_ACC_TO_PDN_NOT_ALLOWED,
+
+	__ESM_CAUSE_MAX,
 };
 
 /**
@@ -1155,6 +1343,21 @@ enum gprs_attach_mode_id gprs_attach_arg_enum(const char *arg);
  * @return const char *. String of readable Error message format value.
  */
 const char *err_msg_fmt_str(enum err_msg_fmt_id fmt);
+
+/**
+ * Convert M2M state value string argument to enumeration value.
+ * @param[in]	*arg	M2M status string argument value.
+ * @return enum m2m_state_id. Enumeration value of M2M service string
+ *  argument value.
+ */
+enum m2m_state_id m2m_arg_enum(const char *arg);
+
+/**
+ * Convert M2M state enumeration value to string.
+ * @param[in]	id	M2M enumeration value.
+ * @return const char *. String of readable M2M state value.
+ */
+const char *m2m_state_arg_str(enum m2m_state_id id);
 
 /**
  * Convert Error message format enumeration value to string.
@@ -1422,6 +1625,20 @@ const char *sms_state_str(enum sms_state_id id);
 enum sms_state_id sms_state_enum(const char *arg);
 
 /**
+ * Convert capability set type id to string.
+ * @param[in]	id	capability setid enumeration value.
+ * @return const char *. String of capavility set type value.
+ */
+const char *cap_set_str(enum cap_set_id);
+
+/**
+ * Convert capability set string to capability set enum.
+ * @param[in]	*arg	CApability set string argument value.
+ * @return enum capability_id . Enumeration of capability set id value.
+ */
+enum cap_set_id cap_set_enum(const char *arg);
+
+/**
  * Convert UE state type id to string.
  * @param[in]   id      UE state id enumeration value.
  * @return const char *. String of SMS state type value.
@@ -1469,6 +1686,20 @@ const char *nat_mode_id_str(enum nat_mode_id id);
  * @return enum ue_usage_id. Enumeration of ue usage id value.
  */
 enum ue_usage_id ue_usage_id_enum(const char *arg);
+
+/**
+ * Convert secure boot mode string to secure boot mode id enum.
+ * @param[in]	*arg	secure boot mode id string argument value.
+ * @return enum secboot_mode_id. Enumeration of secure boot mode id value.
+ */
+enum secboot_mode_id sec_boot_mode_id_enum(const char *arg);
+
+/**
+ * Convert secure boot mode id to string.
+ * @param[in]	id	secure boot mode id enumeration value.
+ * @return const char *. String of secure boot mode id value.
+ */
+const char *sec_boot_mode_id_str(enum secboot_mode_id id);
 
 /**
  * Convert ue usage id to string.
@@ -1823,6 +2054,13 @@ const char *scell_state_str(enum scell_state_t state);
 const char *bandwidth_str(enum bandwidth_id id);
 
 /**
+ * Convert bandwidth enum to string.
+ * @param[in]     id     Bandwidth enumeration value.
+ * @return const char *. String of bandwidth value.
+ */
+const char *bandwidth_5G_str(enum bandwidth_5G_id id);
+
+/**
  * Convert storage type string to storage type enum.
  * @param[in]	*arg	Storage type string argument value.
  * @return enum storage_type_id. Enumeration of storage type value.
@@ -1975,5 +2213,47 @@ enum gnss_operation_mode_id gnss_operation_mode_enum(const char *arg);
  * @return const char *. String of GNSS mode value.
  */
 const char *gnss_operation_mode_str(enum gnss_operation_mode_id mode);
+
+/**
+ * Convert EMM error cause enum to string.
+ * @param[in]   emm_cause   EMM cause enumeration value.
+ * @return const char *.    String of EMM error cause value.
+ */
+const char *emm_cause_str(enum emm_cause_id emm_cause);
+
+/**
+ * Convert ESM error cause enum to string.
+ * @param[in]   esm_cause   ESM cause enumeration value.
+ * @return const char *.    String of ESM error cause value.
+ */
+const char *esm_cause_str(enum esm_cause_id esm_cause);
+
+/**
+ * Convert DPO mode string to enum.
+ * @param[char]   *arg    DPO mode string value.
+ * @return enum dpo_mode_id. Enumeration of DPO mode value.
+ */
+enum dpo_mode_id dpo_mode_enum(const char *arg);
+
+/**
+ * Convert DPO mode enum to string.
+ * @param[in]    mode    DPO mode enumeration value.
+ * @return const char *. String of DPO mode value.
+ */
+const char *dpo_mode_str(enum dpo_mode_id mode);
+
+/**
+ * Convert Disable 5G mode string to enum.
+ * @param[char]   *arg    disable mode string value.
+ * @return enum disable_nr5g_mode_id. Enumeration of disable 5G mode value.
+ */
+enum disable_nr5g_mode_id disable_nr5g_mode_enum(const char *arg);
+
+/**
+ * Convert DPO mode enum to string.
+ * @param[in]    mode    disable 5G mode enumeration value.
+ * @return const char *. String of disable 5G mode value.
+ */
+const char *disable_nr5g_mode_str(enum disable_nr5g_mode_id mode);
 
 #endif // GSM_MODEM_API

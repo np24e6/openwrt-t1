@@ -531,7 +531,7 @@ static int miibus_get(a_uint32_t dev_id)
 	struct device_node *mdio_node = NULL;
 	struct device_node *switch_node = NULL;
 	struct platform_device *mdio_plat = NULL;
-	struct ipq40xx_mdio_data *mdio_data = NULL;
+	// struct ipq40xx_mdio_data *mdio_data = NULL;
 	struct qca_phy_priv *priv;
 
 	priv = qca_phy_priv_global[dev_id];
@@ -1008,7 +1008,7 @@ ssdk_plat_init(ssdk_init_cfg *cfg, a_uint32_t dev_id)
 		return -ENODEV;
 
 	if(ssdk_dt_global.ssdk_dt_switch_nodes[dev_id]->uniphy_reg_access_mode == HSL_REG_LOCAL_BUS) {
-		hppe_uniphy_addr = ioremap_nocache(ssdk_dt_global.ssdk_dt_switch_nodes[dev_id]->uniphyreg_base_addr,
+		hppe_uniphy_addr = ioremap(ssdk_dt_global.ssdk_dt_switch_nodes[dev_id]->uniphyreg_base_addr,
 					ssdk_dt_global.ssdk_dt_switch_nodes[dev_id]->uniphyreg_size);
 		if (!hppe_uniphy_addr) {
 			pr_debug("%s ioremap fail.", __func__);
@@ -1020,7 +1020,7 @@ ssdk_plat_init(ssdk_init_cfg *cfg, a_uint32_t dev_id)
 		cfg->reg_func.uniphy_reg_get = qca_uniphy_reg_read;
 	}
 	if(ssdk_dt_global.ssdk_dt_switch_nodes[dev_id]->switch_reg_access_mode == HSL_REG_LOCAL_BUS) {
-		qca_phy_priv_global[dev_id]->hw_addr = ioremap_nocache(ssdk_dt_global.ssdk_dt_switch_nodes[dev_id]->switchreg_base_addr,
+		qca_phy_priv_global[dev_id]->hw_addr = ioremap(ssdk_dt_global.ssdk_dt_switch_nodes[dev_id]->switchreg_base_addr,
 					ssdk_dt_global.ssdk_dt_switch_nodes[dev_id]->switchreg_size);
 		if (!qca_phy_priv_global[dev_id]->hw_addr) {
 			pr_debug("%s ioremap fail.", __func__);
@@ -1051,7 +1051,7 @@ ssdk_plat_init(ssdk_init_cfg *cfg, a_uint32_t dev_id)
 			return -1;
 		}*/
 
-		qca_phy_priv_global[dev_id]->psgmii_hw_addr = ioremap_nocache(ssdk_dt_global.ssdk_dt_switch_nodes[dev_id]->psgmiireg_base_addr,
+		qca_phy_priv_global[dev_id]->psgmii_hw_addr = ioremap(ssdk_dt_global.ssdk_dt_switch_nodes[dev_id]->psgmiireg_base_addr,
 				ssdk_dt_global.ssdk_dt_switch_nodes[dev_id]->psgmiireg_size);
 		if (!qca_phy_priv_global[dev_id]->psgmii_hw_addr) {
 			pr_debug("%s ioremap fail.", __func__);

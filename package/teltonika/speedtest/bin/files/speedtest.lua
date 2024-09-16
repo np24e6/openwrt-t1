@@ -178,7 +178,7 @@ local function flagCheck(num,flag)
 
         SERVER = trimLink(SERVER)
 
-        if socket.connect(SERVER, 80) == nil then
+        if socket.connect(SERVER, 8080) == nil then
             ERROR = "There was no connection to the given server"
             writeData()
         end
@@ -242,12 +242,12 @@ local function getClosestServer()
     return trimLink(t[1]["url"]);
 end
 
-local function checkConnection(url)
+local function checkConnection(url, port)
     local connection, result
 
     connection = socket.tcp()
     connection:settimeout(1000)
-    result = connection:connect(url, 80)
+    result = connection:connect(url, port and port or 8080)
     connection:close()
 
     if result then
@@ -273,7 +273,7 @@ end
 --Looks for internet connection
 STATE = "CHECKING_CONNECTION"
 writeData()
-if not checkConnection("www.google.com") then
+if not checkConnection("www.google.com", 80) then
     ERROR = "Internet connection is required to use this application."
     writeData()
     os.exit()

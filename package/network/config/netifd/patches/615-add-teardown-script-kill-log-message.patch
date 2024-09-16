@@ -1,0 +1,12 @@
+Index: netifd-2022-01-12-5ca5e0b4/proto-shell.c
+===================================================================
+--- netifd-2022-01-12-5ca5e0b4.orig/proto-shell.c
++++ netifd-2022-01-12-5ca5e0b4/proto-shell.c
+@@ -350,6 +350,7 @@ proto_shell_task_finish(struct proto_she
+ static void
+ proto_shell_teardown_timeout_cb(struct uloop_timeout *timeout)
+ {
++	netifd_log_message(L_NOTICE, "Teardown timeout was reached. Killing scripts\n");
+ 	struct proto_shell_state *state;
+ 
+ 	state = container_of(timeout, struct proto_shell_state, teardown_timeout);

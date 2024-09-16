@@ -146,6 +146,7 @@ _ucidef_add_switch_port() {
 			[ -n "$want_untag" ] && json_add_boolean want_untag "$want_untag"
 			[ -n "$role"       ] && json_add_string  role       "$role"
 			[ -n "$index"      ] && json_add_int     index      "$index"
+			[ -n "$sfp"        ] && json_add_boolean sfp	    "$sfp"
 		json_close_object
 	json_select ..
 
@@ -252,7 +253,7 @@ ucidef_add_switch() {
 	fi
 
 	local name="$1"; shift
-	local port num role device index need_tag prev_role
+	local port num role device index need_tag prev_role sfp
 	local cpu0 cpu1 cpu2 cpu3 cpu4 cpu5
 	local n_cpu=0 n_vlan=0 n_ports=0
 
@@ -283,6 +284,7 @@ ucidef_add_switch() {
 						role="${port#[0-9]*:}"; role="${role%:*}"
 					;;
 					[0-9]*:*)
+						[ "${port: -2}" = "#s" ] && sfp=1 && port="${port%%#s}"
 						num="${port%%:*}"
 						role="${port##*:}"
 					;;
@@ -292,7 +294,7 @@ ucidef_add_switch() {
 					_ucidef_add_switch_port
 				fi
 
-				unset num device role index need_tag want_untag
+				unset num device role index need_tag want_untag sfp
 			done
 		json_select ..
 	json_select ..
@@ -704,6 +706,12 @@ ucidef_set_poe_chip() {
 			json_close_object
 		json_select ..
 	json_select ..
+}
+
+ucidef_usbcheck() {
+	json_add_object usbcheck
+		json_add_string path "$1"
+	json_close_object
 }
 
 board_config_update() {

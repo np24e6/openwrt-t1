@@ -67,18 +67,4 @@ fi
 
 uci_commit "vuci"
 
-if [ -f "/etc/config/teltonika" ]; then
-	first_login=$(uci_get teltonika sys first_login)
-	if [ "$first_login" = "1" ]; then
-		uci_set "vuci" "main" "firstlogin" "1"
-	else
-		uci_remove "vuci" "main" "firstlogin" 2>/dev/null
-	fi
-
-	uci commit "vuci"
-
-	# Uncomment after RUT9 migration
-	# rm /etc/config/teltonika
-fi
-
 exit 0

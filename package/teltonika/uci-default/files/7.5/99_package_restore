@@ -1,0 +1,34 @@
+#!/bin/sh
+
+. /lib/functions.sh
+PACKAGE_FILE="/etc/package_restore.txt"
+[ -s "$PACKAGE_FILE" ] && sed -i "/modbus_data_sender/d" "$PACKAGE_FILE"
+get_enabled() {
+	local enabled
+
+	config_get_bool enabled "$1" "$2" "0"
+
+	[ "$enabled" -eq 1 ] && ENABLED="1"
+}
+
+check_config() {
+	local config="$1"
+	local section="$2"
+	local enabled_option="$3"
+	local pkg_name="$4"
+	local full_name="$5"
+
+	if [ -f "$PACKAGE_FILE" ] && grep -q -w "$pkg_name" "$PACKAGE_FILE"; then
+		return
+	fi
+
+	ENABLED="0"
+	config_load "$config"
+	config_foreach get_enabled "$section" "$enabled_option"
+
+	[ "$ENABLED" -eq 1 ] && echo "$pkg_name - $full_name" >> "$PACKAGE_FILE"
+}
+
+check_config "upnpd" "upnpd" "enabled" "miniupnpd" "UPNP"
+
+exit 0

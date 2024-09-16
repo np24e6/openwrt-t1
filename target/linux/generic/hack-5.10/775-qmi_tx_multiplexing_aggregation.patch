@@ -1,0 +1,343 @@
+Index: linux-5.10.191/drivers/net/usb/qmi_wwan.c
+===================================================================
+--- linux-5.10.191.orig/drivers/net/usb/qmi_wwan.c
++++ linux-5.10.191/drivers/net/usb/qmi_wwan.c
+@@ -47,6 +47,15 @@
+  * commands on a serial interface
+  */
+ 
++#ifndef ETH_P_MAP
++#define ETH_P_MAP 0xDA1A
++#endif
++
++#if (ETH_P_MAP == 0x00F9)
++#undef ETH_P_MAP
++#define ETH_P_MAP 0xDA1A
++#endif
++
+ #define RMNET_V5_URB_SIZE 31744 // 31 bit * 1024
+ 
+ /* driver specific data */
+@@ -58,6 +67,17 @@ struct qmi_wwan_state {
+ 	struct usb_interface *data;
+ };
+ 
++struct qmi_wwan_priv {
++	struct sk_buff *qmimux_tx_curr_aggr_skb;
++	struct tasklet_struct bh;
++	/* spinlock for tx packets aggregation */
++	spinlock_t qmimux_tx_mtx;
++	u32 timer_interval;
++	u32 qmimux_tx_max_datagrams;
++	u32 qmimux_tx_max_size;
++	u32 qmimux_tx_current_datagrams_n;
++};
++
+ enum qmi_wwan_flags {
+ 	QMI_WWAN_FLAG_RAWIP = 1 << 0,
+ 	QMI_WWAN_FLAG_MUX = 1 << 1,
+@@ -219,12 +239,103 @@ static int handle_egress(struct sk_buff
+ 	return 0;
+ }
+ 
++static void qmimux_tx_schedule(struct qmi_wwan_priv *priv)
++{
++	tasklet_schedule(&priv->bh);
++}
++
++static void qmimux_tx_put_data(struct sk_buff *aggr_skb, struct sk_buff *skb) {
++	void *data = skb_put(aggr_skb, skb->len);
++	skb_copy_bits(skb, 0, data, skb->len);
++}
++
++static struct sk_buff *qmimux_fill_tx_frame(struct usbnet *dev,
++					    struct sk_buff *skb,
++					    unsigned int *n, unsigned int *len)
++{
++	struct qmi_wwan_priv *priv = dev->driver_priv;
++	struct sk_buff *skb_current = NULL;
++
++	if (!priv->qmimux_tx_curr_aggr_skb) {
++		/* The incoming skb size should be less than max ul packet aggregated size
++                * otherwise it is dropped.
++                */
++		if (skb->len > priv->qmimux_tx_max_size) {
++			*n = 0;
++			goto exit_skb;
++		}
++
++		priv->qmimux_tx_curr_aggr_skb =
++			alloc_skb(priv->qmimux_tx_max_size, GFP_ATOMIC);
++		if (!priv->qmimux_tx_curr_aggr_skb) {
++			/* If memory allocation fails we simply return the skb in input */
++			skb_current = skb;
++		} else {
++			priv->qmimux_tx_curr_aggr_skb->dev = dev->net;
++			priv->qmimux_tx_current_datagrams_n = 1;
++			qmimux_tx_put_data(priv->qmimux_tx_curr_aggr_skb, skb);
++			dev_kfree_skb_any(skb);
++		}
++	} else {
++		/* Queue the incoming skb */
++		if (skb->len + priv->qmimux_tx_curr_aggr_skb->len >
++		    priv->qmimux_tx_max_size) {
++			/* Send the current skb and copy the incoming one in a new buffer */
++			skb_current = priv->qmimux_tx_curr_aggr_skb;
++			*n = priv->qmimux_tx_current_datagrams_n;
++			*len = skb_current->len -
++			       priv->qmimux_tx_current_datagrams_n * 4;
++			priv->qmimux_tx_curr_aggr_skb =
++				alloc_skb(priv->qmimux_tx_max_size, GFP_ATOMIC);
++			if (priv->qmimux_tx_curr_aggr_skb) {
++				priv->qmimux_tx_curr_aggr_skb->dev = dev->net;
++				qmimux_tx_put_data(priv->qmimux_tx_curr_aggr_skb, skb);
++
++				dev_kfree_skb_any(skb);
++				priv->qmimux_tx_current_datagrams_n = 1;
++				/* Start the timer, since we already have something to send */
++				qmimux_tx_schedule(priv);
++			}
++		} else {
++			/* Copy to current skb */
++			qmimux_tx_put_data(priv->qmimux_tx_curr_aggr_skb, skb);
++			dev_kfree_skb_any(skb);
++			priv->qmimux_tx_current_datagrams_n++;
++			if (priv->qmimux_tx_current_datagrams_n ==
++			    priv->qmimux_tx_max_datagrams) {
++				/* Maximum number of datagrams reached, send them */
++				skb_current = priv->qmimux_tx_curr_aggr_skb;
++				*n = priv->qmimux_tx_current_datagrams_n;
++				*len = skb_current->len -
++				       priv->qmimux_tx_current_datagrams_n * 4;
++				priv->qmimux_tx_curr_aggr_skb = NULL;
++			} else {
++			}
++		}
++	}
++
++	if (skb_current)
++		skb_current->protocol = htons(ETH_P_MAP);
++exit_skb:
++	if (!skb_current)
++		qmimux_tx_schedule(priv);
++
++	return skb_current;
++}
++
+ static netdev_tx_t qmimux_start_xmit(struct sk_buff *skb, struct net_device *dev)
+ {
+ 	struct qmimux_priv *priv = netdev_priv(dev);
++	struct qmi_wwan_priv *usbdev_priv;
+ 	unsigned int len = skb->len;
+ 	struct qmimux_hdr *hdr;
+-	netdev_tx_t ret;
++	struct sk_buff *skb_current;
++	struct usbnet *usbdev;
++	unsigned int n = 1;
++	struct pcpu_sw_netstats *stats64;
++
++	usbdev = netdev_priv(priv->real_dev);
++	usbdev_priv = usbdev->driver_priv;
+ 
+ 	if (!priv->qmap_v5) {
+ 		hdr = skb_push(skb, sizeof(struct qmimux_hdr));
+@@ -235,20 +346,31 @@ static netdev_tx_t qmimux_start_xmit(str
+ 	} else {
+ 		handle_egress(skb, dev);
+ 	}
+-	ret = dev_queue_xmit(skb);
+-
+-	if (likely(ret == NET_XMIT_SUCCESS || ret == NET_XMIT_CN)) {
+-		struct pcpu_sw_netstats *stats64 = this_cpu_ptr(priv->stats64);
+ 
+-		u64_stats_update_begin(&stats64->syncp);
+-		stats64->tx_packets++;
+-		stats64->tx_bytes += len;
+-		u64_stats_update_end(&stats64->syncp);
++	if (usbdev_priv->qmimux_tx_max_datagrams == 1) {
++		/* No tx aggregation requested */
++		skb_current = skb;
+ 	} else {
++		spin_lock_bh(&usbdev_priv->qmimux_tx_mtx);
++		skb_current = qmimux_fill_tx_frame(usbdev, skb, &n, &len);
++		spin_unlock_bh(&usbdev_priv->qmimux_tx_mtx);
++	}
++
++	if (skb_current) {
++		skb_current->protocol = htons(ETH_P_MAP);
++		dev_queue_xmit(skb_current);
++	} else if (n == 0) {
+ 		dev->stats.tx_dropped++;
++		return NET_XMIT_DROP;
+ 	}
+ 
+-	return ret;
++	stats64 = this_cpu_ptr(priv->stats64);
++	u64_stats_update_begin(&stats64->syncp);
++	stats64->tx_packets++;
++	stats64->tx_bytes += len;
++	u64_stats_update_end(&stats64->syncp);
++
++	return NET_XMIT_SUCCESS;
+ }
+ 
+ static void qmimux_get_stats64(struct net_device *net,
+@@ -277,6 +399,7 @@ static void qmimux_setup(struct net_devi
+ 	dev->netdev_ops      = &qmimux_netdev_ops;
+ 	dev->mtu             = 1500;
+ 	dev->needs_free_netdev = true;
++	dev->features        |= NETIF_F_SG | NETIF_F_FRAGLIST;
+ }
+ 
+ static struct net_device *qmimux_find_dev(struct usbnet *dev, u8 mux_id)
+@@ -412,6 +535,25 @@ static struct attribute_group qmi_wwan_s
+ 	.attrs = qmi_wwan_sysfs_qmimux_attrs,
+ };
+ 
++static void qmimux_txpath_bh(unsigned long data)
++{
++	struct qmi_wwan_priv *priv = (struct qmi_wwan_priv *)data;
++
++	if (!priv)
++		return;
++
++	spin_lock(&priv->qmimux_tx_mtx);
++	if (priv->qmimux_tx_curr_aggr_skb) {
++		struct sk_buff *skb = priv->qmimux_tx_curr_aggr_skb;
++
++		priv->qmimux_tx_curr_aggr_skb = NULL;
++		spin_unlock(&priv->qmimux_tx_mtx);
++		dev_queue_xmit(skb);
++	} else {
++		spin_unlock(&priv->qmimux_tx_mtx);
++	}
++}
++
+ static int qmimux_register_device(struct net_device *real_dev, u8 mux_id, int qmap_v5)
+ {
+ 	struct net_device *new_dev;
+@@ -639,14 +781,82 @@ err:
+ 	return ret;
+ }
+ 
++static ssize_t tx_max_datagrams_mux_store(struct device *d,
++					  struct device_attribute *attr,
++					  const char *buf, size_t len)
++{
++	struct usbnet *dev = netdev_priv(to_net_dev(d));
++	struct qmi_wwan_priv *priv = dev->driver_priv;
++	u8 qmimux_tx_max_datagrams;
++
++	if (netif_running(dev->net)) {
++		netdev_err(dev->net, "Cannot change a running device\n");
++		return -EBUSY;
++	}
++
++	if (kstrtou8(buf, 0, &qmimux_tx_max_datagrams))
++		return -EINVAL;
++
++	if (qmimux_tx_max_datagrams < 1)
++		return -EINVAL;
++
++	priv->qmimux_tx_max_datagrams = qmimux_tx_max_datagrams;
++
++	return len;
++}
++
++static ssize_t tx_max_datagrams_mux_show(struct device *d,
++					 struct device_attribute *attr,
++					 char *buf)
++{
++	struct usbnet *dev = netdev_priv(to_net_dev(d));
++	struct qmi_wwan_priv *priv = dev->driver_priv;
++
++	return sysfs_emit(buf, "%u\n", priv->qmimux_tx_max_datagrams);
++}
++
++static ssize_t tx_max_size_mux_store(struct device *d,
++				     struct device_attribute *attr,
++				     const char *buf, size_t len)
++{
++	struct usbnet *dev = netdev_priv(to_net_dev(d));
++	struct qmi_wwan_priv *priv = dev->driver_priv;
++	unsigned long qmimux_tx_max_size;
++
++	if (netif_running(dev->net)) {
++		netdev_err(dev->net, "Cannot change a running device\n");
++		return -EBUSY;
++	}
++
++	if (kstrtoul(buf, 0, &qmimux_tx_max_size))
++		return -EINVAL;
++
++	priv->qmimux_tx_max_size = qmimux_tx_max_size;
++
++	return len;
++}
++
++static ssize_t tx_max_size_mux_show(struct device *d,
++				    struct device_attribute *attr, char *buf)
++{
++	struct usbnet *dev = netdev_priv(to_net_dev(d));
++	struct qmi_wwan_priv *priv = dev->driver_priv;
++
++	return sysfs_emit(buf, "%u\n", priv->qmimux_tx_max_size);
++}
++
+ static DEVICE_ATTR_RW(raw_ip);
+ static DEVICE_ATTR_RW(add_mux);
+ static DEVICE_ATTR_RW(del_mux);
++static DEVICE_ATTR_RW(tx_max_datagrams_mux);
++static DEVICE_ATTR_RW(tx_max_size_mux);
+ 
+ static struct attribute *qmi_wwan_sysfs_attrs[] = {
+ 	&dev_attr_raw_ip.attr,
+ 	&dev_attr_add_mux.attr,
+ 	&dev_attr_del_mux.attr,
++	&dev_attr_tx_max_datagrams_mux.attr,
++	&dev_attr_tx_max_size_mux.attr,
+ 	NULL,
+ };
+ 
+@@ -869,10 +1079,16 @@ static int qmi_wwan_bind(struct usbnet *
+ 	struct usb_driver *driver = driver_of(intf);
+ 	struct qmi_wwan_state *info = (void *)&dev->data;
+ 	struct usb_cdc_parsed_header hdr;
++	struct qmi_wwan_priv *priv;
+ 
+ 	BUILD_BUG_ON((sizeof(((struct usbnet *)0)->data) <
+ 		      sizeof(struct qmi_wwan_state)));
+ 
++	priv = kzalloc(sizeof(*priv), GFP_KERNEL);
++	if (!priv)
++		return -ENOMEM;
++	dev->driver_priv = priv;
++
+ 	/* set up initial state */
+ 	info->control = intf;
+ 	info->data = intf;
+@@ -941,6 +1157,13 @@ static int qmi_wwan_bind(struct usbnet *
+ 		qmi_wwan_change_dtr(dev, true);
+ 	}
+ 
++	/* QMAP tx packets aggregation info */
++	tasklet_init(&priv->bh, qmimux_txpath_bh, (unsigned long)priv);
++	spin_lock_init(&priv->qmimux_tx_mtx);
++	/* tx packets aggregation disabled by default and max size set to default MTU */
++	priv->qmimux_tx_max_datagrams = 1;
++	priv->qmimux_tx_max_size = dev->net->mtu;
++
+ 	/* Never use the same address on both ends of the link, even if the
+ 	 * buggy firmware told us to. Or, if device is assigned the well-known
+ 	 * buggy firmware MAC address, replace it with a random address,
+@@ -972,6 +1195,10 @@ static void qmi_wwan_unbind(struct usbne
+ 	struct qmi_wwan_state *info = (void *)&dev->data;
+ 	struct usb_driver *driver = driver_of(intf);
+ 	struct usb_interface *other;
++	struct qmi_wwan_priv *priv = dev->driver_priv;
++
++	tasklet_kill(&priv->bh);
++	kfree(priv);
+ 
+ 	if (info->subdriver && info->subdriver->disconnect)
+ 		info->subdriver->disconnect(info->control);

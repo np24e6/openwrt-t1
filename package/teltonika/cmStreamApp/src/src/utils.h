@@ -1,17 +1,19 @@
 #ifndef UTILS_H
 #define UTILS_H
 
-#include "modem.h"
 #include "config.h"
+#ifdef MOBILE_SUPPORT
+#include "modem.h"
+#endif
 
 #define CM_MODEM_ERR	   10
 #define CM_DEVICE_ERR	   11
 #define AGNT_INTEGR_ERR	   12
 #define CONN_VAL_ERR	   13
 #define AGNT_BOOTSTRAP_ERR 14
-#define LUA_ERR		       15
+#define LUA_ERR		   15
 #define REPORTER_ERR	   16
-#define PUSH_ERR	   	   17
+#define PUSH_ERR	   17
 #define CONFIG_SCAN_ERR	   18
 #define ROUTER_STR_ERR	   19
 

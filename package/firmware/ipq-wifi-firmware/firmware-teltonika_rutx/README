@@ -1,0 +1,12 @@
+To create ath10k format firmware file from qca firmware binaries using
+https://github.com/qca/qca-swiss-army-knife tool, use this command:
+	./ath10k-fwencoder --create \
+	--firmware-version=10.4-3.53-00050 \
+	--features=no-p2p,mfp-support,peer-flow-ctrl,btcoex-param,allows-mesh-bcast,no-ps \
+	--firmware=athwlan.bin \
+	--otp=otp.bin \
+	--set-wmi-op-version=10.4 \
+	--set-htt-op-version=10.4 \
+	--firmware-codeswap=athwlan.codeswap.bin -o firmware-5.bin
+
+

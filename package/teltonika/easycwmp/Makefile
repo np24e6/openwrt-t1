@@ -6,10 +6,11 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=easycwmp
-PKG_VERSION:=2023-02-13
+PKG_VERSION:=2023-09-01
 PKG_RELEASE:=1
 
-PKG_SOURCE_VERSION:=d3c6684e08f302d33d5951d761f5c7f1cbf61f0e
+PKG_SOURCE_VERSION:=1.5
+
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_SOURCE_VERSION)-$(PKG_VERSION)
 PKG_SOURCE:=$(PKG_SOURCE_SUBDIR).tar.gz
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_SOURCE_SUBDIR)
@@ -92,6 +93,9 @@ ifeq ($(CONFIG_EASYCWMP_SCRIPTS_FULL),y)
 	$(CP) $(PKG_BUILD_DIR)/ext/openwrt/scripts/defaults $(1)/usr/share/easycwmp
 	$(CP) $(PKG_BUILD_DIR)/ext/openwrt/scripts/functions/common/* $(1)/usr/share/easycwmp/functions/
 	$(CP) $(PKG_BUILD_DIR)/ext/openwrt/scripts/functions/custom/* $(1)/usr/share/easycwmp/functions/
+ifeq ($(CONFIG_EASYCWMP_SCRIPT_GPS), y)
+	$(CP) $(PKG_BUILD_DIR)/ext/openwrt/scripts/functions/gps/* $(1)/usr/share/easycwmp/functions/
+endif
 ifeq ($(CONFIG_EASYCWMP_SCRIPT_HOTSPOT), y)
 	$(CP) $(PKG_BUILD_DIR)/ext/openwrt/scripts/functions/hotspot/* $(1)/usr/share/easycwmp/functions/
 endif

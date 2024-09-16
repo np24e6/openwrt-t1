@@ -8,6 +8,40 @@ mdcollect=$1
 cat << EOF
 -- GSM --
 
+modemGroup OBJECT-GROUP
+	OBJECTS { modemNum,
+		  mIndex,
+		  mDescr,
+		  mImei,
+		  mModel,
+		  mManufacturer,
+		  mRevision,
+		  mSerial,
+		  mIMSI,
+		  mSimState,
+		  mPinState,
+		  mNetState,
+		  mSignal,
+		  mOperator,
+		  mOperatorNumber,
+		  mConnectionState,
+		  mNetworkType,
+		  mTemperature,
+		  mCellID,
+		  mSINR,
+		  mRSRP,
+		  mRSRQ,
+		  $mdcollect_group
+		  mIP,
+		  $mdcollect_group1
+		  mICCID,
+		  $mdcollect_group2
+		  $mdcollect_group3
+		  connectionUptime }
+	STATUS current
+	DESCRIPTION "Mobile SNMP group defined according to RFC 2580"
+	::= { teltonikaSnmpGroups 2 }
+
 modemNum OBJECT-TYPE
 	SYNTAX		Integer32
 	MAX-ACCESS	read-only
@@ -34,31 +68,33 @@ modemEntry OBJECT-TYPE
 
 ModemEntry ::=
 	SEQUENCE {
-	mIndex			INTEGER,
+	mIndex			Integer32,
 	mDescr			DisplayString,
 	mImei			DisplayString,
 	mModel			DisplayString,
 	mManufacturer		DisplayString,
 	mRevision		DisplayString,
-	mSerial			DisplayString,
+	mSerial 		DisplayString,
 	mIMSI			DisplayString,
 	mSimState		DisplayString,
 	mPinState		DisplayString,
 	mNetState		DisplayString,
-	mSignal			INTEGER,
+	mSignal		INTEGER,
 	mOperator		DisplayString,
-	mOperatorNumber		DisplayString,
+	mOperatorNumber 	DisplayString,
 	mConnectionState	DisplayString,
 	mNetworkType		DisplayString,
 	mTemperature		INTEGER,
-	mCellID			DisplayString,
+	mCellID		DisplayString,
 	mSINR			DisplayString,
 	mRSRP			DisplayString,
 	mRSRQ			DisplayString,
 	$mdcollect_entry
 	mIP			DisplayString,
 	$mdcollect_entry1
-	mICCID			DisplayString,
+	$mdcollect_entry2
+	$mdcollect_entry3
+	mICCID			DisplayString
 	}
 
 mIndex OBJECT-TYPE
@@ -225,4 +261,17 @@ mICCID OBJECT-TYPE
 	STATUS      current
 	DESCRIPTION "SIM ICCID"
 	::= { modemEntry 27 }
+
+$mdcollect_obj2
+
+$mdcollect_obj3
+
+-- End of the table
+
+connectionUptime OBJECT-TYPE
+	SYNTAX		Unsigned32
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION	"Mobile connection uptime in seconds"
+	::= { mobile 3 }
 EOF

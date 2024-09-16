@@ -35,7 +35,7 @@ define Package/openvpn/Default
   URL:=http://openvpn.net
   SUBMENU:=VPN
   MENU:=1
-  DEPENDS:=+kmod-tun +OPENVPN_$(1)_ENABLE_LZO:liblzo +OPENVPN_$(1)_ENABLE_IPROUTE2:ip $(3) +libubus +libubox
+  DEPENDS:=+kmod-tun +OPENVPN_$(1)_ENABLE_LZO:liblzo +OPENVPN_$(1)_ENABLE_IPROUTE2:ip $(3) +libubus +libubox +libuci
   VARIANT:=$(1)
   PROVIDES:=openvpn openvpn-crypto
 endef
@@ -57,7 +57,7 @@ CONFIGURE_VARS += \
 	NETSTAT=/sbin/netstat
 
 TARGET_CFLAGS += -ffunction-sections -fdata-sections
-TARGET_LDFLAGS += -Wl,--gc-sections
+TARGET_LDFLAGS += -Wl,--gc-sections,-luci
 
 define Build/Configure
 	$(call Build/Configure/Default, \

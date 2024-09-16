@@ -1,7 +1,6 @@
 #!/bin/sh /etc/rc.common
 
 . /lib/functions.sh
-. /lib/functions/network.sh
 
 USE_PROCD=1
 START=99
@@ -20,13 +19,11 @@ add_interface_triggers()
 	[ -z "$interface_mark" ] || [ -z "$interfaces" ] && return 0
 
 	for iface in $interface_mark; do
-		network_get_device device "$iface"
-		procd_add_interface_trigger "interface.*" $device /etc/init.d/udprelay restart
+		procd_add_interface_trigger "interface.*" $iface /etc/init.d/udprelay restart
 	done
 
 	for iface in $interfaces; do
-		network_get_device device "$iface"
-		procd_add_interface_trigger "interface.*" $device /etc/init.d/udprelay restart
+		procd_add_interface_trigger "interface.*" $iface /etc/init.d/udprelay restart
 	done
 }
 
@@ -54,12 +51,17 @@ start_instance()
 	[ -z "$port" ] && return 0
 	[ -z "$interfaces" ] && return 0
 
-	network_get_device interface_mark "$interface_mark"
+	interface_mark="$(uci_get "network" "$interface_mark" "device")"
+
+	[ -z "$interface_mark" ] && return 0
 
 	for iface in $interfaces; do
-		network_get_device device "$iface"
+		device="$(uci_get "network" "$iface" "device")"
+		[ -z "$device" ] && continue
 		devices="${devices} $device"
 	done
+
+	[ -z "$devices" ] && return 0
 
 	procd_open_instance "udp-broadcast-relay-$sname"
 	procd_set_param command /usr/sbin/udp-broadcast-relay 1 "$port" $interface_mark $devices

@@ -36,7 +36,7 @@ image_demux() {
 		local fullname=$(get_full_section_name ${img} ${sec})
 
 		local position=$(dumpimage -l ${img} | grep "(${fullname})" | awk '{print $2}')
-		dumpimage -i ${img} -o /tmp/${fullname}.bin -T "flat_dt" -p "${position}" ${fullname} > /dev/null || { \
+		dumpimage -i ${img} -o "/tmp/sysupgrade.${fullname}.bin" -T "flat_dt" -p "${position}" ${fullname} > /dev/null || { \
 			echo "Error while extracting \"${sec}\" from ${img}"
 			return 1
 		}
@@ -79,7 +79,7 @@ do_flash_mtd() {
 	local pgsz=$(cat /sys/class/mtd/${mtdpart}/writesize)
 	[ -f "$CONF_TAR" -a "$SAVE_CONFIG" -eq 1 -a "$2" == "rootfs" ] && append="-j $CONF_TAR"
 
-	dd if=/tmp/${bin}.bin bs=${pgsz} conv=sync | mtd $append -e "/dev/${mtdpart}" write - "/dev/${mtdpart}"
+	dd if=/tmp/sysupgrade.${bin}.bin bs=${pgsz} conv=sync | mtd $append -e "/dev/${mtdpart}" write - "/dev/${mtdpart}"
 }
 
 do_flash_partition() {
@@ -95,7 +95,7 @@ do_flash_bootconfig() {
 
 	# Fail safe upgrade
 	if [ -f /proc/boot_info/getbinary_${bin} ]; then
-		cat /proc/boot_info/getbinary_${bin} > /tmp/${bin}.bin
+		cat /proc/boot_info/getbinary_${bin} > /tmp/sysupgrade.${bin}.bin
 		do_flash_partition $bin $mtdname
 	fi
 }
@@ -146,7 +146,7 @@ do_flash_ubi() {
 	}
 
 	mtdpart=$(grep "\"${mtdname}\"" /proc/mtd | awk -F: '{print $1}')
-	ubiformat /dev/${mtdpart} -y -f /tmp/${bin}.bin
+	ubiformat /dev/${mtdpart} -y -f /tmp/sysupgrade.${bin}.bin
 }
 
 do_flash_tz() {
@@ -267,7 +267,7 @@ platform_do_upgrade_ipq() {
 	fi
 
 	for sec in $(print_sections $1); do
-		if [ ! -e /tmp/${sec}.bin ]; then
+		if [ ! -e /tmp/sysupgrade.${sec}.bin ]; then
 			echo "Error: Cant' find ${sec} after switching to ramfs, aborting upgrade!"
 			reboot
 		fi

@@ -1,33 +1,34 @@
+Index: ubox-2020-10-25-9ef88681/log/logdb.h
+===================================================================
 --- /dev/null
-+++ b/log/logdb.h
-@@ -0,0 +1,37 @@
++++ ubox-2020-10-25-9ef88681/log/logdb.h
+@@ -0,0 +1,36 @@
 +#ifndef LOGDB_H
 +#define LOGDB_H
 +
 +#include <sqlite3.h>
 +
 +#define DB "/log/log.db"
++#define DB_BAK "/tmp/log.db_bak"
 +#define DB_CORRUPTED "/tmp/log.db_corrupted"
 +
 +#define TABLE_E "EVENTS"
 +#define TABLE_C "CONNECTIONS"
-+#define TABLE_S "SMS_TABLE"
 +#define TABLE_N "NETWORK"
 +#define TABLE_SYS "SYSTEM"
 +
-+#define MAX_EVENT 4000
-+#define MAX_NET 4000
-+#define MAX_SYS 4000
-+#define MAX_CON 3500
-+#define MAX_SMS_TABLE 7000
++#define MAX_EVENT 2000
++#define MAX_NET 3000
++#define MAX_SYS 3000
++#define MAX_CON 2500
 +#define SQLITE_ERROR 1
 +#define SQLITE_SUCCESS 0
 +
 +#define DB_CHECK_COLUMN "SELECT COUNT(*) FROM pragma_table_info('%s') WHERE name='%s';"
 +#define DB_ADD_COL "ALTER TABLE %s ADD COLUMN %s;"
 +
-+int init_db();
-+int db_action(int action, sqlite3_stmt *stmt);
++int init_db(void);
++int db_action(int action, sqlite3_stmt **stmt);
 +sqlite3_stmt *db_prepare(char *query);
 +
 +enum {
@@ -38,9 +39,11 @@
 +	ACTION_SELECT
 +};
 +#endif
+Index: ubox-2020-10-25-9ef88681/log/logdb.c
+===================================================================
 --- /dev/null
-+++ b/log/logdb.c
-@@ -0,0 +1,300 @@
++++ ubox-2020-10-25-9ef88681/log/logdb.c
+@@ -0,0 +1,503 @@
 +#define _GNU_SOURCE
 +
 +#include <stdio.h>
@@ -48,29 +51,52 @@
 +#include <unistd.h>
 +#include <string.h>
 +#include <syslog.h>
++#include <libubox/uloop.h>
 +
 +#include "logdb.h"
 +
 +#define DB_BUFF_128 128
++#define ROW_THRESHOLD 100
 +
-+sqlite3 *conn = NULL;
-+static int EVENT_size = 0;
-+static int CON_size = 0;
-+static int SMS_size = 0;
-+static int SYS_size = 0;
-+static int NET_size = 0;
++#ifndef ARRAY_SIZE
++#define ARRAY_SIZE(arr) sizeof(arr) / sizeof(arr[0])
++#endif
++
++typedef struct {
++	const char *name;
++	int max_limit;
++	int current;
++} t_data;
++
++enum {
++	T_EVENTS,
++	T_CONN,
++	T_NET,
++	T_SYS
++};
++
++static t_data g_info[] = {
++	[T_EVENTS] = { .name = TABLE_E, .max_limit = MAX_EVENT },
++	[T_CONN] = { .name = TABLE_C, .max_limit = MAX_NET },
++	[T_SYS] = { .name = TABLE_SYS, .max_limit = MAX_SYS },
++	[T_NET] = { .name = TABLE_N, .max_limit = MAX_CON }
++};
++
++static struct uloop_process g_cp_proc;
++static bool g_vc_running;
++static sqlite3 *conn;
++
++static void open_bk_db(struct uloop_process *proc, int ret);
 +
 +static int check_column_exists(sqlite3 *con, const char *table, const char *column)
 +{
 +	int count = 0;
 +	sqlite3_stmt *res;
-+	char *err_msg = NULL;
 +	char query[DB_BUFF_128] = { 0 };
 +
 +	snprintf(query, DB_BUFF_128, DB_CHECK_COLUMN, table, column);
 +	if (sqlite3_prepare_v2(con, query, -1, &res, NULL) != SQLITE_OK) {
-+		fprintf(stderr, "%s(%d) %s\n", __func__, __LINE__, err_msg);
-+		sqlite3_free(err_msg);
++		syslog(LOG_CRIT, "sqlite3 prepare error: %s\n", sqlite3_errmsg(conn));
 +
 +		return SQLITE_ERROR;
 +	}
@@ -78,6 +104,8 @@
 +	if (sqlite3_step(res) == SQLITE_ROW) {
 +		count = sqlite3_column_int(res, 0);
 +	}
++
++	sqlite3_finalize(res);
 +
 +	return count ? SQLITE_SUCCESS : SQLITE_ERROR;
 +}
@@ -89,7 +117,7 @@
 +
 +	snprintf(query, DB_BUFF_128, DB_ADD_COL, table, column);
 +	if (sqlite3_exec(con, query, NULL, NULL, &err_msg) != SQLITE_OK) {
-+		fprintf(stderr, "%s(%d) %s\n", __func__, __LINE__, err_msg);
++		syslog(LOG_CRIT, "sqlite3 exec error: %s\n", err_msg);
 +		sqlite3_free(err_msg);
 +
 +		return SQLITE_ERROR;
@@ -125,7 +153,15 @@
 +	error = sqlite3_prepare_v2(conn, query, -1, &res, &tail);
 +	if (error != SQLITE_OK) {
 +		syslog(LOG_CRIT, "sqlite3 query error: %s\n", sqlite3_errmsg(conn));
-+		exit(EXIT_FAILURE);
++
++		if (error == SQLITE_CORRUPT) {
++			syslog(LOG_CRIT, "sqlite3 database is corrupted\n");
++			sqlite3_close(conn);
++			unlink(DB);
++			init_db();
++		}
++
++		return;
 +	}
 +	output = sqlite3_step(res);
 +
@@ -142,7 +178,7 @@
 +        execute_query("create table if not exists NETWORK (ID INTEGER PRIMARY KEY AUTOINCREMENT, TIME TIMESTAMP, NAME CHAR(15), TYPE CHAR(15), TEXT CHAR(100))");
 +        execute_query("create table if not exists CONNECTIONS (ID INTEGER PRIMARY KEY AUTOINCREMENT, TIME TIMESTAMP, NAME CHAR(15), TYPE CHAR(15), TEXT CHAR(100))");
 +        execute_query("create table if not exists SMS_COUNT (ID INTEGER PRIMARY KEY AUTOINCREMENT, SLOT char(15), SEND INTEGER, RECIEVED INTEGER);insert into SMS_COUNT (SLOT,SEND,RECIEVED) values ('SLOT1',0,0);insert into SMS_COUNT (SLOT,SEND,RECIEVED) values ('SLOT2',0,0)");
-+        execute_query("create table if not exists SMS_TABLE (ID INTEGER PRIMARY KEY AUTOINCREMENT, SIM char(15), SEND INTEGER, TIME INTEGER)");
++        execute_query("drop table if exists SMS_TABLE");
 +}
 +
 +static int check_db_size(char *db_name)
@@ -210,7 +246,213 @@
 +	return check_db_size(db_name);
 +}
 +
-+static int execute_action(sqlite3 *conn, sqlite3_stmt *stmt, int action)
++static void tweak_max_rows(void)
++{
++	int skipped = 0;
++
++	for (size_t i = 0; i < ARRAY_SIZE(g_info); i++) {
++		if (g_info[i].max_limit > ROW_THRESHOLD) {
++			g_info[i].max_limit -= ROW_THRESHOLD;
++		} else {
++			syslog(LOG_ERR, "Unable to reduce max rows (%d) on `%s` table\n",
++				g_info[i].max_limit, g_info[i].name);
++			skipped++;
++			continue;
++		}
++
++		syslog(LOG_ERR, "Modified max rows to %d on `%s` table\n",
++			g_info[i].max_limit, g_info[i].name);
++	}
++
++	if (skipped == ARRAY_SIZE(g_info)) {
++		syslog(LOG_ERR, "Unable to optimize database\n");
++	}
++}
++
++static bool maintain_max_rows(void)
++{
++	bool tidy = false;
++
++	for (size_t i = 0; i < ARRAY_SIZE(g_info); i++) {
++		fprintf(stdout, "`%s` %d/%d\n", g_info[i].name, g_info[i].current, g_info[i].max_limit);
++
++		if (g_info[i].current < g_info[i].max_limit) {
++			continue;
++		}
++
++		fprintf(stdout, "Reached peak row level in `%s` table...\n", g_info[i].name);
++
++		g_info[i].current = delete_from_db((char *)g_info[i].name, g_info[i].max_limit);
++
++		if (g_info[i].current >= 0) {
++			tidy = true;
++			continue;
++		}
++
++		syslog(LOG_ERR, "Failed to delete MAX ID from `%s` table\n", g_info[i].name);
++	}
++
++	return tidy;
++}
++
++static bool cp_async(const char *src, const char *dst, struct uloop_process *p,
++		     void (cb(struct uloop_process *, int)))
++{
++	p->cb = cb;
++	p->pid = fork();
++
++	if (p->pid == -1) {
++		return false;
++	}
++
++	if (p->pid == 0) {
++		execl("/bin/cp", "/bin/cp", "-f", src, dst, NULL);
++		exit(-1);
++	}
++
++	uloop_process_add(p);
++	return true;
++}
++
++static void restore_db_conn(struct uloop_process *proc, int ret)
++{
++	uloop_process_delete(proc);
++
++	if (ret) {
++		syslog(LOG_ERR, "Failed to restore database\n");
++
++		if (sqlite3_open(DB_BAK, &conn)) {
++			syslog(LOG_ERR, "Can't open backup database\n");
++			sqlite3_close(conn);
++			return;
++		}
++
++		tweak_max_rows();
++		maintain_max_rows();
++		open_bk_db(NULL, 0);
++		return;
++	}
++
++	unlink(DB_BAK);
++
++	if (sqlite3_open(DB, &conn)) {
++		syslog(LOG_ERR, "Can't open database\n");
++		sqlite3_close(conn);
++	}
++
++	syslog(LOG_INFO, "Finished database optimization\n");
++	g_vc_running = false;
++}
++
++static void open_bk_db(struct uloop_process *proc, int ret)
++
++{
++	char *err = NULL;
++
++	if (proc) {
++		uloop_process_delete(proc);
++	}
++
++	if (ret) {
++		syslog(LOG_ERR, "Failed to backup database\n");
++		goto restore_conn;
++	}
++
++	if (proc && sqlite3_open(DB_BAK, &conn)) {
++		syslog(LOG_ERR, "Can't open backup database\n");
++		sqlite3_close(conn);
++		unlink(DB_BAK);
++		goto restore_conn;
++	}
++
++	if (sqlite3_exec(conn, "VACUUM", NULL, NULL, &err) != SQLITE_OK) {
++		syslog(LOG_ERR, "Failed to execute `VACUUM`: `%s`\n", err);
++	}
++
++	if (sqlite3_close(conn) != SQLITE_OK) {
++		syslog(LOG_ERR, "Failed to close db: %s\n", sqlite3_errmsg(conn));
++		return;
++	}
++
++	unlink(DB);
++
++	if (!cp_async(DB_BAK, DB, &g_cp_proc, restore_db_conn)) {
++		syslog(LOG_ERR, "Failed to execute async copy\n");
++	}
++
++	return;
++
++restore_conn:
++	g_vc_running = false;
++	syslog(LOG_INFO, "Unable to optimize database size\n");
++
++	if (sqlite3_open(DB, &conn)) {
++		syslog(LOG_ERR, "Can't open database\n");
++		sqlite3_close(conn);
++	}
++}
++
++static bool tidy_database(void)
++{
++	char *err = NULL;
++
++	if (g_vc_running) {
++		fprintf(stdout, "Vacuum is already initialized..\n");
++		return true;
++	}
++
++	fprintf(stdout, "Running vaccum...\n");
++	g_vc_running = true;
++
++	if (sqlite3_exec(conn, "VACUUM", NULL, NULL, &err) == SQLITE_OK) {
++	        syslog(LOG_INFO, "Finished database optimization\n");
++	        g_vc_running = false;
++		return true;
++	}
++
++	fprintf(stdout, "Failed to execute `VACUUM`...: `%s` %p\n", err, conn);
++
++	// most likely failed because partition is full
++	// we need to move it into /tmp and perform vacuum again
++	if (sqlite3_close(conn) != SQLITE_OK) {
++		syslog(LOG_ERR, "Failed to close db: %s\n", sqlite3_errmsg(conn));
++		syslog(LOG_INFO, "Unable to optimize database size\n");
++		g_vc_running = false;
++		return false;
++	}
++
++	fprintf(stdout, "Moving DB to /tmp partition...\n");
++
++	if (!cp_async(DB, DB_BAK, &g_cp_proc, open_bk_db)) {
++		syslog(LOG_ERR, "Failed to execute async copy\n");
++		syslog(LOG_INFO, "Unable to optimize database size\n");
++		g_vc_running = false;
++		return false;
++	}
++
++	return true;
++}
++
++static void perform_cleanup(sqlite3_stmt **stmt, bool force)
++{
++	if (!force && !maintain_max_rows()) {
++		return;
++	}
++
++	// close previous statement, otherwise we will not be able to close database
++	if (*stmt) {
++		sqlite3_finalize(*stmt);
++		*stmt = NULL;
++	}
++
++	syslog(LOG_INFO, "Starting database size optimization...\n");
++
++	if (!tidy_database()) {
++		syslog(LOG_INFO, "Unable to optimize database size\n");
++	}
++}
++
++static int execute_action(sqlite3 *conn, sqlite3_stmt **stmt, int action)
 +{
 +	int output = 0;
 +
@@ -219,71 +461,46 @@
 +		return SQLITE_ERROR;
 +	}
 +
-+	output = sqlite3_step(stmt);
++	output = sqlite3_step(*stmt);
 +	if (output == SQLITE_ROW) {
 +		while (output == SQLITE_ROW) {
-+			output = sqlite3_step(stmt);
++			output = sqlite3_step(*stmt);
 +		}
 +	} else if (output != SQLITE_DONE) {
 +		syslog(LOG_ERR, "failed to step through query. Error '%s'\n",sqlite3_errmsg(conn));
++		if (output == SQLITE_FULL || output == SQLITE_READONLY || output == SQLITE_CANTOPEN) {
++			// attempt to recover full database
++			perform_cleanup(stmt, true);
++		}
 +		return SQLITE_ERROR;
 +	}
 +
 +	switch(action) {
 +	case ACTION_EVENTS:
-+		EVENT_size++;
-+
-+		if (EVENT_size >= MAX_EVENT) {
-+			if ((EVENT_size = delete_from_db(TABLE_E, MAX_EVENT)) < 0) {
-+				syslog(LOG_ERR, "Failed to delete MAX ID from EVENTS table\n");
-+				return SQLITE_ERROR;
-+			}
-+		}
++		g_info[T_EVENTS].current++;
 +		break;
 +	case ACTION_NETWORK:
-+		NET_size++;
-+
-+		if (NET_size >= MAX_NET) {
-+			if ((NET_size = delete_from_db(TABLE_N, MAX_NET)) < 0) {
-+				syslog(LOG_ERR, "Failed to delete MAX ID from NETWORK table\n");
-+				return SQLITE_ERROR;
-+			}
-+		}
++		g_info[T_NET].current++;
 +		break;
 +	case ACTION_CONNECTION:
-+		CON_size++;
-+
-+		if (CON_size >= MAX_CON) {
-+			if ((CON_size = delete_from_db(TABLE_C, MAX_CON)) < 0) {
-+				syslog(LOG_ERR, "Failed to delete MAX ID from CONNECTION table\n");
-+				return SQLITE_ERROR;
-+			}
-+		}
++		g_info[T_CONN].current++;
 +		break;
 +	case ACTION_SYSTEM:
-+		SYS_size++;
-+
-+		if (SYS_size >= MAX_SYS) {
-+			if ((SYS_size = delete_from_db(TABLE_SYS, MAX_SYS)) < 0) {
-+				syslog(LOG_ERR, "Failed to delete MAX ID from SYSTEM table\n");
-+				return SQLITE_ERROR;
-+			}
-+		}
++		g_info[T_SYS].current++;
 +		break;
 +	}
 +
-+	if (SMS_size >= MAX_SMS_TABLE) {
-+		if ((SMS_size = delete_from_db(TABLE_S, MAX_SMS_TABLE)) < 0) {
-+			syslog(LOG_ERR, "Failed to delete MAX ID from SMS table\n");
-+			return SQLITE_ERROR;
-+		}
-+	}
++	perform_cleanup(stmt, false);
 +
 +	return SQLITE_SUCCESS;
 +}
 +
-+int db_action(int action, sqlite3_stmt *stmt)
++int db_action(int action, sqlite3_stmt **stmt)
 +{
++	if (g_vc_running) {
++		return SQLITE_ERROR;
++	}
++
 +	if (execute_action(conn, stmt, action) != 0) {
 +		syslog(LOG_ERR, "Failed to execute query\n");
 +		return SQLITE_ERROR;
@@ -292,7 +509,12 @@
 +	return SQLITE_SUCCESS;
 +}
 +
-+sqlite3_stmt *db_prepare(char *query){
++sqlite3_stmt *db_prepare(char *query)
++{
++	if (g_vc_running) {
++		return NULL;
++	}
++
 +	sqlite3_stmt *stmt = NULL;
 +	if (sqlite3_prepare_v2(conn, query, -1, &stmt, NULL) != SQLITE_OK) {
 +		syslog(LOG_ERR, "sqlite3_prepare_v2 failure: %s\n", sqlite3_errmsg(conn));
@@ -301,10 +523,10 @@
 +	return stmt;
 +}
 +
-+int init_db()
++int init_db(void)
 +{
 +	if (sqlite3_open(DB, &conn)) {
-+		syslog(LOG_CRIT, "Can't open database\n");
++		syslog(LOG_ERR, "Can't open database\n");
 +		return SQLITE_ERROR;
 +	}
 +
@@ -314,29 +536,13 @@
 +	//Migrate Old fashioned  DB
 +	fix_db(conn);
 +
-+	if ((EVENT_size = check_db_size(TABLE_E)) < 0) {
-+		syslog(LOG_ERR, "failed to check %s table size\n", TABLE_E);
-+		return SQLITE_ERROR;
-+	}
++	for (size_t i = 0; i < ARRAY_SIZE(g_info); i++) {
++		g_info[i].current = check_db_size((char *)g_info[i].name);
 +
-+	if ((CON_size = check_db_size(TABLE_C)) < 0) {
-+		syslog(LOG_ERR, "failed to check %s table size\n", TABLE_C);
-+		return SQLITE_ERROR;
-+	}
-+
-+	if ((SMS_size = check_db_size(TABLE_S)) < 0) {
-+		syslog(LOG_ERR, "failed to check %s table size\n", TABLE_S);
-+		return SQLITE_ERROR;
-+	}
-+
-+	if ((SYS_size = check_db_size(TABLE_SYS)) < 0) {
-+		syslog(LOG_ERR, "failed to check %s table size\n", TABLE_SYS);
-+		return SQLITE_ERROR;
-+	}
-+
-+	if ((NET_size = check_db_size(TABLE_N)) < 0) {
-+		syslog(LOG_ERR, "failed to check %s table size\n", TABLE_N);
-+		return SQLITE_ERROR;
++		if (g_info[i].current < 0) {
++			syslog(LOG_ERR, "failed to check %s table size\n", g_info[i].name);
++			g_info[i].current = 0;
++		}
 +	}
 +
 +	return SQLITE_SUCCESS;

@@ -7,7 +7,7 @@ include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=rut_fota
 
-PKG_SOURCE_VERSION:=1079d50349d5cbbdc70e7f205251b2e204c28038
+PKG_SOURCE_VERSION:=2.12
 
 include $(INCLUDE_DIR)/package.mk
 

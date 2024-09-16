@@ -1,0 +1,31 @@
+#!/bin/sh
+
+. /lib/functions.sh
+[ ! -f "/lib/functions/modem.sh" ] && return 0
+. /lib/functions/modem.sh
+
+import_mwan(){
+	config_get name "$1" "name"
+	if [ "$name" = "wan" ]; then
+		config_get network "$1" "network"
+		for n in $network ; do
+			metric=$(uci_get network "$n" metric)
+			if [ -n "$metric" ]; then
+				create_multiwan_iface "$n" "$metric"
+				uci_reorder "mwan3" "$n" "$metric"
+			fi
+		done
+	fi
+}
+
+uci_remove "mwan3" "wan"
+uci_remove "mwan3" "wan_member_mwan"
+uci_remove "mwan3" "wan_member_balance"
+uci_remove_list "mwan3" "mwan_default" "use_member" "wan_member_mwan"
+uci_remove_list "mwan3" "balance_default" "use_member" "wan_member_balance"
+uci_remove "mwan3" "@condition[0]"
+config_load "firewall"
+config_foreach import_mwan "zone"
+uci_commit "mwan3"
+
+exit 0

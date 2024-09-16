@@ -1,0 +1,33 @@
+#!/bin/sh
+
+# On <=7.4, BACnet WebUI did not support USB serial devices
+# On <=7.4, M-Bus only supported /dev/mbus
+# DLMS is only coming out in 7.5
+
+. /lib/functions.sh
+
+repair_option() {
+	local section_id="$1"
+	local opt_name="$2"
+
+	# We must use uci_get instead of config_get because previous config_load might have overwritten CONFIG_$SECTION_$OPTION
+	local opt="$(uci_get "$config" "$section_id" "$opt_name")"
+
+	if [ "$(printf "%.15s" "$opt")" = "/dev/rs232_usb_" ] ; then
+		uci_set "$config" "$section_id" "$opt_name" "/dev/usb_serial_${opt##/dev/rs232_usb_}"
+	fi
+}
+
+repair_section() {
+	repair_option "$1" device
+	repair_option "$1" serial_port # dnp3_master only
+}
+
+for config in modbus modbus_master modbusgateway rs_console rs_modbus rs_modem rs_overip rs_ntrip dnp3_master dnp3_outstation
+do
+	config_load "$config"
+	config_foreach repair_section
+	uci_commit "$config"
+done
+
+exit 0

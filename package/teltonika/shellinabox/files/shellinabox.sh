@@ -4,8 +4,15 @@ paragraph=""
 shell_cert="/tmp/certificate.pem"
 uhttpd_cert=$(uci -q get uhttpd.main.cert)
 uhttpd_key=$(uci -q get uhttpd.main.key)
+key_type=$(uci get uhttpd.defaults.key_type)
 enable=$(uci -q get cli.status.enable)
-if [ "$enable" -eq "1" ]; then
+wan_deny=0
+echo "$SERVER_ADDR" | grep -q -E '^192\.168\.|^10\.' || {
+	wan_access=$(uci -q get cli.status._cliWanAccess)
+	[ "$wan_access" -eq "1" ] || wan_deny=1
+}
+
+if [ "$enable" -eq "1" ] && [ "$wan_deny" -eq "0" ]; then
 	port=$(uci -q get cli.status.port)
 	if [ -z "$port" ]; then
 		port="4200-4220"
@@ -20,10 +27,13 @@ if [ "$enable" -eq "1" ]; then
 	fi
 	shells=$(ps | grep -v grep | grep -c shellinaboxd)
 	if [ "$shells" -lt "$shell_limit" ]; then
-		if [ ! -s "$shell_cert" ]; then
-			openssl x509 -inform DER -in "$uhttpd_cert" -outform PEM | cat "$uhttpd_key" - > /tmp/shellinabox.tmp
+			if grep -q "[^[:print:][:blank:]]" "$uhttpd_cert"; then
+				openssl x509 -inform DER -in "$uhttpd_cert" -outform PEM | cat "$uhttpd_key" - > /tmp/shellinabox.tmp
+			else
+				cat "$uhttpd_key" "$uhttpd_cert" > /tmp/shellinabox.tmp
+			fi
 			mv /tmp/shellinabox.tmp "$shell_cert"
-		fi
+			[ "$key_type" = "ec" ] && sed -i 's/\([^C]\) PRIVATE/\1 EC PRIVATE/g' "$shell_cert"
 		if [ -n "$HTTPS" ]; then
 			/usr/sbin/shellinaboxd --disable-ssl-menu --cgi="${port}" -u 0 -g 0 -c /tmp
 		else

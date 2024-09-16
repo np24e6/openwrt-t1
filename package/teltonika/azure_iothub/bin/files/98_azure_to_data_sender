@@ -1,0 +1,214 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+[ -f "/etc/config/azure_iothub" ] || return 0
+[ -f "/etc/config/data_sender" ] || return 0
+
+#Test if we have a legacy config here
+uci -q get azure_iothub.azure_iothub &>/dev/null || return 0
+
+DEV_COUNT=0
+
+_config_get() {
+	local sec="$1"
+	local option="$2"
+	local tmp
+
+	config_get tmp "$sec" "$option" 0
+	[ "$tmp" -eq 1 ]
+}
+
+set_gsm_plugin() {
+	local sec="$1"
+	local new_sec="$2"
+	local col_sec="$3"
+	local fmt_str modem
+
+	config_get modem "$sec" modem
+
+	_config_get "$sec" ipaddr && fmt_str="$fmt_str\"ip\": %ip%, \"ipv6\": %ipv6%, "
+	_config_get "$sec" connstate && fmt_str="$fmt_str\"connection_state\": \"%connstate%\", "
+	_config_get "$sec" netstate && fmt_str="$fmt_str\"network_state\": \"%netstate%\", "
+	_config_get "$sec" imei && fmt_str="$fmt_str\"imei\": \"%imei%\", "
+	_config_get "$sec" iccid && fmt_str="$fmt_str\"iccid\": \"%iccid%\", "
+	_config_get "$sec" model && fmt_str="$fmt_str\"model\": \"%model%\", "
+	_config_get "$sec" manuf && fmt_str="$fmt_str\"manufacturer\": \"%manuf%\", "
+	_config_get "$sec" serial && fmt_str="$fmt_str\"serial\": \"%serial%\", "
+	_config_get "$sec" revision && fmt_str="$fmt_str\"revision\": \"%revision%\", "
+	_config_get "$sec" imsi && fmt_str="$fmt_str\"imsi\": \"%imsi%\", "
+	_config_get "$sec" simstate && fmt_str="$fmt_str\"sim_state\": \"%simstate%\", "
+	_config_get "$sec" pinstate && fmt_str="$fmt_str\"pin_state\": \"%pinstate%\", "
+	_config_get "$sec" signal && fmt_str="$fmt_str\"signal\": %rssi%, "
+	_config_get "$sec" rscp && fmt_str="$fmt_str\"rscp\": %rscp%, "
+	_config_get "$sec" ecio && fmt_str="$fmt_str\"ecio\": %ecio%, "
+	_config_get "$sec" rsrp && fmt_str="$fmt_str\"rsrp\": %rsrp%, "
+	_config_get "$sec" sinr && fmt_str="$fmt_str\"sinr\": %sinr%, "
+	_config_get "$sec" rsrq && fmt_str="$fmt_str\"rsrq\": %rsrq%, "
+	_config_get "$sec" cellid && fmt_str="$fmt_str\"cell_id\": \"%cellid%\", "
+	_config_get "$sec" operator && fmt_str="$fmt_str\"operator\": \"%operator%\", "
+	_config_get "$sec" opernum && fmt_str="$fmt_str\"operator_number\": %opernum%, "
+	_config_get "$sec" conntype && fmt_str="$fmt_str\"connection_type\": \"%conntype%\", "
+	_config_get "$sec" temp && fmt_str="$fmt_str\"temperature\": %temp%, "
+	_config_get "$sec" pincount && fmt_str="$fmt_str\"pin_count\": %pincount%, "
+
+   [ -n "$fmt_str" ] || return 0
+
+	__FORMAT_STR="${__FORMAT_STR:+$__FORMAT_STR, }%$new_sec%"
+
+	uci_add data_sender input "$new_sec"
+	uci_set data_sender "$new_sec" plugin gsm
+	uci_set data_sender "$new_sec" name "$new_sec"
+	uci_set data_sender "$new_sec" gsm_modem_id "$modem"
+	uci_set data_sender "$new_sec" format "custom"
+	uci_set data_sender "$new_sec" na_str "N/A"
+	uci_set data_sender "$new_sec" delimiter ","
+	uci_set data_sender "$new_sec" format_str "$(echo $fmt_str | sed 's/,$//')"
+
+	uci_add_list data_sender "$col_sec" input "$new_sec"
+}
+
+set_mdcollect_plugin() {
+	local sec="$1"
+	local new_sec="$2"
+	local col_sec="$3"
+	local fmt_str modem sim
+
+	config_get interface "$sec" interface
+	_config_get "$sec" bsent && fmt_str="$fmt_str\"bytes_sent\": %tx%, "
+	_config_get "$sec" brecv && fmt_str="$fmt_str\"bytes_received\": %rx%, "
+
+	[ -n "$fmt_str" ] || return 0
+
+	if [ -n "$interface" ]; then
+		sim="$(uci -q get network.$interface.sim)"
+		modem="$(uci -q get network.$interface.modem)"
+	fi
+
+	__FORMAT_STR="${__FORMAT_STR:+$__FORMAT_STR, }%$new_sec%"
+
+	uci_add data_sender input "$new_sec"
+	uci_set data_sender "$new_sec" plugin mdcollect
+	uci_set data_sender "$new_sec" name "$new_sec"
+	uci_set data_sender "$new_sec" format "custom"
+	uci_set data_sender "$new_sec" na_str "N/A"
+	uci_set data_sender "$new_sec" delimiter ","
+	uci_set data_sender "$new_sec" mdc_period "month"
+	uci_set data_sender "$new_sec" format_str "$(echo $fmt_str | sed 's/,$//')"
+
+	if [ -n "$sim" ] && [ -n "$modem" ]; then
+		uci_set data_sender "$new_sec" mdc_sim "$sim"
+		uci_set data_sender "$new_sec" mdc_modem_id "$modem"
+	fi
+
+	uci_add_list data_sender "$col_sec" input "$new_sec"
+}
+
+set_mqtt_plugin() {
+	local sec="$1"
+	local new_sec="$2"
+	local col_sec="$3"
+
+	__FORMAT_STR="%$new_sec%"
+
+	config_get mqtt_username "$sec" mqtt_username
+	config_get mqtt_ip "$sec" mqtt_ip
+	config_get msg_type "$sec" msg_type
+	config_get mqtt_password "$sec" mqtt_password
+	config_get mqtt_port "$sec" mqtt_port
+	config_get mqtt_topic "$sec" mqtt_topic
+
+	uci_add data_sender input "$new_sec"
+	uci_set data_sender "$new_sec" plugin mqtt
+	uci_set data_sender "$new_sec" name "$new_sec"
+	uci_set data_sender "$new_sec" mqtt_in_username "$mqtt_username"
+	uci_set data_sender "$new_sec" mqtt_in_password "$mqtt_password"
+	uci_set data_sender "$new_sec" mqtt_in_port "$mqtt_port"
+	uci_set data_sender "$new_sec" mqtt_in_topic "$mqtt_topic"
+	uci_set data_sender "$new_sec" mqtt_in_host "$mqtt_ip"
+	uci_set data_sender "$new_sec" format "custom"
+	uci_set data_sender "$new_sec" na_str "N/A"
+	uci_set data_sender "$new_sec" delimiter ","
+	uci_set data_sender "$new_sec" format_str "\"value\": \"%data%\""
+
+
+	uci_add_list data_sender "$col_sec" input "$new_sec"
+}
+
+set_ubus_plugin() {
+	local sec="$1"
+	local new_sec="$2"
+	local col_sec="$3"
+
+	uci_add data_sender output "$new_sec"
+	uci_set data_sender "$new_sec" plugin ubus
+	uci_set data_sender "$new_sec" name $new_sec""
+	uci_set data_sender "$new_sec" ubus_object "azure.device_$DEV_COUNT"
+	uci_set data_sender "$new_sec" ubus_method "message"
+
+	uci_set data_sender "$col_sec" output "$new_sec"
+}
+
+set_input_plugin() {
+	local type="$1"
+	local sec="$2"
+	local col_sec="$3"
+
+	case "$type" in
+		gsmctl)
+			set_gsm_plugin "$sec" "gsm_in_$DEV_COUNT" "$col_sec"
+			set_mdcollect_plugin "$sec" "mdcollect_in_$DEV_COUNT" "$col_sec"
+			;;
+		mqtt)
+			set_mqtt_plugin "$sec" "mqtt_in_$DEV_COUNT" "$col_sec"
+			;;
+	esac
+}
+
+set_azure_conf() {
+
+	local sec="$1"
+
+	config_get enable "$sec" enable
+	config_get connection_string "$sec" connection_string
+
+	uci_add azure_iothub azure_iothub "device_$DEV_COUNT"
+	uci_set azure_iothub "$CONFIG_SECTION" enabled "$enable"
+	uci_set azure_iothub "$CONFIG_SECTION" connection_type 'iothub'
+	uci_set azure_iothub "$CONFIG_SECTION" connection_string "$connection_string"
+}
+
+migrate_azure() {
+	local sec="$1"
+
+	DEV_COUNT=$((DEV_COUNT+1))
+
+	config_get enable "$sec" enable
+	config_get msg_type "$sec" msg_type
+	config_get message_interval "$sec" message_interval
+
+	#Test legacy config
+	[ -n "$msg_type" ] || return
+
+	uci_add data_sender collection "collection_$DEV_COUNT"
+	collection_sec="$CONFIG_SECTION"
+
+	set_input_plugin "$msg_type" "$sec" "$collection_sec"
+	set_ubus_plugin "$sec" "device_$DEV_COUNT" "$collection_sec"
+
+	uci_set data_sender "$collection_sec" enabled "$enable" 
+	uci_set data_sender "$collection_sec" period "$message_interval"
+	uci_set data_sender "$collection_sec" name "collection_$DEV_COUNT"
+	uci_set data_sender "$collection_sec" format "custom"
+	uci_set data_sender "$collection_sec" format_str "{$__FORMAT_STR}"
+	uci_set data_sender "$collection_sec" na_str "N/A"
+
+	set_azure_conf "$sec"
+	uci_remove azure_iothub "$sec"
+}
+
+config_load azure_iothub
+config_foreach migrate_azure azure_iothub
+
+uci commit
+/etc/init.d/data_sender reload

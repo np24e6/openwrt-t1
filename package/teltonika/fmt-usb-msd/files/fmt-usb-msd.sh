@@ -27,7 +27,6 @@ Usage:
 	$bname unmountable                  get unmountable USB MSD list in json format
 	$bname unmount [device|mountpoint]  unmount an USB MSD
 "
-	exit 1
 }
 
 refresh_msd() {
@@ -44,7 +43,7 @@ msdos_pt() {
 
 	dd if=/dev/zero of=$msd bs=1M count=16 conv=fsync || {
 		logger "failed to clear partitions on $msd"
-		exit 1
+		return 1
 	}
 
 	refresh_msd
@@ -53,7 +52,7 @@ msdos_pt() {
 	# create msdos partition table with a single partition spanning the whole disk
 	echo -e "o\nn\np\n1\n\n\nt\n$system_id\nw\n" | fdisk $msd || {
 		logger "failed to create partition table on $msd"
-		exit 1
+		return 1
 	}
 
 	refresh_msd
@@ -67,7 +66,7 @@ msdos_pt() {
 	done
 
 	logger "failed to create partition table on $msd: timed out waiting for device"
-	exit 1
+	return 1
 }
 
 msd_is_overlay() {
@@ -79,8 +78,9 @@ msd_is_overlay() {
 last_inserted_ok() {
 	[ ! -b "$msd" ] || msd_is_overlay && {
 		logger "storage device unavailable"
-		exit 1
+		return 1
 	}
+	return 0
 }
 
 add_space_consumption() {
@@ -171,31 +171,31 @@ blockdev_hotplug_pause() {
 
 case $1 in
 	ntfs|exfat)
-		last_inserted_ok
+		last_inserted_ok || return
 		blockdev_hotplug_pause 1
-		msdos_pt $1
+		msdos_pt $1 || return
 		mkfs.exfat -L "$2" $msd1 || {
 			logger "exfat volume creation failed"
-			exit 1
+			return 1
 		}
 		refresh_msd
 		block mount
 		blockdev_hotplug_pause 0
 	;;
 	ext?)
-		last_inserted_ok
+		last_inserted_ok || return
 		blockdev_hotplug_pause 1
-		msdos_pt $1
+		msdos_pt $1 || return
 		mkfs.ext4 -O ^has_journal -F -L "$2" $msd1 || {
 			logger "EXT4 volume creation failed"
-			exit 1
+			return 1
 		}
 		refresh_msd
 		block mount
 		blockdev_hotplug_pause 0
 	;;
 	target)
-		last_inserted_ok
+		last_inserted_ok || return
 		echo $msd
 		return 0
 	;;
@@ -204,12 +204,13 @@ case $1 in
 		return
 	;;
 	unmount)
-		[ -z "$2" ] && usage
+		[ -z "$2" ] && { usage; return 1; }
 		unmount $2
 		return
 	;;
 	*)
 		usage
+		return 1
 	;;
 esac
 

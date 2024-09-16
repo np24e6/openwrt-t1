@@ -19,7 +19,8 @@ set_drift() {
 }
 
 start_client() {
-	local enabled interval force failover sync_enabled tmz_sync_enabled count
+	local enabled interval force failover sync_enabled tmz_sync_enabled count \
+	      hotplug_script="/usr/sbin/ntpd-hotplug"
 
 	config_get enabled $1 enabled 0
 	[ "$enabled" != "0" ] || return
@@ -43,6 +44,7 @@ start_client() {
 	[ "$sync_enabled" != "0" ] && procd_append_param command -m
 	[ "$tmz_sync_enabled" != "0" ] && procd_append_param command -z
 	[ "$count" != "0" ] && procd_append_param command -c $count
+	[ "$hotplug_script" != "0" ] && procd_append_param command -e $hotplug_script
 
 	procd_set_param file /etc/config/ntpclient
 	procd_set_param stderr 1

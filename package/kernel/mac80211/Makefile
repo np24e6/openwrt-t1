@@ -104,6 +104,9 @@ define KernelPackage/cfg80211
   FILES:= \
 	$(PKG_BUILD_DIR)/compat/compat.ko \
 	$(PKG_BUILD_DIR)/net/wireless/cfg80211.ko
+  ifneq ($(CONFIG_USES_VENDOR_WIFI_DRIVER),)
+	AUTOLOAD:=$(call AutoProbe,cfg80211)
+  endif
 endef
 
 define KernelPackage/cfg80211/description
@@ -536,7 +539,7 @@ define Build/InstallDev
 	rm -f $(1)/usr/include/mac80211-backport/linux/module.h
 endef
 
-
+ifeq ($(CONFIG_USES_VENDOR_WIFI_DRIVER),)
 define KernelPackage/cfg80211/install
 	$(INSTALL_DIR) $(1)/lib/wifi $(1)/lib/netifd/wireless
 	$(INSTALL_DATA) ./files/lib/wifi/mac80211.sh $(1)/lib/wifi
@@ -545,6 +548,7 @@ define KernelPackage/cfg80211/install
 	$(INSTALL_DIR) $(1)/etc/hotplug.d/ieee80211
 	$(INSTALL_DATA) ./files/mac80211.hotplug $(1)/etc/hotplug.d/ieee80211/10-wifi-detect
 endef
+endif
 
 define KernelPackage/zd1211rw/install
 	$(INSTALL_DIR) $(1)/lib/firmware/zd1211

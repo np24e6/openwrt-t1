@@ -53,11 +53,16 @@ define Package/netifd/install
 	$(if $(CONFIG_SMP_SUPPORT),, \
 		$(RM) $(1)/etc/hotplug.d/net/20-smp-packet-steering)
 
-	$(if $(and $(CONFIG_MOBILE_SUPPORT),$(CONFIG_DEV_SINGLE_ETH_PORT)),,\
+	$(if $(and $(CONFIG_MOBILE_SUPPORT),$(CONFIG_HAS_SINGLE_ETH_PORT)),,\
     	rm $(1)/etc/hotplug.d/iface/29-setup-mobile-gateway-passthrough-bridge)
 
 	$(if $(CONFIG_ADVANCED_NETWORK),,\
 		$(RM) $(1)/lib/netifd/proto/l2tpv3.sh)
+
+	$(if $(CONFIG_PPP_MOBILE_SUPPORT),, \
+		$(RM) $(1)/lib/netifd/proto/pppmobile.sh)
+
+
 endef
 
 $(eval $(call BuildPackage,netifd))

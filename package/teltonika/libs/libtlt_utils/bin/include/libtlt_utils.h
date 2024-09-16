@@ -119,4 +119,6 @@ unsigned char *lutil_base64_decode(const unsigned char *src, size_t len,
  */
 int lutil_v_add(lutil_v *d, const void *s, size_t n);
 
+const char *lutil_protocol_resolve(char *port);
+
 #endif //__LIBTLT_SMTP_H

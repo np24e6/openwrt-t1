@@ -2,6 +2,11 @@
 
 . /lib/functions.sh
 
+[ -f "/etc/config/teltonika" ] && {
+    cp /rom/etc/config/rpcd /etc/config/rpcd
+    exit 0
+}
+
 login_cb() {
     local sec="$1"
     local username password
@@ -10,7 +15,7 @@ login_cb() {
     [ "$username" != "admin" ] && return
 
     config_get password "$sec" "password"
-    [ "$username" != "$p$root" ] && \
+    [ "$password" == "\$p\$root" ] && \
         uci_set rpcd "$sec" "password" "\$p\$admin"
 }
 

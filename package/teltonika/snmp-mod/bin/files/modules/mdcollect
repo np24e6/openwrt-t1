@@ -1,9 +1,26 @@
+mdcollect_group='mSent,
+		 mReceived,'
 
-mdcollect_entry='mSent			INTEGER,
-	mReceived		INTEGER,'
+mdcollect_group1='mSentToday,
+		  mReceivedToday,'
 
-mdcollect_entry1='mSentToday		INTEGER,
-	mReceivedToday		INTEGER,'
+mdcollect_group2='mSentCurrentWeek,
+		  mReceivedCurrentWeek,'
+
+mdcollect_group3='mSentCurrentMonth,
+		  mReceivedCurrentMonth,'
+
+mdcollect_entry='mSent			Counter64,
+	mReceived		Counter64,'
+
+mdcollect_entry1='mSentToday		Counter64,
+	mReceivedToday		Counter64,'
+
+mdcollect_entry2='mSentCurrentWeek	Counter64,
+	mReceivedCurrentWeek	Counter64,'
+
+mdcollect_entry3='mSentCurrentMonth	Counter64,
+	mReceivedCurrentMonth	Counter64,'
 
 mdcollect_obj='mSent OBJECT-TYPE
 	SYNTAX		Counter64
@@ -33,3 +50,30 @@ mReceivedToday OBJECT-TYPE
 	DESCRIPTION	"Bytes received today"
 	::= { modemEntry 26 }'
 	
+mdcollect_obj2='mSentCurrentWeek OBJECT-TYPE
+	SYNTAX		Counter64
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION	"Bytes sent current week"
+	::= { modemEntry 28 }
+
+mReceivedCurrentWeek OBJECT-TYPE
+	SYNTAX		Counter64
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION	"Bytes received current week"
+	::= { modemEntry 29 }'
+
+mdcollect_obj3='mSentCurrentMonth OBJECT-TYPE
+	SYNTAX		Counter64
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION	"Bytes sent current month"
+	::= { modemEntry 30 }
+
+mReceivedCurrentMonth OBJECT-TYPE
+	SYNTAX		Counter64
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION	"Bytes received current month"
+	::= { modemEntry 31 }'

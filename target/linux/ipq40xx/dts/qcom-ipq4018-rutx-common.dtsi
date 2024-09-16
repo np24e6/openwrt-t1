@@ -10,16 +10,30 @@
 		reg = <0x80000000 0x10000000>;
 	};
 
+	chosen {
+		bootargs = "console=ttyMSM0,115200";
+	};
+
 	soc {
 		mdio@90000 {
 			status = "ok";
 			pinctrl-0 = <&mdio_pins>;
 			pinctrl-names = "default";
-			phy-reset-gpio = <&tlmm 62 0>;
+			reset-gpios = <&tlmm 62 GPIO_ACTIVE_LOW>;
+			reset-delay-us = <2000>;
 
 			ethphy4: ethernet-phy@4 {
 				qcom,fiber-enable;
 			};
+		};
+
+		ess-switch@c000000 {
+			resets = <&gcc ESS_RESET>, <&gcc ESS_MAC1_ARES>,
+					 <&gcc ESS_MAC2_ARES>, <&gcc ESS_MAC3_ARES>,
+					 <&gcc ESS_MAC4_ARES>, <&gcc ESS_MAC5_ARES>;
+			reset-names = "ess_rst", "ess_mac1_rst",
+						  "ess_mac2_rst", "ess_mac3_rst",
+						  "ess_mac4_rst", "ess_mac5_rst";
 		};
 
 		pinctrl@1000000 {

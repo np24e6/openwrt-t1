@@ -1,0 +1,186 @@
+ndex: linux-5.10.185/drivers/net/usb/usbnet.c
+===================================================================
+Index: linux-5.10.191/drivers/net/usb/usbnet.c
+===================================================================
+--- linux-5.10.191.orig/drivers/net/usb/usbnet.c
++++ linux-5.10.191/drivers/net/usb/usbnet.c
+@@ -330,7 +330,11 @@ void usbnet_skb_return (struct usbnet *d
+ 	if (skb_defer_rx_timestamp(skb))
+ 		return;
+ 
+-	status = netif_rx (skb);
++	if (dev->driver_info->flags & FLAG_NAPI_RX) {
++		status = usbnet_napi_rx(dev, skb);
++	} else {
++		status = netif_rx (skb);
++	}
+ 	if (status != NET_RX_SUCCESS)
+ 		netif_dbg(dev, rx_err, dev->net,
+ 			  "netif_rx status %d\n", status);
+@@ -582,6 +586,44 @@ static inline int rx_process(struct usbn
+ 
+ /*-------------------------------------------------------------------------*/
+ 
++static inline void usb_free_skb(struct sk_buff *skb);
++
++int usbnet_napi_rx_poll(struct napi_struct *napi, int budget) {
++	struct usbnet *dev = container_of(napi, struct usbnet, rx_napi);
++	int done = 0;
++
++	while (done < budget) {
++		struct sk_buff *skb = __skb_dequeue(&dev->rx_napi_complete);
++
++		if (!skb)
++			break;
++
++		napi_gro_receive(napi, skb);
++		done++;
++	}
++
++	dev->rx_napi_budget = budget - done;
++
++	while (dev->rx_napi_budget > 0) {
++		struct sk_buff *urb = skb_dequeue(&dev->rx_napi_pending);
++
++		if (!urb)
++			break;
++
++		if (rx_process(dev, urb))
++			usb_free_skb(urb);
++	}
++
++	done = budget - dev->rx_napi_budget;
++
++	if (done < budget)
++		napi_complete_done(napi, done);
++
++	return done;
++}
++
++/*-------------------------------------------------------------------------*/
++
+ static void rx_complete (struct urb *urb)
+ {
+ 	struct sk_buff		*skb = (struct sk_buff *) urb->context;
+@@ -658,7 +700,30 @@ block:
+ 			set_bit(EVENT_RX_KILL, &dev->flags);
+ 	}
+ 
+-	state = defer_bh(dev, skb, &dev->rxq, state);
++	if (dev->driver_info->flags & FLAG_NAPI_RX) {
++		if (state == rx_done) {
++			unsigned long flags;
++
++			spin_lock_irqsave(&dev->rx_napi_pending.lock, flags);
++
++			if (skb_queue_len(&dev->rx_napi_pending) < USBNET_RX_NAPI_QLEN) {
++				skb_unlink(skb, &dev->rxq);
++				__skb_queue_tail(&dev->rx_napi_pending, skb);
++				napi_schedule(&dev->rx_napi);
++			} else {
++				dev->net->stats.rx_dropped++;
++				state = rx_cleanup;
++			}
++
++			spin_unlock_irqrestore(&dev->rx_napi_pending.lock, flags);
++		}
++
++		if (state != rx_done) {
++			state = defer_bh(dev, skb, &dev->rxq, state);
++		}
++	} else {
++		state = defer_bh(dev, skb, &dev->rxq, state);
++	}
+ 
+ 	if (urb) {
+ 		if (netif_running (dev->net) &&
+@@ -839,6 +904,12 @@ int usbnet_stop (struct net_device *net)
+ 
+ 	usbnet_status_stop(dev);
+ 
++	if (info->flags & FLAG_NAPI_RX) {
++		napi_disable(&dev->rx_napi);
++		skb_queue_purge(&dev->rx_napi_pending);
++		skb_queue_purge(&dev->rx_napi_complete);
++	}
++
+ 	usbnet_purge_paused_rxq(dev);
+ 
+ 	mpn = !test_and_clear_bit(EVENT_NO_RUNTIME_PM, &dev->flags);
+@@ -902,6 +973,10 @@ int usbnet_open (struct net_device *net)
+ 		goto done;
+ 	}
+ 
++	if (info->flags & FLAG_NAPI_RX) {
++		napi_enable(&dev->rx_napi);
++	}
++
+ 	/* start any status interrupt transfer */
+ 	if (dev->interrupt) {
+ 		retval = usbnet_status_start(dev, GFP_KERNEL);
+@@ -1613,6 +1688,10 @@ void usbnet_disconnect (struct usb_inter
+ 	if (dev->driver_info->unbind)
+ 		dev->driver_info->unbind (dev, intf);
+ 
++	if (dev->driver_info->flags & FLAG_NAPI_RX) {
++		netif_napi_del(&dev->rx_napi);
++	}
++
+ 	usb_kill_urb(dev->interrupt);
+ 	usb_free_urb(dev->interrupt);
+ 	kfree(dev->padding_pkt);
+@@ -1809,6 +1888,13 @@ usbnet_probe (struct usb_interface *udev
+ 		}
+ 	}
+ 
++	if (info->flags & FLAG_NAPI_RX) {
++		skb_queue_head_init (&dev->rx_napi_pending);
++		skb_queue_head_init (&dev->rx_napi_complete);
++		net->threaded = 1;
++		netif_napi_add(net, &dev->rx_napi, usbnet_napi_rx_poll, USBNET_RX_NAPI_WEIGHT);
++	}
++
+ 	status = register_netdev (net);
+ 	if (status)
+ 		goto out5;
+Index: linux-5.10.191/include/linux/usb/usbnet.h
+===================================================================
+--- linux-5.10.191.orig/include/linux/usb/usbnet.h
++++ linux-5.10.191/include/linux/usb/usbnet.h
+@@ -65,6 +65,13 @@ struct usbnet {
+ 	struct usb_anchor	deferred;
+ 	struct tasklet_struct	bh;
+ 
++#define USBNET_RX_NAPI_QLEN 128
++#define USBNET_RX_NAPI_WEIGHT 64
++	struct napi_struct	rx_napi;
++	struct sk_buff_head	rx_napi_pending;
++	struct sk_buff_head	rx_napi_complete;
++	int 			rx_napi_budget;
++
+ 	struct pcpu_sw_netstats __percpu *stats64;
+ 
+ 	struct work_struct	kevent;
+@@ -124,6 +131,7 @@ struct driver_info {
+ #define FLAG_RX_ASSEMBLE	0x4000	/* rx packets may span >1 frames */
+ #define FLAG_NOARP		0x8000	/* device can't do ARP */
+ #define FLAG_PAGE_FRAG		0x10000	/* Allocate usb transfer buffers as page fragments */
++#define FLAG_NAPI_RX		0x20000	/* Support handling rx_fixup in napi ctx */
+ 
+ 	/* init device ... can sleep, or cause probe() failure */
+ 	int	(*bind)(struct usbnet *, struct usb_interface *);
+@@ -346,4 +354,14 @@ inline struct sk_buff *usbnet_clone_zero
+ 	return nskb;
+ }
+ 
++inline int usbnet_napi_rx(struct usbnet *dev, struct sk_buff *skb) {
++	if (dev->rx_napi_budget > 0) {
++		dev->rx_napi_budget--;
++		napi_gro_receive(&dev->rx_napi, skb);
++	} else {
++		__skb_queue_tail(&dev->rx_napi_complete, skb);
++	}
++	return NET_RX_SUCCESS;
++}
++
+ #endif /* __LINUX_USB_USBNET_H */

@@ -52,6 +52,7 @@ start_service() {
 		procd_set_param respawn
 		procd_close_instance
 	fi
+	ubus send mwan3 "$(ubus call mwan3 status)"
 }
 
 stop_service() {

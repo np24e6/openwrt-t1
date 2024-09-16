@@ -1,0 +1,14 @@
+--- a/drivers/mtd/nand/spi/xtx.c
++++ b/drivers/mtd/nand/spi/xtx.c
+@@ -49,8 +49,9 @@ static int xt26g0xa_ooblayout_free(struc
+ 	if (section)
+ 		return -ERANGE;
+ 
+-	region->offset = 1;
+-	region->length = 47;
++	/* Reserve 2 bytes for the BBM. */
++	region->offset = 2;
++	region->length = 62;
+ 
+ 	return 0;
+ }

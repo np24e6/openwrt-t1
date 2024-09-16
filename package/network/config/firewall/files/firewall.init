@@ -40,10 +40,16 @@ service_triggers() {
 restart() {
 	fw3 restart
 	procd_send_signal ip_blockd "*" SIGUSR1
+	[[ -x /usr/bin/rutx_hnat ]] && {
+		/usr/bin/rutx_hnat
+	}
 }
 
 start_service() {
 	fw3 ${QUIET} start
+	[[ -x /usr/bin/rutx_hnat ]] && {
+		/usr/bin/rutx_hnat
+	}
 }
 
 stop_service() {

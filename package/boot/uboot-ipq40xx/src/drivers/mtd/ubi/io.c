@@ -641,7 +641,9 @@ int ubi_io_read_ec_hdr(struct ubi_device *ubi, int pnum,
 
 	err = ubi_io_read(ubi, ec_hdr, pnum, 0, UBI_EC_HDR_SIZE);
 	if (err) {
-		if (err != UBI_IO_BITFLIPS && err != -EBADMSG)
+		if (err == UBI_IO_BITFLIPS)
+			dbg_io("bit-flip while reading EC header from PEB %d", pnum);
+		else if (err != -EBADMSG)
 			return err;
 
 		/*
@@ -918,9 +920,10 @@ int ubi_io_read_vid_hdr(struct ubi_device *ubi, int pnum,
 	err = ubi_io_read(ubi, p, pnum, ubi->vid_hdr_aloffset,
 			  ubi->vid_hdr_alsize);
 	if (err) {
-		if (err != UBI_IO_BITFLIPS && err != -EBADMSG)
+		if (err == UBI_IO_BITFLIPS)
+			dbg_io("bit-flip while reading VID header from PEB %d", pnum);
+		else if (err != -EBADMSG)
 			return err;
-
 		/*
 		 * We read all the data, but either a correctable bit-flip
 		 * occurred, or MTD reported about some data integrity error,

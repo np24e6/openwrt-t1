@@ -1,7 +1,7 @@
 /*
- * Copyright © Stéphane Raimbault <stephane.raimbault@gmail.com>
+ * Copyright © 2001-2013 Stéphane Raimbault <stephane.raimbault@gmail.com>
  *
- * SPDX-License-Identifier: LGPL-2.1-or-later
+ * SPDX-License-Identifier: LGPL-2.1+
  */
 
 #if defined(_WIN32)
@@ -77,11 +77,7 @@ static int _modbus_tcp_init_win32(void)
 static int _modbus_set_slave(modbus_t *ctx, int slave)
 {
     /* Broadcast address is 0 (MODBUS_BROADCAST_ADDRESS) */
-    if (slave >= 0 && slave <= 247) {
-        ctx->slave = slave;
-    } else if (slave == MODBUS_TCP_SLAVE) {
-        /* The special value MODBUS_TCP_SLAVE (0xFF) can be used in TCP mode to
-         * restore the default value. */
+    if (slave >= 0 && slave <= 255) {
         ctx->slave = slave;
     } else {
         errno = EINVAL;
@@ -154,7 +150,7 @@ static int _modbus_tcp_prepare_response_tid(const uint8_t *req, int *req_length)
 
 static int _modbus_tcp_send_msg_pre(uint8_t *req, int req_length)
 {
-    /* Subtract the header length to the message length */
+    /* Substract the header length to the message length */
     int mbap_length = req_length - 6;
 
     req[4] = mbap_length >> 8;
@@ -323,7 +319,7 @@ static int _modbus_tcp_connect(modbus_t *ctx)
 #endif
 
     ctx->s = socket(PF_INET, flags, 0);
-    if (ctx->s < 0) {
+    if (ctx->s == -1) {
         return -1;
     }
 
@@ -432,7 +428,7 @@ static int _modbus_tcp_pi_connect(modbus_t *ctx)
 /* Closes the network connection and socket in TCP mode */
 static void _modbus_tcp_close(modbus_t *ctx)
 {
-    if (ctx->s >= 0) {
+    if (ctx->s != -1) {
         shutdown(ctx->s, SHUT_RDWR);
         close(ctx->s);
         ctx->s = -1;
@@ -680,7 +676,7 @@ int modbus_tcp_accept(modbus_t *ctx, int *s)
     ctx->s = accept(*s, (struct sockaddr *)&addr, &addrlen);
 #endif
 
-    if (ctx->s < 0) {
+    if (ctx->s == -1) {
         return -1;
     }
 
@@ -710,7 +706,7 @@ int modbus_tcp_pi_accept(modbus_t *ctx, int *s)
     ctx->s = accept(*s, (struct sockaddr *)&addr, &addrlen);
 #endif
 
-    if (ctx->s < 0) {
+    if (ctx->s == -1) {
         return -1;
     }
 
@@ -746,20 +742,7 @@ static int _modbus_tcp_select(modbus_t *ctx, fd_set *rset, struct timeval *tv, i
 }
 
 static void _modbus_tcp_free(modbus_t *ctx) {
-    if (ctx->backend_data) {
-        free(ctx->backend_data);
-    }
-    free(ctx);
-}
-
-static void _modbus_tcp_pi_free(modbus_t *ctx) {
-    if (ctx->backend_data) {
-        modbus_tcp_pi_t *ctx_tcp_pi = ctx->backend_data;
-        free(ctx_tcp_pi->node);
-        free(ctx_tcp_pi->service);
-        free(ctx->backend_data);
-    }
-
+    free(ctx->backend_data);
     free(ctx);
 }
 
@@ -805,7 +788,7 @@ const modbus_backend_t _modbus_tcp_pi_backend = {
     _modbus_tcp_close,
     _modbus_tcp_flush,
     _modbus_tcp_select,
-    _modbus_tcp_pi_free
+    _modbus_tcp_free
 };
 
 modbus_t* modbus_new_tcp(const char *ip, int port)
@@ -835,7 +818,7 @@ modbus_t* modbus_new_tcp(const char *ip, int port)
     _modbus_init_common(ctx);
 
     /* Could be changed after to reach a remote serial Modbus device */
-    ctx->slave = MODBUS_TCP_SLAVE;
+    ctx->slave = 0x01;
 
     ctx->backend = &_modbus_tcp_backend;
 
@@ -877,6 +860,8 @@ modbus_t* modbus_new_tcp_pi(const char *node, const char *service)
 {
     modbus_t *ctx;
     modbus_tcp_pi_t *ctx_tcp_pi;
+    size_t dest_size;
+    size_t ret_size;
 
     ctx = (modbus_t *)malloc(sizeof(modbus_t));
     if (ctx == NULL) {
@@ -885,7 +870,7 @@ modbus_t* modbus_new_tcp_pi(const char *node, const char *service)
     _modbus_init_common(ctx);
 
     /* Could be changed after to reach a remote serial Modbus device */
-    ctx->slave = MODBUS_TCP_SLAVE;
+    ctx->slave = 0x01;
 
     ctx->backend = &_modbus_tcp_pi_backend;
 
@@ -896,32 +881,47 @@ modbus_t* modbus_new_tcp_pi(const char *node, const char *service)
         return NULL;
     }
     ctx_tcp_pi = (modbus_tcp_pi_t *)ctx->backend_data;
-    ctx_tcp_pi->node = NULL;
-    ctx_tcp_pi->service = NULL;
 
-    if (node != NULL) {
-        ctx_tcp_pi->node = strdup(node);
-    } else {
+    if (node == NULL) {
         /* The node argument can be empty to indicate any hosts */
-        ctx_tcp_pi->node = strdup("");
+        ctx_tcp_pi->node[0] = 0;
+    } else {
+        dest_size = sizeof(char) * _MODBUS_TCP_PI_NODE_LENGTH;
+        ret_size = strlcpy(ctx_tcp_pi->node, node, dest_size);
+        if (ret_size == 0) {
+            fprintf(stderr, "The node string is empty\n");
+            modbus_free(ctx);
+            errno = EINVAL;
+            return NULL;
+        }
+
+        if (ret_size >= dest_size) {
+            fprintf(stderr, "The node string has been truncated\n");
+            modbus_free(ctx);
+            errno = EINVAL;
+            return NULL;
+        }
     }
 
-    if (ctx_tcp_pi->node == NULL) {
+    if (service != NULL) {
+        dest_size = sizeof(char) * _MODBUS_TCP_PI_SERVICE_LENGTH;
+        ret_size = strlcpy(ctx_tcp_pi->service, service, dest_size);
+    } else {
+        /* Empty service is not allowed, error catched below. */
+        ret_size = 0;
+    }
+
+    if (ret_size == 0) {
+        fprintf(stderr, "The service string is empty\n");
         modbus_free(ctx);
-        errno = ENOMEM;
+        errno = EINVAL;
         return NULL;
     }
 
-    if (service != NULL && service[0] != '\0') {
-        ctx_tcp_pi->service = strdup(service);
-    } else {
-        /* Default Modbus port number */
-        ctx_tcp_pi->service = strdup("502");
-    }
-
-    if (ctx_tcp_pi->service == NULL) {
+    if (ret_size >= dest_size) {
+        fprintf(stderr, "The service string has been truncated\n");
         modbus_free(ctx);
-        errno = ENOMEM;
+        errno = EINVAL;
         return NULL;
     }
 

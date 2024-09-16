@@ -116,8 +116,9 @@ dess_portproperty_init(a_uint32_t dev_id)
 	a_uint32_t bitmap = 0;
 
     pdev = hsl_dev_ptr_get(dev_id);
-    if (pdev == NULL)
+    if (pdev == NULL) {
         return SW_NOT_INITIALIZED;
+    }
 
 	cfg = dess_get_port_config();
 	bitmap = dess_pbmp_5[cfg];
@@ -188,8 +189,9 @@ dess_dev_init(a_uint32_t dev_id, ssdk_init_cfg *cfg)
     hsl_dev_t *pdev = NULL;
 
     pdev = hsl_dev_ptr_get(dev_id);
-    if (pdev == NULL)
+    if (pdev == NULL) {
         return SW_NOT_INITIALIZED;
+    }
 
     HSL_REG_FIELD_GET(rv, dev_id, MASK_CTL, 0, DEVICE_ID,
                       (a_uint8_t *) (&entry), sizeof (a_uint32_t));

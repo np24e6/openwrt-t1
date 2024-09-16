@@ -7,6 +7,7 @@ fix_sms_utils(){
 	local sec="$1" action
 
 	config_get action "$sec" "action"
+	config_get smstext "$sec" "smstext"
 	case "$action" in
 	"wifi")
 		[ "$wifi" -eq 0 ] && {
@@ -33,12 +34,17 @@ fix_sms_utils(){
 			uci_remove "sms_utils" "$sec"
 		}
 		;;
+	"send_status")
+		[ "$smstext" = "iostatus" -a "$ios" -eq 0 ] && {
+			uci_remove "sms_utils" "$sec"
+		}
+		;;
 	esac
 }
 
 json_load_file "/etc/board.json"
 json_select hwinfo
-json_get_vars dual_sim wifi mobile gps
+json_get_vars dual_sim wifi mobile gps ios
 
 config_load "sms_utils"
 config_foreach fix_sms_utils "rule"

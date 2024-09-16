@@ -1,0 +1,26 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+change_event_mark(){
+	local section_id="$1"
+	local event eventMark
+
+	config_get event "$section_id" "event"
+	config_get eventMark "$section_id" "eventMark"
+
+	if [ "$event" = "Web UI" ]; then
+		case "$eventMark" in
+		"was successful")
+			uci_set "events_reporting" "$section_id" "eventMark" "Password auth succeeded";;
+		"not successful") 
+			uci_set "events_reporting" "$section_id" "eventMark" "Bad password attempt";;
+		esac
+	fi
+}
+
+config_load "events_reporting"
+config_foreach change_event_mark "rule"
+uci_commit "events_reporting"
+
+exit 0

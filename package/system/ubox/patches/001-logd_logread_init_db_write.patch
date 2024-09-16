@@ -1,5 +1,7 @@
---- a/log/logread.c
-+++ b/log/logread.c
+Index: ubox-2020-10-25-9ef88681/log/logread.c
+===================================================================
+--- ubox-2020-10-25-9ef88681.orig/log/logread.c
++++ ubox-2020-10-25-9ef88681/log/logread.c
 @@ -11,7 +11,7 @@
   * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
   * GNU General Public License for more details.
@@ -127,7 +129,7 @@
  	c[strlen(c) - 1] = '\0';
  
  	if (log_type == LOG_NET) {
-@@ -200,12 +247,53 @@ static int log_notify(struct blob_attr *
+@@ -200,12 +247,54 @@ static int log_notify(struct blob_attr *
  			uloop_timeout_set(&retry, 1000);
  		}
  	} else {
@@ -161,10 +163,11 @@
 +				return -1;
 +			}
 +
-+			if ((ret = db_action(action, stmt)) != 0)
++			if ((ret = db_action(action, &stmt)) != 0)
 +				syslog(LOG_ERR, "Failed to insert into DB.");
 +
-+			sqlite3_finalize(stmt);
++			if (stmt)
++				sqlite3_finalize(stmt);
 +
 +		} else if (msg_sender && log_db_init) {
 +			snprintf(buf, sizeof(buf), "%s %s%s.%s %s: %s\n",
@@ -187,7 +190,7 @@
  	}
  
  	if (log_type == LOG_FILE)
-@@ -307,7 +395,7 @@ int main(int argc, char **argv)
+@@ -307,7 +396,7 @@ int main(int argc, char **argv)
  
  	signal(SIGPIPE, SIG_IGN);
  
@@ -196,7 +199,7 @@
  		switch (ch) {
  		case 'u':
  			log_udp = 1;
-@@ -334,6 +422,9 @@ int main(int argc, char **argv)
+@@ -334,6 +423,9 @@ int main(int argc, char **argv)
  		case 'f':
  			log_follow = 1;
  			break;
@@ -206,7 +209,7 @@
  		case 'l':
  			lines = atoi(optarg);
  			break;
-@@ -375,6 +466,11 @@ int main(int argc, char **argv)
+@@ -375,6 +467,11 @@ int main(int argc, char **argv)
  	}
  	ubus_add_uloop(ctx);
  

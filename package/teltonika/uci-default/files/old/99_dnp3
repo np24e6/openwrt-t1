@@ -1,0 +1,37 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+CONFIG="dnp3_master"
+COUNT=0
+
+set_max_count() {
+	local section=$1
+	[ $((section)) -gt $COUNT ] && COUNT=$((section))
+}
+
+set_id_to_name() {
+	local section=$1
+
+	# if section is not a number then
+	if [[ "$section" =~ [^0-9] ]]; then
+		COUNT=$((COUNT + 1))
+		uci_rename "$CONFIG" "$section" "$COUNT"
+	fi
+}
+
+rename_serial_port() {
+	local section=$1
+	config_get serial_port "$section" "serial_port"
+
+	[ -z "$serial_port" ] && return
+
+	uci delete "$CONFIG.$section.serial_port"
+	uci set "$CONFIG.$section.device=$serial_port"
+}
+
+config_load "$CONFIG"
+config_foreach set_max_count
+config_foreach set_id_to_name "instance"
+config_foreach rename_serial_port
+uci_commit "$CONFIG"

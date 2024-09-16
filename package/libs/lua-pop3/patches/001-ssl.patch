@@ -12,7 +12,7 @@
 +            options     = {"all", "no_sslv2", "no_sslv3", "no_tlsv1", "no_tlsv1_1"},
 +            verify      = ssl_verify and "peer" or "none",
 +            certificate = "/etc/ssl/cert.pem",
-+            cafile      = "/etc/cacert.pem",
++            cafile      = "/etc/ssl/certs/ca-certificates.crt",
 +            mode        = "client"
 +      }
  

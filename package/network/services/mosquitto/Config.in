@@ -15,7 +15,7 @@ config MOSQUITTO_CTRL
 config MOSQUITTO_DYNAMIC_SECURITY
     bool "Install mosquitto_dynamic_security.so"
     depends on PACKAGE_mosquitto-ssl
-    default y
+    default n
     help
         This enables the dynamic security modes documented at
         https://mosquitto.org/documentation/dynamic-security/

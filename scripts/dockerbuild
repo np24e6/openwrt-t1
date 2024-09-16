@@ -1,6 +1,6 @@
 #!/bin/sh
 
-IMAGE_NAME="rutos-focal:v1"
+IMAGE_NAME="rutos-focal:v1.1"
 
 PROJDIR="$(pwd)"
 HOMEDIR="$PROJDIR:$PROJDIR"
@@ -52,7 +52,9 @@ $SUDO docker run -it \
 	-u "$USER" \
 	-w "$PROJDIR" \
 	-v "$HOMEDIR" \
+	-v "$HOME:$HOME" \
 	-v "$PASSWD" \
 	-v "$GROUP" \
 	-v "$HOSTS" \
+	--ulimit "nofile=1024:1048576" \
 	$IMAGE_NAME $@

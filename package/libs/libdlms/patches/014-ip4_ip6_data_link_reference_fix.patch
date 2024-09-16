@@ -1,0 +1,38 @@
+Index: libdlms-c65175ef/development/src/gxsetmalloc.c
+===================================================================
+--- libdlms-c65175ef.orig/development/src/gxsetmalloc.c
++++ libdlms-c65175ef/development/src/gxsetmalloc.c
+@@ -2528,10 +2528,12 @@ int cosem_setIP4Setup(dlmsSettings* sett
+     if (index == 2)
+     {
+ #ifndef DLMS_IGNORE_OBJECT_POINTERS
+-        if ((ret = oa_findByLN(&settings->objects, DLMS_OBJECT_TYPE_NONE, value->byteArr->data, &object->dataLinkLayer)) != 0)
+-        {
+-            return ret;
+-        }
++	if (!value->byteArr->data) {
++		return DLMS_ERROR_CODE_INVALID_RESPONSE;
++	}
++	gxObject *tmp = calloc(1, sizeof(*tmp));
++	memcpy(tmp->logicalName, value->byteArr->data, 6);
++	object->dataLinkLayer = tmp;
+ #else
+         ret = bb_get(value->byteArr, object->dataLinkLayerReference, 6);
+ #endif //DLMS_IGNORE_OBJECT_POINTERS
+@@ -2646,10 +2648,12 @@ int cosem_setIP6Setup(dlmsSettings* sett
+     if (index == 2)
+     {
+ #ifndef DLMS_IGNORE_OBJECT_POINTERS
+-        if ((ret = oa_findByLN(&settings->objects, DLMS_OBJECT_TYPE_NONE, value->byteArr->data, &object->dataLinkLayer)) != 0)
+-        {
+-            return ret;
+-        }
++	if (!value->byteArr->data) {
++		return DLMS_ERROR_CODE_INVALID_RESPONSE;
++	}
++	gxObject *tmp = calloc(1, sizeof(*tmp));
++	memcpy(tmp->logicalName, value->byteArr->data, 6);
++	object->dataLinkLayer = tmp;
+ #else
+         ret = bb_get(value->byteArr, object->dataLinkLayerReference, 6);
+ #endif //DLMS_IGNORE_OBJECT_POINTERS

@@ -1,0 +1,40 @@
+Index: mwan3-2.10.12/files/usr/sbin/mwan3track
+===================================================================
+--- mwan3-2.10.12.orig/files/usr/sbin/mwan3track
++++ mwan3-2.10.12/files/usr/sbin/mwan3track
+@@ -23,6 +23,7 @@ WRAP() {
+ clean_up() {
+ 	LOG notice "Stopping mwan3track for interface \"${INTERFACE}\". Status was \"${STATUS}\""
+ 	stop_subprocs
++	ubus send mwan3 "{\"interface\": \"$INTERFACE\", \"status\": \"stopped\"}"
+ 	exit 0
+ }
+ 
+@@ -119,6 +120,7 @@ disconnected() {
+ 	[ "$1" = 1 ] && return
+ 	LOG notice "Interface $INTERFACE ($DEVICE) is offline"
+ 	env -i ACTION="disconnected" INTERFACE="$INTERFACE" DEVICE="$DEVICE" /sbin/hotplug-call iface
++	ubus send mwan3 "{\"interface\": \"$INTERFACE\", \"status\": \"offline\"}"
+ }
+ 
+ connected() {
+@@ -132,6 +134,7 @@ connected() {
+ 	loss=0
+ 	LOG notice "Interface $INTERFACE ($DEVICE) is online"
+ 	env -i FIRSTCONNECT=$1 ACTION="connected" INTERFACE="$INTERFACE" DEVICE="$DEVICE" /sbin/hotplug-call iface
++	ubus send mwan3 "{\"interface\": \"$INTERFACE\", \"status\": \"online\"}"
+ }
+ 
+ disconnecting() {
+@@ -156,9 +159,11 @@ disabled() {
+ 	STATUS='disabled'
+ 	echo "disabled" > $MWAN3TRACK_STATUS_DIR/$INTERFACE/STATUS
+ 	STARTED=0
++	ubus send mwan3 "{\"interface\": \"$INTERFACE\", \"status\": \"disabled\"}"
+ }
+ 
+ firstconnect() {
++	ubus send mwan3 "{\"interface\": \"$INTERFACE\", \"status\": \"started\"}"
+ 	local true_iface
+ 	network_flush_cache
+ 

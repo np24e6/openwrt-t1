@@ -1,0 +1,62 @@
+diff --git a/main.c b/main.c
+index d77a814..c748751 100644
+--- a/main.c
++++ b/main.c
+@@ -31,7 +31,7 @@
+ #include <rpcd/session.h>
+ #include <rpcd/uci.h>
+ 
+-static struct ubus_context *ctx;
++static struct ubus_auto_conn conn;
+ static bool respawn = false;
+ 
+ int rpc_exec_timeout = RPC_EXEC_DEFAULT_TIMEOUT;
+@@ -63,7 +63,15 @@ exec_self(int argc, char **argv)
+ 		args[i] = argv[i];
+ 
+ 	setenv("RPC_HANGUP", "1", 1);
+-	execv(cmd, (char * const *)args);
++	execv(cmd, (char *const *)args);
++}
++
++static void ubus_connect_handler(struct ubus_context *ctx)
++{
++	rpc_session_api_init(ctx);
++	rpc_uci_api_init(ctx);
++	rpc_rc_api_init(ctx);
++	rpc_plugin_api_init(ctx);
+ }
+ 
+ int main(int argc, char **argv)
+@@ -104,18 +112,10 @@ int main(int argc, char **argv)
+ 
+ 	uloop_init();
+ 
+-	ctx = ubus_connect(ubus_socket);
+-	if (!ctx) {
+-		fprintf(stderr, "Failed to connect to ubus\n");
+-		return -1;
+-	}
++	conn.cb	  = ubus_connect_handler;
++	conn.path = ubus_socket;
+ 
+-	ubus_add_uloop(ctx);
+-
+-	rpc_session_api_init(ctx);
+-	rpc_uci_api_init(ctx);
+-	rpc_rc_api_init(ctx);
+-	rpc_plugin_api_init(ctx);
++	ubus_auto_connect(&conn);
+ 
+ 	hangup = getenv("RPC_HANGUP");
+ 
+@@ -125,8 +125,8 @@ int main(int argc, char **argv)
+ 		rpc_session_thaw();
+ 
+ 	uloop_run();
+-	ubus_free(ctx);
+ 	uloop_done();
++	ubus_auto_shutdown(&conn);
+ 
+ 	if (respawn)
+ 		exec_self(argc, argv);

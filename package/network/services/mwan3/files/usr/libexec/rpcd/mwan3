@@ -115,6 +115,7 @@ get_mwan3_status() {
 		network_is_up "$iface" && up="1"
 		if [ -f "$MWAN3TRACK_STATUS_DIR/${iface}/STATUS" ]; then
 			status="$(cat "$MWAN3TRACK_STATUS_DIR/${iface}/STATUS")"
+			[ "$status" = "online" ] && [ "$(cat /tmp/run/mwan3/active_wan)" != "$iface" ] && status="standby"
 		else
 			status="notracking"
 		fi

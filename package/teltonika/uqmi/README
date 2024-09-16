@@ -1,0 +1,30 @@
+perl files which generating .c code stored at data directory.
+
+gen-verbose-error-list.pl file generating from qmi-enums-wds.h files QMI_WDS_VERBOSE_CALL_END_REASON error mesages and stored them to qmi-wds-error-types.c file
+
+Those new structures stored at qmi-wds-error-types.c is using qmi-messages-wds.c file qmi_wds_verbose_call_end_reason_get_string funkcion.
+
+This function calls only from commands-wds.c file, cmd_wds_start_network_cb() function.
+uqmi --start-network call has exeption to go to this callback to add verbose message if call fails. Exeption is on dev.c file __qmi_request_complete() function
+
+
+
+Functions for UQMI API
+
+--get-client-id
+--set-client-id
+
+--set-autoconnect disabled
+--set-expected-data-format
+
+--release-client-id
+
+--set-ip-family
+--modify-profile
+--start-network
+--stop-network
+
+--wda-get-data-format
+--get-current-settings
+--get-data-status
+--get-serving-system

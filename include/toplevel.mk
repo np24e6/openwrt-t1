@@ -92,6 +92,10 @@ prepare-tmpinfo: FORCE
 	./scripts/package-metadata.pl usergroup tmp/.packageinfo > tmp/.packageusergroup || { rm -f tmp/.packageusergroup; false; }
 	touch $(TOPDIR)/tmp/.build
 
+clean-tmpinfo: FORCE
+	rm -rf tmp
+	$(_SINGLE)$(NO_TRACE_MAKE) prepare-tmpinfo OPENWRT_BUILD=
+
 .config: ./scripts/config/conf $(if $(CONFIG_HAVE_DOT_CONFIG),,prepare-tmpinfo)
 	@+if [ \! -e .config ] || ! grep CONFIG_HAVE_DOT_CONFIG .config >/dev/null; then \
 		[ -e $(HOME)/.openwrt/defconfig ] && cp $(HOME)/.openwrt/defconfig .config; \

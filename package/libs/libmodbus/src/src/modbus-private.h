@@ -1,7 +1,7 @@
 /*
- * Copyright © Stéphane Raimbault <stephane.raimbault@gmail.com>
+ * Copyright © 2010-2012 Stéphane Raimbault <stephane.raimbault@gmail.com>
  *
- * SPDX-License-Identifier: LGPL-2.1-or-later
+ * SPDX-License-Identifier: LGPL-2.1+
  */
 
 #ifndef MODBUS_PRIVATE_H

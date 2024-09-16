@@ -16,6 +16,7 @@
 #define LPARAM_BUFF_64 64
 #define LPARAM_BUFF_128 128
 #define LPARAM_BUFF_256 256
+#define IO_BUFF 100
 
 typedef enum { // TODO: ADC param
 	PARAM_INVALID, // must be the first element
@@ -58,10 +59,16 @@ typedef enum { // TODO: ADC param
 	PARAM_ECIO,
 	PARAM_IMEI,
 #endif
+#ifdef GPS_SUPPORT
+	PARAM_GPS,
+#endif
 #ifdef IO_SUPPORT
 	PARAM_INPUT_NAME,
 	PARAM_INPUT_STATE, 
 	PARAM_GPIO_STATE,
+#endif
+#ifdef GPS_SUPPORT
+	PARAM_GPS_INFO,
 #endif
 	PARAM_FIRMWARE_ON_SERVER,
 #if defined(RUT9_PLATFORM) || defined(RUT9M_PLATFORM) || defined(RUT952_PLATFORM)

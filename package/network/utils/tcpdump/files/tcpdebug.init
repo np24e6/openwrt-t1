@@ -29,7 +29,7 @@ start_service() {
 	[ -n "$interface" ] && procd_append_param command -i "$interface"
 	[ -n "$direction" ] && procd_append_param command -Q "$direction"
 	[ -n "$filter" ] && procd_append_param command "$filter"
-	procd_append_param command "$options"
+	procd_append_param command $options
 	procd_append_param command -w "$storage"/tcpdebug.pcap
 	procd_set_param respawn
 	procd_close_instance

@@ -16,11 +16,13 @@ start_service()
 	uhttpd_key=$(uci get uhttpd.main.key)
 	shell_cert="/tmp/certificate.pem"
 	if [ "$enable" == "1" ]; then
-		if [ ! -s "$shell_cert" ]; then
-			openssl x509 -inform DER -in "$uhttpd_cert" -outform PEM | cat "$uhttpd_key" - > /tmp/shellinabox.tmp
+			if grep -q "[^[:print:][:blank:]]" "$uhttpd_cert"; then
+				openssl x509 -inform DER -in "$uhttpd_cert" -outform PEM | cat "$uhttpd_key" - > /tmp/shellinabox.tmp
+			else
+				cat "$uhttpd_key" "$uhttpd_cert" > /tmp/shellinabox.tmp
+			fi
 			mv /tmp/shellinabox.tmp "$shell_cert"
-			[ "$key_type" = "ec" ] && sed -i 's/PRIVATE/EC PRIVATE/g' "$shell_cert"
-		fi
+			[ "$key_type" = "ec" ] && sed -i 's/\([^C]\) PRIVATE/\1 EC PRIVATE/g' "$shell_cert"
 	fi
 }
 
@@ -35,9 +37,9 @@ restart_service()
 	rm -f "$shell_cert"
 	killall shellinaboxd
 	if [ "$enable" == "1" ]; then
-		openssl x509 -inform DER -in "$uhttpd_cert" -outform PEM | cat "$uhttpd_key" - > /tmp/shellinabox.tmp
+		openssl x509 -in "$uhttpd_cert" -outform PEM | cat "$uhttpd_key" - > /tmp/shellinabox.tmp
 		mv /tmp/shellinabox.tmp "$shell_cert"
-		[ "$key_type" = "ec" ] && sed -i 's/PRIVATE/EC PRIVATE/g' "$shell_cert"
+		[ "$key_type" = "ec" ] && sed -i 's/\([^C]\) PRIVATE/\1 EC PRIVATE/g' "$shell_cert"
 	fi
 }
 

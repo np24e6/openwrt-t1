@@ -76,8 +76,34 @@ setup_config() {
 		counter=$(( counter + 1 ))
 	}
 
+	config_get auth_chap "$1" auth_chap "1"
+        [ "$auth_chap" = "1" ] && {
+		echo "require chap = yes" >> "$CONFIG"
+		echo "require-chap" >> "$OPTIONS"
+	} || {
+		echo "refuse chap = yes" >> "$CONFIG"
+		echo "refuse-chap" >> "$OPTIONS"
+	}
+
+	config_get auth_pap "$1" auth_pap "0"
+	[ "$auth_pap" = "1" ] && {
+		echo "require pap = yes" >> "$CONFIG"
+		echo "require-pap" >> "$OPTIONS"
+	} || {
+		echo "refuse pap = yes" >> "$CONFIG"
+		echo "refuse-pap" >> "$OPTIONS"
+	}
+
+	config_get auth_mschap2 "$1" auth_mschap2 "1"
+	[ "$auth_mschap2" = "1" ] && {
+		echo "require-mschap-v2" >> "$OPTIONS"
+	} || {
+		echo "refuse-mschap-v2" >> "$OPTIONS"
+	}
+
 	config_get chap "$section" chap
-	[ "$chap" = "1" ] && echo "challenge = yes" >> $CONFIG
+	[ "$chap" = "1" ] && echo "challenge = yes" >> "$CONFIG"
+
 	config_get auth "$section" auth
 	[ -n "$auth" ] && echo "* * $auth" >> $SECRETS
 }
@@ -136,6 +162,10 @@ start_service() {
 		procd_set_param stderr 1 # same for stderr
 		procd_set_param respawn
 		procd_close_instance
+
+		mkdir -p /tmp/state/l2tp
+		date "+%s" > /tmp/state/l2tp/uptime
+
 	}
 }
 
@@ -148,6 +178,8 @@ stop_service() {
 
 	[ -e "$CONFIG" ] && rm -rf "$CONFIG"
 	[ -e "$CHAP_SECRETS" ] &&rm -rf "$CHAP_SECRETS"
+
+	rm /tmp/state/l2tp/uptime
 }
 
 reload_service() {

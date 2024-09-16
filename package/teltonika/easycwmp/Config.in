@@ -42,4 +42,9 @@ config EASYCWMP_SCRIPT_HOTSPOT
     bool "Hotspot scripts"
 	default y
 
+config EASYCWMP_SCRIPT_GPS
+    bool "GPS scripts"
+	depends on GPS_SUPPORT
+	default y
+
 endif

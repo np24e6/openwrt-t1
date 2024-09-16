@@ -386,6 +386,8 @@ typedef sw_error_t (*adpt_ip_intf_get_func)(
 typedef sw_error_t (*adpt_ip_host_del_func)(
 			a_uint32_t dev_id, a_uint32_t del_mode,
 			fal_host_entry_t * host_entry);
+typedef sw_error_t (*adpt_ip_host_del_all_func)(
+			a_uint32_t dev_id);
 typedef sw_error_t (*adpt_ip_route_mismatch_get_func)(
 			a_uint32_t dev_id, fal_fwd_cmd_t *cmd);
 typedef sw_error_t (*adpt_ip_vsi_arp_sg_cfg_get_func)(
@@ -1071,6 +1073,7 @@ typedef struct
 	adpt_ip_port_sg_cfg_get_func adpt_ip_port_sg_cfg_get;
 	adpt_ip_intf_get_func adpt_ip_intf_get;
 	adpt_ip_host_del_func adpt_ip_host_del;
+	adpt_ip_host_del_all_func adpt_ip_host_del_all;
 	adpt_ip_route_mismatch_get_func adpt_ip_route_mismatch_get;
 	adpt_ip_vsi_arp_sg_cfg_get_func adpt_ip_vsi_arp_sg_cfg_get;
 	adpt_ip_port_arp_sg_cfg_set_func adpt_ip_port_arp_sg_cfg_set;

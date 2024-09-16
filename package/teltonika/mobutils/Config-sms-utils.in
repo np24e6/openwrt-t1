@@ -1,16 +1,5 @@
 # sms-utilities advanced configuration
 
-menu "Advanced options"
-	depends on PACKAGE_mobutils-sms_utilities
-
-	config SMS_UTILS_TEST_MODE
-		bool "Test mode"
-		default n
-		help
-			Enable test mode
-
-endmenu
-
 menu "SMS rules"
 	depends on PACKAGE_mobutils-sms_utilities
 
@@ -49,6 +38,12 @@ config SMS_UTILS_HANDLER_EXEC
 	default y
     help
         Compile with script exec support
+
+config SMS_UTILS_HANDLER_API
+	bool "API handler"
+	default y
+    help
+        Compile with API support
 
 endmenu
 

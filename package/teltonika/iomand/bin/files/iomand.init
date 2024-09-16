@@ -22,6 +22,6 @@ reload_service() {
 	procd_send_signal ioman
 }
 
-service_triggers() {           
+service_triggers() {
 	procd_add_reload_trigger ioman
 }

@@ -1,0 +1,110 @@
+Index: linux-5.10.191/drivers/net/usb/qmi_wwan.c
+===================================================================
+--- linux-5.10.191.orig/drivers/net/usb/qmi_wwan.c
++++ linux-5.10.191/drivers/net/usb/qmi_wwan.c
+@@ -440,11 +440,12 @@ static bool qmimux_has_slaves(struct usb
+ 
+ static int qmimux_rx_fixup(struct usbnet *dev, struct sk_buff *skb)
+ {
+-	unsigned int len, offset = 0, pad_len, pkt_len;
++	unsigned int len, offset = 0, pad_len, pkt_len, hdr_len;
+ 	struct qmimux_hdr *hdr;
+ 	struct net_device *net;
+ 	struct sk_buff *skbn;
+ 	u8 qmimux_hdr_sz = sizeof(*hdr);
++	bool ipv6;
+ 
+ 	if (dev->driver_info->data & QMI_WWAN_V5_HEAD) {
+ 		qmimux_hdr_sz += sizeof(struct rmnet_map_v5_csum_header);
+@@ -469,33 +470,43 @@ static int qmimux_rx_fixup(struct usbnet
+ 			goto skip;
+ 		pkt_len = len - pad_len;
+ 
+-		net = qmimux_find_dev(dev, hdr->mux_id);
+-		if (!net)
+-			goto skip;
+-		skbn = netdev_alloc_skb(net, pkt_len + LL_MAX_HEADER);
+-		if (!skbn)
+-			return 0;
+-		/* packet doesn't have mac header
+-		 * so reset its offset */
+-		skb_reset_mac_header(skbn);
+-
+-		skbn->dev = net;
+-
+ 		switch (skb->data[offset + qmimux_hdr_sz] & 0xf0) {
+ 		case 0x40:
+-			skbn->protocol = htons(ETH_P_IP);
++			ipv6 = false;
+ 			break;
+ 		case 0x60:
+-			skbn->protocol = htons(ETH_P_IPV6);
++			ipv6 = true;
+ 			break;
+ 		default:
+ 			/* not ip - do not know what to do */
+ 			goto skip;
+ 		}
+ 
+-		skb_reserve(skbn, LL_MAX_HEADER);
+-		skb_put_data(skbn, skb->data + offset + qmimux_hdr_sz, pkt_len);
+-		if (netif_rx(skbn) != NET_RX_SUCCESS) {
++		net = qmimux_find_dev(dev, hdr->mux_id);
++		if (!net)
++			goto skip;
++
++		/* Optimize for most common case:
++		 * IPv4/6 header + TCP header with timestamp option (+ 2 byte padding for it)
++		 * Any more and we introduce extra fragmention afrer GRO
++		 * Any less and we suffer from slow skb_copy_bits calls downstream */
++		hdr_len = ipv6? 72 : 52;
++
++		skbn = usbnet_clone_zerocopy(
++			net, skb, offset + qmimux_hdr_sz, pkt_len, hdr_len, 0, 64);
++
++		/* packet doesn't have mac header
++		 * so reset its offset */
++		skb_reset_mac_header(skbn);
++
++		if (ipv6)
++			skbn->protocol = htons(ETH_P_IPV6);
++		else
++		 	skbn->protocol = htons(ETH_P_IP);
++
++		skbn->ip_summed = CHECKSUM_UNNECESSARY;
++
++		if (usbnet_napi_rx(dev, skbn) != NET_RX_SUCCESS) {
+ 			net->stats.rx_errors++;
+ 			return 0;
+ 		} else {
+@@ -1298,7 +1309,8 @@ err:
+ 
+ static const struct driver_info	qmi_wwan_info = {
+ 	.description	= "WWAN/QMI device",
+-	.flags		= FLAG_WWAN | FLAG_SEND_ZLP | FLAG_MULTI_PACKET,
++	.flags		= FLAG_WWAN | FLAG_SEND_ZLP | FLAG_MULTI_PACKET
++	                | FLAG_PAGE_FRAG | FLAG_NAPI_RX,
+ 	.bind		= qmi_wwan_bind,
+ 	.unbind		= qmi_wwan_unbind,
+ 	.manage_power	= qmi_wwan_manage_power,
+@@ -1307,7 +1319,8 @@ static const struct driver_info	qmi_wwan
+ 
+ static const struct driver_info	qmi_wwan_info_quirk_dtr = {
+ 	.description	= "WWAN/QMI device",
+-	.flags		= FLAG_WWAN | FLAG_SEND_ZLP | FLAG_MULTI_PACKET,
++	.flags		= FLAG_WWAN | FLAG_SEND_ZLP | FLAG_MULTI_PACKET
++	                | FLAG_PAGE_FRAG | FLAG_NAPI_RX,
+ 	.bind		= qmi_wwan_bind,
+ 	.unbind		= qmi_wwan_unbind,
+ 	.manage_power	= qmi_wwan_manage_power,
+@@ -1317,7 +1330,9 @@ static const struct driver_info	qmi_wwan
+ 
+ static const struct driver_info qmi_wwan_info_quirk_dtr_sdx55 = {
+ 	.description    = "WWAN/QMI device",
+-	.flags          = FLAG_WWAN | FLAG_RX_ASSEMBLE | FLAG_NOARP | FLAG_SEND_ZLP | FLAG_MULTI_PACKET,
++	.flags          = FLAG_WWAN | FLAG_RX_ASSEMBLE | FLAG_NOARP
++	                | FLAG_SEND_ZLP | FLAG_MULTI_PACKET | FLAG_PAGE_FRAG
++			| FLAG_NAPI_RX,
+ 	.bind           = qmi_wwan_bind,
+ 	.unbind         = qmi_wwan_unbind,
+ 	.manage_power   = qmi_wwan_manage_power,

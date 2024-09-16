@@ -1,5 +1,10 @@
 #!/bin/sh
 
+top_priority_methods="get_firmware get_iccid get_serial get_sim_slot get_pin_count get_pin_state get_temperature \
+get_func get_network_info get_signal_query get_serving_cell get_neighbour_cells get_net_reg_stat \
+get_net_greg_stat get_net_ereg_stat get_net_5greg_stat get_service_provider get_mbn_list get_ps_att_state \
+get_pdp_ctx_list get_active_pdp_ctx_list get_pdp_addr_list get_ims_state get_volte_state"
+
 get_special_info() {
 	modem_num="$2"
 	model="$1"
@@ -24,7 +29,6 @@ AT+QCFG=\"dbgctl\""
 
 get_gsm_info() {
 	local log_file="$1"
-	ubus call gsm enable_debug '{"enabled":"true"}'
 
 	troubleshoot_init_log "GSM INFORMATION" "$log_file"
 	ubus call gsm info >>"$log_file" 2>&1
@@ -38,6 +42,13 @@ get_gsm_info() {
 			info_output="$(ubus call "$mdm" info 2>&1)"
 			printf "%-40s\n%s\n" "Running info..." "$info_output" >>"$log_file"
 
+			#foreach top_priority_methods
+			for method in $top_priority_methods; do
+				cmd="$(ubus call "$mdm" "$method" 2>&1)"
+				[ "$cmd" = "Command failed: Operation not supported" ] && continue
+				printf "%s:\n%s\n" "$method" "$cmd" >>"$log_file"
+			done
+
 			#foreach 'get' command without arguments
 			for l in $(ubus -v list $mdm); do
 				[ "${l#\"get*:}" != "{}" ] && continue
@@ -46,6 +57,9 @@ get_gsm_info() {
 				[ "$l" = "\"get_clip_mode\":{}" ] && continue
 
 				method_name="$(echo ${l%:*} | xargs)"
+
+				#skip methods from top_priority_methods list
+				echo "$top_priority_methods" | grep -q "$method_name" && continue
 
 				cmd="$(ubus call "$mdm" "$method_name" 2>&1)"
 				[ "$cmd" = "Command failed: Operation not supported" ] && continue
@@ -61,9 +75,6 @@ get_gsm_info() {
 			troubleshoot_add_log "Modem not responding to AT commands. Skipping.." "$log_file"
 		fi
 	done
-
-	ubus call gsm dump_log
-	ubus call gsm enable_debug '{"enabled":"false"}'
 }
 
 modem_hook() {

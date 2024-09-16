@@ -8,12 +8,12 @@ void cm_get_gsm_operator(struct ubus_context *ctx, char *out, int modem_num, lgs
 {
 	int len = strlen(out);
 
-	if (lgsm_handle_methods_structed(ctx, LGSM_UBUS_GET_OPERATOR_SEL, modem_num, rsp) !=
+	if (lgsm_handle_methods_structed(ctx, LGSM_UBUS_SERVICE_PROVIDER, modem_num, rsp) !=
 	    LGSM_SUCCESS) {
 		syslog(LOG_INFO, "Failed to get operator info.");
 	}
 
-	len += snprintf(out + len, MODEM_BUFF - 1, "%s,", rsp->label == LGSM_LABEL_ERROR ? "N/A" : rsp->data.op_slc.op_name);
+	len += snprintf(out + len, MODEM_BUFF - 1, "%s,", rsp->label == LGSM_LABEL_ERROR ? "N/A" : rsp->data.srvc_provider.provider_name);
 }
 
 void cm_get_gsm_signal(struct ubus_context *ctx, char *out, int modem_num, lgsm_structed_info_t *rsp) 

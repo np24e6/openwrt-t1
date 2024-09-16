@@ -2,6 +2,8 @@
 
 . /lib/functions.sh
 
+config_load "firewall"
+
 seperate_src() {
 	local src
 	config_get src "$1" "$2"
@@ -13,7 +15,6 @@ seperate_src() {
 	done
 }
 
-config_load "firewall"
 config_foreach seperate_src "redirect" "src_ip"
 config_foreach seperate_src "redirect" "src_port"
 uci_commit "firewall"

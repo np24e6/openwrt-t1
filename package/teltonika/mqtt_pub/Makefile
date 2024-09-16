@@ -2,10 +2,10 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=mqtt_pub
-PKG_VERSION:=2023-06-22
+PKG_VERSION:=2023-09-01
 PKG_RELEASE:=1
 
-PKG_SOURCE_VERSION:=c32bf1c9fdf5ba32aca6c19d9ad71725e2a8d876
+PKG_SOURCE_VERSION:=2.1
 
 include $(INCLUDE_DIR)/package.mk
 
@@ -47,4 +47,3 @@ define Package/mqtt_pub/install
 endef
 
 $(eval $(call BuildPackage,mqtt_pub))
-

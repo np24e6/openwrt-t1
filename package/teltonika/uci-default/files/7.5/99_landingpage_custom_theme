@@ -1,0 +1,25 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+theme=""
+
+delete_custom(){
+	local section="$1"
+	local custom
+
+	config_get custom "$section" "custom"
+
+	[ "$theme" = "$section" ] && \
+	[ "$custom" = "1" ] && \
+		uci_set "landingpage" "general" "theme" "default"
+
+	[ "$custom" = "1" ] && uci_remove "landingpage" "$section"
+}
+
+config_load "landingpage"
+config_get theme "general" "theme"
+config_foreach delete_custom "theme"
+uci_commit "landingpage"
+
+exit 0

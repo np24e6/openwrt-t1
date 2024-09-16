@@ -6,10 +6,10 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=mdcollect
-PKG_VERSION:=2023-05-09
-PKG_RELEASE:=1
+PKG_VERSION:=2023-09-04
+PKG_RELEASE:=2
 
-PKG_SOURCE_VERSION:=12ca94fb50c0dddf835032b2e928744d13abaefd
+PKG_SOURCE_VERSION:=7.5
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_SOURCE_VERSION)-$(PKG_VERSION)
 PKG_SOURCE:=$(PKG_SOURCE_SUBDIR).tar.gz
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_SOURCE_SUBDIR)
@@ -23,14 +23,14 @@ define Package/mdcollectd
 	CATEGORY:=Base system
 	TITLE:=mdcollectd
 	DEPENDS:=+lsqlite3 +libuci +libtlt_uci +libmdcollect +libubus +libubox \
-		+libtlt-logger +libgsm +iptables-mod-quota2 +rpcd-mod-simd +libnftnl
+		+libtlt-logger +libgsm +iptables-mod-quota2 +libnftnl
 endef
 
 define Package/libmdcollect
 	SECTION:=libs
 	CATEGORY:=Libraries
 	TITLE:=A library for mdcollectd
-	DEPENDS:=+lsqlite3 +libjson-c +libubus +libubox +libblobmsg-json +rpcd-mod-simd
+	DEPENDS:=+lsqlite3 +libjson-c +libubus +libubox +libblobmsg-json
 endef
 
 define Package/mdcollectd/conffiles

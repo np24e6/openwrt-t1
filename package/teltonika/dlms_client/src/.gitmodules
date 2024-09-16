@@ -1,0 +1,3 @@
+[submodule "test/support"]
+	path = test/support
+	url = git@git.teltonika.lt:teltonika/packages/unit_test_stubs.git

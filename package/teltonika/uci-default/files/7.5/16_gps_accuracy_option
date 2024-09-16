@@ -1,0 +1,19 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+AVL_CONF="avl"
+
+add_accuracy_option() {
+	local section="$1"
+
+	config_get accuracy "$section" "accuracy" "10"
+	uci_set "$AVL_CONF" "$section" "accuracy" "$accuracy"
+}
+
+config_load "$AVL_CONF" || exit 0
+config_foreach add_accuracy_option "avl_rule" "avl_rule"
+add_accuracy_option "avl_rule_main"
+uci_commit "$AVL_CONF"
+
+exit 0

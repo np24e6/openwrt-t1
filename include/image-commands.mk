@@ -68,6 +68,8 @@ metadata_json = \
 					"$(subst :," $(comma)",$(lastword $(subst %,": ,$(data))))",)}) \
 	}'
 
+version_json = '{"version":"$(call json_quote,$(TLT_VERSION))"}'
+
 define Build/append-metadata
 	$(if $(SUPPORTED_DEVICES),-echo $(call metadata_json) | fwtool -I - $@)
 	[ -z "$(CONFIG_SIGNED_IMAGES)" -o ! -s "$(BUILD_KEY)" -o ! -s "$(BUILD_KEY).ucert" -o ! -s "$@" ] || { \
@@ -76,6 +78,10 @@ define Build/append-metadata
 		ucert -A -c "$@.ucert" -x "$@.sig" ;\
 		fwtool -S "$@.ucert" "$@" ;\
 	}
+endef
+
+define Build/append-version
+	echo $(call version_json) | fwtool -I - $@
 endef
 
 define Build/append-rootfs

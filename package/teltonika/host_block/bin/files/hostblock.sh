@@ -3,9 +3,12 @@
 . /lib/functions.sh
 
 SCRIPT_NAME=$(basename $0)
-SERVER_CONF="/tmp/dnsmasq.d/server"
+NETWORK="$(uci -q get hostblock.config.network)"
+[ "$NETWORK" = "all" ] && NETWORK=""
+
+SERVER_CONF="/tmp/dnsmasq.d${NETWORK:+_}${NETWORK}/server"
 SERVER_SNAP=""
-ADDRESS_CONF="/tmp/dnsmasq.d/address"
+ADDRESS_CONF="/tmp/dnsmasq.d${NETWORK:+_}${NETWORK}/address"
 ADDRESS_SNAP=""
 DEFAULT_DNS="8.8.8.8"
 DEFAULT_BLOCKIP="255.255.255.255"
@@ -16,14 +19,21 @@ help() {
 	echo "Usage: $SCRIPT_NAME enable|disable|restart"
 }
 
+append_file_hosts() {
+	cat "$1" | awk -v IP="$SERVER_IP" -F ";" \
+		'{ if ($2 !~ /!.*/ && length($2) > 0){
+			gsub(/\*/, "") ; print "server=/"$2"/"IP
+		} }' >> $SERVER_CONF
+}
+
 append_host() {
 	local enabled
 	local host
 	config_get_bool enabled "$1" "enabled"
-	if [ $enabled -eq 1 ]; then
+	if [ "$enabled" -eq 1 ]; then
 		config_get host "$1" "host"
 		if [ -n "$host" ]; then
-			host=$(echo $host | sed 's/*//g')
+			host=$(echo "$host" | sed 's/*//g')
 			echo "server=/$host/$SERVER_IP" >>"$SERVER_CONF"
 		else
 			logger -t "$SCRIPT_NAME" "No host specified"
@@ -54,10 +64,13 @@ enable_hb() {
 		return 1
 	fi
 
-	rm -f $SERVER_CONF
-	rm -f $ADDRESS_CONF
+	rm -f "$SERVER_CONF"
+	rm -f "$ADDRESS_CONF"
+	rm -f "/tmp/dnsmasq.d/server"
+	rm -f "/tmp/dnsmasq.d/address"
 
 	config_foreach append_host "block"
+	[ -e "/etc/vuci-uploads/hosts" ] && append_file_hosts "/etc/vuci-uploads/hosts"
 
 	echo "server=/rms.teltonika.lt/$icmp_host" >>"$SERVER_CONF"
 
@@ -80,8 +93,10 @@ enable_hb() {
 }
 
 disable_hb() {
-	rm -f $SERVER_CONF
-	rm -f $ADDRESS_CONF
+	rm -f "$SERVER_CONF"
+	rm -f "$ADDRESS_CONF"
+	rm -f "/tmp/dnsmasq.d/server"
+	rm -f "/tmp/dnsmasq.d/address"
 	echo "HostBlock disabled"
 }
 
@@ -101,16 +116,33 @@ add_dns_redirect() {
 }
 
 enable_dns_redirect() {
-	local lan_ip
-	local rule
-	lan_ip=$(uci -q get network.lan.ipaddr)
-	if [ -n "$lan_ip" ]; then
+	local dest_ip rule
+	local zone="lan"
+
+	if [ -n "$NETWORK" ];then
+		if [ "$NETWORK" = "hotspot" ];then
+			dest_ip=$(uci -q get chilli.@chilli[0].uamlisten)
+			zone="hotspot"
+		else
+			dest_ip=$(uci -q get network."$NETWORK".ipaddr)
+		fi
+	else
+		dest_ip=$(uci -q get network.lan.ipaddr)
+	fi
+
+	if [ -n "$dest_ip" ]; then
 		rule=$(uci -q get firewall.REDIR_DNS)
 		if [ "$rule" != "redirect" ]; then
 			add_dns_redirect
 		fi
 		uci -q set firewall.REDIR_DNS.enabled=1
-		uci -q set firewall.REDIR_DNS.dest_ip="$lan_ip"
+		uci -q set firewall.REDIR_DNS.dest_ip="$dest_ip"
+		uci -q set firewall.REDIR_DNS.src="$zone"
+		uci -q set firewall.REDIR_DNS.dest="$zone"
+		uci -q delete firewall.REDIR_DNS.src_ip
+		[ -n "$NETWORK" ] && [ "$NETWORK" != "hotspot" ] && {
+			uci -q add_list firewall.REDIR_DNS.src_ip="${dest_ip%.*}.0/24"
+		}
 		uci -q commit firewall
 		reload_firewall
 	else

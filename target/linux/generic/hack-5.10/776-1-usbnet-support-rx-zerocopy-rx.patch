@@ -1,0 +1,203 @@
+Index: linux-5.10.191/drivers/net/usb/usbnet.c
+===================================================================
+--- linux-5.10.191.orig/drivers/net/usb/usbnet.c
++++ linux-5.10.191/drivers/net/usb/usbnet.c
+@@ -477,10 +477,18 @@ static int rx_submit (struct usbnet *dev
+ 		return -ENOLINK;
+ 	}
+ 
+-	if (test_bit(EVENT_NO_IP_ALIGN, &dev->flags))
+-		skb = __netdev_alloc_skb(dev->net, size, flags);
+-	else
+-		skb = __netdev_alloc_skb_ip_align(dev->net, size, flags);
++	if (test_bit(EVENT_NO_IP_ALIGN, &dev->flags)) {
++		if (dev->driver_info->flags & FLAG_PAGE_FRAG)
++			skb = __netdev_alloc_skb_frag(dev->net, size, flags);
++		else
++			skb = __netdev_alloc_skb(dev->net, size, flags);
++	} else {
++		if (dev->driver_info->flags & FLAG_PAGE_FRAG)
++			skb = __netdev_alloc_skb_frag_ip_align(dev->net, size, flags);
++		else
++			skb = __netdev_alloc_skb_ip_align(dev->net, size, flags);
++	}
++
+ 	if (!skb) {
+ 		netif_dbg(dev, rx_err, dev->net, "no rx skb\n");
+ 		usbnet_defer_kevent (dev, EVENT_RX_MEMORY);
+Index: linux-5.10.191/include/linux/skbuff.h
+===================================================================
+--- linux-5.10.191.orig/include/linux/skbuff.h
++++ linux-5.10.191/include/linux/skbuff.h
+@@ -2729,6 +2729,8 @@ static inline int pskb_trim(struct sk_bu
+ extern struct sk_buff *__netdev_alloc_skb_ip_align(struct net_device *dev,
+ 		unsigned int length, gfp_t gfp);
+ 
++extern struct sk_buff *__netdev_alloc_skb_frag_ip_align(struct net_device *dev,
++		unsigned int length, gfp_t gfp);
+ 
+ /**
+  *	pskb_trim_unique - remove end from a paged unique (not cloned) buffer
+@@ -2828,6 +2830,9 @@ void *netdev_alloc_frag(unsigned int fra
+ struct sk_buff *__netdev_alloc_skb(struct net_device *dev, unsigned int length,
+ 				   gfp_t gfp_mask);
+ 
++struct sk_buff *__netdev_alloc_skb_frag(struct net_device *dev, unsigned int length,
++				   gfp_t gfp_mask);
++
+ /**
+  *	netdev_alloc_skb - allocate an skbuff for rx on a specific device
+  *	@dev: network device to receive on
+Index: linux-5.10.191/include/linux/usb/usbnet.h
+===================================================================
+--- linux-5.10.191.orig/include/linux/usb/usbnet.h
++++ linux-5.10.191/include/linux/usb/usbnet.h
+@@ -123,6 +123,7 @@ struct driver_info {
+ #define FLAG_MULTI_PACKET	0x2000
+ #define FLAG_RX_ASSEMBLE	0x4000	/* rx packets may span >1 frames */
+ #define FLAG_NOARP		0x8000	/* device can't do ARP */
++#define FLAG_PAGE_FRAG		0x10000	/* Allocate usb transfer buffers as page fragments */
+ 
+ 	/* init device ... can sleep, or cause probe() failure */
+ 	int	(*bind)(struct usbnet *, struct usb_interface *);
+@@ -291,4 +292,58 @@ extern void usbnet_update_max_qlen(struc
+ extern void usbnet_get_stats64(struct net_device *dev,
+ 			       struct rtnl_link_stats64 *stats);
+ 
++/**
++ * @brief helper for implementing zero-copy rx-fixup on agregating driverss
++ *
++ * @param net netdev
++ * @param skb must be one provided via usbnet's rx_fixup, and FLAG_PAGE_FRAG must be set
++ * @param offset offset into input skb
++ * @param len length of final sk_buff
++ * @param linear_len amount of header to keep inside skb->head
++ * @param headroom extra headoom in output skb
++ * @param tailroom extra tailroom in output skb
++ *
++ * @return struct sk_buff* skb representing sublice [offset; offset + len)
++ */
++inline struct sk_buff *usbnet_clone_zerocopy(struct net_device *net,
++						 struct sk_buff *skb,
++						 unsigned int offset,
++						 unsigned int len,
++						 unsigned int linear_len,
++						 unsigned int headroom,
++						 unsigned int tailroom)
++{
++	struct sk_buff *nskb;
++	struct page *page;
++	unsigned int poff;
++
++	// This function assumes input skb is taken straight from usbnet.
++	// Assume these hold:
++	// BUG_ON(!skb->head_frag);
++	// BUG_ON(skb_is_nonlinear(skb));
++
++	if (len <= 128) {
++		// Don't bother with small packets, copy them whole
++		linear_len = len;
++	} else {
++		linear_len = min(linear_len, len);
++	}
++
++	nskb = __netdev_alloc_skb_frag(net, headroom + linear_len + tailroom, GFP_ATOMIC);
++	if (!nskb)
++		return NULL;
++
++	skb_put_data(nskb, skb->data + offset, linear_len);
++	skb_reserve(nskb, headroom);
++
++	if (linear_len != len) {
++		page = virt_to_head_page(skb->data);
++		poff = (void *)(skb->data + offset + linear_len) - page_address(page);
++		skb_add_rx_frag(nskb, 0, page, poff, len - linear_len, len);
++		skb_frag_ref(nskb, 0);
++	}
++
++	return nskb;
++}
++
+ #endif /* __LINUX_USB_USBNET_H */
+Index: linux-5.10.191/net/core/skbuff.c
+===================================================================
+--- linux-5.10.191.orig/net/core/skbuff.c
++++ linux-5.10.191/net/core/skbuff.c
+@@ -490,6 +490,54 @@ skb_fail:
+ }
+ EXPORT_SYMBOL(__netdev_alloc_skb);
+ 
++struct sk_buff *__netdev_alloc_skb_frag(struct net_device *dev, unsigned int len,
++				   gfp_t gfp_mask)
++{
++	struct page_frag_cache *nc;
++	struct sk_buff *skb;
++	bool pfmemalloc;
++	void *data;
++
++	len += NET_SKB_PAD;
++
++	len += SKB_DATA_ALIGN(sizeof(struct skb_shared_info));
++	len = SKB_DATA_ALIGN(len);
++
++	if (sk_memalloc_socks())
++		gfp_mask |= __GFP_MEMALLOC;
++
++	if (in_irq() || irqs_disabled()) {
++		nc = this_cpu_ptr(&netdev_alloc_cache);
++		data = page_frag_alloc(nc, len, gfp_mask);
++		pfmemalloc = nc->pfmemalloc;
++	} else {
++		local_bh_disable();
++		nc = this_cpu_ptr(&napi_alloc_cache.page);
++		data = page_frag_alloc(nc, len, gfp_mask);
++		pfmemalloc = nc->pfmemalloc;
++		local_bh_enable();
++	}
++
++	if (unlikely(!data))
++		return NULL;
++
++	skb = __build_skb(data, len);
++	if (unlikely(!skb)) {
++		skb_free_frag(data);
++		return NULL;
++	}
++
++	if (pfmemalloc)
++		skb->pfmemalloc = 1;
++	skb->head_frag = 1;
++
++	skb_reserve(skb, NET_SKB_PAD);
++	skb->dev = dev;
++
++	return skb;
++}
++EXPORT_SYMBOL(__netdev_alloc_skb_frag);
++
+ /**
+  *	__napi_alloc_skb - allocate skbuff for rx in a specific NAPI instance
+  *	@napi: napi instance this buffer was allocated for
+@@ -570,6 +618,22 @@ struct sk_buff *__netdev_alloc_skb_ip_al
+ }
+ EXPORT_SYMBOL(__netdev_alloc_skb_ip_align);
+ 
++struct sk_buff *__netdev_alloc_skb_frag_ip_align(struct net_device *dev,
++		unsigned int length, gfp_t gfp)
++{
++	struct sk_buff *skb = __netdev_alloc_skb_frag(dev, length + NET_IP_ALIGN, gfp);
++
++#ifdef CONFIG_ETHERNET_PACKET_MANGLE
++	if (dev && (dev->priv_flags & IFF_NO_IP_ALIGN))
++		return skb;
++#endif
++
++	if (NET_IP_ALIGN && skb)
++		skb_reserve(skb, NET_IP_ALIGN);
++	return skb;
++}
++EXPORT_SYMBOL(__netdev_alloc_skb_frag_ip_align);
++
+ void skb_add_rx_frag(struct sk_buff *skb, int i, struct page *page, int off,
+ 		     int size, unsigned int truesize)
+ {

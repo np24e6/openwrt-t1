@@ -343,6 +343,7 @@ enum {
 	FUNC_IP_INTF_GET,
 	FUNC_IP_NETWORK_ROUTE_DEL,
 	FUNC_IP_HOST_DEL,
+	FUNC_IP_HOST_DEL_ALL,
 	FUNC_IP_ROUTE_MISMATCH_GET,
 	FUNC_IP_VSI_ARP_SG_CFG_GET,
 	FUNC_IP_PORT_ARP_SG_CFG_SET,
@@ -366,6 +367,9 @@ enum {
     sw_error_t
     fal_ip_host_del(a_uint32_t dev_id, a_uint32_t del_mode,
                     fal_host_entry_t * host_entry);
+
+	sw_error_t
+    fal_ip_host_del_all(a_uint32_t dev_id);
 
     sw_error_t
     fal_ip_host_get(a_uint32_t dev_id, a_uint32_t get_mode,

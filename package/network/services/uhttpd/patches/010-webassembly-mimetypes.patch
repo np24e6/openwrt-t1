@@ -1,0 +1,12 @@
+diff --git a/mimetypes.h b/mimetypes.h
+index 1f5b92f..8a9215f 100644
+--- a/mimetypes.h
++++ b/mimetypes.h
+@@ -47,6 +47,7 @@ static const struct mimetype uh_mime_types[] = {
+ 	{ "svg",     "image/svg+xml" },
+ 
+ 	{ "json",    "application/json" },
++	{ "wasm",    "application/wasm" },
+ 	{ "jsonp",   "application/javascript" },
+ 	{ "zip",     "application/zip" },
+ 	{ "pdf",     "application/pdf" },

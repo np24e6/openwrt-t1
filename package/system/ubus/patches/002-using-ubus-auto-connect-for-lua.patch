@@ -1,0 +1,90 @@
+Index: ubus-2021-06-30-4fc532c8/lua/ubus.c
+===================================================================
+--- ubus-2021-06-30-4fc532c8.orig/lua/ubus.c
++++ ubus-2021-06-30-4fc532c8/lua/ubus.c
+@@ -14,6 +14,7 @@
+  */
+ 
+ #include <unistd.h>
++#include <stdbool.h>
+ #include <libubus.h>
+ #include <libubox/blobmsg.h>
+ #include <libubox/blobmsg_json.h>
+@@ -29,6 +30,8 @@ struct ubus_lua_connection {
+ 	int timeout;
+ 	struct blob_buf buf;
+ 	struct ubus_context *ctx;
++	struct ubus_auto_conn conn;
++	bool is_auto;
+ };
+ 
+ struct ubus_lua_object {
+@@ -246,6 +249,31 @@ ubus_lua_format_blob_array(lua_State *L,
+ 	return true;
+ }
+ 
++static int
++ubus_lua_auto_connect(lua_State *L)
++{
++	struct ubus_lua_connection *c;
++	const char *sockpath = luaL_optstring(L, 1, NULL);
++	int timeout = luaL_optint(L, 2, 30);
++
++	if ((c = lua_newuserdata(L, sizeof(*c))) != NULL) {
++		c->conn.path = sockpath;
++		ubus_auto_connect(&c->conn);
++		c->ctx = &c->conn.ctx;
++		ubus_add_uloop(c->ctx);
++		c->timeout = timeout;
++		c->is_auto = true;
++		memset(&c->buf, 0, sizeof(c->buf));
++		luaL_getmetatable(L, METANAME);
++		lua_setmetatable(L, -2);
++		return 1;
++	}
++
++	/* NB: no errors from ubus_connect() yet */
++	lua_pushnil(L);
++	lua_pushinteger(L, UBUS_STATUS_UNKNOWN_ERROR);
++	return 2;
++}
+ 
+ static int
+ ubus_lua_connect(lua_State *L)
+@@ -259,6 +287,7 @@ ubus_lua_connect(lua_State *L)
+ 	{
+ 		ubus_add_uloop(c->ctx);
+ 		c->timeout = timeout;
++		c->is_auto = false;
+ 		memset(&c->buf, 0, sizeof(c->buf));
+ 		luaL_getmetatable(L, METANAME);
+ 		lua_setmetatable(L, -2);
+@@ -271,7 +300,6 @@ ubus_lua_connect(lua_State *L)
+ 	return 2;
+ }
+ 
+-
+ static void
+ ubus_lua_objects_cb(struct ubus_context *c, struct ubus_object_data *o, void *p)
+ {
+@@ -935,8 +963,10 @@ ubus_lua__gc(lua_State *L)
+ 	struct ubus_lua_connection *c = luaL_checkudata(L, 1, METANAME);
+ 
+ 	blob_buf_free(&c->buf);
+-	if (c->ctx != NULL)
+-	{
++	if (c->is_auto) { /*for auto connect*/
++		ubus_auto_shutdown(&c->conn);
++		memset(c, 0, sizeof(*c));
++	} else if (c->ctx != NULL) { /*for simple connect*/
+ 		ubus_free(c->ctx);
+ 		memset(c, 0, sizeof(*c));
+ 	}
+@@ -946,6 +976,7 @@ ubus_lua__gc(lua_State *L)
+ 
+ static const luaL_Reg ubus[] = {
+ 	{ "connect", ubus_lua_connect },
++	{ "auto_connect", ubus_lua_auto_connect },
+ 	{ "objects", ubus_lua_objects },
+ 	{ "add", ubus_lua_add },
+ 	{ "notify", ubus_lua_notify },

@@ -15,6 +15,12 @@ boot() {
 		crconf add driver "authenc(hmac($alg),cbc(des3_ede-generic))" type 3
 		crconf add driver "pcrypt(authenc(hmac($alg),cbc(des3_ede-generic)))" type 3
 	done
+	
+	crconf add driver "gcm_base(ctr(aes-arm),cryptd(ghash-ce-sync))" type 3 priority 510
+	crconf add driver "gcm_base(ctr-aes-neonbs,cryptd(ghash-ce-sync))" type 3 priority 500
+	crconf add driver "pcrypt(gcm(aes))" type 3 2> /dev/null
+	crconf add driver "rfc4106(gcm(aes))" type 3
+	crconf add driver "pcrypt(rfc4106(gcm(aes)))" type 3 2> /dev/null
 }
 
 start() {

@@ -17,7 +17,11 @@ source "target/Config.in"
 
 source "config/Config-options.in"
 
+if !BUILD_MINIMAL_IMAGE
 source "config/Config-tlt.in"
+endif
+
+source "config/Config-tweaks.in"
 
 source "config/Config-images.in"
 

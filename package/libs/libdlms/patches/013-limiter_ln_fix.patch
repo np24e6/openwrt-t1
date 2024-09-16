@@ -1,0 +1,14 @@
+Index: libdlms-c65175ef/development/src/gxsetmalloc.c
+===================================================================
+--- libdlms-c65175ef.orig/development/src/gxsetmalloc.c
++++ libdlms-c65175ef/development/src/gxsetmalloc.c
+@@ -3034,6 +3034,9 @@ int cosem_setLimiter(dlmsSettings* setti
+         {
+             return ret;
+         }
++	if (!tmp3->byteArr) {
++		return DLMS_ERROR_CODE_INVALID_RESPONSE;
++	}
+ #ifndef DLMS_IGNORE_OBJECT_POINTERS
+         if ((ret = oa_findByLN(&settings->objects, DLMS_OBJECT_TYPE_SCRIPT_TABLE, tmp3->byteArr->data, (gxObject**)&object->actionOverThreshold.script)) != 0)
+         {

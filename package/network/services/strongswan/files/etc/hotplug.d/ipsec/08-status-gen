@@ -1,0 +1,23 @@
+#!/bin/sh
+
+. /usr/share/libubox/jshn.sh
+
+if [ "$PLUTO_VERB" = "up-client" ] || [ "$PLUTO_VERB" = "up-client-v6" ] || [ "$PLUTO_VERB" = "up-host" ] || [ "$PLUTO_VERB" = "up-host-v6" ]; then
+	mkdir -p /tmp/state/ipsec
+
+	json_init
+	json_add_string "conndate" "$(date +%s)"
+	json_add_string "my_ip_address" "$PLUTO_ME"
+	json_add_string "my_id" "$PLUTO_MY_ID"
+	json_add_string "my_subnet" "$PLUTO_MY_CLIENT"
+	json_add_string "peer_ip_address" "$PLUTO_PEER"
+	json_add_string "peer_id" "$PLUTO_PEER_ID"
+	json_add_string "peer_subnet" "$PLUTO_PEER_CLIENT"
+	
+	json_dump > "/tmp/state/ipsec/$PLUTO_CONNECTION-$PLUTO_REQID.status"
+	exit 0
+fi
+
+if [ "$PLUTO_VERB" = "down-client" ] || [ "$PLUTO_VERB" = "down-client-v6" ] || [ "$PLUTO_VERB" = "down-host" ] || [ "$PLUTO_VERB" = "down-host-v6" ]; then
+	rm "/tmp/state/ipsec/$PLUTO_CONNECTION-$PLUTO_REQID.status"
+fi

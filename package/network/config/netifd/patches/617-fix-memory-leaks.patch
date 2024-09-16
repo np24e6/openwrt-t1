@@ -1,0 +1,29 @@
+--- a/system-linux.c
++++ b/system-linux.c
+@@ -2182,8 +2182,10 @@
+ 	struct nl_msg *msg;
+ 	int i;
+ 
+-	if (!data.ifindex)
++	if (!data.ifindex) {
++		nl_cb_put(cb);
+ 		return 0;
++	}
+ 
+ 	msg = nlmsg_alloc_simple(RTM_GETLINK, NLM_F_DUMP);
+ 
+@@ -2240,12 +2242,10 @@
+ 		}
+ 	}
+ 
+-	goto out;
+-
+ free:
+ 	nlmsg_free(msg);
+-out:
+ 	nl_cb_put(cb);
++
+ 	return data.ret;
+ }
+ 
+

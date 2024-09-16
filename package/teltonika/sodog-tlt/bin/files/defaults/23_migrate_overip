@@ -1,0 +1,51 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+PREDEFINED_LIST="predefined_address"
+CLIENT_LIST="address_connect"
+CONF="rs_overip"
+
+migrate_sections() {
+	local section="$1"
+
+	local udp_client_count=$(uci_get "$CONF" "$section" "udp_client_count")
+	if [ -n "$udp_client_count" ]; then
+		uci_set "$CONF" "$section" "max_clients" "$udp_client_count"
+		uci_remove $CONF $section "udp_client_count"
+	fi
+
+	local ip_connect=$(uci_get "$CONF" "$section" "ip_connect")
+	local port_connect=$(uci_get "$CONF" "$section" "port_connect")
+	if [ -n "$ip_connect" ] && [ -n "$port_connect" ]; then
+		uci_add_list $CONF $section "$CLIENT_LIST" "${ip_connect}:${port_connect}"
+		uci_remove $CONF $section "ip_connect"
+		uci_remove $CONF $section "port_connect"
+	fi
+
+	local predefined_addr1=$(uci_get "$CONF" "$section" "predefined_addr1")
+	local predefined_port1=$(uci_get "$CONF" "$section" "predefined_port1")
+	if [ -n "$predefined_addr1" ] && [ -n "$predefined_port1" ]; then
+		uci_add_list $CONF $section "$PREDEFINED_LIST" "${predefined_addr1}:${predefined_port1}"
+		uci_remove $CONF $section "predefined_addr1"
+		uci_remove $CONF $section "predefined_port1"
+	fi
+
+	local predefined_addr2=$(uci_get "$CONF" "$section" "predefined_addr2")
+	local predefined_port2=$(uci_get "$CONF" "$section" "predefined_port2")
+	if [ -n "$predefined_addr2" ] && [ -n "$predefined_port2" ]; then
+		uci_add_list $CONF $section "$PREDEFINED_LIST" "${predefined_addr2}:${predefined_port2}"
+		uci_remove $CONF $section "predefined_addr2"
+		uci_remove $CONF $section "predefined_port2"
+	fi
+
+	local protocol=$(uci_get "$CONF" "$section" "protocol")
+	[ "$protocol" = "tcp" ] && uci_set "$CONF" "$section" "protocol" "0"
+	[ "$protocol" = "udp" ] && uci_set "$CONF" "$section" "protocol" "1"
+}
+
+config_load "$CONF"
+config_foreach migrate_sections
+uci commit "$CONF"
+
+exit 0

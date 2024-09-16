@@ -1,6 +1,7 @@
 . /lib/upgrade/common.sh
 
 # fwtool error messages
+# 0 - No error
 # 1 - Signature processing error
 # 2 - Image signature not present
 # 3 - Use sysupgrade -F to override this check when downgrading or flashing to vendor firmware
@@ -15,7 +16,9 @@
 # 12 - Firmware version is to old
 # 13 - Firmware is not compatible with current bootloader version
 # 14 - Firmware is not supported by this device
-# 15 - Insufficient free space in /tmp/
+# 15 - Insufficient free space in /tmp
+# 16 - Downgrade is not allowed
+# 17 - Only authorized firmware is allowed
 
 fwtool_msg() {
 	v "$1"
@@ -24,36 +27,28 @@ fwtool_msg() {
 }
 
 fwtool_pre_upgrade() {
-	fwtool -q -i /dev/null "$1"
+	fwtool -q -t -s /dev/null "$1"
+	fwtool -q -t -i /dev/null "$1"
 }
 
 fwtool_check_signature() {
 	local ret
-	rm -f /tmp/.sysupgrade_image_signature_valid
 
 	[ $# -gt 1 ] && return 1
 
 	[ ! -x /usr/bin/ucert ] && {
-		if [ "$REQUIRE_IMAGE_SIGNATURE" = 1 ]; then
-			fwtool_msg "Signature processing error" "1"
-			return 1
-		else
-			return 0
-		fi
+		fwtool_msg "Signature processing error" "1"
+		return 1
 	}
 
 	if ! fwtool -q -s /tmp/sysupgrade.ucert "$1"; then
 		fwtool_msg "Image signature not present" "2"
-		[ "$REQUIRE_IMAGE_SIGNATURE" = 1 -a "$FORCE" != 1 ] && {
-			fwtool_msg "Use sysupgrade -F to override this check when downgrading or flashing to vendor firmware" "3"
-		}
-		[ "$REQUIRE_IMAGE_SIGNATURE" = 1 ] && return 1
-		return 0
+		return 1
 	fi
 
-	local ver=$(fwtool_get_fw_version "$1")
-	local major=$(echo $ver | awk -F . '{print $2 }')
-	local minor=$(echo $ver | awk -F . '{print $3 }')
+	local ver="$(fwtool_get_fw_version "$1")"
+	local major="$(echo $ver | awk -F . '{print $2 }')"
+	local minor="$(echo $ver | awk -F . '{print $3 }')"
 	local bsha512=""
 
 	# append usign broken sha512 block size for versions 02.01 or lower
@@ -65,14 +60,15 @@ fwtool_check_signature() {
 		ucert ${bsha512} -V -m - -c "/tmp/sysupgrade.ucert" -P /etc/proprietary_keys 2>/dev/null
 	ret="$?"
 
-	if [ "$ret" = 0 ]; then
-		touch /tmp/.sysupgrade_image_signature_valid
-		fwtool -q -t -s /dev/null "$1"
-	fi
+	[ "$ret" -eq 0 ] && return 0
 
-	[ "$REQUIRE_VALID_IMAGE_SIGNATURE" = 1 ] && return "$ret"
+	fwtool_get_vcert_state >&2
+	[ "$?" -eq 1 ] && {
+		fwtool_msg "Only authorized firmware is allowed" "17"
+		return 1
+	}
 
-	return 0
+	return $ret
 }
 
 fwtool_get_fw_version() {
@@ -95,7 +91,7 @@ fwtool_get_fw_version() {
 		return 1
 	}
 
-	v "$fw_version"
+	echo "$fw_version"
 }
 
 fwtool_json_entry_array_check() {
@@ -158,8 +154,6 @@ fwtool_check_image() {
 	local blver=$(mnf_info -v)
 	local vb=$(echo $blver | grep '\-vb')
 	local device_name=$(mnf_info -n | cut -c1-4 2>/dev/null)
-
-	rm -f /tmp/.sysupgrade_passwd_warning
 
 	if ! fwtool -q -i /tmp/sysupgrade.meta "$1"; then
 		fwtool_msg "Image metadata not present" "4"
@@ -241,17 +235,6 @@ fwtool_check_image() {
 		}
 	fi
 
-	if [ "$device_name" != "TCR1" ] && [ -n "$(mnf_info -x)" ]; then
-		local target_hotfix="2"
-		[ "$device_name" = "RUTX" ] || [ "$device_name" = "TRB1" ] && target_hotfix="4"
-
-		[ "$fw_major" -lt 7 ] ||
-		{ [ "$fw_major" -eq 7 ] && [ "$fw_minor" -lt 2 ]; } ||
-		{ [ "$fw_major" -eq 7 ] && [ "$fw_minor" -eq 2 ] && [ "$fw_hotfix" -lt "$target_hotfix" ]; } && {
-			touch /tmp/.sysupgrade_passwd_warning
-		}
-	fi
-
 	device="$(cat /tmp/sysinfo/board_name)"
 	devicecompat="$(uci -q get system.@system[0].compat_version)"
 	[ -n "$devicecompat" ] || devicecompat="1.0"
@@ -317,4 +300,140 @@ fwtool_check_backup() {
 	fi
 
     return 0
+}
+
+fwtool_check_upgrade_type() {
+	local current_ver="$(cat /etc/version)"
+
+	# cannot determine current version
+	# assume it is the worst case - downgrade
+	[ -z "$current_ver" ] && return 1
+
+	local ver=$(fwtool_get_fw_version "$1")
+
+	# cannot determine version from the archive
+	# assume it is the worst case - downgrade
+	[ "$?" -eq 1 ] || [ -z "$ver" ] && return 1
+
+	local major="$(echo "$ver" | awk -F . '{print $2 }')"
+	local minor="$(echo "$ver" | awk -F . '{print $3 }')"
+	minor="$(echo "$minor" | awk -F _ '{ print $1 }')"
+
+	local current_fw=$(echo "$current_ver" | awk -F . '{ print $1 }')
+	local img_fw=$(echo "$ver" | awk -F . '{ print $1 }')
+
+	local current_branch=$(echo "$current_fw" | awk -F _ '{ print $(NF - 1) }')
+	local fw_branch=$(echo "$img_fw" | awk -F _ '{ print $(NF - 1) }')
+
+	# cannot parse branch, assume it is the worst case - downgrade
+	[ -z "$current_branch" ] || [ -z "$fw_branch" ] && return 1
+
+	# downgrade on unknown branches
+	case "$fw_branch" in
+		F*|R*|H*|GPL*|DEV*)
+			;;
+		*)
+			return 1
+			;;
+	esac
+
+	# downgrade when coming from develop/feature to release/hotfix
+	case "$current_branch" in
+		DEV|F*)
+			case "$fw_branch" in
+				R*|H*|GPL*) return 1;;
+			esac
+		;;
+	esac
+
+	local current_client="$(echo "$current_fw" | awk -F _ '{ print $NF }')"
+	local fw_client="$(echo "$img_fw" | awk -F _ '{ print $NF }')"
+
+	# cannot parse client no, assume it is the worst case - downgrade
+	[ -z "$current_client" ] || [ -z "$fw_client" ] && return 1
+
+	# client numbers do not match, it is downgrade
+	[ "$current_client" != "$fw_client" ] && return 1
+
+	local current_major="$(echo "$current_ver" | awk -F . '{ print $2 }')"
+
+	# cannot current major version, assume it is the worst case - downgrade
+	[ -z "$current_major" ] || [ -z "$major" ] && return 1
+
+	# current major is newer - downgrade
+	[ "$current_major" -gt "$major" ] && return 1
+
+	# current major is older - upgrade
+	[ "$major" -gt "$current_major" ] && return 0
+
+	local current_minor="$(echo "$current_ver" | awk -F . '{ print $3 }')"
+	current_minor="$(echo "$current_minor" | awk -F _ '{ print $1 }')"
+
+	# cannot current minor version, assume it is the worst case - downgrade
+	[ -z "$current_minor" ] || [ -z "$minor" ] && return 1
+
+	# current minor is newer - downgrade
+	[ "$current_minor" -gt "$minor" ] && return 1
+
+	# current minor is older - upgrade
+	[ "$minor" -gt "$current_minor" ] && return 0
+
+	# if we have vcert enabled, then patch version downgrade is prohibited
+	fwtool_get_vcert_state >&2
+	[ "$?" = "1" ] || return 0
+
+	local current_patch="$(echo "$current_ver" | awk -F . '{ print $4 }')"
+	local patch="$(echo "$ver" | awk -F . '{print $4 }')"
+
+	# current patch is newer - downgrade
+	[ "${current_patch:-0}" -gt "${patch:-0}" ] && return 1
+
+	return 0
+}
+
+fwtool_get_vcert_state() {
+	. /usr/share/libubox/jshn.sh
+
+	json_load_file "/etc/board.json"
+	json_select hwinfo &&
+	json_get_var vcert vcert
+
+	[ -n "$vcert" ] || return 0
+
+	return $vcert
+}
+
+fwtool_check_downgrade_ability() {
+	fwtool_get_vcert_state >&2
+	local ret="$?"
+
+	[ "$ret" = "1" ] && {
+		fwtool_msg "Downgrade is not allowed" "16"
+	}
+
+	return $ret
+}
+
+fwtool_check_passwd_warning() {
+	local device_name="$(mnf_info -n | cut -c1-4 2>/dev/null)"
+
+	[ "$device_name" == "TCR1" ] && return 0
+	[ -n "$(mnf_info -x)" ] || return 0
+
+	local ver="$(fwtool_get_fw_version "$1")"
+	local fw_major="$(echo "$ver" | cut -d'.' -f2)"
+	local fw_minor="$(echo "$ver" | cut -d'.' -f3 | cut -d'_' -f1)"
+	local fw_hotfix="$(echo "$ver" | cut -d'.' -f4 | cut -d'_' -f1)"
+
+	local target_hotfix="2"
+	[ "$device_name" = "RUTX" ] || [ "$device_name" = "TRB1" ] && target_hotfix="4"
+
+	[ "$fw_major" -lt 7 ] ||
+		{ [ "$fw_major" -eq 7 ] && [ "$fw_minor" -lt 2 ]; } ||
+		{ [ "$fw_major" -eq 7 ] && [ "$fw_minor" -eq 2 ] &&
+			[ "$fw_hotfix" -lt "$target_hotfix" ]; } && {
+		return 1
+	}
+
+	return 0
 }

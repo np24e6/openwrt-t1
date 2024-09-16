@@ -39,7 +39,7 @@ chilli_response_SOURCES = main-response.c
 chilli_query_SOURCES = main-query.c
 chilli_opt_SOURCES = main-opt.c
 
-libchilli_la_LIBADD = $(top_builddir)/bstring/libbstring.la -lsqlite3
+libchilli_la_LIBADD = $(top_builddir)/bstring/libbstring.la -lsqlite3 -luci -ltlt_uci
 LDADD = libchilli.la ${LIBRT} $(top_builddir)/bstring/libbstring.la ${LIBJSON} -lsqlite3
 
 if WITH_MINICONFIG
@@ -76,8 +76,8 @@ libchilli_la_SOURCES += lookup3.c
 endif
 
 if WITH_OPENSSL
-libchilli_la_SOURCES += passwd_md5crypt.c
-chilliinclude_HEADERS += passwd_md5crypt.h
+libchilli_la_SOURCES += passwd_md5crypt.c passwd_shacrypt.c
+chilliinclude_HEADERS += passwd_md5crypt.h passwd_shacrypt.h
 libchilli_la_LIBADD += ${LIBSSL}
 LDADD += ${LIBSSL}
 endif

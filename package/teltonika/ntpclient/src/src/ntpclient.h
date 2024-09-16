@@ -45,6 +45,7 @@ struct ntp_control {
 #endif
 	uint32_t time_of_send[2];
 	char *hostnames[NTP_MAX_SERVERS];
+	char *hotplug_script;
 };
 
 /* global tuning parameter */

@@ -1,0 +1,13 @@
+#!/bin/sh
+
+[ "$EVENT_NAME" = "gsm.new_modem" ] || return
+[ "$OBJECT_NAME" = "gsm.modem0" ] || [ "$OBJECT_NAME" = "gsm.modem1" ] || return
+
+vcert="$(jsonfilter -i /etc/board.json -e '$.hwinfo.vcert')"
+[ "$vcert" = "true" ] && return
+
+vc="$(jsonfilter -s "$(ubus call "$OBJECT_NAME" info)" -e '$.vcert')"
+
+[ "$vc" = "true" ] || return
+
+[ "$vcert" != "$vc" ] && sed -i 's/"vcert": false/"vcert": true/' /etc/board.json

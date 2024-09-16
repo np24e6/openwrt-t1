@@ -13,9 +13,15 @@
 
 #define UNUSED(x) (void)(x)
 
+#define CHILLI_EVENT_CONNECT "chilli.connect"
+#define CHILLI_EVENT_DISCONNECT "chilli.disconnect"
+
 void chilli_ubus_add_obj(struct ubus_context *ctx);
 void chilli_ubus_remove_obj(struct ubus_context *ctx);
 
 void chilli_ubus_subscribe_hostapd(struct ubus_context *ctx, struct options_t options);
+
+void send_ubus_event(struct ubus_context *ctx, char *state, struct app_conn_t *appconn,
+                        struct dhcp_conn_t *dhcpconn);
 
 #endif //_CHILLI_UBUS_H

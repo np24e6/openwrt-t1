@@ -16,9 +16,9 @@ entry_execute_method_list_forcedinform="$entry_execute_method_list_forcedinform 
 MDCOLLECTCTL_BIN=/usr/bin/mdcollectdctl
 current_sim="1"
 # Structure --- <Value name represented in easycwmp log;ubus method name;lookup value from method response>
-PARAM_LIST="RSSI;get_signal_query;rssi ConnState;get_net_reg_stat;status_id NetState;get_net_reg_stat;status ICCID;get_iccid;iccid \
-IMSI;get_imsi;imsi RSCP;null;null ECIO;null;null RSRP;get_signal_query;rsrp SINR;get_signal_query;sinr RSRQ;get_signal_query;rsrq \
-CellID;get_net_reg_stat;ci Operator;get_operator_selection;operator OperatorNum;get_network_info;opernum ConnType;get_signal_query;net_mode \
+PARAM_LIST="RSSI;get_signal_query;rssi ConnState;info;usb_id NetState;get_net_reg_stat_all;status ICCID;get_iccid;iccid \
+IMSI;get_imsi;imsi RSCP;get_signal_query;rscp ECIO;get_signal_query;ecio RSRP;get_signal_query;rsrp SINR;get_signal_query;sinr RSRQ;get_signal_query;rsrq \
+CellID;get_net_reg_stat;ci Operator;get_service_provider;provider_name OperatorNum;get_network_info;opernum ConnType;get_network_info;net_mode \
 Model;info;model Manufacturer;info;manuf Serial;get_serial;serial Revision;get_firmware;firmware IMEI;info;imei SimState;get_pin_state;state_id \
 PinState;get_pin_state;state Temperature;get_temperature;temperature_value"
 
@@ -43,6 +43,58 @@ get_usb_id() {
 
 }
 
+get_conn_state() {
+
+	local modem_id=$1
+
+	json_init
+	json_load "$(ubus call network.interface dump)"
+
+	json_is_a interface array || {
+		return 5
+	}
+
+	json_select interface
+	json_get_keys keys
+
+	for var in $keys; do
+		json_select "$var"
+		json_get_var interface interface
+		json_get_var data data
+		json_get_var up up
+		json_get_var modem_main modem
+
+		[ -z "$data" ] || [ -z "$up" ] || [ "$up" -eq 0 ] && {
+			json_select ..
+			continue
+		}
+
+		json_select data
+		json_get_var modem_data modem
+		json_select ..
+
+		[ "$modem_main" != "$modem_id" ] && [ "$modem_data" != "$modem_id" ] && {
+			json_select ..
+			continue
+		}
+
+		json_get_var method method
+		json_select ipv4-address
+		json_select 1 >/dev/null 2>&1
+		json_get_var ipv4 address
+		json_select ..
+
+		[ -n "$method" -a "$method" = "bridge" ] || [ "$ipv4" ] && {
+			return 1
+		}
+
+		json_select ..
+	done
+
+	return 0
+}
+
+
 get_modem_value() {
 
 	local modem_num="$1"
@@ -64,18 +116,19 @@ get_modem_value() {
 			esac
 		;;
 		"ConnState")
-			[ "$found_value" == "1" ] || [ "$found_value" == "5" ] && found_value="Connected" || found_value="Not connected"
-		;;
-		"Operator")
-			local format=$(ubus call gsm.modem$modem_num $method 2>/dev/null | grep -w format | sed 's/[^ ]* *//; s/["]//g; s/,$//g')
-			if [ "$format" == "Numeric" ];
-			then
-				/bin/ubus call gsm.modem"$modem_num" set_operator_selection "{\"format\":\"short\"}" >> /dev/null 2>&1
-
-				found_value=$(ubus call gsm.modem$modem_num $method 2>/dev/null | grep -w $value | sed 's/[^ ]* *//; s/["]//g; s/,$//g')
-
-				/bin/ubus call gsm.modem"$modem_num" set_operator_selection "{\"format\":\"numeric\"}" >> /dev/null 2>&1
-			fi
+			get_conn_state "$found_value"
+			found_value=$?
+			case "$found_value" in
+				1)
+					found_value="Connected"
+					;;
+				0)
+					found_value="Not connected"
+					;;
+				*)
+					found_value="Unknown"
+					;;
+			esac
 		;;
 	esac
 

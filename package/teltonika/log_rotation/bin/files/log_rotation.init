@@ -12,6 +12,7 @@ start_service() {
         local log_file
         local log_size
         local compress
+	local log_dir
 
         config_get log_file system log_file
         config_get compress system log_compress
@@ -20,6 +21,10 @@ start_service() {
         [ -z "$log_file" ] && {
                 return 1
         }
+	
+	log_dir=$(dirname "${log_file}") 
+	[ -d "${log_dir}" ] || mkdir -p "${log_dir}" 
+	[ -f "${log_file}" ] || touch "${log_file}"
 
         if [ "$compress" -eq 1 ]; then
                 compress="-c"

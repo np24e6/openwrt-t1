@@ -1,0 +1,121 @@
+--- a/drivers/mtd/mtdcore.c
++++ b/drivers/mtd/mtdcore.c
+@@ -317,6 +317,14 @@ static ssize_t mtd_bbtblocks_show(struct
+ }
+ static DEVICE_ATTR(bbt_blocks, S_IRUGO, mtd_bbtblocks_show, NULL);
+ 
++static ssize_t nand_model_show(struct device *dev,
++	 			   struct device_attribute *attr, char *buf)
++{
++	struct mtd_info *mtd = dev_get_drvdata(dev);
++	return snprintf(buf, PAGE_SIZE, "%s\n", mtd->nand_model);
++}
++static DEVICE_ATTR_RO(nand_model);
++
+ static struct attribute *mtd_attrs[] = {
+ 	&dev_attr_type.attr,
+ 	&dev_attr_flags.attr,
+@@ -336,9 +344,30 @@ static struct attribute *mtd_attrs[] = {
+ 	&dev_attr_bad_blocks.attr,
+ 	&dev_attr_bbt_blocks.attr,
+ 	&dev_attr_bitflip_threshold.attr,
++	&dev_attr_nand_model.attr,
+ 	NULL,
+ };
+-ATTRIBUTE_GROUPS(mtd);
++
++static umode_t mtd_attr_is_visible(struct kobject *kobj,
++				   struct attribute *attr, int n)
++{
++	struct device *dev = kobj_to_dev(kobj);
++	struct mtd_info *mtd = dev_get_drvdata(dev);
++	if (attr == &dev_attr_nand_model.attr && !mtd->nand_model)
++		return 0;
++
++	return attr->mode;
++}
++
++static const struct attribute_group mtd_group = {
++	.attrs		= mtd_attrs,
++	.is_visible	= mtd_attr_is_visible,
++};
++
++static const struct attribute_group *mtd_groups[] = {
++	&mtd_group,
++ 	NULL,
++};
+ 
+ static const struct device_type mtd_devtype = {
+ 	.name		= "mtd",
+@@ -889,7 +918,6 @@ int mtd_device_parse_register(struct mtd
+ 			      int nr_parts)
+ {
+ 	int ret;
+-
+ 	mtd_set_dev_defaults(mtd);
+ 
+ 	if (IS_ENABLED(CONFIG_MTD_PARTITIONED_MASTER)) {
+--- a/include/linux/mtd/mtd.h
++++ b/include/linux/mtd/mtd.h
+@@ -288,6 +288,7 @@ struct mtd_info {
+ 
+ 	/* Kernel-only stuff starts here. */
+ 	const char *name;
++	char *nand_model;
+ 	int index;
+ 
+ 	/* OOB layout description */
+--- a/drivers/mtd/mtdpart.c
++++ b/drivers/mtd/mtdpart.c
+@@ -19,6 +19,7 @@
+ #include <linux/err.h>
+ #include <linux/of.h>
+ #include <linux/of_platform.h>
++#include <linux/mtd/spinand.h>
+ 
+ #include "mtdcore.h"
+ #include "mtdsplit/mtdsplit.h"
+@@ -30,6 +31,8 @@
+ 
+ static inline void free_partition(struct mtd_info *mtd)
+ {
++	if(mtd->nand_model)
++		kfree(mtd->nand_model);
+ 	kfree(mtd->name);
+ 	kfree(mtd);
+ }
+@@ -46,9 +49,16 @@ static struct mtd_info *allocate_partiti
+ 			  parent->part.size : parent->size;
+ 	struct mtd_info *child;
+ 	u32 remainder;
+-	char *name;
++	char *name, *nand_model;
+ 	u64 tmp;
+ 
++	struct spinand_device *spinand = mtd_to_spinand(parent);
++	if(spinand->info) {
++		nand_model = kstrdup(spinand->info->model, GFP_KERNEL);
++	} else {
++		nand_model = 0;
++	}
++
+ 	/* allocate the partition structure */
+ 	child = kzalloc(sizeof(*child), GFP_KERNEL);
+ 	name = kstrdup(part->name, GFP_KERNEL);
+@@ -57,6 +67,8 @@ static struct mtd_info *allocate_partiti
+ 		       parent->name);
+ 		kfree(name);
+ 		kfree(child);
++		if(nand_model)
++			kfree(nand_model);
+ 		return ERR_PTR(-ENOMEM);
+ 	}
+ 
+@@ -72,6 +84,7 @@ static struct mtd_info *allocate_partiti
+ 	child->oobavail = parent->oobavail;
+ 	child->subpage_sft = parent->subpage_sft;
+ 
++	child->nand_model = nand_model;
+ 	child->name = name;
+ 	child->owner = parent->owner;
+ 

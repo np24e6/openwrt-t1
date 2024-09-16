@@ -7,7 +7,7 @@ include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=events_reporting
 
-PKG_SOURCE_VERSION:=4ac5db73c2969bf035399566284f8ae0cb052a93
+PKG_SOURCE_VERSION:=2.2
 
 include $(INCLUDE_DIR)/package.mk
 

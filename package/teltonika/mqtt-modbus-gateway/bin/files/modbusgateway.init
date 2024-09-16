@@ -13,11 +13,7 @@ check_for_duplex() {
 
 	{ [ "$ENABLED" == "0" ] || [ "$DEVICE" != "/dev/rs485" ]; } && return
 
-	if [ "$FULL_DUPLEX" == "1" ]; then
-		echo "1" > /sys/class/gpio/rs485_rx_en/value
-	else
-		echo "0" > /sys/class/gpio/rs485_rx_en/value
-	fi
+	set_tty_duplex "/dev/rs485" "$FULL_DUPLEX"
 }
 
 start_service() {

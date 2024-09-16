@@ -34,24 +34,20 @@ define Device/teltonika_rutx
 	BLOCKSIZE := 128k
 	PAGESIZE := 2048
 	FILESYSTEMS := squashfs
+	DEVICE_FEATURES := usb-port gps serial modbus io wifi bt dualsim port-mirror ntrip hw-offload
 	# Default common packages for RUTX series
 	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	# Essential must-have:
-	DEVICE_PACKAGES := sysupgrade-helper uboot-ipq40xx
+	DEVICE_PACKAGES := sysupgrade-helper uboot-ipq40xx kmod-cypress-serial
 
 	# Wi-Fi related:
-	DEVICE_PACKAGES += ipq-wifi-teltonika_rutx
+	DEVICE_PACKAGES += ipq-wifi-teltonika_rutx ipq-wifi-firmware-teltonika_rutx
 
 	# USB related:
 	DEVICE_PACKAGES += kmod-usb-uhci
 
-	# USB Serial
-	DEVICE_PACKAGES += kmod-usb-serial kmod-usb-acm kmod-usb-serial-ch341 \
-			kmod-usb-serial-pl2303 kmod-usb-serial-ark3116 kmod-usb-serial-belkin \
-			kmod-usb-serial-cp210x kmod-usb-serial-cypress-m8 kmod-usb-serial-ftdi
-
 	# Uncaterizored stuff
-	DEVICE_PACKAGES += kmod-r2ec stm32flasher libfuse libcap libwebsockets-openssl crconf
+	DEVICE_PACKAGES.basic += kmod-r2ec stm32flasher crconf
 
 	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	KERNEL_IN_UBI := 1
@@ -62,6 +58,8 @@ define Device/teltonika_rutx
 	# HW_SUPPORT := type1%type1_value1:type1_value2 type2%type2_value1 ...
 	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	HW_SUPPORT := io_expander%stm32:shiftreg_1
+
+	HW_MODS := mod1%W25N02KV
 
 endef
 TARGET_DEVICES += teltonika_rutx

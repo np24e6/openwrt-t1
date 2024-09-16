@@ -1,5 +1,7 @@
 #!/bin/sh
 . /lib/functions.sh
+. /usr/share/libubox/jshn.sh
+
 #
 # Script which handles the routing issues as necessary for pptpd
 #
@@ -32,5 +34,15 @@ add_routes(){
 
 config_load network
 config_foreach add_routes route $5
+
+mkdir -p /tmp/state/l2tp
+
+json_init
+json_add_string "conndate" "$(date +%s)"
+json_add_string "local_ip" "$4"
+json_add_string "remote_ip" "$5"
+json_add_string "interface" "$1"
+
+json_dump > /tmp/state/l2tp/"${PEERNAME}".status
 
 exit 0

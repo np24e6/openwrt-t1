@@ -7,7 +7,7 @@ include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=post_get
 
-PKG_SOURCE_VERSION:=4cfc983987fe63fb776d84bd916bdf9e0ecb0d13
+PKG_SOURCE_VERSION:=1.2
 
 PKG_FIXUP:=autoreconf
 

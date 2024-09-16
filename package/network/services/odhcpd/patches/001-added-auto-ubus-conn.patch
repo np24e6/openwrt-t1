@@ -1,0 +1,77 @@
+--- a/src/ubus.c
++++ b/src/ubus.c
+@@ -10,7 +10,7 @@
+ #include "dhcpv6.h"
+ #include "dhcpv4.h"
+ 
+-static struct ubus_context *ubus = NULL;
++static struct ubus_auto_conn ubus = { 0 };
+ static struct ubus_subscriber netifd;
+ static struct blob_buf b;
+ static struct blob_attr *dump = NULL;
+@@ -247,14 +247,14 @@
+ static void update_netifd(bool subscribe)
+ {
+ 	if (subscribe)
+-		ubus_subscribe(ubus, &netifd, objid);
+-
+-	ubus_abort_request(ubus, &req_dump);
++		ubus_subscribe(&ubus.ctx, &netifd, objid);
++
++	ubus_abort_request(&ubus.ctx, &req_dump);
+ 	blob_buf_init(&b, 0);
+ 
+-	if (!ubus_invoke_async(ubus, objid, "dump", b.head, &req_dump)) {
++	if (!ubus_invoke_async(&ubus.ctx, objid, "dump", b.head, &req_dump)) {
+ 		req_dump.data_cb = handle_dump;
+-		ubus_complete_request_async(ubus, &req_dump);
++		ubus_complete_request_async(&ubus.ctx, &req_dump);
+ 	}
+ }
+ 
+@@ -341,7 +341,7 @@
+ 		const size_t mlen, const struct in_addr *addr, const char *name,
+ 		const char *interface)
+ {
+-	if (!ubus || !main_object.has_subscribers)
++	if (!ubus.ctx.msgbuf.data || !main_object.has_subscribers)
+ 		return;
+ 
+ 	blob_buf_init(&b, 0);
+@@ -354,7 +354,7 @@
+ 	if (interface)
+ 		blobmsg_add_string(&b, "interface", interface);
+ 
+-	ubus_notify(ubus, &main_object, type, b.head, -1);
++	ubus_notify(&ubus.ctx, &main_object, type, b.head, -1);
+ }
+ 
+ static void handle_event(_unused struct ubus_context *ctx, _unused struct ubus_event_handler *ev,
+@@ -437,18 +437,19 @@
+ 
+ int ubus_init(void)
+ {
+-	if (!(ubus = ubus_connect(NULL))) {
++	ubus_auto_connect(&ubus);
++	if (!ubus.ctx.msgbuf.data) {
+ 		syslog(LOG_ERR, "Unable to connect to ubus: %m");
+ 		return -1;
+ 	}
+ 
+ 	netifd.cb = handle_update;
+-	ubus_register_subscriber(ubus, &netifd);
+-
+-	ubus_add_uloop(ubus);
+-	ubus_add_object(ubus, &main_object);
+-	ubus_register_event_handler(ubus, &event_handler, "ubus.object.add");
+-	if (!ubus_lookup_id(ubus, "network.interface", &objid))
++	ubus_register_subscriber(&ubus.ctx, &netifd);
++
++	ubus_add_uloop(&ubus.ctx);
++	ubus_add_object(&ubus.ctx, &main_object);
++	ubus_register_event_handler(&ubus.ctx, &event_handler, "ubus.object.add");
++	if (!ubus_lookup_id(&ubus.ctx, "network.interface", &objid))
+ 		update_netifd(true);
+ 
+ 	return 0;
+

@@ -5,7 +5,6 @@ extern "C" {
 
 #include <time.h>
 #include <libubus.h>
-#include <libsim.h>
 
 #define LMDC_BUFFER_SIZE 256
 #define LMDC_UBUS_TIMEOUT 30
@@ -27,7 +26,7 @@ typedef struct lmdc_data {
 } lmdc_data;
 
 int lmdc_ubus_read_raw_total_db(struct ubus_context *ctx, lmdc_data *output,
-			     long int from, long int to, const char *modem, lsim_t sim,
+			     long int from, long int to, const char *modem, int sim,
 			     const char *iface);
 /**
  * Gathers tx,rx data of the current day
@@ -37,7 +36,7 @@ int lmdc_ubus_read_raw_total_db(struct ubus_context *ctx, lmdc_data *output,
  * @param modem - modem id. NULL means any
  * @return returns LMDC_SUCCESS on success and LMDC_ERROR on fail.
  */
-int lmdc_get_current_day(struct ubus_context *ctx, lmdc_data *output, lsim_t sim, const char *modem);
+int lmdc_get_current_day(struct ubus_context *ctx, lmdc_data *output, int sim, const char *modem);
 /**
  * Current week data
  * @param ctx - ubus context
@@ -46,7 +45,7 @@ int lmdc_get_current_day(struct ubus_context *ctx, lmdc_data *output, lsim_t sim
  * @param modem - modem id. NULL means any
  * @return returns LMDC_SUCCESS on success and LMDC_ERROR on fail.
  */
-int lmdc_get_current_week(struct ubus_context *ctx, lmdc_data *output, lsim_t sim, const char *modem);
+int lmdc_get_current_week(struct ubus_context *ctx, lmdc_data *output, int sim, const char *modem);
 /**
  * Current month
  * @param ctx - ubus context
@@ -55,7 +54,7 @@ int lmdc_get_current_week(struct ubus_context *ctx, lmdc_data *output, lsim_t si
  * @param modem - modem id. NULL means any
  * @return returns LMDC_SUCCESS on success and LMDC_ERROR on fail.
  */
-int lmdc_get_current_month(struct ubus_context *ctx, lmdc_data *output, lsim_t sim, const char *modem);
+int lmdc_get_current_month(struct ubus_context *ctx, lmdc_data *output, int sim, const char *modem);
 /**
  * Last 24h data
  * @param ctx - ubus context
@@ -65,7 +64,7 @@ int lmdc_get_current_month(struct ubus_context *ctx, lmdc_data *output, lsim_t s
  * @return returns LMDC_SUCCESS on success and LMDC_ERROR on fail.
  */
 
-int lmdc_get_day(struct ubus_context *ctx, lmdc_data *output, lsim_t sim, const char *modem);
+int lmdc_get_day(struct ubus_context *ctx, lmdc_data *output, int sim, const char *modem);
 /**
  *
  * @param ctx - ubus context
@@ -74,7 +73,7 @@ int lmdc_get_day(struct ubus_context *ctx, lmdc_data *output, lsim_t sim, const 
  * @param modem - modem id. NULL means any
  * @return returns LMDC_SUCCESS on success and LMDC_ERROR on fail.
  */
-int lmdc_get_week(struct ubus_context *ctx, lmdc_data *output, lsim_t sim, const char *modem);
+int lmdc_get_week(struct ubus_context *ctx, lmdc_data *output, int sim, const char *modem);
 /**
  *
  * @param ctx - ubus context
@@ -83,7 +82,7 @@ int lmdc_get_week(struct ubus_context *ctx, lmdc_data *output, lsim_t sim, const
  * @param modem - sim number. NULL means any
  * @return returns LMDC_SUCCESS on success and LMDC_ERROR on fail.
  */
-int lmdc_get_month(struct ubus_context *ctx, lmdc_data *output, lsim_t sim, const char *modem);
+int lmdc_get_month(struct ubus_context *ctx, lmdc_data *output, int sim, const char *modem);
 
 /**
  * Get total data usage
@@ -93,7 +92,7 @@ int lmdc_get_month(struct ubus_context *ctx, lmdc_data *output, lsim_t sim, cons
  * @param modem - sim number. NULL means any
  * @return returns LMDC_SUCCESS on success and LMDC_ERROR on fail.
  */
-int lmdc_get_total(struct ubus_context *ctx, lmdc_data *output, lsim_t sim, const char *modem);
+int lmdc_get_total(struct ubus_context *ctx, lmdc_data *output, int sim, const char *modem);
 
 /**
  * Clean database
@@ -103,7 +102,7 @@ int lmdc_get_total(struct ubus_context *ctx, lmdc_data *output, lsim_t sim, cons
  * @param interface - interface name. NULL means any
  * @return returns LMDC_SUCCESS on success and LMDC_ERROR on fail.
  */
-int lmdc_clean_db(struct ubus_context *ctx, const char *modem, lsim_t sim, const char *interface);
+int lmdc_clean_db(struct ubus_context *ctx, const char *modem, int sim, const char *interface);
 /**
  * Backup database
  * @param ctx - ubus context

@@ -39,6 +39,7 @@ extern ssdk_chip_type SSDK_CURRENT_CHIP_TYPE;  /*running chip type*/
 #define IP_INTF_ENTRY_ADD hsl_api_ptr_get(0)->ip_intf_entry_add
 #define IP_HOST_ADD hsl_api_ptr_get(0)->ip_host_add
 #define IP_HOST_DEL hsl_api_ptr_get(0)->ip_host_del
+#define IP_HOST_DEL_ALL hsl_api_ptr_get(0)->ip_host_del_all
 #define IP_HOST_GET hsl_api_ptr_get(0)->ip_host_get
 #define IP_HOST_NEXT hsl_api_ptr_get(0)->ip_host_next
 #define IP_INTF_ENTRY_DEL hsl_api_ptr_get(0)->ip_intf_entry_del
@@ -100,13 +101,16 @@ extern ssdk_chip_type SSDK_CURRENT_CHIP_TYPE;  /*running chip type*/
 #define NETISOLATE_SET hsl_api_ptr_get(0)->netisolate_set
 
 /* PORT_CTRL API */
-#define HEADER_TYPE_SET hsl_api_ptr_get(0)->header_type_set
-#define PORT_TXHDR_MODE_SET hsl_api_ptr_get(0)->port_txhdr_mode_set
-#define PORT_TXMAC_STATUS_SET hsl_api_ptr_get(0)->port_txmac_status_set
+#define HEADER_TYPE_SET                 hsl_api_ptr_get(0)->header_type_set
+#define PORT_TXHDR_MODE_SET             hsl_api_ptr_get(0)->port_txhdr_mode_set
+#define PORT_TXMAC_STATUS_SET           hsl_api_ptr_get(0)->port_txmac_status_set
+#define PORT_AUTONEGOTIATION_RESTART    hsl_api_ptr_get(0)->port_autoneg_restart
 
 /* REG ACCESS API */
 #define REG_GET hsl_api_ptr_get(0)->reg_get
 
+/*MISC API*/
+#define MISC_ARP_GUARD_SET fal_ip_arp_guard_set
 
 #elif defined(ISISC)
 /* NAT API*/

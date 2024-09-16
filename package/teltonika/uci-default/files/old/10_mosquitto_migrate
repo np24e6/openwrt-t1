@@ -57,7 +57,9 @@ config_get local_port $MQTT "local_port"
 [ -n "$local_port" ] || return
 
 uci_remove $CONFIG $MQTT "local_port"
-uci_add_list $CONFIG $MQTT "local_port" "$local_port"
+for port in $local_port; do
+        uci_add_list $CONFIG $MQTT "local_port" "$port"
+done
 
 config_foreach fix_bridge $MQTT
 

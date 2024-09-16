@@ -30,7 +30,8 @@ define Package/mwan3
      +iptables \
      +iptables-mod-conntrack-extra \
      +iptables-mod-ipopt \
-     +jshn
+     +jshn \
+     +vuci-app-mwan3-ui
    TITLE:=Multiwan hotplug script with connection tracking support
    MAINTAINER:=Florian Eckert <fe@dev.tdt.de>
    PKGARCH:=all
@@ -122,7 +123,8 @@ define Package/mwan3/install
 
 	$(INSTALL_DIR) $(1)/etc/uci-defaults
 	$(INSTALL_DATA) $(PKG_BUILD_DIR)/files/mwan3.defaults $(1)/etc/uci-defaults/
-	$(INSTALL_DATA) $(PKG_BUILD_DIR)/files/mwan3-trb2-otd.defaults $(1)/etc/uci-defaults/
+	$(if $(or $(CONFIG_HAS_SINGLE_ETH_PORT),$(CONFIG_POE_SUPPORT)), \
+		$(INSTALL_DATA) $(PKG_BUILD_DIR)/files/mwan3-no-wan.defaults $(1)/etc/uci-defaults/)
 
 	$(CP) $(PKG_BUILD_DIR)/libwrap_mwan3_sockopt.so.1.0 $(1)/lib/mwan3/
 endef

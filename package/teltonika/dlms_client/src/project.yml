@@ -1,0 +1,150 @@
+---
+# This sample demonstrates running a collection of unit tests.
+
+:project:
+  :use_exceptions: FALSE
+  :use_test_preprocessor: TRUE
+  :use_auxiliary_dependencies: TRUE
+  :build_root: build
+  :release_build: FALSE
+  :test_file_prefix: test_
+  :which_ceedling: gem
+  :ceedling_version: 0.31.1
+  :default_tasks:
+    - test:all
+
+:environment:
+  - :path:
+      - "#{ENV['PATH']}"
+  - :gcov_prefix_strip: 100
+  - :gcov_prefix: "/tmp/gcov/"
+  - :gcov_run: 1
+
+:extension:
+  :executable: .out
+
+:paths:
+  :libraries: []
+  :test:
+    - +:test/**
+    - -:test/support
+  :support:
+    - test/support
+  :source:
+    - src/**
+  :include:
+    - test/include
+    - "#{ENV['STAGING_DIR']}/usr/include/"
+    - "#{ENV['STAGING_DIR']}/usr/include/libubox/*"
+    - "#{ENV['TOOLCHAIN_DIR']}/include/"
+
+:tools:
+  :gcov_compiler:
+    :executable: "#{ENV['CC']}"
+    :name: "OpenWRT gcc"
+    :arguments:
+      - -I"$": COLLECTION_PATHS_TEST_SUPPORT_SOURCE_INCLUDE_VENDOR
+      - -I"$": COLLECTION_PATHS_TEST_TOOLCHAIN_INCLUDE
+      - "#{ENV['CFLAGS']}"
+      - "#{ENV['CPPFLAGS']}"
+      - "#{ENV['LDFLAGS']}"
+      - -DTEST
+      - --coverage
+      - -lpthread
+      - -luci
+      - -ltlt_uci
+      - -lsqlite3
+      - -lubus
+      - -lubox
+      - -lubus
+      - -c
+      - -Werror=incompatible-pointer-types
+      - -O0 -ggdb3 # for debugging
+      - -o ${2}
+      - ${1}
+  :gcov_linker:
+    :executable: "#{ENV['CC']}"
+    :name: "OpenWRT gcc linker"
+    :arguments:
+      - -I"$": COLLECTION_PATHS_TEST_SUPPORT_SOURCE_INCLUDE_VENDOR
+      - "#{ENV['CFLAGS']}"
+      - "#{ENV['CPPFLAGS']}"
+      - "#{ENV['LDFLAGS']}"
+      - -DTEST
+      - -lpthread
+      - -luci
+      - -ltlt_uci
+      - -lsqlite3
+      - -lubus
+      - -lubox
+      - -O0 -ggdb3 # for debugging
+      - --coverage
+      - -o ${2}
+      - ${1}
+  :gcov_fixture:
+    :executable: "#{ENV['TOPDIR']}/scripts/tests_upload_and_run.sh"
+    :name: "Test uploader and runner script"
+    :arguments:
+      - "#{ENV['TARGET_IP']}"
+      - "#{ENV['TARGET_PORT']}"
+      - "${1}"
+  :gcov_report:
+    :executable: "#{ENV['GCOV']}"
+    :name: "gcov report"
+    :arguments:
+      - -n
+      - -p
+      - -b
+      - -o "$": GCOV_BUILD_OUTPUT_PATH
+      - ${1}
+  :gcov_gcovr_post_report:
+    :executable: "gcovr"
+    :name: "gcovr post report"
+    :arguments:
+      - --exclude-throw-branches
+      - --exclude-unreachable-branches
+      - ${1}
+
+:cmock:
+  :mock_prefix: mock_
+  :when_no_prototypes: :error
+  # :when_ptr: :compare_ptr
+  :enforce_strict_ordering: TRUE
+  :plugins:
+    - :array
+    - :callback
+    - :expect_any_args
+    - :ignore
+    - :ignore_arg
+    # - :ignore_stateless
+    - :return_thru_ptr
+  :treat_as:
+    int8: INT8
+    uint8: HEX8
+    uint16: HEX16
+    uint32: UINT32
+    bool: UINT8
+  :treat_externs: :include
+  :treat_inlines: :exclude
+
+:plugins:
+  :load_paths:
+    - "#{Ceedling.load_path}"
+  :enabled:
+    - stdout_pretty_tests_report
+    - module_generator
+    - gcov
+
+# Add -gcov to the plugins list to make sure of the gcov plugin
+# You will need to have gcov and gcovr both installed to make it work.
+# For more information on these options, see docs in plugins/gcov
+:gcov:
+  :utilities:
+    - gcovr # Use gcovr to create the specified reports (default).
+  :html_report: true
+  :html_report_type: detailed
+  :reports:
+    - HtmlDetailed
+  :gcovr:
+    :html_artifact_filename: coverage_report.html
+    :html_title: "REPORT"

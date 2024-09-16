@@ -1034,7 +1034,7 @@ int ubi_eba_copy_leb(struct ubi_device *ubi, int from, int to,
 	 * cancel it.
 	 */
 	if (vol->eba_tbl[lnum] != from) {
-		dbg_eba("LEB %d:%d is no longer mapped to PEB %d, mapped to "
+		ubi_msg("LEB %d:%d is no longer mapped to PEB %d, mapped to "
 			"PEB %d, cancel", vol_id, lnum, from,
 			vol->eba_tbl[lnum]);
 		err = 1;
@@ -1098,8 +1098,10 @@ int ubi_eba_copy_leb(struct ubi_device *ubi, int from, int to,
 	if (err) {
 		if (err != UBI_IO_BITFLIPS)
 			ubi_warn("cannot read VID header back from PEB %d", to);
-		else
+		else {
+			ubi_warn("bit-flip reading VID header back from PEB %d", to);
 			err = 1;
+		}
 		goto out_unlock_buf;
 	}
 
@@ -1120,16 +1122,17 @@ int ubi_eba_copy_leb(struct ubi_device *ubi, int from, int to,
 			if (err != UBI_IO_BITFLIPS)
 				ubi_warn("cannot read data back from PEB %d",
 					 to);
-			else
+			else {
+				ubi_warn("bit-flip while read data back from PEB %d", to);
 				err = 1;
+			}
 			goto out_unlock_buf;
 		}
 
 		cond_resched();
 
 		if (memcmp(ubi->peb_buf1, ubi->peb_buf2, aldata_size)) {
-			ubi_warn("read data back from PEB %d - it is different",
-				 to);
+			ubi_warn("read data back from PEB %d - it is different", to);
 			goto out_unlock_buf;
 		}
 	}

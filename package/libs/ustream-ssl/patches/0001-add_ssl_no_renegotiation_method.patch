@@ -1,0 +1,44 @@
+--- a/ustream-openssl.c
++++ b/ustream-openssl.c
+@@ -162,6 +162,11 @@ __ustream_ssl_context_new(bool server)
+ 	return (void *) c;
+ }
+ 
++__hidden void __ustream_ssl_no_renegotiation(struct ustream_ssl_ctx *ctx)
++{
++	SSL_CTX_set_options((void *) ctx, SSL_OP_NO_RENEGOTIATION);
++}
++
+ __hidden int __ustream_ssl_add_ca_crt_file(struct ustream_ssl_ctx *ctx, const char *file)
+ {
+ 	int ret;
+--- a/ustream-internal.h
++++ b/ustream-internal.h
+@@ -35,6 +35,7 @@ enum ssl_conn_status {
+ 
+ void ustream_set_io(struct ustream_ssl_ctx *ctx, void *ssl, struct ustream *s);
+ struct ustream_ssl_ctx *__ustream_ssl_context_new(bool server);
++void __ustream_ssl_no_renegotiation(struct ustream_ssl_ctx *ctx);
+ int __ustream_ssl_add_ca_crt_file(struct ustream_ssl_ctx *ctx, const char *file);
+ int __ustream_ssl_set_crt_file(struct ustream_ssl_ctx *ctx, const char *file);
+ int __ustream_ssl_set_key_file(struct ustream_ssl_ctx *ctx, const char *file);
+--- a/ustream-ssl.h
++++ b/ustream-ssl.h
+@@ -50,6 +50,7 @@ struct ustream_ssl_ctx;
+ struct ustream_ssl_ops {
+ 
+ 	struct ustream_ssl_ctx *(*context_new)(bool server);
++	void (*context_no_renegotiation)(struct ustream_ssl_ctx *ctx);
+ 	int (*context_set_crt_file)(struct ustream_ssl_ctx *ctx, const char *file);
+ 	int (*context_set_key_file)(struct ustream_ssl_ctx *ctx, const char *file);
+ 	int (*context_add_ca_crt_file)(struct ustream_ssl_ctx *ctx, const char *file);
+--- a/ustream-ssl.c
++++ b/ustream-ssl.c
+@@ -225,6 +225,7 @@ static int _ustream_ssl_set_peer_cn(stru
+ 
+ const struct ustream_ssl_ops ustream_ssl_ops = {
+ 	.context_new = __ustream_ssl_context_new,
++	.context_no_renegotiation = __ustream_ssl_no_renegotiation,
+ 	.context_set_crt_file = __ustream_ssl_set_crt_file,
+ 	.context_set_key_file = __ustream_ssl_set_key_file,
+ 	.context_add_ca_crt_file = __ustream_ssl_add_ca_crt_file,

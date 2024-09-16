@@ -1,0 +1,29 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+CONFIG=modbus_client
+MAIN_SCT=main
+IS_ENABLED=0
+
+check_if_enabled() {
+        local section=$1
+	local enabled_section=0
+	config_get enabled_section $section enabled
+
+	[ "$enabled_section" = "1" ] && IS_ENABLED=1
+}
+
+config_load $CONFIG
+config_foreach check_if_enabled tcp_server
+config_foreach check_if_enabled rtu_server
+
+if ! uci_get "$CONFIG" "$MAIN_SCT"; then
+	sec=$(uci add "$CONFIG" "$MAIN_SCT")
+        uci_set "$CONFIG" "$sec" "enabled" "$IS_ENABLED"
+        uci_rename "$CONFIG" "$sec" "$MAIN_SCT"
+
+        uci_commit $CONFIG
+fi
+
+exit 0

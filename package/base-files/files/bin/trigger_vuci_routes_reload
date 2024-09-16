@@ -4,6 +4,7 @@ print_help() {
 	printf "Usage: %s [options]\n
 Options:
 	-t | --triggerer WHO \t WHO called this script (triggered vuci reload). Used for logging.
+	-d | --delay SEC \t Wait (in foreground) for SEC seconds before triggering routes reload.
 	-h | --help \t\t Print this help and exit
 " "$0"
 }
@@ -21,6 +22,9 @@ while [ -n "$1" ]; do
 		print_help
 		exit
 		;;
+	-d | --delay)
+		delay=$value
+		;;
 	-t | --triggerer)
 		triggerer=$value
 		;;
@@ -33,16 +37,16 @@ while [ -n "$1" ]; do
 	shift 2
 done
 
+[ -n "$delay" ] && [ "$delay" -gt 0 ] && sleep "$delay"
+
 # If any of the following commands fail, further commands will not be executed (in the subshell scope).
 # This way we can elegantly know if any of the commands in the subshell failed and react accordingly.
 (						# Create a subshell.
 	set -o errexit				# Set shell option to exit if any of the following commands return a non-zero exit code.
-	/bin/mkdir -p /tmp/vuci			# Execute required commands 
-	/bin/touch /tmp/vuci/reload_routes	#   to trigger a reload.
+	/bin/mkdir -p /tmp/vuci			# Execute required commands
+	/bin/touch /tmp/vuci/reload_routes	#  to trigger a reload.
 )
-[ $? -eq 0 ] || { 				# Check exit code of the subshell.
+[ $? -eq 0 ] || {				# Check exit code of the subshell.
 	log "Failed to trigger vuci routes reload${triggerer:+" requested by $triggerer"}"
 	exit 1
 }
-
-log "vuci reload_routes triggered${triggerer:+" by $triggerer"}"

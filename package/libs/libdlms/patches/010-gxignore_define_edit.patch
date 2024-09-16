@@ -1,0 +1,23 @@
+Index: libdlms-e5cc16e1/development/include/gxignore.h
+===================================================================
+--- libdlms-e5cc16e1.orig/development/include/gxignore.h
++++ libdlms-e5cc16e1/development/include/gxignore.h
+@@ -42,7 +42,7 @@ extern "C" {
+ // #define DLMS_IGNORE_WRAPPER
+ // #define DLMS_IGNORE_PLC
+ // #define DLMS_IGNORE_NOTIFY
+-// #define DLMS_IGNORE_SERVER
++#define DLMS_IGNORE_SERVER
+ // #define DLMS_IGNORE_CLIENT
+ // #define GX_DLMS_MICROCONTROLLER
+ // #define DLMS_IGNORE_HIGH_SHA256
+@@ -151,7 +151,7 @@ extern "C" {
+
+ // Use 32 bit max size bytebuffer instead of 16 bit.
+ // This might be used in client side if a lot of data is read from the meter.
+-// #define GX_DLMS_BYTE_BUFFER_SIZE_32
++#define GX_DLMS_BYTE_BUFFER_SIZE_32
+
+ //Serializer is not used.
+ //DLMS_IGNORE_SERIALIZER
+

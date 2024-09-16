@@ -1,0 +1,54 @@
+Index: vrrpd-1.15/vrrpd.c
+===================================================================
+--- vrrpd-1.15.orig/vrrpd.c
++++ vrrpd-1.15/vrrpd.c
+@@ -1076,19 +1076,20 @@ int detect_ethtool(int skfd, char *ifnam
+ static int parse_cmdline(vrrp_rt *vsrv, int argc, char *argv[])
+ {
+ 	vrrp_if *vif = &vsrv->vif;
+-	int c;
++	int c, ret = 1;
+ 	vsrv->no_vmac = 1;
+-	while (1) {
+-		c = getopt(argc, argv, "f:M:Vhnrsi:v:a:p:z:y:x:d:D:U:I:O:");
++	while ((c = getopt(argc, argv, "f:M:Vhnrsi:v:a:p:z:y:x:d:D:U:I:O:")) != -1) {
+ 		/* if the parsing is completed, exit */
+ 		if (c == EOF)
+ 			break;
+ 		switch (c) {
+ 		case 'n':
+ 			vsrv->no_vmac = 0;
++			ret++;
+ 			break;
+ 		case 's':
+ 			vsrv->preempt = !vsrv->preempt;
++			ret++;
+ 			break;
+ 		case 'f':
+ 			snprintf(PidDir, sizeof(PidDir), "%s", optarg);
+@@ -1185,6 +1186,7 @@ static int parse_cmdline(vrrp_rt *vsrv,
+ 
+ 		case 'r':
+ 			daemonize = 1;
++			ret++;
+ 			break;
+ 
+ 		case 'M':
+@@ -1214,7 +1216,7 @@ static int parse_cmdline(vrrp_rt *vsrv,
+ 			goto err;
+ 		}
+ 	}
+-	return optind;
++	return optind - ret;
+ err:;
+ 	usage();
+ 	return -1;
+@@ -2211,7 +2213,7 @@ int main(int argc, char *argv[])
+ 
+ 	// Parse cmdline //
+ 	argc = parse_cmdline(vsrv, argc, argv);
+-	if (argc < 0) {
++	if (argc <= 0) {
+ 		exit(0);
+ 	}
+ 

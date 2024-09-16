@@ -37,7 +37,10 @@
 		local action message io_var
 
 		config_get action "$1" "action"
-		[ "$action" = "iostatus" ] || return
+		[ "$action" = "send_status" ] || return
+
+		config_get smstext "$1" "smstext"
+		[ "$smstext" = "iostatus" ] || return
 
 		config_get message "$1" "message" "$IOSTATUS_MESSAGE"
 

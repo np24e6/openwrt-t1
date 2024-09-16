@@ -206,6 +206,7 @@ define Package/samba36-server/prerm
 		config_get user "$$1" username
 		/usr/sbin/deluser "$$user"
 		/usr/sbin/smbpasswd -x "$$user"
+		sed --in-place "/^$${user}:/d" /etc/group
 	}
 
 	config_load 'samba'

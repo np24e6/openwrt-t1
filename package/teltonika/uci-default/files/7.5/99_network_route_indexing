@@ -1,0 +1,21 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+index=0
+
+config_cb() {
+	[ "$1" = "route" ] || [ "$1" = "rule" ] || \
+	[ "$1" = "route6" ] || [ "$1" = "table" ] || return
+	index=$((index + 1))
+	[ "${2:0:3}" != "cfg" ] && return
+
+	while uci_get "network" "$index" >/dev/null; do
+		index=$((index + 1))
+	done
+
+	uci_rename "network" "$2" "$index"
+}
+
+config_load "network"
+uci_commit "network"

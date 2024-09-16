@@ -1,0 +1,45 @@
+#!/bin/sh /etc/rc.common
+
+# START must be before /etc/init.d/events_reporting start
+START=98
+
+. /usr/share/libubox/jshn.sh
+
+ENABLED=0
+
+check_if_enabled() {
+	local enable
+	
+	config_get_bool enable "$1" "enable" 0
+	[ "$enable" -ne 1 ] && return 0
+
+	ENABLED=1
+}
+
+send_event() {
+	ubus call log write_ext '{"event":"Device startup completed","sender":"Startup","table":1,"priority":5,"write_db":1}'
+}
+
+wait_for_events_reporting() {
+	# wait for events_reporting to initialize and only then send the event
+	ubus -t 60 listen events_reporting | while read line ; do
+		local event=""
+		json_init
+		json_load "$line" && json_select events_reporting && json_get_var event event
+		if [[ "$event" == "initialized" ]]; then
+			send_event
+			return 0
+		fi
+	done
+}
+
+boot() {
+	config_load events_reporting
+	config_foreach check_if_enabled rule
+	[ "$ENABLED" -ne 1 ] && {
+		send_event
+		return 0
+	}
+	
+	wait_for_events_reporting &
+}

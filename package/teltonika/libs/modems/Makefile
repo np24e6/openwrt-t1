@@ -1,12 +1,12 @@
 #
-# Copyright (C) 2023 Teltonika
+# Copyright (C) 2023 Teltonika-Networks
 #
 
 include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=modems
-PKG_SOURCE_VERSION:=da99018d1b41e090d9d8700c4faaf9d367f2f2d1
+PKG_SOURCE_VERSION:=3.1
 
 include $(INCLUDE_DIR)/package.mk
 

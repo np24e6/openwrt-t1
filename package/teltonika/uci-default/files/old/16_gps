@@ -34,6 +34,10 @@ handle_io_tavl() {
 		adc0)
 			uci_set "$GPS_CONF" "$tavl_sec" "enabled" "$send_analog_input"
 		;;
+		acl0)
+			uci_set "$GPS_CONF" "$tavl_sec" "enabled" "0"
+			uci_set "$GPS_CONF" "$tavl_sec" "acl" "current"
+		;;
 		*)
 			uci_set "$GPS_CONF" "$tavl_sec" "enabled" "0"
 	esac
@@ -144,6 +148,10 @@ move_avl_rules_to_avl_config() {
 		uci_set "$AVL_CONF" "$sec" "type" "$type"
 		uci_set "$AVL_CONF" "$sec" "name" "$name"
 
+		if [ "$type" = "acl" ]; then
+			uci_set "$AVL_CONF" "$sec" "acl" "current"
+		fi
+
 		uci_remove "$GPS_CONF" "$section"
 
 	elif [ "$section_name" = "input" ]; then
@@ -212,6 +220,45 @@ add_new_nmea_rules() {
 	done
 }
 
+ACL_RULE_EXIST=0
+add_acl_routine() {
+	ubus list ioman.acl* > /dev/null 2>&1 || return
+
+	add_acl_rule_if_missing "$AVL_CONF" "tavl_rule"
+	add_acl_rule_if_missing "$GPS_CONF" "https_tavl_rule"
+}
+
+add_acl_rule_if_missing() {
+	local conf=$1
+	local section_type=$2
+	ACL_RULE_EXIST=0
+
+	config_load "$conf" || return
+	config_foreach check_if_acl_rule_exists
+	[ "$ACL_RULE_EXIST" = "0" ] && add_acl_rule "$conf" "$section_type"
+}
+
+check_if_acl_rule_exists() {
+	[ "$ACL_RULE_EXIST" = "0" ] || return
+	local section="$1"
+
+	config_get type "$section" "type" "0"
+	if [ "$type" = "acl" ]; then
+		ACL_RULE_EXIST=1
+	fi
+}
+
+add_acl_rule() {
+	local conf="$1"
+	local sec_type="$2"
+
+	acl_sec=$(uci add "$conf" "$sec_type")
+	uci_set "$conf" "$acl_sec" "enabled" "0"
+	uci_set "$conf" "$acl_sec" "type" "acl"
+	uci_set "$conf" "$acl_sec" "name" "acl0"
+	uci_set "$conf" "$acl_sec" "acl" "current"
+}
+
 config_load "$GPS_CONF" || exit 0
 config_foreach convert_tavl "tavl" "tavl_rule"
 config_load "$GPS_CONF" || exit 0
@@ -248,8 +295,9 @@ fi
 
 retain_https_rules
 add_new_nmea_rules
+add_acl_routine
 
-uci_commit "$GPS_CONF"
-uci_commit "$AVL_CONF"
+uci_commit $GPS_CONF
+uci_commit $AVL_CONF
 
 exit 0

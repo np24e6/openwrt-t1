@@ -4,7 +4,7 @@ Delay=
 TEXT=1
 force=
 count=0
-device_name=
+skip_shutdown=0
 
 [ -e /usr/bin/killall ] && [ -e /usr/bin/ledman ] && {
 	if killall -q -0 ubusd; then
@@ -13,7 +13,7 @@ device_name=
 		# on RAMdisk during sysupgrade, ubusd isn't running and the normal way of
 		# notifying ledman doesn't work
 		killall -q -TERM ledman
-		ledman --boot --daemon --force >/dev/null 2>&1 &
+		ledman --boot --daemon >/dev/null 2>&1 &
 	fi
 }
 

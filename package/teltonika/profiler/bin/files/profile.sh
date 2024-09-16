@@ -1,5 +1,5 @@
 #!/bin/sh
-# shellcheck disable=SC3010,SC3043
+# shellcheck disable=3010,3043,2317,3057
 
 . /lib/functions.sh
 . /lib/upgrade/common.sh
@@ -9,9 +9,10 @@ TAR_PATH=/etc/profiles/
 export CONFFILES=/tmp/profile.conffiles
 RM_CONFFILES=/tmp/rm_profile.conffiles
 PROFILE_VERSION_FILE=/etc/profile_version
-EXEPTIONS="etc\/config\/rms_connect_timer etc\/config\/profiles etc\/crontabs\/root etc\/hosts etc\/config\/luci etc\/config\/vuci
-	etc\/inittab etc\/group etc\/passwd etc\/profile etc\/shadow etc\/shells etc\/sysctl.conf etc\/rc.local  etc\/config\/teltonika
-	etc\/default-config"
+EXCEPTIONS="etc/config/rms_connect_timer etc/config/profiles etc/crontabs/root etc/hosts etc/config/luci etc/config/vuci
+	etc/inittab etc/group etc/passwd etc/profile etc/shadow etc/shells etc/sysctl.conf etc/rc.local  etc/config/teltonika
+	etc/default-config"
+
 EXTRA_FILES="/etc/firewall.user /etc/profile_version"
 
 KNOWN_CLEANS="/etc/config/iojuggler"
@@ -46,6 +47,7 @@ add_uci_conffiles() {
 
 	[ -n "$opkg_command" ] && eval "$opkg_command" >"$file"
 	#Do not qoute ${misc_files} !!!!
+	# shellcheck disable=2086 # Splitting is intended here
 	[ -n "$misc_files" ] && find ${misc_files} -type f -o -type l 2>/dev/null >>"$file"
 
 	# removes duplicates
@@ -57,24 +59,24 @@ add_uci_conffiles() {
 	return 0
 }
 
-remove_exeptions() {
-	for val in $EXEPTIONS; do
-		sed -i "/$val/d" "$1"
-	done
+remove_exceptions() {
+	# shellcheck disable=2086 # Splitting is intended here
+	sed -i'' -e "$(printf "\,%s,d; " $EXCEPTIONS)" "$1"
 }
 
-remove_exeptions_from_file() {
+remove_exceptions_from_file() {
 	local dir="$1"
+	cd "$dir" || return 1
 
-	for val in $EXEPTIONS; do
-		rm -f "${dir}${val//\\/}"
-	done
+	# shellcheck disable=2086 # Splitting is intended here
+	rm -f $EXCEPTIONS
+
+	cd - >/dev/null || return 1
 }
 
 add_extras() {
-	for val in $EXTRA_FILES; do
-		echo "$val" >>"$CONFFILES"
-	done
+	# shellcheck disable=2086 # Splitting is intended here
+	printf "%s\n" $EXTRA_FILES >>"$CONFFILES"
 }
 
 __add_conf_files() {
@@ -125,7 +127,7 @@ __update_tar() {
 	for profile in /etc/profiles/*.tar.gz; do
 		tar xzf "$profile" -C "$TMP_DIR"
 		name=$(basename "$profile" .tar.gz)
-		eval "$cb \"\$name\" \"\$filelist\""
+		eval "$cb '$name' '$filelist'"
 		[ -e "/tmp/keep_files" ] && keep=" -T /tmp/keep_files"
 
 		tar cz${keep} -f "$profile" -C "$TMP_DIR" "."
@@ -155,7 +157,7 @@ do_save_conffiles() {
 
 	add_uci_conffiles "$CONFFILES"
 	# Do not save these configs
-	remove_exeptions "$CONFFILES"
+	remove_exceptions "$CONFFILES"
 	echo -en "\n" >>"$CONFFILES"
 	add_extras
 	cp /etc/version "$PROFILE_VERSION_FILE"
@@ -200,33 +202,31 @@ uci_apply_defaults() {
 
 call_config_event() {
 	echo "apply $1"
-	ubus call service event "{ \"type\": \"config.change\", \"data\": { \"package\": \"$(basename "$1")\" }}"
+	ubus call service event "{ \"type\": \"config.change\", \"data\": { \"package\": \"$1\" }}"
 }
 
 apply_config() {
 	local config_check_path="/var/run/config.check"
 	local md5file="${1:-/var/run/config.md5}"
-	local network=0
 
 	rm -rf "${config_check_path}"
 	mkdir -p "${config_check_path}"
 
-	for config in /etc/config/*; do
-		file=${config##*/}
-		[ "$file" = "profiles" ] && continue
-		uci show "${file##*/}" >"${config_check_path}/${file}"
-	done
+	cp /etc/config/* ${config_check_path}/
+	rm ${config_check_path}/profiles
 
 	[ -f "$md5file" ] && {
-		for c in $(md5sum -c "$md5file" 2>/dev/null | grep 'FAILED' | cut -d':' -f1); do
-			[[ "$c" =~ "/network$" ]] && {
+		local network=0
+
+		for c in $(diff "$md5file"); do
+			[ "$c" = "network" ] && {
 				network=1
 				continue
 			}
 			call_config_event "$c"
 		done
 
-		/bin/ubus -t 180 call mobifd reload
+		/bin/ubus -t 180 call mobifd reload >/dev/null
 		[ "$network" -eq 1 ] && call_config_event "network"
 	}
 
@@ -240,14 +240,13 @@ change_config() {
 	local md5file="/var/run/config.md5"
 	local new="$1"
 
-	uci -q get "profiles.$new" || {
+	uci -q get "profiles.$new" >/dev/null || {
 		log "Profile '$new' not found"
 		return 1
 	}
 
-	local archive="${TAR_PATH}$(uci -q get "profiles.${new}.archive")"
-
-	[ $? -ne 0 ] && {
+	local archive
+	archive="${TAR_PATH}$(uci -q get "profiles.${new}.archive")" || {
 		log "Unable to retrieve profile '$new' archive name"
 		return 1
 	}
@@ -261,24 +260,10 @@ change_config() {
 	apply_config "$md5file"
 
 	mkdir -p "$TMP_DIR"
-	cd "$TMP_DIR" || {
-		log "Failed to cd to '$TMP_DIR'"
+	tar xzf "$archive" -C "$TMP_DIR" 2>&- || {
+		log "Unable to extract '$archive'"
 		return 1
 	}
-
-	local tar="$(basename "$archive" .gz)"
-
-	gunzip -dc "$archive" >"./$tar" 2>&- || {
-		log "Unable to unzip '$archive'"
-		return 1
-	}
-
-	tar xf "$tar" 2>&- || {
-		log "Unable to untar '$tar'"
-		return 1
-	}
-
-	cd -
 
 	cmp -s "${TMP_DIR}${PROFILE_VERSION_FILE}" /etc/version || {
 		#Legacy profiles do not have some config files so we need to reset
@@ -289,10 +274,10 @@ change_config() {
 	}
 
 	#Fixing legacy profiles
-	remove_exeptions_from_file "$TMP_DIR"
-	cp -r "$TMP_DIR"* /
+	remove_exceptions_from_file "$TMP_DIR"
+	cp -r "$TMP_DIR"/* /
 
-	#Apply uci defaults only if profile is created on diferent FW version.
+	#Apply uci defaults only if profile is created on different FW version.
 	cmp -s "${TMP_DIR}${PROFILE_VERSION_FILE}" /etc/version || {
 		uci_apply_defaults
 	}
@@ -313,13 +298,13 @@ change_config() {
 }
 
 diff() {
-	MD5FILE=$1
-	[ -z "$MD5FILE" ] && return 1
-	[ -f "$MD5FILE" ] && {
-		for c in $(md5sum -c "$MD5FILE" 2>/dev/null | grep FAILED | cut -d: -f1); do
-			basename "$c"
-		done
-	}
+	local md5file="$1"
+
+	[ -z "$md5file" ] && return 1
+
+	for c in $(md5sum -c "$md5file" 2>/dev/null | sed -nE -e 's/(.*):\s+FAILED/\1/p'); do
+		echo "${c##*/}" # for known input (in this case regular fullpath filenames) it's equivalent to basename, but faster
+	done
 
 	return 0
 }
@@ -327,11 +312,10 @@ diff() {
 rm_conffiles() {
 	add_uci_conffiles "$RM_CONFFILES"
 	# Do not save these configs
-	remove_exeptions "$RM_CONFFILES"
+	remove_exceptions "$RM_CONFFILES"
 
-	for file in $(cat $RM_CONFFILES); do
-		rm "$file"
-	done
+	# shellcheck disable=2046 # Splitting is intended here
+	rm $(cat $RM_CONFFILES)
 }
 
 [ -z "$1" ] && exit
@@ -350,7 +334,7 @@ case "$1" in
 	change_config "$2"
 	;;
 -d)
-	diff "$2"
+	[ -f "$2" ] && diff "$2"
 	;;
 -u)
 	uci_apply_defaults

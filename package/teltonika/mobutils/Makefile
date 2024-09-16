@@ -6,10 +6,10 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=mobutils
-PKG_VERSION:=2023-06-06
+PKG_VERSION:=2023-09-15
 PKG_RELEASE:=1
 
-PKG_SOURCE_VERSION:=d5a3f015ae19e5f22747a6fd0408ab3c6c6c9aeb
+PKG_SOURCE_VERSION:=3.3
 
 PKG_FIXUP:=autoreconf
 
@@ -50,10 +50,10 @@ endef
 define Package/mobutils-sms_utilities
 	$(call Package/mobutils/Default)
 	TITLE:=SMS utilities
-	DEPENDS+=mobutils +libgsm +libgsm +libcgi +MOBILE_SUPPORT:libmdcollect \
-		+MOBILE_SUPPORT:rpcd-mod-simd +libboardjson +liblog  \
-		+SMS_UTILS_HANDLER_IO:iomand +SMS_UTILS_HANDLER_GPS:libgps \
-		+libcurl +@LIBCURL_SMTP +libparam +SMS_UTILS_HANDLER_RMS:librms
+	DEPENDS+=mobutils +libgsm +libcgi +MOBILE_SUPPORT:libmdcollect \
+		+libboardjson +liblog +SMS_UTILS_HANDLER_IO:iomand \
+		+SMS_UTILS_HANDLER_GPS:libgps +libcurl +@LIBCURL_SMTP \
+		+libparam +SMS_UTILS_HANDLER_RMS:librms
 endef
 
 define Package/mobutils-sms_utilities/conffiles
@@ -69,13 +69,13 @@ TARGET_LDFLAGS += -lcrypt
 endif
 
 CONFIGURE_ARGS += \
-	$(if $(CONFIG_SMS_UTILS_TEST_MODE),--enable-test-mode) \
 	$(if $(CONFIG_SMS_UTILS_HANDLER_IO),--enable-io) \
 	$(if $(CONFIG_SMS_UTILS_HANDLER_GPS),--enable-gps) \
 	$(if $(CONFIG_SMS_UTILS_HANDLER_WIFI),--enable-wifi) \
 	$(if $(CONFIG_SMS_UTILS_HANDLER_VPN),--enable-vpn) \
 	$(if $(CONFIG_SMS_UTILS_HANDLER_RMS),--enable-rms) \
 	$(if $(CONFIG_SMS_UTILS_HANDLER_EXEC),--enable-exec) \
+	$(if $(CONFIG_SMS_UTILS_HANDLER_API),--enable-api) \
 	$(if $(CONFIG_SMS_FWD_HANDLER_HTTP),--enable-fwd-http) \
 	$(if $(CONFIG_SMS_FWD_HANDLER_REPLY),--enable-fwd-reply) \
 	$(if $(CONFIG_SMS_FWD_HANDLER_SMS),--enable-fwd-sms) \
@@ -100,16 +100,18 @@ define Package/mobutils-call_utilities/install
 endef
 
 define Package/mobutils-sms_utilities/install
-	$(INSTALL_DIR) $(1)/usr/sbin/ $(1)/etc/init.d/ $(1)/etc/config/
+	$(INSTALL_DIR) $(1)/usr/sbin/ $(1)/etc/init.d/ $(1)/etc/config/ \
+			$(1)/etc/sms_utils/
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/sms_utils/files/sms_utils.init $(1)/etc/init.d/sms_utils
 	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/sms_utils $(1)/usr/sbin/
 	$(INSTALL_DIR) $(1)/etc/uci-defaults/etc
 
+	$(CP) $(PKG_BUILD_DIR)/sms_utils/files/api_list.json $(1)/etc/sms_utils/api_list.json
 	$(CP) $(PKG_BUILD_DIR)/files/99_sms_utils-mobutils $(1)/etc/uci-defaults/etc
 	$(CP) $(PKG_BUILD_DIR)/files/99_sms_utils-mobutils_3 $(1)/etc/uci-defaults/etc
 	if [ $(TLT_PLATFORM_RUTX) ] || [ $(TLT_PLATFORM_RUTM) ] || [ $(TLT_PLATFORM_X86_64) ]; then \
 		$(INSTALL_CONF) $(PKG_BUILD_DIR)/sms_utils/files/sms_utils_rutx.conf $(1)/etc/config/sms_utils; \
-	elif [ $(TLT_PLATFORM_TRB2) ]; then \
+	elif [ $(TLT_PLATFORM_TRB2) ] || [ $(TLT_PLATFORM_TRB2M) ] ; then \
 		$(INSTALL_CONF) $(PKG_BUILD_DIR)/sms_utils/files/sms_utils_trb2.conf $(1)/etc/config/sms_utils; \
 	elif [ $(TLT_PLATFORM_TRB1) ] || [ $(TLT_PLATFORM_TRB5) ] ; then \
 		$(INSTALL_CONF) $(PKG_BUILD_DIR)/sms_utils/files/sms_utils_trb1.conf $(1)/etc/config/sms_utils; \

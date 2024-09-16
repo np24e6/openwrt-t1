@@ -1,0 +1,40 @@
+#!/bin/sh
+
+[ "$EVENT_NAME" = "gsm.new_modem" ] || exit 0
+
+gsmctl -y | grep -e "BG96" -e "BG95" > /dev/null || exit 0
+
+SIMCARD_CFG="simcard"
+OPERLIST_CFG="operctl"
+
+remove_operlist_selection() {
+    local section="$1"
+    local operlist
+    local operlist_name
+    local opermode
+
+    config_get operlist "$section" "operlist"
+    [ -n "$operlist" ] && uci_remove "$SIMCARD_CFG" "$section" "operlist"
+
+    config_get operlist_name "$section" "operlist_name"
+    [ -n "$operlist_name" ] && uci_remove "$SIMCARD_CFG" "$section" "operlist_name"
+
+    config_get opermode "$section" "opermode"
+    [ -n "$opermode" ] && uci_remove "$SIMCARD_CFG" "$section" "opermode"
+}
+
+remove_operlist() {
+    local section="$1"
+    [ -n "$section" ] && uci_remove "$OPERLIST_CFG" "$section"
+}
+
+config_load "$SIMCARD_CFG"
+config_foreach remove_operlist_selection sim
+
+config_load "$OPERLIST_CFG"
+config_foreach remove_operlist operlist
+
+uci_commit "$SIMCARD_CFG"
+uci_commit "$OPERLIST_CFG"
+
+exit 0

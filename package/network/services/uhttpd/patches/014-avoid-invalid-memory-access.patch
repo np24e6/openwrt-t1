@@ -1,0 +1,39 @@
+From 9e87095a4125b0bf45eac95d00d528153b0c4310 Mon Sep 17 00:00:00 2001
+From: Jo-Philipp Wich <jo@mein.io>
+Date: Tue, 23 Nov 2021 17:29:05 +0100
+Subject: [PATCH] listen: avoid invalid memory access
+
+Fixes the following memory access error spotted by valgrind:
+
+    Invalid read of size 4
+       at 0x10D6D3: uh_socket_bind (listen.c:192)
+       by 0x10C830: add_listener_arg (main.c:128)
+       by 0x10C830: main (main.c:325)
+     Address 0x4aa1160 is 0 bytes after a block of size 64 alloc'd
+       at 0x483877F: malloc (vg_replace_malloc.c:307)
+       by 0x49ACAC5: gaih_inet.constprop.0 (getaddrinfo.c:1058)
+       by 0x49AE224: getaddrinfo (getaddrinfo.c:2256)
+       by 0x10D590: uh_socket_bind (listen.c:145)
+       by 0x10C830: add_listener_arg (main.c:128)
+       by 0x10C830: main (main.c:325)
+
+Signed-off-by: Jo-Philipp Wich <jo@mein.io>
+---
+ listen.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/listen.c b/listen.c
+index 2a54888..c5ba16f 100644
+--- a/listen.c
++++ b/listen.c
+@@ -189,7 +189,7 @@ int uh_socket_bind(const char *host, const char *port, bool tls)
+ 
+ 		l->fd.fd = sock;
+ 		l->tls = tls;
+-		l->addr = *(struct sockaddr_in6 *)p->ai_addr;
++		memcpy(&l->addr, p->ai_addr, p->ai_addrlen);
+ 		list_add_tail(&l->list, &listeners);
+ 		bound++;
+ 
+-- 
+2.30.2

@@ -28,7 +28,7 @@ define Package/emailrelay
 	CATEGORY:=Mail
 	DEPENDS:=+EMAILRELAY_SSL:libopenssl +libstdcpp +vuci-app-email-relay-ui
 	TITLE:=A simple SMTP proxy and MTA
-	PKG_TLT_NAME:=E-MailRelay
+	PKG_TLT_NAME:=Email Relay
 	PKG_ROUTER:=$(TLT_PLATFORM_NAME)
 	URL:=http://emailrelay.sourceforge.net/
 	MENU:=1

@@ -579,6 +579,7 @@ static int r2ec_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	struct r2ec_platform_data *pdata = dev_get_platdata(&client->dev);
 	struct r2ec *gpio;
 	int status, i;
+	struct gpio_irq_chip *girq;
 
 	gpio = devm_kzalloc(&client->dev, sizeof(*gpio), GFP_KERNEL);
 	if (!gpio) {
@@ -623,11 +624,6 @@ static int r2ec_probe(struct i2c_client *client, const struct i2c_device_id *id)
 
 	i2c_set_clientdata(client, gpio);
 
-	status = devm_gpiochip_add_data(&client->dev, &gpio->chip, gpio);
-	if (status < 0) {
-		goto fail;
-	}
-
 	if (client->irq) {
 		gpio->irqchip.name = "r2ec";
 		gpio->irqchip.irq_enable = noop,
@@ -639,10 +635,16 @@ static int r2ec_probe(struct i2c_client *client, const struct i2c_device_id *id)
 		gpio->irqchip.irq_bus_lock = r2ec_irq_bus_lock;
 		gpio->irqchip.irq_bus_sync_unlock = r2ec_irq_bus_sync_unlock;
 
-		status = gpiochip_irqchip_add_nested(&gpio->chip,
-						     &gpio->irqchip,
-						     0, handle_level_irq,
-						     IRQ_TYPE_NONE);
+		girq = &gpio->chip.irq;
+		girq->chip = &gpio->irqchip;
+		girq->parent_handler = NULL;
+		girq->num_parents = 0;
+		girq->parents = NULL;
+		girq->default_type = IRQ_TYPE_NONE;
+		girq->handler = handle_level_irq;
+		girq->threaded = true;
+		girq->first = 0;
+
 		if (status) {
 			dev_err(&client->dev, "cannot add irqchip\n");
 			goto fail;
@@ -658,6 +660,11 @@ static int r2ec_probe(struct i2c_client *client, const struct i2c_device_id *id)
 		if (status) {
 			goto fail;
 		}
+	}
+
+	status = devm_gpiochip_add_data(&client->dev, &gpio->chip, gpio);
+	if (status < 0) {
+		goto fail;
 	}
 
 	if (pdata && pdata->setup) {

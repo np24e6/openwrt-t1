@@ -7,7 +7,7 @@ include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=port_eventsd
 
-PKG_SOURCE_VERSION:=774e89351d436b097494e4ba12fda7fe6f73392e
+PKG_SOURCE_VERSION:=1.7.1
 
 include $(INCLUDE_DIR)/package.mk
 

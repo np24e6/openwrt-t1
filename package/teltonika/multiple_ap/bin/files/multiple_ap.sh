@@ -162,7 +162,7 @@ while uci_get "multi_wifi" "@wifi-iface[0]" >/dev/null; do
 	[ "$ENCRYPTION" != "none" ] && [ "$ENCRYPTION" != "owe" ] && uci_set "wireless" "$SECTION" "key" "$KEY"
 	uci_set "wireless" "$SECTION" "disabled" "0"
 	uci_commit "wireless"
-	ifup "$NAME"
+	ubus call network reload
 	sleep "$TIMEOUT"
 done
 

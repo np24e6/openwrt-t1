@@ -32,8 +32,6 @@ define Package/bash
   TITLE:=The GNU Bourne Again Shell
   DEPENDS:=+libncurses +libreadline
   URL:=http://www.gnu.org/software/bash/
-  PKG_TLT_NAME:=Bash
-  PKG_ROUTER:=$(TLT_PLATFORM_NAME)
 endef
 
 define Package/bash/description

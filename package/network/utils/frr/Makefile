@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2018 Lucian Cristian <lucian.cristian@gmail.com>
+# Copyright (C) 2019 Lucian Cristian <lucian.cristian@gmail.com>
 #
 # This is free software, licensed under the GNU General Public License v2.
 # See /LICENSE for more information.
@@ -7,51 +7,79 @@
 
 include $(TOPDIR)/rules.mk
 PKG_NAME:=frr
-PKG_VERSION:=5.0.2
+PKG_VERSION:=8.4.2
 PKG_RELEASE:=1
+PKG_SOURCE_DATE:=2023-02-17
 
-PKG_SOURCE_URL:=https://github.com/FRRouting/frr/releases/download/$(PKG_NAME)-$(PKG_VERSION)/
-PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
-PKG_HASH:=4cf5416e6e6eebdd3be61f76d1de7bede87521af3f2ac4b3fb9713837458aaff
+PKG_SOURCE:=$(PKG_NAME)-$(PKG_SOURCE_DATE).tar.gz
+PKG_SOURCE_VERSION:=410d78b7a4f2c8b4d4c3736c6d6cdb710287ca80
+PKG_SOURCE_URL:=https://codeload.github.com/FRRouting/frr/tar.gz/$(PKG_SOURCE_VERSION)?
+
+PKG_HASH:=1334b050ea3d4144efeb7bdfe9c6976ebc91744810c5d8a7381a53fac2877ea9
+PKG_MAINTAINER:=Lucian Cristian <lucian.cristian@gmail.com>
+
+PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-$(PKG_SOURCE_VERSION)
+HOST_BUILD_DIR:=$(BUILD_DIR_HOST)/$(PKG_NAME)-$(PKG_SOURCE_VERSION)
+
+PKG_LICENSE:=GPL-2.0-only LGPL-2.1-only
+
+PKG_DAEMON_AVAILABLE:= \
+	babeld \
+	bfdd \
+	bgpd \
+	eigrpd \
+	fabricd \
+	isisd \
+	ldpd \
+	nhrp \
+	ospfd \
+	ospf6d \
+	pathd \
+	pbrd \
+	pimd \
+	ripd \
+	ripngd \
+	staticd \
+	vrrpd
 
 PKG_CONFIG_DEPENDS:= \
 	CONFIG_IPV6 \
-	CONFIG_PACKAGE_frr-babeld \
-	CONFIG_PACKAGE_frr-bgpd \
-	CONFIG_PACKAGE_frr-eigrpd \
-	CONFIG_PACKAGE_frr-isisd \
-	CONFIG_PACKAGE_frr-ldpd \
+	CONFIG_FRR_OPENSSL \
+	CONFIG_FRR_INTERNAL \
+	CONFIG_FRR_SNMP \
+	CONFIG_FRR_NO_SNMP \
 	CONFIG_PACKAGE_frr-libfrr \
-	CONFIG_PACKAGE_frr-nhrpd \
-	CONFIG_PACKAGE_frr-ospfd \
-	CONFIG_PACKAGE_frr-ospf6d \
-	CONFIG_PACKAGE_frr-pbrd \
-	CONFIG_PACKAGE_frr-pimd \
-	CONFIG_PACKAGE_frr-ripd \
-	CONFIG_PACKAGE_frr-ripngd \
 	CONFIG_PACKAGE_frr-vtysh \
 	CONFIG_PACKAGE_frr-watchfrr \
-	CONFIG_PACKAGE_frr-zebra
+	CONFIG_PACKAGE_frr-zebra \
+	$(patsubst %,CONFIG_PACKAGE_frr-%,$(PKG_DAEMON_AVAILABLE)) \
 
-PKG_BUILD_PARALLEL:=1
-PKG_BUILD_DEPENDS:=python3/host
 PKG_FIXUP:=autoreconf
-PKG_LICENSE:=GPL-2.0
+PKG_BUILD_PARALLEL:=1
+PKG_INSTALL:=1
+
+PKG_BUILD_DEPENDS:=frr/host
+HOST_BUILD_DEPENDS:=python3/host
 
 include $(INCLUDE_DIR)/package.mk
+include $(INCLUDE_DIR)/host-build.mk
+
+define Package/frr-libfrr/config
+  source "$(SOURCE)/Config.in"
+endef
 
 define Package/frr/Default
   SECTION:=net
   CATEGORY:=Network
   SUBMENU:=Routing and Redirection
-  TITLE:=The FRRouting (FRR) Software Routing Suite
   URL:=https://www.frrouting.org/
-  MAINTAINER:=Lucian Cristian <lucian.cristian@gmail.com>
+  DEPENDS:=frr
 endef
 
 define Package/frr
   $(call Package/frr/Default)
   DEPENDS:=+librt
+  TITLE:=The FRRouting (FRR) Software Routing Suite
   MENU:=1
 endef
 
@@ -60,125 +88,33 @@ define Package/frr/description
   routing protocols.
 
   Currently FRRouting supports BGP4, BGP4+, OSPFv2, OSPFv3, RIPv1, RIPv2, RIPng,
-  IS-IS, PIM-SM/MSDP, LDP and Babel as well as very early support for EIGRP and
+  IS-IS, PIM-SM/MSDP, LDP, VRRP and Babel as well as very early support for EIGRP and
   NHRP.
-endef
-
-define Package/frr-babeld
-  $(call Package/frr/Default)
-  DEPENDS+=+frr-libfrr
-  TITLE:=BABEL daemon
-endef
-
-define Package/frr-bgpd
-  $(call Package/frr/Default)
-  DEPENDS+=+frr-libfrr +frr +frr-vtysh +frr-watchfrr +frr-zebra +kmod-tcpmd5sig
-  TITLE:=BGPv4, BGPv4+, BGPv4- daemon
-  ifeq (m, $(CONFIG_PACKAGE_frr-bgpd))
-  	PKG_TLT_NAME:=BGP daemon
-  	PKG_ROUTER:=$(TLT_PLATFORM_NAME)
-  endif
-endef
-
-define Package/frr-eigrpd
-  $(call Package/frr/Default)
-  DEPENDS+=+frr +frr-libfrr +frr-vtysh +frr-watchfrr +frr-zebra
-  TITLE:=EIGRPD daemon
-  ifeq (m, $(CONFIG_PACKAGE_frr-eigrpd))
-        PKG_TLT_NAME:=EIGRPD daemon
-        PKG_ROUTER:=$(TLT_PLATFORM_NAME)
-  endif
-endef
-
-define Package/frr-isisd
-  $(call Package/frr/Default)
-  DEPENDS+=+frr-libfrr
-  TITLE:=IS-IS daemon
-endef
-
-define Package/frr-ldpd
-  $(call Package/frr/Default)
-  DEPENDS+=+frr-libfrr
-  TITLE:=LDP daemon
 endef
 
 define Package/frr-libfrr
   $(call Package/frr/Default)
   TITLE:=zebra library
-  DEPENDS+=+libjson-c
-endef
-
-define Package/frr-nhrpd
-  $(call Package/frr/Default)
-  DEPENDS+=+frr +frr-libfrr +libcares +frr-vtysh +frr-watchfrr +frr-zebra
-  TITLE:=NHRP daemon
-endef
-
-define Package/frr-nhrp
-  $(call Package/frr/Default)
-  DEPENDS+=+frr-nhrpd
-  TITLE:=NHRP daemon (meta package)
-  ifeq (m, $(CONFIG_PACKAGE_frr-nhrp))
-        PKG_TLT_NAME:=NHRP daemon
-        PKG_ROUTER:=$(TLT_PLATFORM_NAME)
-  endif
-endef
-
-define Package/frr-ospfd
-  $(call Package/frr/Default)
-  DEPENDS+=+frr +frr-libfrr +frr-vtysh +frr-watchfrr +frr-zebra
-  TITLE:=OSPFv2 daemon
-  ifeq (m, $(CONFIG_PACKAGE_frr-ospfd))
-        PKG_TLT_NAME:=OSPF daemon
-        PKG_ROUTER:=$(TLT_PLATFORM_NAME)
-  endif
-endef
-
-define Package/frr-ospf6d
-  $(call Package/frr/Default)
-  DEPENDS+=+frr-libfrr @IPV6
-  TITLE:=OSPFv3 daemon
-endef
-
-define Package/frr-pbrd
-  $(call Package/frr/Default)
-  DEPENDS+=+frr-libfrr
-  TITLE:=PBRD daemon
-endef
-
-define Package/frr-pimd
-  $(call Package/frr/Default)
-  DEPENDS+=+frr-libfrr
-  TITLE:=PIM daemon
-endef
-
-define Package/frr-ripd
-  $(call Package/frr/Default)
-  DEPENDS+=+frr +frr-libfrr +frr-vtysh +frr-watchfrr +frr-zebra
-  TITLE:=RIP daemon
-  ifeq (m, $(CONFIG_PACKAGE_frr-ripd))
-        PKG_TLT_NAME:=RIP daemon
-        PKG_ROUTER:=$(TLT_PLATFORM_NAME)
-  endif
-endef
-
-define Package/frr-ripngd
-  $(call Package/frr/Default)
-  DEPENDS+=+frr-libfrr @IPV6
-  TITLE:=RIPNG daemon
+  DEPENDS+=+librt +libatomic +libcap +libjson-c +libyang +FRR_OPENSSL:libopenssl +FRR_SNMP:libnetsnmp
+  CONFLICTS:=quagga-libzebra
 endef
 
 define Package/frr-vtysh
   $(call Package/frr/Default)
-  DEPENDS+=+frr-libfrr +libreadline +libncurses
+  DEPENDS+=+frr-libfrr +libreadline +libncurses +more
   TITLE:=integrated shell for frr routing software
+  CONFLICTS:=quagga-vtysh
+  ifeq (m, $(CONFIG_PACKAGE_frr-vtysh))
+    PKG_TLT_NAME:=FRR VTYSH
+    PKG_ROUTER:=$(TLT_PLATFORM_NAME)
+  endif
 endef
 
 define Package/frr-watchfrr
   $(call Package/frr/Default)
   TITLE:=frr watchdog
   DEPENDS+=+frr-libfrr
-  DEFAULT:=y if PACKAGE_frr
+  DEFAULT:=n if PACKAGE_frr
 endef
 
 define Package/frr-zebra
@@ -186,330 +122,270 @@ define Package/frr-zebra
   TITLE:=Zebra daemon
   DEPENDS+=+frr-libfrr
   DEFAULT:=y if PACKAGE_frr
+  CONFLICTS:=quagga-zebra
 endef
 
-define Package/frr-zebra/conffiles
-/etc/frr/zebra.conf
+define Package/frr-pythontools
+  $(call Package/frr/Default)
+  TITLE:=Python reload tool
+  DEPENDS+=+frr-libfrr +python3-base +python3-light +python3-logging
 endef
 
+##Migrate from quagga
+##should test file exists and link in frr folder
+#define Package/frr/postinst
+##!/bin/sh
+#if [ -f /etc/quagga/ospfd.conf ]; then
+#    ls to /etc/frr
+#    sed enable ospfd daemon
+#fi
+#exit 0
+#endef
 
-define Package/frr-babeld/conffiles
-/etc/frr/babeld.conf
-endef
+# define Package/frr-zebra/conffiles
+# /etc/frr/zebra.conf
+# endef
+
+# define Package/frr-babeld/conffiles
+# /etc/frr/babeld.conf
+# endef
 
 define Package/frr-bgpd/conffiles
-/etc/frr/bgpd.conf
+/etc/config/bgp
 endef
 
 define Package/frr-eigrpd/conffiles
-/etc/frr/eigrpd.conf
+/etc/config/eigrp
 endef
 
-define Package/frr-isisd/conffiles
-/etc/frr/isisd.conf
-endef
+# define Package/frr-isisd/conffiles
+# /etc/frr/isisd.conf
+# endef
 
 define Package/frr-ldpd/conffiles
-/etc/frr/ldpd.conf
+/etc/config/mpls
 endef
 
-define Package/frr-nhrpd/conffiles
-/etc/frr/nhrpd.conf
+define Package/frr-nhrp/conffiles
+/etc/config/nhrp
 endef
 
 define Package/frr-ospfd/conffiles
-/etc/frr/ospfd.conf
+/etc/config/ospf
 endef
 
-define Package/frr-ospf6d/conffiles
-/etc/frr/ospf6d.conf
-endef
+# define Package/frr-ospf6d/conffiles
+# /etc/frr/ospf6d.conf
+# endef
 
-define Package/frr-pbrd/conffiles
-/etc/frr/pbrd.conf
-endef
+# define Package/frr-pbrd/conffiles
+# /etc/frr/pbrd.conf
+# endef
 
-define Package/frr-pimd/conffiles
-/etc/frr/pimd.conf
-endef
+# define Package/frr-pimd/conffiles
+# /etc/frr/pimd.conf
+# endef
 
 define Package/frr-ripd/conffiles
-/etc/frr/ripd.conf
+/etc/config/rip
 endef
 
-define Package/frr-ripngd/conffiles
-/etc/frr/ripngd.conf
+# define Package/frr-staticd/conffiles
+# /etc/config/static
+# endef
+
+# define Package/frr-ripngd/conffiles
+# /etc/frr/ripngd.conf
+# endef
+
+# define Package/frr-libfrr/conffiles
+# /etc/frr/vtysh.conf
+# endef
+
+define BuildDaemon
+    define Package/frr-$(1)
+	$$(call Package/frr/Default)
+	TITLE:= $(1) routing engine
+	DEPENDS+=frr-libfrr frr-zebra $(2)
+
+	ifeq ($(1),bgpd)
+		DEPENDS+=+kmod-tcpmd5sig
+		DEPENDS+=+vuci-app-dynamic-routes-bgp-ui
+	endif
+	ifeq ($(1),eigrpd)
+		DEPENDS+=+vuci-app-dynamic-routes-eigrp-ui
+	endif
+	ifeq ($(1),ospfd)
+		DEPENDS+=+vuci-app-dynamic-routes-ospf-ui
+	endif
+	ifeq ($(1),ripd)
+		DEPENDS+=+vuci-app-dynamic-routes-rip-ui
+	endif
+	ifeq ($(1),nhrp)
+		DEPENDS+=+vuci-app-dynamic-routes-nhrp-ui
+	endif
+
+#	if [ "$(1)" == "bfdd" ]; then \
+#	export HAVE_BFDD == 1 ; fi
+
+		ifeq (m, $(CONFIG_PACKAGE_frr-$(1)))
+			ifeq (bgpd, $(1))
+				PKG_TLT_NAME:= BGP daemon
+			endif
+			ifeq (eigrpd, $(1))
+				PKG_TLT_NAME:= EIGRP daemon
+			endif
+			ifeq (ospfd, $(1))
+				PKG_TLT_NAME:= OSPF daemon
+			endif
+			ifeq (ripd, $(1))
+				PKG_TLT_NAME:= RIP daemon
+			endif
+			ifeq (ldpd, $(1))
+				PKG_TLT_NAME:= MPLS daemon
+			endif
+			ifeq (staticd, $(1))
+				PKG_TLT_NAME:= STATIC daemon
+			endif
+			ifeq (nhrp, $(1))
+				PKG_TLT_NAME:= NHRP daemon
+			endif
+			PKG_ROUTER:=$(TLT_PLATFORM_NAME)
+		endif
+    endef
+
+    define Package/frr-$(1)/install
+		$(INSTALL_DIR) $$(1)/usr/sbin
+		$(INSTALL_DIR) $$(1)/etc/config
+		$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/$(1) $$(1)/usr/sbin/; \
+		if [ "$(1)" == "nhrp" ]; then \
+		$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/nhrpd $$(1)/usr/sbin/; \
+		$(INSTALL_DIR) $$(1)/usr/lib; \
+		$(CP) $(PKG_INSTALL_DIR)/usr/lib/libfrrcares.so* $$(1)/usr/lib/; fi
+		config_name="$(1)"; \
+		config_name="$$$$$$$${config_name::-1}"; \
+		config_name="$$$$$$$${config_name/nhr/nhrp}"; \
+		config_name="$$$$$$$${config_name/ldp/mpls}"; \
+		$(INSTALL_CONF) ./files/configs/"$$$$$$$${config_name}".conf $$(1)/etc/config/"$$$$$$$${config_name}"
+    endef
+
+    $$(eval $$(call BuildPackage,frr-$(1)))
 endef
 
-define Package/frr-ripngd/conffiles
-/etc/frr/vtysh.conf
+TARGET_LDFLAGS += -Wl,--gc-sections,--as-needed -latomic
+TARGET_CFLAGS += -flto
+
+define Host/Configure
+	$(Host/Configure/Default)
+	$(SED) 's/$$$$(MAKE) $$$$(AM_MAKEFLAGS) install-am/# $$$$(MAKE) $$$$(AM_MAKEFLAGS) install-am/' $(HOST_BUILD_DIR)/Makefile.in
 endef
 
-define Build/Configure
-    ( cd $(PKG_BUILD_DIR)/ ; \
-    mkdir build/ ; \
-    cd build ; \
-    ../configure \
-    	PYTHON_CFLAGS="-I/usr/include/ncursesw -I/usr/include/ncurses" \
-	--host="$(GNU_TARGET_NAME)" \
-	--build="$(GNU_HOST_NAME)" \
-	CFLAGS="$(TARGET_CFLAGS) $(EXTRA_CFLAGS) -DFALSE=0 -DTRUE=1" \
-	CXXFLAGS="$(TARGET_CFLAGS) $(EXTRA_CFLAGS)" \
-	LDFLAGS="$(TARGET_LDFLAGS) $(EXTRA_LDFLAGS)" \
-	HOST_CFLAGS="$(HOST_CFLAGS)" \
-	HOST_LDFLAGS="$(HOST_LDFLAGS)" \
-	BUILD_CPPFLAGS="$(TARGET_CPPLAGS)" \
-	BUILD_CFLAGS="$(TARGET_CFLAGS)" \
-	BUILD_LDFLAGS="$(TARGET_LDFLAGS)" \
-	--localstatedir=/var/run/frr \
-	--sysconfdir=/etc/frr/ \
+HOST_CPPFLAGS += -I$(STAGING_DIR_HOST)/include/libelf
+HOST_CONFIGURE_ARGS+= \
+	--enable-clippy-only
+
+define Host/Install
+	$(INSTALL_DIR) $(STAGING_DIR_HOSTPKG)/bin
+	$(INSTALL_BIN) $(HOST_BUILD_DIR)/lib/clippy $(STAGING_DIR_HOSTPKG)/bin/
+endef
+
+CONFIGURE_ARGS+= \
+	--with-clippy=$(STAGING_DIR_HOSTPKG)/bin/clippy \
+	--prefix=/usr \
 	--enable-shared \
 	--disable-static \
 	--enable-user=root \
 	--enable-group=root \
-	--enable-multipath=8 \
-	--with-vtysh-pager=cat \
-	--disable-capabilities \
 	--disable-ospfclient \
 	--disable-doc \
-	$(call autoconf_bool,CONFIG_PACKAGE_frr-babeld,babeld) \
-	$(call autoconf_bool,CONFIG_PACKAGE_frr-bgpd,bgpd) \
-	$(call autoconf_bool,CONFIG_PACKAGE_frr-eigrpd,eigrpd) \
-	$(call autoconf_bool,CONFIG_PACKAGE_frr-isisd,isisd) \
-	$(call autoconf_bool,CONFIG_PACKAGE_frr-ldpd,ldpd) \
-	$(call autoconf_bool,CONFIG_PACKAGE_frr-nhrpd,nhrpd) \
-	$(call autoconf_bool,CONFIG_PACKAGE_frr-ospfd,ospfd) \
-	$(call autoconf_bool,CONFIG_PACKAGE_frr-ospf6d,ospf6d) \
-	$(call autoconf_bool,CONFIG_PACKAGE_frr-pbrd,pbrd) \
-	$(call autoconf_bool,CONFIG_PACKAGE_frr-pimd,pimd) \
-	$(call autoconf_bool,CONFIG_PACKAGE_frr-ripd,ripd) \
-	$(call autoconf_bool,CONFIG_PACKAGE_frr-ripngd,ripngd) \
+	--disable-backtrace \
+	--disable-watchfrr \
+	--disable-bgp-vnc \
+	--disable-bgp-bmp \
+	--sysconfdir=/etc/frr \
+	--localstatedir=/var/run/frr \
+	$(if $(CONFIG_FRR_OPENSSL),--with-crypto=openssl,) \
+	$(if $(CONFIG_FRR_SNMP),--enable-snmp,) \
+	$(foreach m,$(PKG_DAEMON_AVAILABLE), \
+	$(call autoconf_bool,CONFIG_PACKAGE_frr-$(m),$(m)) ) \
 	$(call autoconf_bool,CONFIG_PACKAGE_frr-vtysh,vtysh) \
-	$(call autoconf_bool,CONFIG_PACKAGE_frr-libfrr,zebra) \
-)
-endef
-
-#	just speed it up, maybe not a good approach ?
-#NUM_CORES ?= $(shell grep -c "vendor_id" /proc/cpuinfo)
-
-define Build/Compile
-	$(MAKE) -C $(PKG_BUILD_DIR)/build
-endef
-
-define Package/frr/conffiles
-/etc/config/frr
-endef
+	$(call autoconf_bool,CONFIG_PACKAGE_frr-libfrr,zebra)
 
 define Package/frr/install
 	$(INSTALL_DIR) $(1)/usr/sbin
 	$(INSTALL_BIN) ./files/frr $(1)/usr/sbin/frr.init
-	$(INSTALL_DIR) $(1)/etc/config
-	$(INSTALL_BIN) ./files/frr.sys.conf $(1)/etc/config/frr
 	$(INSTALL_DIR) $(1)/etc/init.d
 	$(INSTALL_BIN) ./files/frr.init $(1)/etc/init.d/frr
+	$(INSTALL_BIN) ./files/frrcommon.sh $(1)/usr/sbin/
+	$(INSTALL_DIR) $(1)/etc/uci-defaults/7.5
+	$(CP) ./files/defaults/97_frr_indexing $(1)/etc/uci-defaults/7.5/97_frr_indexing
+	$(CP) ./files/defaults/98_modify-frr.sh $(1)/etc/uci-defaults/7.5/98_modify-frr.sh
+	$(CP) ./files/defaults/99_migrate-frr.sh $(1)/etc/uci-defaults/7.5/99_migrate-frr.sh
 endef
 
 define Package/frr-watchfrr/install
 	$(INSTALL_DIR) $(1)/usr/sbin
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/build/watchfrr/.libs/watchfrr $(1)/usr/sbin/
+	$(INSTALL_BIN) ./files/watchfrr.sh $(1)/usr/sbin/
+	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/watchfrr $(1)/usr/sbin/
 endef
 
 define Package/frr-zebra/install
 	$(INSTALL_DIR) $(1)/usr/sbin
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/build/zebra/.libs/zebra $(1)/usr/sbin/
-	$(INSTALL_DIR) $(1)/etc/frr
-	chmod 0750 $(1)/etc/frr
-	$(INSTALL_CONF) ./files/frr.conf $(1)/etc/frr/zebra.conf
-endef
-
-define Package/frr-babeld/install
-	$(INSTALL_DIR) $(1)/usr/sbin
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/build/babeld/.libs/babeld $(1)/usr/sbin/
-	$(INSTALL_DIR) $(1)/etc/frr
-	chmod 0750 $(1)/etc/frr
-	$(INSTALL_CONF) ./files/frr.conf $(1)/etc/frr/babeld.conf
-endef
-
-define Package/frr-bgpd/install
-	$(INSTALL_DIR) $(1)/usr/sbin
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/build/bgpd/.libs/bgpd $(1)/usr/sbin/
-	$(INSTALL_DIR) $(1)/etc/frr
-	chmod 0750 $(1)/etc/frr
-	$(INSTALL_CONF) ./files/frr.conf $(1)/etc/frr/bgpd.conf
-endef
-
-define Package/frr-bgpd/prerm
-	#!/bin/sh
-	. /lib/functions.sh
-	uci_remove frr bgp
-	uci_remove frr main_instance
-	uci_add frr bgp_general bgp
-	uci_add frr bgp_instance main_instance
-	uci_commit frr
-endef
-
-define Package/frr-eigrpd/install
-	$(INSTALL_DIR) $(1)/usr/sbin
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/build/eigrpd/.libs/eigrpd $(1)/usr/sbin/
-	$(INSTALL_DIR) $(1)/etc/frr
-	chmod 0750 $(1)/etc/frr
-	$(INSTALL_CONF) ./files/frr.conf $(1)/etc/frr/eigrpd.conf
-endef
-
-define Package/frr-eigrpd/prerm
-	#!/bin/sh
-	. /lib/functions.sh
-	uci_remove frr eigrp
-	uci_add frr eigrp_general eigrp
-	uci_commit frr
-endef
-
-define Package/frr-isisd/install
-	$(INSTALL_DIR) $(1)/usr/sbin
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/build/isisd/.libs/isisd $(1)/usr/sbin/
-	$(INSTALL_DIR) $(1)/etc/frr
-	chmod 0750 $(1)/etc/frr
-	$(INSTALL_CONF) ./files/frr.conf $(1)/etc/frr/isisd.conf
-endef
-
-define Package/frr-ldpd/install
-	$(INSTALL_DIR) $(1)/usr/sbin
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/build/ldpd/.libs/ldpd $(1)/usr/sbin/
-	$(INSTALL_DIR) $(1)/etc/frr
-	chmod 0750 $(1)/etc/frr
-	$(INSTALL_CONF) ./files/frr.conf $(1)/etc/frr/ldpd.conf
-endef
-
-define Package/frr-nhrp/install
-	true
-endef
-
-define Package/frr-nhrpd/install
-	$(INSTALL_DIR) $(1)/usr/sbin
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/build/nhrpd/.libs/nhrpd $(1)/usr/sbin/
-	$(INSTALL_DIR) $(1)/etc/frr
-	chmod 0750 $(1)/etc/frr
-	$(INSTALL_CONF) ./files/frr.conf $(1)/etc/frr/nhrpd.conf
-endef
-
-define Package/frr-nhrpd/prerm
-	#!/bin/sh
-	. /lib/functions.sh
-	clean_config() {
-		uci_remove frr "$$1"
-	}
-	config_load frr
-	config_foreach clean_config nhrp_instance
-	uci_remove frr nhrp
-	uci_add frr nhrp_general nhrp
-	uci_commit frr
-endef
-
-define Package/frr-ospfd/install
-	$(INSTALL_DIR) $(1)/usr/sbin
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/build/ospfd/.libs/ospfd $(1)/usr/sbin/
-	$(INSTALL_DIR) $(1)/etc/frr
-	chmod 0750 $(1)/etc/frr
-	$(INSTALL_CONF) ./files/frr.conf $(1)/etc/frr/ospfd.conf
-endef
-
-define Package/frr-ospfd/prerm
-	#!/bin/sh
-	. /lib/functions.sh
-	clean_config() {
-		uci_remove frr "$$1"
-	}
-	config_load frr
-	config_foreach clean_config ospf_area
-	config_foreach clean_config ospf_network
-	config_foreach clean_config ospf_interface
-	uci_remove frr ospf
-	uci_add frr ospf ospf
-	uci_commit frr
-endef
-
-define Package/frr-ospf6d/install
-	$(INSTALL_DIR) $(1)/usr/sbin
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/build/ospf6d/.libs/ospf6d $(1)/usr/sbin/
-	$(INSTALL_DIR) $(1)/etc/frr
-	chmod 0750 $(1)/etc/frr
-	$(INSTALL_CONF) ./files/frr.conf $(1)/etc/frr/ospf6d.conf
-endef
-
-define Package/frr-pbrd/install
-	$(INSTALL_DIR) $(1)/usr/sbin
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/build/pbrd/.libs/pbrd $(1)/usr/sbin/
-	$(INSTALL_DIR) $(1)/etc/frr
-	chmod 0750 $(1)/etc/frr
-	$(INSTALL_CONF) ./files/frr.conf $(1)/etc/frr/pbrd.conf
-endef
-
-define Package/frr-pimd/install
-	$(INSTALL_DIR) $(1)/usr/sbin
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/build/pimd/.libs/pimd $(1)/usr/sbin/
-	$(INSTALL_DIR) $(1)/etc/frr
-	chmod 0750 $(1)/etc/frr
-	$(INSTALL_CONF) ./files/frr.conf $(1)/etc/frr/pimd.conf
-endef
-
-define Package/frr-ripd/install
-	$(INSTALL_DIR) $(1)/usr/sbin
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/build/ripd/.libs/ripd $(1)/usr/sbin/
-	$(INSTALL_DIR) $(1)/etc/frr
-	chmod 0750 $(1)/etc/frr
-	$(INSTALL_CONF) ./files/frr.conf $(1)/etc/frr/ripd.conf
-endef
-
-define Package/frr-ripd/prerm
-	#!/bin/sh
-	. /lib/functions.sh
-	clean_config() {
-		uci_remove frr "$$1"
-	}
-	config_load frr
-	config_foreach clean_config interface
-	config_foreach clean_config rip_access_list
-	uci_remove frr rip
-	uci_add frr rip_general rip
-	uci_commit frr
-endef
-
-define Package/frr-ripngd/install
-	$(INSTALL_DIR) $(1)/usr/sbin
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/build/ripngd/.libs/ripngd $(1)/usr/sbin/
-	$(INSTALL_DIR) $(1)/etc/frr
-	chmod 0750 $(1)/etc/frr
-	$(INSTALL_CONF) ./files/frr.conf $(1)/etc/frr/ripngd.conf
-endef
-
-define Package/frr-vtysh/install
-	$(INSTALL_DIR) $(1)/usr/bin
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/build/vtysh/.libs/vtysh $(1)/usr/bin/
-	$(INSTALL_DIR) $(1)/etc/frr
-	chmod 0750 $(1)/etc/frr
-	$(INSTALL_CONF) ./files/vtysh.conf $(1)/etc/frr/vtysh.conf
+	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/zebra $(1)/usr/sbin/
 endef
 
 define Package/frr-libfrr/install
-	$(INSTALL_DIR) $(1)/usr/lib
-	$(CP) $(PKG_BUILD_DIR)/build/lib/.libs/libfrr.so* $(1)/usr/lib/
+	$(INSTALL_DIR) $(1)/usr/lib $(1)/etc/frr
+	$(CP) $(PKG_INSTALL_DIR)/usr/lib/libfrr.so* $(1)/usr/lib/
+	$(if $(CONFIG_FRR_SNMP),$(CP) $(PKG_INSTALL_DIR)/usr/lib/libfrrsnmp.so* $(1)/usr/lib/,)
 endef
 
+define Package/frr-pythontools/install
+	$(INSTALL_DIR) $(1)/usr/lib/frr $(1)/usr/sbin $(1)/etc/frr
+	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/*.py $(1)/usr/lib/frr/
+	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/frr-reload $(1)/usr/sbin/
+	$(INSTALL_CONF) $(PKG_BUILD_DIR)/tools/etc/frr/support_bundle_commands.conf $(1)/etc/frr/
+endef
+
+define Package/frr-vtysh/install
+	$(INSTALL_DIR) $(1)/usr/bin $(1)/etc/frr
+	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/bin/vtysh $(1)/usr/bin/
+	$(INSTALL_CONF) ./files/vtysh.conf $(1)/etc/frr/
+endef
+
+define generate_post_template
+define Package/frr-$(1)/postinst
+	/etc/init.d/frr reload > /dev/null 2>&1
+	exit 0
+endef
+define Package/frr-$(1)/postrm
+	/etc/init.d/frr reload > /dev/null 2>&1
+	exit 0
+endef
+endef
+
+$(foreach pkg,$(PKG_DAEMON_AVAILABLE),$(eval $(call generate_post_template,$(pkg))))
+$(eval $(call HostBuild))
 $(eval $(call BuildPackage,frr))
-$(eval $(call BuildPackage,frr-babeld))
-$(eval $(call BuildPackage,frr-bgpd))
-$(eval $(call BuildPackage,frr-eigrpd))
-$(eval $(call BuildPackage,frr-isisd))
-$(eval $(call BuildPackage,frr-ldpd))
 $(eval $(call BuildPackage,frr-libfrr))
-$(eval $(call BuildPackage,frr-nhrp))
-$(eval $(call BuildPackage,frr-nhrpd))
-$(eval $(call BuildPackage,frr-ospfd))
-$(eval $(call BuildPackage,frr-ospf6d))
-$(eval $(call BuildPackage,frr-pbrd))
-$(eval $(call BuildPackage,frr-pimd))
-$(eval $(call BuildPackage,frr-ripd))
-$(eval $(call BuildPackage,frr-ripngd))
-$(eval $(call BuildPackage,frr-vtysh))
+$(eval $(call BuildPackage,frr-pythontools))
 $(eval $(call BuildPackage,frr-watchfrr))
 $(eval $(call BuildPackage,frr-zebra))
+$(eval $(call BuildPackage,frr-vtysh))
+$(eval $(call BuildDaemon,babeld,))
+$(eval $(call BuildDaemon,bfdd,))
+$(eval $(call BuildDaemon,bgpd,))
+$(eval $(call BuildDaemon,eigrpd,))
+$(eval $(call BuildDaemon,fabricd,))
+$(eval $(call BuildDaemon,isisd,))
+$(eval $(call BuildDaemon,ldpd,))
+$(eval $(call BuildDaemon,nhrp,+libcares))
+$(eval $(call BuildDaemon,ospfd,))
+$(eval $(call BuildDaemon,ospf6d,@IPV6))
+$(eval $(call BuildDaemon,pathd,))
+$(eval $(call BuildDaemon,pbrd,))
+$(eval $(call BuildDaemon,pimd,))
+$(eval $(call BuildDaemon,ripd,))
+$(eval $(call BuildDaemon,ripngd,@IPV6))
+$(eval $(call BuildDaemon,staticd,))
+$(eval $(call BuildDaemon,vrrpd,))

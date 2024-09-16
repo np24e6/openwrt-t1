@@ -31,3 +31,10 @@ lrut_fota_t lrut_fota_set_modem_info(struct ubus_context *ubus, char *fw_size, c
 #endif
 lrut_fota_t lrut_fota_set_tap_info(struct ubus_context *ubus, char *mac, char *fw, char *fw_stable);
 lrut_fota_t lrut_fota_reset_info(struct ubus_context *ubus);
+
+/**
+ * @brief Free info structure
+ * 
+ * @param info	pointer to info structure
+ */
+void lrut_free_info(struct lrut_fota_info_st *info);

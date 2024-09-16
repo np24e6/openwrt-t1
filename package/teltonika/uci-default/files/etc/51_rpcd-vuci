@@ -17,10 +17,11 @@ update_user_rule() {
 migrate_paths() {
   from="$1"
   to="$2"
-  config_list_foreach "admin" "read" migrate_path "admin" "read" "$from" "$to"
-  config_list_foreach "admin" "write" migrate_path "admin" "write" "$from" "$to"
-  config_list_foreach "user" "read" migrate_path "user" "read" "$from" "$to"
-  config_list_foreach "user" "write" migrate_path "user" "write" "$from" "$to"
+  additional="$3"
+  config_list_foreach "admin" "read" migrate_path "admin" "read" "$from" "$to" "$additional"
+  config_list_foreach "admin" "write" migrate_path "admin" "write" "$from" "$to" "$additional"
+  config_list_foreach "user" "read" migrate_path "user" "read" "$from" "$to" "$additional"
+  config_list_foreach "user" "write" migrate_path "user" "write" "$from" "$to" "$additional"
 }
 
 migrate_path() {
@@ -29,13 +30,27 @@ migrate_path() {
   type="$3"
   from="$4"
   to="$5"
-  case "$rule" in
-    "$from")
-      uci_remove_list "rpcd" "$group_name" "$type" "$rule"
-      new_rule="${rule/$from/$to}"
-      uci_add_list "rpcd" "$group_name" "$type" "$new_rule"
-      ;;
-  esac
+  additional="$6"
+  if [ "${from: -1}" = "*" ]; then
+    local wfrom="${from::-1}"
+    case "$rule" in
+      "$wfrom"* )
+        uci_remove_list "rpcd" "$group_name" "$type" "$rule"
+        uci_add_list "rpcd" "$group_name" "$type" "$to"
+        ;;
+    esac
+  else
+    case "$rule" in
+      "$from")
+        uci_remove_list "rpcd" "$group_name" "$type" "$rule"
+        new_rule="${rule/$from/$to}"
+        uci_add_list "rpcd" "$group_name" "$type" "$new_rule"
+        if [ ! -z "$additional" ]; then
+          uci_add_list "rpcd" "$group_name" "$type" "$additional"
+        fi
+        ;;
+    esac
+  fi
 }
 
 add_not_superuser() {
@@ -71,7 +86,7 @@ update_admin_group() {
   read_rules=$(config_get ${1} read | tr \* +)
   write_rules=$(config_get ${1} write | tr \* +)
   write_rules_length=${#write_rules}
-  acls="system/flashops system/uscripts system/wizard system/multiusers/users_configuration system/profiles system/admin/access_control/general system/backup"
+  acls="system/flashops system/maintenance/uscripts system/wizard system/admin/multiusers/users_configuration system/admin/profiles system/admin/access_control/general system/maintenance/backup"
   if [ "$write_access" = "allow" ] && [ "$write_rules" = "+" ]; then
     uci_set "rpcd" "$1" "target_write" "deny"
     uci_remove "rpcd" "$1" "write"
@@ -86,12 +101,12 @@ update_admin_group() {
   if [ "$read_access" = "deny" ]; then
     profiles=false
     for rule in $read_rules; do
-      if [ "$rule" = "system/profiles" ]; then
+      if [ "$rule" = "system/admin/profiles" ]; then
         profiles=true
       fi
     done
     if [ "$profiles" = false ]; then
-      uci_add_list "rpcd" "$1" "read" "system/profiles"
+      uci_add_list "rpcd" "$1" "read" "system/admin/profiles"
     fi
   fi
 }
@@ -99,28 +114,89 @@ update_admin_group() {
 config_load "rpcd"
 
 # Call migrate_paths for every route that changes between versions
-migrate_paths "services/cli" "system/cli"
+migrate_paths "services/cli" "system/maintenance/cli"
+migrate_paths "system/cli" "system/maintenance/cli"
 migrate_paths "services/vpn/openvpn-tlt" "services/vpn/openvpn"
 migrate_paths "system/admin/access_control/root_ca" "system/admin/certificates/root_ca"
 migrate_paths "services/mobile_utilities/sms" "services/mobile_utilities/sms_messages"
 migrate_paths "services/mobile_utilities/sms/send" "services/mobile_utilities/sms_messages/send"
 migrate_paths "services/mobile_utilities/sms/read" "services/mobile_utilities/sms_messages/read"
 migrate_paths "services/mobile_utilities/sms/storage" "services/mobile_utilities/sms_messages/storage"
-migrate_paths "services/auto-reboot" "services/auto_reboot"
-migrate_paths "services/auto-reboot/ping-reboot" "services/auto_reboot/ping_reboot"
-migrate_paths "services/auto-reboot/reboot-scheduler" "services/auto_reboot/reboot_scheduler"
+migrate_paths "services/mobile_utilities/sms_gateway/smpp" "services/mobile_utilities/smpp"
+migrate_paths "services/auto-reboot" "system/maintenance/auto_reboot"
+migrate_paths "services/auto-reboot/ping-reboot" "system/maintenance/auto_reboot/ping_reboot"
+migrate_paths "services/auto-reboot/reboot-scheduler" "system/maintenance/auto_reboot/reboot_scheduler"
+migrate_paths "services/auto_reboot" "system/maintenance/auto_reboot"
+migrate_paths "services/auto_reboot/ping_reboot" "system/maintenance/auto_reboot/ping_reboot"
+migrate_paths "services/auto_reboot/reboot_scheduler" "system/maintenance/auto_reboot/reboot_scheduler"
 migrate_paths "services/modbus/modbus-slave" "services/modbus/modbus_slave"
 migrate_paths "services/modbus/modbus-master" "services/modbus/modbus_master"
 migrate_paths "services/modbus/modbus-gateway" "services/modbus/modbus_gateway"
-migrate_paths "services/usb_tools/memory-expansion" "services/usb_tools/memory_expansion"
+migrate_paths "services/usb_tools/memory-expansion" "system/admin/memory_expansion/usb"
+migrate_paths "services/usb_tools/memory_expansion" "system/admin/memory_expansion/usb"
+migrate_paths "services/sshfs" "system/admin/memory_expansion/sshfs"
 migrate_paths "services/snmp/snmp-settings" "services/snmp/snmp_settings"
 migrate_paths "system/wizard/step-pwd" "system/wizard/step_pwd"
 migrate_paths "system/wizard/step-lan" "system/wizard/step_lan"
 migrate_paths "system/wizard/step-wan" "system/wizard/step_wan"
 migrate_paths "system/wizard/step-wifi" "system/wizard/step_wifi"
 migrate_paths "system/wizard/step-rms" "system/wizard/step_rms"
-
-
+migrate_paths "system/backup" "system/maintenance/backup"
+migrate_paths "system/multiusers" "system/admin/multiusers"
+migrate_paths "system/multiusers/change_password" "system/admin/multiusers/change_password"
+migrate_paths "system/multiusers/users_configuration" "system/admin/multiusers/users_configuration"
+migrate_paths "services/hotspot2" "services/hotspot/hotspot2"
+migrate_paths "network/interfaces/static_leases" "network/dhcp_servers/static_leases"
+migrate_paths "status/firewall" "status/network/firewall"
+migrate_paths "services/igmp_proxy" "network/igmp_proxy"
+migrate_paths "services/vpn/l2tp/l2tp" "services/vpn/l2tp"
+migrate_paths "services/vpn/l2tp/l2tpv3" "services/vpn/l2tpv3"
+migrate_paths "status/logs/hotspot" "system/maintenance/hotspot"
+migrate_paths "status/logs/eventlog" "system/maintenance/eventlog"
+migrate_paths "status/logs/eventlog/all" "system/maintenance/eventlog/all"
+migrate_paths "status/logs/eventlog/general" "system/maintenance/eventlog/general"
+migrate_paths "status/logs/eventlog/system" "system/maintenance/eventlog/system"
+migrate_paths "status/logs/eventlog/network" "system/maintenance/eventlog/network"
+migrate_paths "status/logs/eventlog/connections" "system/maintenance/eventlog/connections"
+migrate_paths "status/logs/traffic" "system/maintenance/traffic"
+migrate_paths "status/logs" "system/maintenance/eventlog" "system/maintenance/hotspot"
+migrate_paths "network/mwan" "network/failover/mwan"
+migrate_paths "status/networkmap" "status/network/topology"
+migrate_paths "services/packages" "system/packages"
+migrate_paths "services/packages/packages" "system/packages/packages"
+migrate_paths "services/packages/upload" "system/packages/upload"
+migrate_paths "network/port_mirroring" "network/ports/port_mirroring"
+migrate_paths "services/port_mirroring" "network/ports/port_mirroring"
+migrate_paths "system/profiles" "system/admin/profiles"
+migrate_paths "system/profiles/config" "system/admin/profiles/config"
+migrate_paths "system/profiles/scheduler" "system/admin/profiles/scheduler"
+migrate_paths "services/traffic_shaping" "network/traffic_shaping"
+migrate_paths "services/traffic_shaping/qos" "network/traffic_shaping/qos"
+migrate_paths "services/traffic_shaping/sqm" "network/traffic_shaping/sqm"
+migrate_paths "network/interfaces/relayd" "network/wireless/relayd"
+migrate_paths "system/speedtest" "system/maintenance/speedtest"
+migrate_paths "system/admin/troubleshoot" "system/maintenance/troubleshoot"
+migrate_paths "network/interfaces/udprelay" "network/other/udprelay"
+migrate_paths "system/uscripts" "system/maintenance/uscripts"
+migrate_paths "services/vrrp" "network/failover/vrrp"
+migrate_paths "network/wireless/interfaces" "network/wireless/ssids"
+migrate_paths "network/wireless/devices" "network/wireless/radio"
+migrate_paths "network/interfaces" "network/lan" "network/wan"
+migrate_paths "network/interfaces/general" "network/lan" "network/wan"
+migrate_paths "network/network" "network/wan"
+migrate_paths "status/network/wireless" "status/wireless/interfaces"
+migrate_paths "services/ntpc" "system/admin/datetime"
+migrate_paths "services/ntpc/general" "system/admin/datetime/general"
+migrate_paths "services/ntpc/ntp" "system/admin/datetime/ntp"
+migrate_paths "services/ntpc/ntpd" "system/admin/datetime/ntpd"
+migrate_paths "status/network/mobile/*" "status/network/mobile"
+migrate_paths "status/realtime/bandwidth/*" "status/realtime/bandwidth"
+migrate_paths "status/realtime/wireless/*" "status/realtime/wireless"
+migrate_paths "status/realtime/mobile/*" "status/realtime/mobile"
+migrate_paths "status/mobile_usage/day/*" "status/mobile_usage/day"
+migrate_paths "status/mobile_usage/week/*" "status/mobile_usage/week"
+migrate_paths "status/mobile_usage/month/*" "status/mobile_usage/month"
+migrate_paths "status/mobile_usage/total/*" "status/mobile_usage/total"
 
 uci_commit "rpcd"
 config_load "rpcd"

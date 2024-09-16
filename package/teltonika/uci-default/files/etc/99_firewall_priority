@@ -1,0 +1,15 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+priority="1"
+
+add_priority() {
+	uci_set "firewall" "$1" "priority" "$priority"
+	priority=$((priority + 1))
+}
+
+config_load "firewall"
+config_foreach add_priority "rule"
+config_foreach add_priority "redirect"
+uci_commit "firewall"

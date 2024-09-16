@@ -1526,88 +1526,88 @@ static int qca_switchdev_register(struct qca_phy_priv *priv)
 }
 #endif
 
-static int
-qca_phy_config_init(struct phy_device *pdev)
-{
-	struct qca_phy_priv *priv = pdev->priv;
-	int ret = 0;
+// static int
+// qca_phy_config_init(struct phy_device *pdev)
+// {
+// 	struct qca_phy_priv *priv = pdev->priv;
+// 	int ret = 0;
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,9,0))
-	if (pdev->mdio.addr != 0) {
-#else
-	if (pdev->addr != 0) {
-#endif
-	linkmode_set_bit(ETHTOOL_LINK_MODE_1000baseT_Full_BIT, pdev->supported);
-	linkmode_set_bit(ETHTOOL_LINK_MODE_1000baseT_Full_BIT, pdev->advertising);
-		#ifndef BOARD_AR71XX
-		#if defined(CONFIG_OF) && (LINUX_VERSION_CODE >= KERNEL_VERSION(3,14,0))
-		ssdk_phy_rgmii_set(priv);
-		#endif
-		#endif
-		return 0;
-	}
+// #if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,9,0))
+// 	if (pdev->mdio.addr != 0) {
+// #else
+// 	if (pdev->addr != 0) {
+// #endif
+// 	linkmode_set_bit(ETHTOOL_LINK_MODE_1000baseT_Full_BIT, pdev->supported);
+// 	linkmode_set_bit(ETHTOOL_LINK_MODE_1000baseT_Full_BIT, pdev->advertising);
+// 		#ifndef BOARD_AR71XX
+// 		#if defined(CONFIG_OF) && (LINUX_VERSION_CODE >= KERNEL_VERSION(3,14,0))
+// 		ssdk_phy_rgmii_set(priv);
+// 		#endif
+// 		#endif
+// 		return 0;
+// 	}
 
-	if (priv == NULL)
-		return -ENOMEM;
+// 	if (priv == NULL)
+// 		return -ENOMEM;
 
-	priv->phy = pdev;
-	ret = qca_phy_id_chip(priv);
-	if (ret != 0) {
-		return ret;
-	}
+// 	priv->phy = pdev;
+// 	ret = qca_phy_id_chip(priv);
+// 	if (ret != 0) {
+// 		return ret;
+// 	}
 
-	priv->mii_read = qca_ar8216_mii_read;
-	priv->mii_write = qca_ar8216_mii_write;
-	priv->phy_write = qca_ar8327_phy_write;
-	priv->phy_read = qca_ar8327_phy_read;
-	priv->phy_dbg_write = qca_ar8327_phy_dbg_write;
-	priv->phy_dbg_read = qca_ar8327_phy_dbg_read;
-	priv->phy_mmd_write = qca_ar8327_mmd_write;
-	priv->ports = AR8327_NUM_PORTS;
+// 	priv->mii_read = qca_ar8216_mii_read;
+// 	priv->mii_write = qca_ar8216_mii_write;
+// 	priv->phy_write = qca_ar8327_phy_write;
+// 	priv->phy_read = qca_ar8327_phy_read;
+// 	priv->phy_dbg_write = qca_ar8327_phy_dbg_write;
+// 	priv->phy_dbg_read = qca_ar8327_phy_dbg_read;
+// 	priv->phy_mmd_write = qca_ar8327_mmd_write;
+// 	priv->ports = AR8327_NUM_PORTS;
 
-	ret = qca_link_polling_select(priv);
-	if(ret)
-		priv->link_polling_required = 1;
-	pdev->priv = priv;
-	linkmode_set_bit(ETHTOOL_LINK_MODE_1000baseT_Full_BIT, pdev->supported);
-        linkmode_set_bit(ETHTOOL_LINK_MODE_1000baseT_Full_BIT, pdev->advertising);
+// 	ret = qca_link_polling_select(priv);
+// 	if(ret)
+// 		priv->link_polling_required = 1;
+// 	pdev->priv = priv;
+// 	linkmode_set_bit(ETHTOOL_LINK_MODE_1000baseT_Full_BIT, pdev->supported);
+//         linkmode_set_bit(ETHTOOL_LINK_MODE_1000baseT_Full_BIT, pdev->advertising);
 
-#if defined(IN_SWCONFIG)
-	ret = qca_switchdev_register(priv);
-	if (ret != SW_OK) {
-		return ret;
-	}
-#endif
-	priv->qca_ssdk_sw_dev_registered = A_TRUE;
+// #if defined(IN_SWCONFIG)
+// 	ret = qca_switchdev_register(priv);
+// 	if (ret != SW_OK) {
+// 		return ret;
+// 	}
+// #endif
+// 	priv->qca_ssdk_sw_dev_registered = A_TRUE;
 
-	ret = qca_ar8327_hw_init(priv);
-	if (ret != 0) {
-		return ret;
-	}
+// 	ret = qca_ar8327_hw_init(priv);
+// 	if (ret != 0) {
+// 		return ret;
+// 	}
 
-	qca_phy_mib_work_start(priv);
+// 	qca_phy_mib_work_start(priv);
 
-	if(priv->link_polling_required)
-	{
-		SSDK_INFO("polling is selected\n");
-		ret = qm_err_check_work_start(priv);
-		if (ret != 0)
-		{
-			SSDK_ERROR("qm_err_check_work_start failed for chip 0x%02x%02x\n", priv->version, priv->revision);
-			return ret;
-		}
-	}
-	else
-	{
-		SSDK_INFO("interrupt is selected\n");
-		priv->interrupt_flag = IRQF_TRIGGER_LOW;
-		ret = qca_intr_init(priv);
-		if(ret)
-			SSDK_ERROR("the interrupt init faild !\n");
-	}
+// 	if(priv->link_polling_required)
+// 	{
+// 		SSDK_INFO("polling is selected\n");
+// 		ret = qm_err_check_work_start(priv);
+// 		if (ret != 0)
+// 		{
+// 			SSDK_ERROR("qm_err_check_work_start failed for chip 0x%02x%02x\n", priv->version, priv->revision);
+// 			return ret;
+// 		}
+// 	}
+// 	else
+// 	{
+// 		SSDK_INFO("interrupt is selected\n");
+// 		priv->interrupt_flag = IRQF_TRIGGER_LOW;
+// 		ret = qca_intr_init(priv);
+// 		if(ret)
+// 			SSDK_ERROR("the interrupt init faild !\n");
+// 	}
 
-	return ret;
-}
+// 	return ret;
+// }
 
 #if defined(DESS) || defined(HPPE) || defined (ISISC) || defined (ISIS)
 static int ssdk_switch_register(a_uint32_t dev_id)
@@ -1699,158 +1699,158 @@ static int ssdk_switch_register(a_uint32_t dev_id)
 
 }
 
-static int ssdk_switch_unregister(a_uint32_t dev_id)
-{
-	qca_phy_mib_work_stop(qca_phy_priv_global[dev_id]);
-	qm_err_check_work_stop(qca_phy_priv_global[dev_id]);
-	#ifdef HPPE
-	qca_mac_sw_sync_work_stop(qca_phy_priv_global[dev_id]);
-	#endif
+// static int ssdk_switch_unregister(a_uint32_t dev_id)
+// {
+// 	qca_phy_mib_work_stop(qca_phy_priv_global[dev_id]);
+// 	qm_err_check_work_stop(qca_phy_priv_global[dev_id]);
+// 	#ifdef HPPE
+// 	qca_mac_sw_sync_work_stop(qca_phy_priv_global[dev_id]);
+// 	#endif
 
-	#if defined(IN_SWCONFIG)
-	unregister_switch(&qca_phy_priv_global[dev_id]->sw_dev);
-	#endif
-	return 0;
-}
+// 	#if defined(IN_SWCONFIG)
+// 	unregister_switch(&qca_phy_priv_global[dev_id]->sw_dev);
+// 	#endif
+// 	return 0;
+// }
 #endif
 
-static int
-qca_phy_read_status(struct phy_device *pdev)
-{
-	struct qca_phy_priv *priv = pdev->priv;
-	a_uint32_t port_status;
-	a_uint32_t port_speed;
-	int ret = 0, addr = 0;
+// static int
+// qca_phy_read_status(struct phy_device *pdev)
+// {
+// 	struct qca_phy_priv *priv = pdev->priv;
+// 	a_uint32_t port_status;
+// 	a_uint32_t port_speed;
+// 	int ret = 0, addr = 0;
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,9,0))
-	addr = pdev->mdio.addr;
-#else
-	addr = pdev->addr;
-#endif
-	if (addr != 0) {
-		mutex_lock(&priv->reg_mutex);
-		ret = genphy_read_status(pdev);
-		mutex_unlock(&priv->reg_mutex);
-		return ret;
-	}
+// #if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,9,0))
+// 	addr = pdev->mdio.addr;
+// #else
+// 	addr = pdev->addr;
+// #endif
+// 	if (addr != 0) {
+// 		mutex_lock(&priv->reg_mutex);
+// 		ret = genphy_read_status(pdev);
+// 		mutex_unlock(&priv->reg_mutex);
+// 		return ret;
+// 	}
 
-	mutex_lock(&priv->reg_mutex);
-	port_status = priv->mii_read(priv->device_id, AR8327_REG_PORT_STATUS(addr));
-	mutex_unlock(&priv->reg_mutex);
+// 	mutex_lock(&priv->reg_mutex);
+// 	port_status = priv->mii_read(priv->device_id, AR8327_REG_PORT_STATUS(addr));
+// 	mutex_unlock(&priv->reg_mutex);
 
-	pdev->link = 1;
-	if (port_status & AR8327_PORT_STATUS_LINK_AUTO) {
-		pdev->link = !!(port_status & AR8327_PORT_STATUS_LINK_UP);
-		if (pdev->link == 0) {
-			return ret;
-		}
-	}
+// 	pdev->link = 1;
+// 	if (port_status & AR8327_PORT_STATUS_LINK_AUTO) {
+// 		pdev->link = !!(port_status & AR8327_PORT_STATUS_LINK_UP);
+// 		if (pdev->link == 0) {
+// 			return ret;
+// 		}
+// 	}
 
-	port_speed = (port_status & AR8327_PORT_STATUS_SPEED) >>
-		            AR8327_PORT_STATUS_SPEED_S;
+// 	port_speed = (port_status & AR8327_PORT_STATUS_SPEED) >>
+// 		            AR8327_PORT_STATUS_SPEED_S;
 
-	switch (port_speed) {
-		case AR8327_PORT_SPEED_10M:
-			pdev->speed = SPEED_10;
-			break;
-		case AR8327_PORT_SPEED_100M:
-			pdev->speed = SPEED_100;
-			break;
-		case AR8327_PORT_SPEED_1000M:
-			pdev->speed = SPEED_1000;
-			break;
-		default:
-			pdev->speed = 0;
-			break;
-	}
+// 	switch (port_speed) {
+// 		case AR8327_PORT_SPEED_10M:
+// 			pdev->speed = SPEED_10;
+// 			break;
+// 		case AR8327_PORT_SPEED_100M:
+// 			pdev->speed = SPEED_100;
+// 			break;
+// 		case AR8327_PORT_SPEED_1000M:
+// 			pdev->speed = SPEED_1000;
+// 			break;
+// 		default:
+// 			pdev->speed = 0;
+// 			break;
+// 	}
 
-	if(port_status & AR8327_PORT_STATUS_DUPLEX) {
-		pdev->duplex = DUPLEX_FULL;
-	} else {
-		pdev->duplex = DUPLEX_HALF;
-	}
+// 	if(port_status & AR8327_PORT_STATUS_DUPLEX) {
+// 		pdev->duplex = DUPLEX_FULL;
+// 	} else {
+// 		pdev->duplex = DUPLEX_HALF;
+// 	}
 
-	pdev->state = PHY_RUNNING;
-	netif_carrier_on(pdev->attached_dev);
-	pdev->adjust_link(pdev->attached_dev);
+// 	pdev->state = PHY_RUNNING;
+// 	netif_carrier_on(pdev->attached_dev);
+// 	pdev->adjust_link(pdev->attached_dev);
 
-	return ret;
-}
+// 	return ret;
+// }
 
-static int
-qca_phy_config_aneg(struct phy_device *pdev)
-{
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,9,0))
-	if (pdev->mdio.addr != 0) {
-#else
-	if (pdev->addr != 0) {
-#endif
-		return genphy_config_aneg(pdev);
-	}
+// static int
+// qca_phy_config_aneg(struct phy_device *pdev)
+// {
+// #if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,9,0))
+// 	if (pdev->mdio.addr != 0) {
+// #else
+// 	if (pdev->addr != 0) {
+// #endif
+// 		return genphy_config_aneg(pdev);
+// 	}
 
-	return 0;
-}
+// 	return 0;
+// }
 
-static int
-qca_phy_probe(struct phy_device *pdev)
-{
-	struct qca_phy_priv *priv;
-	int ret;
+// static int
+// qca_phy_probe(struct phy_device *pdev)
+// {
+// 	struct qca_phy_priv *priv;
+// 	int ret;
 
-	priv = kzalloc(sizeof(struct qca_phy_priv), GFP_KERNEL);
-	if (priv == NULL) {
-		return -ENOMEM;
-	}
+// 	priv = kzalloc(sizeof(struct qca_phy_priv), GFP_KERNEL);
+// 	if (priv == NULL) {
+// 		return -ENOMEM;
+// 	}
 
-	pdev->priv = priv;
-	priv->phy = pdev;
-	mutex_init(&priv->reg_mutex);
+// 	pdev->priv = priv;
+// 	priv->phy = pdev;
+// 	mutex_init(&priv->reg_mutex);
 
-	ret = qca_phy_id_chip(priv);
-	return ret;
-}
+// 	ret = qca_phy_id_chip(priv);
+// 	return ret;
+// }
 
-static void
-qca_phy_remove(struct phy_device *pdev)
-{
-	struct qca_phy_priv *priv = pdev->priv;
-	int addr;
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,9,0))
-	addr = pdev->mdio.addr;
-#else
-	addr = pdev->addr;
-#endif
+// static void
+// qca_phy_remove(struct phy_device *pdev)
+// {
+// 	struct qca_phy_priv *priv = pdev->priv;
+// 	int addr;
+// #if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,9,0))
+// 	addr = pdev->mdio.addr;
+// #else
+// 	addr = pdev->addr;
+// #endif
 
-	if ((addr == 0) && priv && (priv->ports != 0)) {
-		qca_phy_mib_work_stop(priv);
-		qm_err_check_work_stop(priv);
-#if defined(IN_SWCONFIG)
-		if (priv->sw_dev.name != NULL)
-			unregister_switch(&priv->sw_dev);
-#endif
-	}
+// 	if ((addr == 0) && priv && (priv->ports != 0)) {
+// 		qca_phy_mib_work_stop(priv);
+// 		qm_err_check_work_stop(priv);
+// #if defined(IN_SWCONFIG)
+// 		if (priv->sw_dev.name != NULL)
+// 			unregister_switch(&priv->sw_dev);
+// #endif
+// 	}
 
-	if (priv) {
-		kfree(priv);
-    }
-}
+// 	if (priv) {
+// 		kfree(priv);
+//     }
+// }
 
-static struct phy_driver qca_phy_driver = {
-    .name		= "QCA AR8216 AR8236 AR8316 AR8327 AR8337",
-	.phy_id		= 0x004d0000,
-	.phy_id_mask= 0xffff0000,
-	.probe		= qca_phy_probe,
-	.remove		= qca_phy_remove,
-	.config_init= &qca_phy_config_init,
-	.config_aneg= &qca_phy_config_aneg,
-	.read_status= &qca_phy_read_status,
-	.features	= PHY_BASIC_FEATURES,
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,9,0))
-	.mdiodrv.driver		= { .owner = THIS_MODULE },
-#else
-	.driver		= { .owner = THIS_MODULE },
-#endif
-};
+// static struct phy_driver qca_phy_driver = {
+//     .name		= "QCA AR8216 AR8236 AR8316 AR8327 AR8337",
+// 	.phy_id		= 0x004d0000,
+// 	.phy_id_mask= 0xffff0000,
+// 	.probe		= qca_phy_probe,
+// 	.remove		= qca_phy_remove,
+// 	.config_init= &qca_phy_config_init,
+// 	.config_aneg= &qca_phy_config_aneg,
+// 	.read_status= &qca_phy_read_status,
+// 	.features	= PHY_BASIC_FEATURES,
+// #if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,9,0))
+// 	.mdiodrv.driver		= { .owner = THIS_MODULE },
+// #else
+// 	.driver		= { .owner = THIS_MODULE },
+// #endif
+// };
 
 #ifndef BOARD_AR71XX
 #if defined(CONFIG_OF) && (LINUX_VERSION_CODE >= KERNEL_VERSION(3,14,0))
@@ -1869,61 +1869,61 @@ void ssdk_ess_reset(void)
 
 char ssdk_driver_name[] = "ess_ssdk";
 
-static int ssdk_probe(struct platform_device *pdev)
-{
-	ess_rst = devm_reset_control_get(&pdev->dev, "ess_rst");
-	ess_mac_clock_disable[0] = devm_reset_control_get(&pdev->dev, "ess_mac1_clk_dis");
-	ess_mac_clock_disable[1] = devm_reset_control_get(&pdev->dev, "ess_mac2_clk_dis");
-	ess_mac_clock_disable[2] = devm_reset_control_get(&pdev->dev, "ess_mac3_clk_dis");
-	ess_mac_clock_disable[3] = devm_reset_control_get(&pdev->dev, "ess_mac4_clk_dis");
-	ess_mac_clock_disable[4] = devm_reset_control_get(&pdev->dev, "ess_mac5_clk_dis");
+// static int ssdk_probe(struct platform_device *pdev)
+// {
+// 	ess_rst = devm_reset_control_get(&pdev->dev, "ess_rst");
+// 	ess_mac_clock_disable[0] = devm_reset_control_get(&pdev->dev, "ess_mac1_clk_dis");
+// 	ess_mac_clock_disable[1] = devm_reset_control_get(&pdev->dev, "ess_mac2_clk_dis");
+// 	ess_mac_clock_disable[2] = devm_reset_control_get(&pdev->dev, "ess_mac3_clk_dis");
+// 	ess_mac_clock_disable[3] = devm_reset_control_get(&pdev->dev, "ess_mac4_clk_dis");
+// 	ess_mac_clock_disable[4] = devm_reset_control_get(&pdev->dev, "ess_mac5_clk_dis");
 
-	if (IS_ERR(ess_rst)) {
-		SSDK_INFO("ess_rst doesn't exist!\n");
-		return 0;
-	}
-	if (!ess_mac_clock_disable[0]) {
-		SSDK_ERROR("ess_mac1_clock_disable fail!\n");
-		return -1;
-	}
-	if (!ess_mac_clock_disable[1]) {
-		SSDK_ERROR("ess_mac2_clock_disable fail!\n");
-		return -1;
-	}
-	if (!ess_mac_clock_disable[2]) {
-		SSDK_ERROR("ess_mac3_clock_disable fail!\n");
-		return -1;
-	}
-	if (!ess_mac_clock_disable[3]) {
-		SSDK_ERROR("ess_mac4_clock_disable fail!\n");
-		return -1;
-	}
-	if (!ess_mac_clock_disable[4]) {
-		SSDK_ERROR("ess_mac5_clock_disable fail!\n");
-		return -1;
-	}
+// 	if (IS_ERR(ess_rst)) {
+// 		SSDK_INFO("ess_rst doesn't exist!\n");
+// 		return 0;
+// 	}
+// 	if (!ess_mac_clock_disable[0]) {
+// 		SSDK_ERROR("ess_mac1_clock_disable fail!\n");
+// 		return -1;
+// 	}
+// 	if (!ess_mac_clock_disable[1]) {
+// 		SSDK_ERROR("ess_mac2_clock_disable fail!\n");
+// 		return -1;
+// 	}
+// 	if (!ess_mac_clock_disable[2]) {
+// 		SSDK_ERROR("ess_mac3_clock_disable fail!\n");
+// 		return -1;
+// 	}
+// 	if (!ess_mac_clock_disable[3]) {
+// 		SSDK_ERROR("ess_mac4_clock_disable fail!\n");
+// 		return -1;
+// 	}
+// 	if (!ess_mac_clock_disable[4]) {
+// 		SSDK_ERROR("ess_mac5_clock_disable fail!\n");
+// 		return -1;
+// 	}
 
-	reset_control_assert(ess_rst);
-	mdelay(10);
-	reset_control_deassert(ess_rst);
-	mdelay(100);
-	SSDK_INFO("reset ok in probe!\n");
-	return 0;
-}
+// 	reset_control_assert(ess_rst);
+// 	mdelay(10);
+// 	reset_control_deassert(ess_rst);
+// 	mdelay(100);
+// 	SSDK_INFO("reset ok in probe!\n");
+// 	return 0;
+// }
 
 static const struct of_device_id ssdk_of_mtable[] = {
         {.compatible = "qcom,ess-switch" },
         {}
 };
 
-static struct platform_driver ssdk_driver = {
-        .driver = {
-                .name    = ssdk_driver_name,
-                .owner   = THIS_MODULE,
-                .of_match_table = ssdk_of_mtable,
-        },
-        .probe    = ssdk_probe,
-};
+// static struct platform_driver ssdk_driver = {
+//         .driver = {
+//                 .name    = ssdk_driver_name,
+//                 .owner   = THIS_MODULE,
+//                 .of_match_table = ssdk_of_mtable,
+//         },
+//         .probe    = ssdk_probe,
+// };
 #endif
 #endif
 #ifdef DESS
@@ -2836,10 +2836,10 @@ static int ssdk_miireg_close(struct net_device *netdev)
 static int ssdk_miireg_do_ioctl(struct net_device *netdev,
 			struct ifreq *ifr, int32_t cmd)
 {
-	struct mii_ioctl_data *mii_data = if_mii(ifr);
 	int ret = -EINVAL;
 
 #ifdef CONFIG_MDIO
+	struct mii_ioctl_data *mii_data = if_mii(ifr);
 	ret = mdio_mii_ioctl(&ssdk_mdio_ctl, mii_data, cmd);
 #endif
 	return ret;
@@ -2917,62 +2917,62 @@ static void ssdk_miireg_ioctrl_unregister(void)
 	}
 }
 
-static void ssdk_driver_register(a_uint32_t dev_id)
-{
-#ifdef DESS
-	if(ssdk_dt_global.ssdk_dt_switch_nodes[dev_id]->switch_reg_access_mode == HSL_REG_LOCAL_BUS) {
-#ifndef BOARD_AR71XX
-#if defined(CONFIG_OF) && (LINUX_VERSION_CODE >= KERNEL_VERSION(3,14,0))
-		platform_driver_register(&ssdk_driver);
-#endif
-#endif
-	}
-#endif
+// static void ssdk_driver_register(a_uint32_t dev_id)
+// {
+// #ifdef DESS
+// 	if(ssdk_dt_global.ssdk_dt_switch_nodes[dev_id]->switch_reg_access_mode == HSL_REG_LOCAL_BUS) {
+// #ifndef BOARD_AR71XX
+// #if defined(CONFIG_OF) && (LINUX_VERSION_CODE >= KERNEL_VERSION(3,14,0))
+// 		platform_driver_register(&ssdk_driver);
+// #endif
+// #endif
+// 	}
+// #endif
 
-	if(ssdk_dt_global.ssdk_dt_switch_nodes[dev_id]->switch_reg_access_mode == HSL_REG_MDIO && ssdk_dt_global.ssdk_dt_switch_nodes[dev_id]->ess_switch_flag == A_FALSE) {
-		if(driver_find(qca_phy_driver.name, &mdio_bus_type)){
-			SSDK_ERROR("QCA PHY driver had been Registered\n");
-			return;
-		}
+// 	if(ssdk_dt_global.ssdk_dt_switch_nodes[dev_id]->switch_reg_access_mode == HSL_REG_MDIO && ssdk_dt_global.ssdk_dt_switch_nodes[dev_id]->ess_switch_flag == A_FALSE) {
+// 		if(driver_find(qca_phy_driver.name, &mdio_bus_type)){
+// 			SSDK_ERROR("QCA PHY driver had been Registered\n");
+// 			return;
+// 		}
 
-		SSDK_INFO("Register QCA PHY driver\n");
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,9,0))
-		phy_driver_register(&qca_phy_driver, THIS_MODULE);
-#else
-		phy_driver_register(&qca_phy_driver);
-#endif
+// 		SSDK_INFO("Register QCA PHY driver\n");
+// #if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,9,0))
+// 		phy_driver_register(&qca_phy_driver, THIS_MODULE);
+// #else
+// 		phy_driver_register(&qca_phy_driver);
+// #endif
 
-#ifdef BOARD_AR71XX
-#if defined(IN_SWCONFIG)
-		ssdk_uci_takeover_init();
-#endif
+// #ifdef BOARD_AR71XX
+// #if defined(IN_SWCONFIG)
+// 		ssdk_uci_takeover_init();
+// #endif
 
-#ifdef CONFIG_AR8216_PHY
-		ar8327_port_link_notify_register(ssdk_port_link_notify);
-#endif
-		ar7240_port_link_notify_register(ssdk_port_link_notify);
-#endif
-	}
-}
+// #ifdef CONFIG_AR8216_PHY
+// 		ar8327_port_link_notify_register(ssdk_port_link_notify);
+// #endif
+// 		ar7240_port_link_notify_register(ssdk_port_link_notify);
+// #endif
+// 	}
+// }
 
-static void ssdk_driver_unregister(a_uint32_t dev_id)
-{
-	if(ssdk_dt_global.ssdk_dt_switch_nodes[dev_id]->switch_reg_access_mode == HSL_REG_MDIO && ssdk_dt_global.ssdk_dt_switch_nodes[dev_id]->ess_switch_flag == A_FALSE) {
-		phy_driver_unregister(&qca_phy_driver);
+// static void ssdk_driver_unregister(a_uint32_t dev_id)
+// {
+// 	if(ssdk_dt_global.ssdk_dt_switch_nodes[dev_id]->switch_reg_access_mode == HSL_REG_MDIO && ssdk_dt_global.ssdk_dt_switch_nodes[dev_id]->ess_switch_flag == A_FALSE) {
+// 		phy_driver_unregister(&qca_phy_driver);
 
-	#if defined(BOARD_AR71XX) && defined(IN_SWCONFIG)
-		ssdk_uci_takeover_exit();
-	#endif
-	}
+// 	#if defined(BOARD_AR71XX) && defined(IN_SWCONFIG)
+// 		ssdk_uci_takeover_exit();
+// 	#endif
+// 	}
 
-	if (ssdk_dt_global.ssdk_dt_switch_nodes[dev_id]->switch_reg_access_mode == HSL_REG_LOCAL_BUS) {
-#ifndef BOARD_AR71XX
-#if defined(CONFIG_OF) && (LINUX_VERSION_CODE >= KERNEL_VERSION(3,14,0))
-		platform_driver_unregister(&ssdk_driver);
-#endif
-#endif
-	}
-}
+// 	if (ssdk_dt_global.ssdk_dt_switch_nodes[dev_id]->switch_reg_access_mode == HSL_REG_LOCAL_BUS) {
+// #ifndef BOARD_AR71XX
+// #if defined(CONFIG_OF) && (LINUX_VERSION_CODE >= KERNEL_VERSION(3,14,0))
+// 		platform_driver_unregister(&ssdk_driver);
+// #endif
+// #endif
+// 	}
+// }
 
 static int chip_ver_get(a_uint32_t dev_id, ssdk_init_cfg* cfg)
 {
@@ -3150,7 +3150,7 @@ static int ssdk_dess_mac_mode_init(a_uint32_t dev_id, a_uint32_t mac_mode)
 							(a_uint8_t *)&reg_value, 4);
 			mdelay(10);
 			/*softreset psgmii, fixme*/
-			gcc_addr = ioremap_nocache(0x1812000, 0x200);
+			gcc_addr = ioremap(0x1812000, 0x200);
 			if (!gcc_addr) {
 				SSDK_ERROR("gcc map fail!\n");
 				return 0;
@@ -3311,7 +3311,7 @@ static int ssdk_dess_mac_mode_init(a_uint32_t dev_id, a_uint32_t mac_mode)
 static int
 qca_dess_hw_init(ssdk_init_cfg *cfg, a_uint32_t dev_id)
 {
-	a_uint32_t reg_value = 0;
+	// a_uint32_t reg_value = 0;
 	hsl_api_t *p_api;
 
 	qca_switch_init(dev_id);
@@ -4345,37 +4345,37 @@ static void qca_dess_rfs_remove(void)
 
 }
 
-static void qca_dess_rfs_init(void)
-{
-	if (!qca_dess_rfs_registered) {
-		#if defined (CONFIG_NF_FLOW_COOKIE)
-		#ifdef IN_NAT
-		#ifdef IN_SFE
-		sfe_register_flow_cookie_cb(ssdk_flow_cookie_set);
-		#endif
-		#endif
-		#endif
+// static void qca_dess_rfs_init(void)
+// {
+// 	if (!qca_dess_rfs_registered) {
+// 		#if defined (CONFIG_NF_FLOW_COOKIE)
+// 		#ifdef IN_NAT
+// 		#ifdef IN_SFE
+// 		sfe_register_flow_cookie_cb(ssdk_flow_cookie_set);
+// 		#endif
+// 		#endif
+// 		#endif
 
-		#ifdef IN_RFS
-		memset(&rfs_dev, 0, sizeof(rfs_dev));
-		rfs_dev.name = NULL;
-		#ifdef IN_FDB
-		rfs_dev.mac_rule_cb = ssdk_rfs_mac_rule_set;
-		#endif
-		#ifdef IN_IP
-		rfs_dev.ip4_rule_cb = ssdk_rfs_ip4_rule_set;
-		rfs_dev.ip6_rule_cb = ssdk_rfs_ip6_rule_set;
-		#endif
-		rfs_ess_device_register(&rfs_dev);
-		#if defined(CONFIG_RFS_ACCEL)
-		#endif
-		ssdk_inet_notifier.notifier_call = ssdk_inet_event;
-		ssdk_inet_notifier.priority = 1;
-		register_inetaddr_notifier(&ssdk_inet_notifier);
-		#endif
-		qca_dess_rfs_registered = true;
-	}
-}
+// 		#ifdef IN_RFS
+// 		memset(&rfs_dev, 0, sizeof(rfs_dev));
+// 		rfs_dev.name = NULL;
+// 		#ifdef IN_FDB
+// 		rfs_dev.mac_rule_cb = ssdk_rfs_mac_rule_set;
+// 		#endif
+// 		#ifdef IN_IP
+// 		rfs_dev.ip4_rule_cb = ssdk_rfs_ip4_rule_set;
+// 		rfs_dev.ip6_rule_cb = ssdk_rfs_ip6_rule_set;
+// 		#endif
+// 		rfs_ess_device_register(&rfs_dev);
+// 		#if defined(CONFIG_RFS_ACCEL)
+// 		#endif
+// 		ssdk_inet_notifier.notifier_call = ssdk_inet_event;
+// 		ssdk_inet_notifier.priority = 1;
+// 		register_inetaddr_notifier(&ssdk_inet_notifier);
+// 		#endif
+// 		qca_dess_rfs_registered = true;
+// 	}
+// }
 #endif
 
 static a_uint32_t ssdk_get_switch_nums(void)
@@ -4466,7 +4466,7 @@ static int __init regi_init(void)
 	ssdk_init_cfg cfg;
 	garuda_init_spec_cfg chip_spec_cfg;
 	#ifdef DESS
-	a_uint32_t psgmii_result = 0;
+	// a_uint32_t psgmii_result = 0;
 	#endif
 	int rv = 0;
 

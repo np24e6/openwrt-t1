@@ -2,8 +2,7 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=mqtt-modbus-gateway
-PKG_VERSION:=2023-02-13
-PKG_SOURCE_VERSION:=48ca22d8c866bb44113c5540c18087b565ebb147
+PKG_SOURCE_VERSION:=7.5
 
 # TARGET_CFLAGS += -ggdb3 -O0
 
@@ -29,6 +28,13 @@ define Package/mqtt-modbus-gateway/conffiles
 /etc/config/modbusgateway
 endef
 
+
+define Build/Test
+	test_modbusgateway.c
+	test_parse_mqtt_request.c
+	test_validate_request_parameters.c
+	test_config_utils.c
+endef
 
 define Package/mqtt-modbus-gateway/install
 		$(INSTALL_DIR) $(1)/etc/config

@@ -1,0 +1,23 @@
+#!/bin/sh /etc/rc.common
+
+APP=/usr/sbin/dlms_client
+USE_PROCD=1
+START=99
+STOP=99
+
+start_service() {
+	config_load dlms_client
+	config_get enabled "main" enabled "0"
+
+	if [ "$enabled" == "1" ]; then
+		procd_open_instance
+		procd_set_param file /etc/config/dlms_client
+		procd_set_param command "$APP"
+		procd_set_param respawn ${respawn_threshold:-0} ${respawn_timeout:-60} ${respawn_retry:-0}
+		procd_close_instance
+	fi
+}
+
+service_triggers() {
+	procd_add_reload_trigger "dlms_client"
+}

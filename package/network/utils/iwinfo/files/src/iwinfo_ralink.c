@@ -10,7 +10,8 @@ struct survey_table {
 	char signal[6];
 };
 
-struct survey_table st[64];
+#define MAX_SURVEY_CNT 128
+struct survey_table st[MAX_SURVEY_CNT];
 int survey_count	      = 0;
 static const char probe_str[] = "Driver version:";
 
@@ -85,7 +86,7 @@ static const char *ralink_to_interface(const char *ifname)
 
 static int ralink_probe(const char *ifname)
 {
-	char data[1024];
+	char data[1024] = { 0 };
 	int ret;
 	int s;
 	struct iwreq wrq;
@@ -107,7 +108,7 @@ static int ralink_probe(const char *ifname)
 	if (MIN(wrq.u.data.length, sizeof(probe_str)) != sizeof(probe_str))
 		return 0;
 
-	return !!strncmp(data, probe_str, sizeof(probe_str));
+	return strncmp(data, probe_str, sizeof(probe_str) - 1) == 0;
 }
 
 static void ralink_close(void)
@@ -126,7 +127,7 @@ static int ralink_get_mode(const char *ifname, int *buf)
 static int ralink_get_ssid(const char *ifname, char *buf)
 {
 	if (ralink_is_device(ifname))
-		return -1;
+		ifname = "apcli0";
 
 	return wext_ops.ssid(ifname, buf);
 }
@@ -285,7 +286,7 @@ static int ralink_get_assoclist(const char *ifname, char *buf, int *len)
 {
 	int ret;
 	int ii;
-	char msgbuf[IWINFO_BUFSIZE];
+	char msgbuf[IWINFO_BUFSIZE] = {0};
 	char *data;
 	unsigned count;
 	struct rt_iwinfo_sta_entry *ent;
@@ -299,9 +300,13 @@ static int ralink_get_assoclist(const char *ifname, char *buf, int *len)
 	if (ret)
 		return -1;
 
-	ent = (struct rt_iwinfo_sta_entry *)data;
+	ent  = (struct rt_iwinfo_sta_entry *)data;
+	*len = 0;
 
 	for (ii = 0; ii < count; ++ii) {
+		memset(&a[ii], 0, sizeof(struct iwinfo_assoclist_entry));
+		memset(&a[ii].rx_rate, 0, sizeof(struct iwinfo_rate_entry));
+		memset(&a[ii].tx_rate, 0, sizeof(struct iwinfo_rate_entry));
 		memcpy(a[ii].mac, ent[ii].mac, 6);
 		a[ii].inactive = ent[ii].inactive;
 		a[ii].signal   = ent[ii].sig_noise.signal;
@@ -335,6 +340,8 @@ static int ralink_fixed_txpwrlist(char *buf, int *len)
 static int ralink_get_txpwrlist(const char *ifname, char *buf, int *len)
 {
 	ifname = ralink_to_interface(ifname);
+	*len   = 0;
+
 	if (!ifname)
 		return ralink_fixed_txpwrlist(buf, len);
 
@@ -379,6 +386,7 @@ static int ralink_get_freqlist(const char *ifname, char *buf, int *len)
 		ent = (struct rt_iwinfo_freq_entry *)data;
 	}
 
+	*len = 0;
 	for (ii = 0; ii < count; ++ii) {
 		f[ii].mhz	 = ent[ii].mhz;
 		f[ii].channel	 = ent[ii].channel;
@@ -426,8 +434,8 @@ static int ralink_fixed_countrylist(char *buf, int *len)
 				   "VE", "VN", "YE", "ZW", "00" };
 
 	struct iwinfo_country_entry *entries = (struct iwinfo_country_entry *)buf;
-
 	*len = 0;
+
 	for (int i = 0; i < ARRAY_SIZE(ccodes); i++) {
 		snprintf(entries[i].ccode, sizeof(entries[i].ccode), "%.2s", ccodes[i]);
 		entries[i].iso3166 = (uint16_t)(ccodes[i][1]) | ((uint16_t)(ccodes[i][0]) << 8);
@@ -773,7 +781,7 @@ static void wifi_site_survey(const char *ifname, char *essid, int print)
 	line	     = strtok((char *)start, "\n");
 	line	     = strtok(NULL, "\n");
 	survey_count = 0;
-	while (line && (survey_count < 64)) {
+	while (line && (survey_count < MAX_SURVEY_CNT)) {
 		next_field(&line, st[survey_count].channel, sizeof(st->channel));
 		next_field(&line, st[survey_count].ssid, sizeof(st->ssid));
 		next_field(&line, st[survey_count].bssid, sizeof(st->bssid));
@@ -802,10 +810,15 @@ static int ralink_get_scanlist(const char *ifname, char *buf, int *len)
 	int i				= 0;
 
 	ifname = ralink_to_interface(ifname);
-	if (!ifname)
-		return -1;
+	if (!ifname) {
+		if (ralink_probe("apcli0"))
+			ifname = "apcli0";
+		else
+			return -1;
+	}
 
 	survey_count = 0;
+	*len         = 0;
 
 	wifi_site_survey(ifname, NULL, 0);
 
@@ -820,6 +833,8 @@ static int ralink_get_scanlist(const char *ifname, char *buf, int *len)
 		e[i].quality	 = atoi(st[i].signal);
 		e[i].quality_max = 100;
 		memset(&e[i].crypto, 0, sizeof(struct iwinfo_crypto_entry));
+		memset(&e[i].ht_chan_info, 0, sizeof(struct iwinfo_scanlist_ht_chan_entry));
+		memset(&e[i].vht_chan_info, 0, sizeof(struct iwinfo_scanlist_vht_chan_entry));
 		if (strstr(st[i].security, "WPA")) {
 			e[i].crypto.enabled = 1;
 			e[i].crypto.auth_suites |= IWINFO_KMGMT_PSK;
@@ -829,8 +844,10 @@ static int ralink_get_scanlist(const char *ifname, char *buf, int *len)
 		if (strstr(st[i].crypto, "TKIP"))
 			e[i].crypto.group_ciphers |= IWINFO_CIPHER_TKIP;
 		if (strstr(st[i].crypto, "AES"))
-			e[i].crypto.group_ciphers |= IWINFO_CIPHER_AESOCB;
-		if (strstr(st[i].security, "WPA2"))
+			e[i].crypto.group_ciphers |= IWINFO_CIPHER_CCMP;
+		if (strstr(st[i].security, "WPA3"))
+			e[i].crypto.wpa_version = 3;
+		else if (strstr(st[i].security, "WPA2"))
 			e[i].crypto.wpa_version = 2;
 		else if (strstr(st[i].security, "WPA"))
 			e[i].crypto.wpa_version = 1;
@@ -838,6 +855,14 @@ static int ralink_get_scanlist(const char *ifname, char *buf, int *len)
 	*len = survey_count * sizeof(struct iwinfo_scanlist_entry);
 
 	return 0;
+}
+
+static int ralink_get_survey(const char *ifname, char *buf, int *len)
+{
+	(void)buf, (void)ifname;
+	*len = 0;
+
+	return -1;
 }
 
 const struct iwinfo_ops ralink_ops = {
@@ -872,5 +897,6 @@ const struct iwinfo_ops ralink_ops = {
 	.scanlist	  = ralink_get_scanlist,
 	.freqlist	  = ralink_get_freqlist,
 	.countrylist	  = ralink_get_countrylist,
+	.survey 	  = ralink_get_survey,
 	.close		  = ralink_close,
 };

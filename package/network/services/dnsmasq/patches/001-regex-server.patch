@@ -317,5 +317,3 @@ index 6176dc9..1147009 100644
    do {
      c1 = (unsigned char) *a++;
      c2 = (unsigned char) *b++;
-
-

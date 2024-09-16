@@ -66,12 +66,24 @@ int ucix_get_option_int(struct uci_context *ctx, const char *p, const char *s, c
 char *ucix_get_option_cfg(struct uci_context *ctx, const char *p, const char *s, const char *o);
 
 /**
- * @brief add or set option value
+ * @brief add or set option long value
  * @param ctx uci context reference
  * @param p configuration name
  * @param s section name
  * @param o option name
- * @param t option value
+ * @param t option long long value
+ * @return return 0 on success or error code
+ */
+int ucix_add_option_llong(struct uci_context *ctx, const char *p,
+		const char *s, const char *o, long long  t);
+
+/**
+ * @brief add or set option int value
+ * @param ctx uci context reference
+ * @param p configuration name
+ * @param s section name
+ * @param o option name
+ * @param t option int value
  * @return return 0 on success or error code
  */
 int ucix_add_option_int(struct uci_context *ctx, const char *p, const char *s, const char *o, int t);

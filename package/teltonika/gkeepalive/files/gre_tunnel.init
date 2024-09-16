@@ -2,7 +2,7 @@
 
 USE_PROCD=1
 START=99
-STOP=1
+STOP=01
 
 . /lib/functions.sh
 . /lib/functions/network.sh
@@ -17,6 +17,7 @@ start_tunnel(){
 
 		config_get peeraddr "$1" "peeraddr" ""
 		config_get keep_alive "$1" "keep_alive" "0"
+		[ "$keep_alive" = "0" ] && return 1
 		config_get keep_alive_interval "$1" "keep_alive_interval" "10"
 		dev="gre4-$1"
 		config_get ipaddr_tunlink "$1" "tunlink"

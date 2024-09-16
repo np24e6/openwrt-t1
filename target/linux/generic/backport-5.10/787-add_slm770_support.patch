@@ -1,0 +1,32 @@
+--- a/drivers/usb/serial/option.c
++++ b/drivers/usb/serial/option.c
+@@ -245,6 +245,16 @@ static void option_instat_callback(struc
+ /* These Yuga products use Qualcomm's vendor ID */
+ #define YUGA_PRODUCT_CLM920_NC5			0x9625
+ 
++#define MEIGLINK_VENDOR_ID 			0x2DEE
++#define MEIG_PRODUCT_SLM790 			0x4D20
++#define MEIG_PRODUCT_SRM815 			0x4D22
++#define MEIG_PRODUCT_SRM815_ECM 		0x4D23
++#define MEIG_QCM_PRODUCT_SRM815_SLM750_SLM868 	0xF601
++#define MEIG_PRODUCT_SRM811_RNDIS 		0x4D51
++#define MEIG_PRODUCT_SRM811_NCM 		0x4D52
++#define MEIG_PRODUCT_SLM770_NCM 		0x4D57
++#define MEIG_PRODUCT_SLM770_ECM 		0x4D58
++
+ #define QUECTEL_VENDOR_ID			0x2c7c
+ /* These Quectel products use Quectel's vendor ID */
+ #define QUECTEL_PRODUCT_EC21			0x0121
+@@ -1177,6 +1187,12 @@ static const struct usb_device_id option
+ 	  .driver_info = ZLP },
+ 	{ USB_DEVICE(QUECTEL_VENDOR_ID, QUECTEL_PRODUCT_BG96),
+ 	  .driver_info = RSVD(4) },
++	{ USB_DEVICE_AND_INTERFACE_INFO(MEIGLINK_VENDOR_ID, MEIG_PRODUCT_SLM770_NCM, 0xff, 0xff, 0xff),
++	  .driver_info = NUMEP2 },
++	{ USB_DEVICE_AND_INTERFACE_INFO(MEIGLINK_VENDOR_ID, MEIG_PRODUCT_SLM770_NCM, 0xff, 0, 0) },
++	{ USB_DEVICE_AND_INTERFACE_INFO(MEIGLINK_VENDOR_ID, MEIG_PRODUCT_SLM770_ECM, 0xff, 0xff, 0xff),
++	  .driver_info = NUMEP2 },
++	{ USB_DEVICE_AND_INTERFACE_INFO(MEIGLINK_VENDOR_ID, MEIG_PRODUCT_SLM770_ECM, 0xff, 0, 0) },
+ 	{ USB_DEVICE_AND_INTERFACE_INFO(QUECTEL_VENDOR_ID, QUECTEL_PRODUCT_EP06, 0xff, 0xff, 0xff),
+ 	  .driver_info = RSVD(1) | RSVD(2) | RSVD(3) | RSVD(4) | NUMEP2 },
+ 	{ USB_DEVICE_AND_INTERFACE_INFO(QUECTEL_VENDOR_ID, QUECTEL_PRODUCT_EP06, 0xff, 0, 0) },

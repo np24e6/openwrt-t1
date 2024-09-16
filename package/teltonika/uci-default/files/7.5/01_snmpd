@@ -1,0 +1,20 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+PUBLIC_ISSET=false
+
+name_section() {
+	local section="$1"
+
+	if [ "$PUBLIC_ISSET" = true ]; then
+		uci_rename "snmpd" "$section" "private6"
+	else
+		uci_rename "snmpd" "$section" "public6"
+		PUBLIC_ISSET=true
+	fi
+}
+
+config_load "snmpd"
+config_foreach name_section "com2sec6"
+uci_commit "snmpd"

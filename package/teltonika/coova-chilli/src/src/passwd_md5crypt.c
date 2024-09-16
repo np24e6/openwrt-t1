@@ -265,29 +265,29 @@ char *hash_md5(char *password)
 	return NULL;
 }
 
-char *extract_salt(char *hash)
-{
-	size_t i	    = 0;
-	int salt_offset	    = 0;
-	int separator_count = 0;
-	char *salt	    = malloc(strlen(hash) + 1);
+// char *extract_salt(char *hash)
+// {
+// 	size_t i	    = 0;
+// 	int salt_offset	    = 0;
+// 	int separator_count = 0;
+// 	char *salt	    = malloc(strlen(hash) + 1);
 
-	if (!salt)
-		return NULL;
+// 	if (!salt)
+// 		return NULL;
 
-	for (; i < strlen(hash); i++) {
-		if (separator_count == 1) {
-			salt_offset = i + 1;
-		} else if (separator_count == 2) {
-			salt[i - salt_offset] = hash[i];
-		} else if (separator_count >= 3) {
-			salt[i - salt_offset - 1] = '\0';
-			return salt;
-		}
-		if (hash[i] == '$')
-			separator_count++;
-	}
+// 	for (; i < strlen(hash); i++) {
+// 		if (separator_count == 1) {
+// 			salt_offset = i + 1;
+// 		} else if (separator_count == 2) {
+// 			salt[i - salt_offset] = hash[i];
+// 		} else if (separator_count >= 3) {
+// 			salt[i - salt_offset - 1] = '\0';
+// 			return salt;
+// 		}
+// 		if (hash[i] == '$')
+// 			separator_count++;
+// 	}
 
-	free(salt);
-	return NULL;
-}
+// 	free(salt);
+// 	return NULL;
+// }

@@ -147,6 +147,7 @@ add_simcard_config(){
 
 	[ -z "$position" ] && position=1
 
+	[ -e /etc/config/simcard ] || touch /etc/config/simcard
 	uci_add simcard sim
 	uci_set simcard $CONFIG_SECTION modem "$device"
 	uci_set simcard $CONFIG_SECTION position "$position"

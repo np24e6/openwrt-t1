@@ -62,7 +62,7 @@
 +	}
 +
 +	cmd[0] = '\0';
-+	sprintf(cmd, "%s for %s from %s", text, a, b);
++	sprintf(cmd, "%s for %s on SSH from %s", text, a, b);
 +
 +	new_task.table = LLOG_CONNECTIONS;
 +	new_task.sender = "SSH";

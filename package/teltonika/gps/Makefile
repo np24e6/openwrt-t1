@@ -6,13 +6,8 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=gps
-PKG_VERSION:=2023-05-17
-PKG_RELEASE:=1
 
-PKG_SOURCE_VERSION:=ac5af151797f56a545bfc723ab0445666a2239ce
-PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_SOURCE_VERSION)-$(PKG_VERSION)
-PKG_SOURCE:=$(PKG_SOURCE_SUBDIR).tar.gz
-PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_SOURCE_SUBDIR)
+PKG_SOURCE_VERSION:=7.5
 
 GPL_INCLUDE_HEADERS:=1
 
@@ -22,7 +17,7 @@ define Package/gpsd
 	SECTION:=base
 	CATEGORY:=Base system
 	TITLE:=Deamon providing gps related functionality.
-	DEPENDS:=+lsqlite3 +libpthread +libuci +liblog +libubus +liburc +libgsm +zlib +libcurl +IO_SUPPORT:iomand
+	DEPENDS:=+lsqlite3 +libpthread +libuci +liblog +libubus +liburc +libgsm +zlib +libcurl +IO_SUPPORT:iomand +libmnfinfo
 endef
 
 define Package/gpsctl
@@ -83,7 +78,7 @@ define Package/gpsd/install
 
 	if [ $(TLT_PLATFORM_RUTX) ] || [ $(TLT_PLATFORM_RUTM) ]; then \
 		$(INSTALL_CONF) $(PKG_BUILD_DIR)/files/gps_RUTX.conf $(1)/etc/config/gps; \
-	elif [ $(TLT_PLATFORM_TRB2) ]; then \
+	elif [ $(TLT_PLATFORM_TRB2) ] || [ $(TLT_PLATFORM_TRB2M) ]; then \
 		$(INSTALL_CONF) $(PKG_BUILD_DIR)/files/gps_TRB2.conf $(1)/etc/config/gps; \
 	elif [ $(TLT_PLATFORM_RUT30X) ] || [ $(TLT_PLATFORM_RUT36X) ]; then \
 		$(INSTALL_CONF) $(PKG_BUILD_DIR)/files/gps_RUT3.conf $(1)/etc/config/gps; \
@@ -110,7 +105,7 @@ define Package/avl/install
 
 	if [ $(TLT_PLATFORM_RUTX) ] || [ $(TLT_PLATFORM_RUTM) ]; then \
 		$(INSTALL_CONF) $(PKG_BUILD_DIR)/files/avl_RUTX.conf $(1)/etc/config/avl; \
-	elif [ $(TLT_PLATFORM_TRB2) ]; then \
+	elif [ $(TLT_PLATFORM_TRB2) ] || [ $(TLT_PLATFORM_TRB2M) ]; then \
 		$(INSTALL_CONF) $(PKG_BUILD_DIR)/files/avl_TRB2.conf $(1)/etc/config/avl; \
 	elif [ $(TLT_PLATFORM_RUT30X) ] || [ $(TLT_PLATFORM_RUT36X) ]; then \
 		$(INSTALL_CONF) $(PKG_BUILD_DIR)/files/avl_RUT3.conf $(1)/etc/config/avl; \

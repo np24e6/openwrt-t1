@@ -6,7 +6,7 @@ get_router_name() {
 	local name
 
 	config_load system
-	config_get name system "routername"
+	config_get name system "devicename"
 
 	[ -z "$name" ] && name=$(mnf_info -n 2>/dev/null | cut -c -6)
 	[ -z "$name" ] && {

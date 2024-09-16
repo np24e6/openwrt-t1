@@ -7,7 +7,7 @@ include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=mnfinfo
 
-PKG_SOURCE_VERSION:=93496335a2afa801de4e7186c876553cf9be83c4
+PKG_SOURCE_VERSION:=2.12
 
 GPL_INCLUDE_HEADERS:=1
 
@@ -24,7 +24,7 @@ define Package/libmnfinfo
   SECTION:=libs
   CATEGORY:=Libraries
   TITLE:=Device mnf-info API library
-  DEPENDS:=+rpcd +libubus +libubox
+  DEPENDS:=+libubus +libubox
 endef
 
 define Package/rpcd-mod-mnfinfo

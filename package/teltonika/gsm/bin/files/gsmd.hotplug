@@ -35,10 +35,17 @@ devicename="$DEVICENAME"
 
 json_init
 json_load "$(cat $usb)"
-json_get_vars desc control data boudrate stop_bits gps
+json_get_vars desc control serial_control data boudrate stop_bits gps
 
-at_device="/dev/$(ls -d /sys/bus/usb/devices/${devicename}:1.${control}/tty?* | sed "s/.*\///g" | tr "\n")"
+if [ -n "$serial_control" ]; then
+	at_device="/dev/ttyS${serial_control}"
+else
+	at_device="/dev/$(ls -d /sys/bus/usb/devices/${devicename}:1.${control}/tty?* | sed "s/.*\///g" | tr "\n")"
+fi
+
 [ "$gps" ] && gps_device="/dev/$(ls -d /sys/bus/usb/devices/${devicename}:1.${gps}/tty?* | sed "s/.*\///g" | tr "\n")"
+
+[ "$data" ] && data_device="/dev/$(ls -d /sys/bus/usb/devices/${devicename}:1.${data}/tty?* | sed "s/.*\///g" | tr "\n")"
 
 [ -s /etc/config/simcard ] && {
 	config_load "simcard"
@@ -73,6 +80,7 @@ json_init
 json_add_string "id" "$devicename"
 json_add_string "cmd_port" "$at_device"
 json_add_string "gps_port" "$gps_device"
+json_add_string "data_port" "$data_device"
 json_add_string "vidpid" "$vid:$pid"
 json_add_int "boudrate" "$boudrate"
 json_add_int "stop_bits" "$stop_bits"

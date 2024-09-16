@@ -1,0 +1,80 @@
+#!/bin/sh
+#
+# Copyright (C), 2023 Teltonika
+#
+
+. /lib/functions.sh
+
+CONF="rs_console"
+DEVICE="/dev/rsconsole"
+SERIAL_CONFIGS="dnp3_outstation dnp3_master rs_console rs_ntrip modbus_master modbus rs_overip rs_modem rs_modbus modbusgateway dnp3_master dnp3_outstation"
+
+DOES_CONSOLE_EXIST=0
+CONSOLE_COUNT=0
+IS_RSCONSOLE_USED=0
+
+check_if_console_section_exist() {
+	local section=$1
+
+	config_get device "$section" "device" "0"
+	[ "$device" = "$DEVICE" ] && DOES_CONSOLE_EXIST=1
+	CONSOLE_COUNT=$(($CONSOLE_COUNT + 1))
+}
+
+check_if_device_is_used_in_config() {
+	local section=$1
+
+	config_get enabled "$section" "enabled" "0"
+	config_get device "$section" "device" "0"
+	[ "$enabled" = "1" ] && [ "$device" = "$DEVICE" ] && IS_RSCONSOLE_USED=1
+}
+
+check_if_device_is_used() {
+	for config_name in $SERIAL_CONFIGS; do
+		if config_load "$config_name"; then
+			config_foreach check_if_device_is_used_in_config
+		fi
+	done
+}
+
+rename_rs232_to_rsconsole() {
+	local section=$1
+
+	config_get device "$section" "device" ""
+	if [ "$device" = "/dev/rs232" ]; then
+		uci_set $CONF "$section" "device" "/dev/rsconsole"
+	fi
+}
+
+case "$(mnf_info --name)" in
+RUTXR1*)
+	config_load "$CONF" || exit 0
+	config_foreach rename_rs232_to_rsconsole
+	uci commit
+
+	config_load "$CONF"
+	config_foreach check_if_console_section_exist
+	[ "$DOES_CONSOLE_EXIST" = "1" ] && exit 0
+
+	check_if_device_is_used
+	enabled="1"
+	if [ "$IS_RS232_USED" = "1" ]; then
+		enabled="0"
+	fi
+
+	new_sec=$(uci add "$CONF" "console")
+	uci_set "$CONF" "$new_sec" "enabled" "$enabled"
+	uci_set "$CONF" "$new_sec" "device" "$DEVICE"
+	uci_set "$CONF" "$new_sec" "baudrate" "115200"
+	uci_set "$CONF" "$new_sec" "databits" "8"
+	uci_set "$CONF" "$new_sec" "parity" "none"
+	uci_set "$CONF" "$new_sec" "stopbits" "1"
+	uci_set "$CONF" "$new_sec" "flowcontrol" "none"
+
+	# This will sometimes not work, if there are gaps in the numbered section names
+	uci_rename "$CONF" "$new_sec" "$(($CONSOLE_COUNT+1))"
+
+	uci commit
+	exit 0
+	;;
+esac

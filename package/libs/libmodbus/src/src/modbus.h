@@ -1,7 +1,7 @@
 /*
- * Copyright © Stéphane Raimbault <stephane.raimbault@gmail.com>
+ * Copyright © 2001-2013 Stéphane Raimbault <stephane.raimbault@gmail.com>
  *
- * SPDX-License-Identifier: LGPL-2.1-or-later
+ * SPDX-License-Identifier: LGPL-2.1+
  */
 
 #ifndef MODBUS_H
@@ -256,20 +256,20 @@ MODBUS_API int modbus_raw_reply(modbus_t *ctx, const uint8_t *req,
 #define MODBUS_GET_INT16_FROM_INT8(tab_int8, index) ((tab_int8[(index)] << 8) | tab_int8[(index) + 1])
 #define MODBUS_SET_INT16_TO_INT8(tab_int8, index, value) \
     do { \
-        ((int8_t*)(tab_int8))[(index)    ] = (int8_t)((value) >> 8);  \
-        ((int8_t*)(tab_int8))[(index) + 1] = (int8_t)(value); \
+        tab_int8[(index)] = (value) >> 8;  \
+        tab_int8[(index) + 1] = (value) & 0xFF; \
     } while (0)
 #define MODBUS_SET_INT32_TO_INT16(tab_int16, index, value) \
     do { \
-        ((int16_t*)(tab_int16))[(index)    ] = (int16_t)((value) >> 16); \
-        ((int16_t*)(tab_int16))[(index) + 1] = (int16_t)(value); \
+        tab_int16[(index)    ] = (value) >> 16; \
+        tab_int16[(index) + 1] = (value); \
     } while (0)
 #define MODBUS_SET_INT64_TO_INT16(tab_int16, index, value) \
     do { \
-        ((int16_t*)(tab_int16))[(index)    ] = (int16_t)((value) >> 48); \
-        ((int16_t*)(tab_int16))[(index) + 1] = (int16_t)((value) >> 32); \
-        ((int16_t*)(tab_int16))[(index) + 2] = (int16_t)((value) >> 16); \
-        ((int16_t*)(tab_int16))[(index) + 3] = (int16_t)(value); \
+        tab_int16[(index)    ] = (value) >> 48; \
+        tab_int16[(index) + 1] = (value) >> 32; \
+        tab_int16[(index) + 2] = (value) >> 16; \
+        tab_int16[(index) + 3] = (value); \
     } while (0)
 
 MODBUS_API void modbus_set_bits_from_byte(uint8_t *dest, int idx, const uint8_t value);

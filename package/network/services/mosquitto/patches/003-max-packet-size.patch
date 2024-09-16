@@ -1,9 +1,10 @@
 --- a/lib/packet_mosq.c
 +++ b/lib/packet_mosq.c
-@@ -455,6 +455,11 @@
- 		mosq->in_packet.remaining_count = (int8_t)(mosq->in_packet.remaining_count * -1);
+@@ -484,6 +484,11 @@
+ 				}
+ 				break;
+ 		}
  
- #ifdef WITH_BROKER
 +		if (mosq->in_packet.remaining_length >= db.config->max_packet_size &&
 +		    db.config->max_packet_size != 0) {
 +			packet__cleanup(&mosq->in_packet);

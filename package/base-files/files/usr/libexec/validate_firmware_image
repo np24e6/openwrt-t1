@@ -39,6 +39,11 @@ notify_firmware_is_downgrade() {
 	IS_DOWNGRADE=1
 }
 
+# Notify password warning when flashing older firmware
+notify_firmware_passwd_warning() {
+	PASSWD_WARNING=1
+}
+
 # Add result of validation test
 notify_firmware_test_result() {
 	local old_ns
@@ -60,26 +65,46 @@ if type 'platform_pre_check_image' >/dev/null 2>/dev/null; then
 fi
 fwtool_check_signature "$1" >&2
 FWTOOL_SIGNATURE=$?
-[ "$FWTOOL_SIGNATURE" -ne 0 ] && notify_firmware_invalid
+
+[ "$FWTOOL_SIGNATURE" -ne 0 ] && {
+	fwtool_get_vcert_state >&2
+	[ "$?" -ne 0 ] && notify_firmware_invalid
+}
 
 fwtool_check_image "$1" >&2
 FWTOOL_DEVICE_MATCH=$?
 [ "$FWTOOL_DEVICE_MATCH" -ne 0 ] && notify_firmware_invalid
 
-[ "$BACKUP_INCOMPATIBLE" -eq 1 2>/dev/null ] && notify_firmware_is_downgrade
+fwtool_check_upgrade_type "$1" >&2
+[ "$?" -eq 1 ] && {
+	notify_firmware_no_backup
+	notify_firmware_is_downgrade
+
+	fwtool_check_downgrade_ability >&2
+	[ "$?" -eq 1 ] && notify_firmware_invalid
+}
+
+fwtool_check_passwd_warning "$1" >&2
+[ "$?" -eq 1 ] && {
+	notify_firmware_passwd_warning
+}
 
 if type 'platform_check_hw_support' >/dev/null 2>/dev/null; then
 	platform_check_hw_support "$1" >&2
-	[ "$?" -ne 0 ] && notify_firmware_hw_unsupported
+	[ "$?" -ne 0 ] &&  {
+		notify_firmware_hw_unsupported
+		fwtool_msg "Firmware is not supported by this device" "14"
+	}
 fi
 
 json_set_namespace validate_firmware_image old_ns
 json_init
+	json_add_string hw_mods "$hw_mods"
 	json_add_object "tests"
 		json_add_boolean fwtool_signature "$(err_to_bool $FWTOOL_SIGNATURE)"
 		json_add_boolean fwtool_device_match "$(err_to_bool $FWTOOL_DEVICE_MATCH)"
 		json_add_string fwtool_last_error "$(cat /tmp/fwtool_last_error)"
-		
+
 		# Call platform_check_image() here so it can add its test
 		# results and still mark image properly.
 		json_set_namespace $old_ns
@@ -91,5 +116,6 @@ json_init
 	json_add_boolean forceable "$FORCEABLE"
 	json_add_boolean allow_backup "$ALLOW_BACKUP"
 	json_add_boolean is_downgrade "$IS_DOWNGRADE"
+	json_add_boolean password_warning "$PASSWD_WARNING"
 json_dump -i
 json_set_namespace $old_ns

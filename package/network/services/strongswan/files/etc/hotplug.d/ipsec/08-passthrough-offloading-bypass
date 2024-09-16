@@ -1,0 +1,42 @@
+#!/bin/sh
+
+[ "$PLUTO_PEER_CLIENT" = "0.0.0.0/0" ] || exit 0
+[ "$(uci -q get ipsec.${PLUTO_CONNECTION##*-}.defaultroute)" = "1" ] && exit 0
+. /lib/functions/network.sh
+
+get_networks(){
+	passthrough_iface="$(uci get ipsec.${PLUTO_CONNECTION##*-}.passthrough 2>/dev/null)"
+	passthrough_net="$(uci get ipsec.${PLUTO_CONNECTION##*-}.passthrough_ip 2>/dev/null)"
+	offloading="$(uci get firewall.1.flow_offloading 2>/dev/null)"
+
+	[ -z "$passthrough_iface" ] && [ -z "$passthrough_net" ] && exit 0
+
+	for iface in $passthrough_iface; do
+		network_get_subnets subnet "$iface"
+		eval "$(ipcalc.sh "$subnet")"
+		[ "$NETWORK/$PREFIX" = "0.0.0.0/0" ] && continue
+		passthrough_net="${passthrough_net} $NETWORK/$PREFIX"
+	done
+}
+
+if [ "$PLUTO_VERB" = "up-client" ]; then
+	get_networks
+	for net in $passthrough_net; do
+		[ "$offloading" = 1 ] && {
+			iptables -I FORWARD -s "$net" -m comment --comment "${PLUTO_CONNECTION##*-} passthrough offload bypass" -j ACCEPT
+			iptables -I FORWARD -d "$net" -m comment --comment "${PLUTO_CONNECTION##*-} passthrough offload bypass" -j ACCEPT
+		}
+		iptables -I postrouting_wan_rule -t nat -s "$net" -m comment --comment "Added by Strongswan hotplug" -j SNAT --to "$PLUTO_MY_SOURCEIP4_1"
+	done
+fi
+
+if [ "$PLUTO_VERB" = "down-client" ]; then
+	get_networks
+	for net in $passthrough_net; do
+		[ "$offloading" = 1 ] && {
+			iptables -D FORWARD -s "$net" -m comment --comment "${PLUTO_CONNECTION##*-} passthrough offload bypass" -j ACCEPT
+			iptables -D FORWARD -d "$net" -m comment --comment "${PLUTO_CONNECTION##*-} passthrough offload bypass" -j ACCEPT
+		}
+		iptables -D postrouting_wan_rule -t nat -s "$net" -m comment --comment "Added by Strongswan hotplug" -j SNAT --to "$PLUTO_MY_SOURCEIP4_1"
+	done
+fi

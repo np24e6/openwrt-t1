@@ -1578,6 +1578,9 @@ typedef sw_error_t
 			fal_host_entry_t * host_entry);
 
   typedef sw_error_t
+    (*hsl_ip_host_del_all) (a_uint32_t dev_id);
+
+  typedef sw_error_t
     (*hsl_ip_host_get) (a_uint32_t dev_id, a_uint32_t get_mode,
 			fal_host_entry_t * host_entry);
 
@@ -2434,6 +2437,7 @@ typedef sw_error_t
     /* IP */
     hsl_ip_host_add ip_host_add;
     hsl_ip_host_del ip_host_del;
+    hsl_ip_host_del_all ip_host_del_all;
     hsl_ip_host_get ip_host_get;
     hsl_ip_host_next ip_host_next;
     hsl_ip_host_counter_bind ip_host_counter_bind;

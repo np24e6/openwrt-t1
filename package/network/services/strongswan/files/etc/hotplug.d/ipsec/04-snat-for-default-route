@@ -5,19 +5,23 @@
 . /lib/functions/network.sh
 
 network_get_subnet lan_subnet lan
+eval "$(ipcalc.sh "$lan_subnet")";lan_subnet="$NETWORK/$PREFIX"
 
 case "$PLUTO_VERB:" in
 	up-client:)
 		[ "$(uci -q get ipsec.${PLUTO_CONNECTION##*-}.defaultroute)" = "1" ] || exit 0
-		iptables -I postrouting_wan_rule -t nat -s "$lan_subnet" \
-	    -m comment --comment "Added by Strongswan hotplug" \
-	    -j SNAT --to $PLUTO_MY_SOURCEIP4_1
-	    echo "Added firewall SNAT rule: from $lan_subnet to $PLUTO_MY_SOURCEIP4_1"
+		offloading="$(uci get firewall.1.flow_offloading 2>/dev/null)"
+		[ "$offloading" = 1 ] && {
+			iptables -I FORWARD -s "$lan_subnet" -m comment --comment "Added by Strongswan hotplug for Default Route" -j ACCEPT
+			iptables -I FORWARD -d "$lan_subnet" -m comment --comment "Added by Strongswan hotplug for Default Route" -j ACCEPT
+		}
+		iptables -I postrouting_wan_rule -t nat -s "$lan_subnet" -m comment --comment "Added by Strongswan hotplug" -j SNAT --to $PLUTO_MY_SOURCEIP4_1
+		echo "Added firewall SNAT rule: from $lan_subnet to $PLUTO_MY_SOURCEIP4_1"
 		;;
 	down-client:)
-		iptables -D postrouting_wan_rule -t nat -s "$lan_subnet" \
-	    -m comment --comment "Added by Strongswan hotplug" \
-	    -j SNAT --to $PLUTO_MY_SOURCEIP4_1
-	     echo "Removed firewall SNAT rule: from $lan_subnet to $PLUTO_MY_SOURCEIP4_1t"
+		iptables -D FORWARD -s "$lan_subnet" -m comment --comment "Added by Strongswan hotplug for Default Route" -j ACCEPT
+		iptables -D FORWARD -d "$lan_subnet" -m comment --comment "Added by Strongswan hotplug for Default Route" -j ACCEPT
+		iptables -D postrouting_wan_rule -t nat -s "$lan_subnet" -m comment --comment "Added by Strongswan hotplug" -j SNAT --to $PLUTO_MY_SOURCEIP4_1
+		echo "Removed firewall SNAT rule: from $lan_subnet to $PLUTO_MY_SOURCEIP4_1"
 		;;
 esac

@@ -6,27 +6,19 @@
 ifneq ($(__target_inc),1)
 __target_inc=1
 
+-include $(TOPDIR)/.config
+
 # default device type
 DEVICE_TYPE?=router
 
 # Default packages - the really basic set
 DEFAULT_PACKAGES:=\
 	base-files \
-	ca-bundle \
-	dropbear \
-	openssh-sftp-server \
 	fstools \
 	libc \
 	libgcc \
-	libustream-openssl \
-	logd \
-	mtd \
 	netifd \
-	opkg \
 	uci \
-	uclient-fetch \
-	urandom-seed \
-	urngd \
 	libbrand-versioning \
 	mnfinfo
 
@@ -37,7 +29,19 @@ DEFAULT_PACKAGES+=busybox procd
 endif
 
 # For the basic set
-DEFAULT_PACKAGES.basic:=
+DEFAULT_PACKAGES.basic:=\
+	ca-bundle \
+	dropbear \
+	openssh-sftp-server \
+	libustream-openssl \
+	logd \
+	mtd \
+	opkg \
+	uclient-fetch \
+	urandom-seed \
+	urngd \
+	dnsmasq
+
 # For nas targets
 DEFAULT_PACKAGES.nas:=\
 	block-mount \
@@ -83,8 +87,11 @@ else
   endif
 endif
 
-# Add device specific packages (here below to allow device type set from subtarget)
+# Add device basic and specific packages (here below to allow device type set from subtarget)
+ifeq ($(CONFIG_BUILD_FACTORY_TEST_IMAGE),)
+DEFAULT_PACKAGES += $(DEFAULT_PACKAGES.basic)
 DEFAULT_PACKAGES += $(DEFAULT_PACKAGES.$(DEVICE_TYPE))
+endif
 
 filter_packages = $(filter-out -% $(patsubst -%,%,$(filter -%,$(1))),$(1))
 extra_packages = $(if $(filter wpad wpad-% nas,$(1)),iwinfo)
@@ -210,6 +217,7 @@ ifeq ($(DUMP),1)
     CPU_CFLAGS_4kec = -mips32r2 -mtune=4kec
     CPU_CFLAGS_24kc = -mips32r2 -mtune=24kc
     CPU_CFLAGS_74kc = -mips32r2 -mtune=74kc
+    CPU_CFLAGS_1004kc = -mips32r2 -mtune=1004kc
     CPU_CFLAGS_octeonplus = -march=octeon+ -mabi=64
   endif
   ifeq ($(ARCH),i386)
@@ -331,7 +339,7 @@ define BuildTargets/DumpCurrent
 	 echo 'Target-Description:'; \
 	 echo "$$$$DESCRIPTION"; \
 	 echo '@@'; \
-	 echo 'Default-Packages: $(DEFAULT_PACKAGES) $(call extra_packages,$(DEFAULT_PACKAGES))'; \
+	 echo 'Default-Packages: $(DEFAULT_PACKAGES) $(call extra_packages,$(DEFAULT_PACKAGES)) $(if $(CONFIG_BUILD_FACTORY_TEST_IMAGE),,$(DEFAULT_PACKAGES.basic))'; \
 	 $(DUMPINFO)
 	$(if $(CUR_SUBTARGET),$(SUBMAKE) -r --no-print-directory -C image -s DUMP=1 SUBTARGET=$(CUR_SUBTARGET))
 	$(if $(SUBTARGET),,@$(foreach SUBTARGET,$(SUBTARGETS),$(SUBMAKE) -s DUMP=1 SUBTARGET=$(SUBTARGET); ))

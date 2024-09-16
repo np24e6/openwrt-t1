@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2022 Teltonika
+# Copyright (C) 2023 Teltonika-Networks
 #
 
 include $(TOPDIR)/rules.mk
@@ -7,7 +7,7 @@ include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=mctl
 
-PKG_SOURCE_VERSION:=2fdb622367699baa8bf0f31c83af36d8f8925ec3
+PKG_SOURCE_VERSION:=3.1.1
 
 GPL_INCLUDE_HEADERS:=1
 
@@ -31,7 +31,7 @@ define Package/libmctl
 	SECTION:=libs
 	CATEGORY:=Libraries
 	TITLE:=A library for manage modem restart. Created by Teltonika
-	DEPENDS:=+BASEBAND_SUPPORT:libubus +libboardjson +libblobmsg-json
+	DEPENDS:=+libubus +libboardjson +libblobmsg-json
 endef
 
 define Package/modem_trackd/description
@@ -60,8 +60,13 @@ define Package/libmctl/install
 endef
 
 define Package/modem_trackd/install
-	$(INSTALL_DIR) $(1)/usr/sbin $(1)/etc/init.d/
+	$(INSTALL_DIR) $(1)/usr/sbin $(1)/etc/init.d/ $(1)/etc/hotplug.d/mctl/
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/modem_trackd $(1)/usr/sbin/modem_trackd
+
+	if [ $(TLT_PLATFORM_RUTM) ]; then \
+		$(INSTALL_BIN) $(PKG_BUILD_DIR)/files/track_timeout.hotplug $(1)/etc/hotplug.d/mctl/01-mctl-event; \
+	fi;
+
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/files/modem_trackd.init $(1)/etc/init.d/modem_trackd
 endef
 

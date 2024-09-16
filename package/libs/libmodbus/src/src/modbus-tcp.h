@@ -1,7 +1,7 @@
 /*
- * Copyright © Stéphane Raimbault <stephane.raimbault@gmail.com>
+ * Copyright © 2001-2010 Stéphane Raimbault <stephane.raimbault@gmail.com>
  *
- * SPDX-License-Identifier: LGPL-2.1-or-later
+ * SPDX-License-Identifier: LGPL-2.1+
  */
 
 #ifndef MODBUS_TCP_H
@@ -32,7 +32,6 @@ MODBUS_BEGIN_DECLS
 #endif
 
 #define MODBUS_TCP_DEFAULT_PORT   502
-#define MODBUS_TCP_SLAVE         0xFF
 
 /* Modbus_Application_Protocol_V1_1b.pdf Chapter 4 Section 1 Page 5
  * TCP MODBUS ADU = 253 bytes + MBAP (7 bytes) = 260 bytes

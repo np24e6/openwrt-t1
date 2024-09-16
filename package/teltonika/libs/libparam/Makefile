@@ -6,8 +6,10 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=libparam
+PKG_VERSION:=2023-09-08
+PKG_RELEASE:=1
 
-PKG_SOURCE_VERSION:=e677d30bd4cdc760eda3c37ee6ef0c148cacfa6a
+PKG_SOURCE_VERSION:=1.3
 
 include $(INCLUDE_DIR)/package.mk
 
@@ -15,8 +17,9 @@ define Package/libparam
 	SECTION:=libs
 	CATEGORY:=Libraries
 	TITLE:=A library for decoding and replacing params in string.
-	DEPENDS:= +libubox +libtlt_uci +libubus +MOBILE_SUPPORT:rpcd-mod-simd \
-		+IO_SUPPORT:iomand +MOBILE_SUPPORT:libgsm +librms +librut_fota +libmnfinfo
+	DEPENDS:= +libubox +libtlt_uci +libubus +IO_SUPPORT:iomand \
+		+MOBILE_SUPPORT:libgsm +librms +librut_fota +libmnfinfo \
+		+GPS_SUPPORT:libgps
 endef
 
 define Package/libparam/description

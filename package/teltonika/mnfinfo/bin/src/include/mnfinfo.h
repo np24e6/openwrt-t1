@@ -35,8 +35,10 @@ extern "C" {
 #include "trb1.h"
 #elif defined(TRB2_PLATFORM) || defined(OTD1_PLATFORM) || defined(TRB2M_PLATFORM)
 #include "trb2.h"
-#elif defined(TRB5_PLATFORM)
+#elif defined(TRB5_PLATFORM) || defined(TRB501_PLATFORM)
 #include "trb5.h"
+#elif defined(RUT14X_PLATFORM)
+#include "rut14.h"
 #elif defined(RUT2_PLATFORM)
 #include "rut2.h"
 #elif defined(RUT2M_PLATFORM)

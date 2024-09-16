@@ -1,0 +1,16 @@
+Index: libdlms-e5cc16e1/development/src/gxsetmalloc.c
+===================================================================
+--- libdlms-e5cc16e1.orig/development/src/gxsetmalloc.c
++++ libdlms-e5cc16e1/development/src/gxsetmalloc.c
+@@ -522,6 +522,11 @@ int updateDayProfileTable(dlmsSettings*
+             {
+                 break;
+             }
++
++           if (!tmp2->byteArr) {
++                   break;
++           }
++
+             if (tmp2->vt == DLMS_DATA_TYPE_OCTET_STRING && tmp2->byteArr != NULL)
+             {
+ #ifndef DLMS_IGNORE_OBJECT_POINTERS

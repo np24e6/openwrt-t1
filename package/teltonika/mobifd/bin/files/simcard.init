@@ -1,0 +1,139 @@
+#!/bin/sh /etc/rc.common
+
+. /lib/functions/board.sh
+. /lib/functions/mobile.sh
+
+START=12
+USE_PROCD=1
+
+handle_mnf_pin() {
+	local builtin=$1
+	local position=$2
+	local pin=$3
+	local dual_modem=$4
+	local pin_num
+
+	if [ "$builtin" = "2" ]; then
+		if [ "$position" = "1" ]; then
+			[ "$dual_modem" = "1" ] && pin_num="3" || pin_num="1"
+		elif [ "$position" = "2" ]; then
+			[ "$dual_modem" = "1" ] && pin_num="4" || pin_num="2"
+		fi
+	else
+		if [ "$position" = "1" ]; then
+			[ "$dual_modem" = "1" ] && pin_num="1" || pin_num="3"
+		elif [ "$position" = "2" ]; then
+			[ "$dual_modem" = "1" ] && pin_num="2" || pin_num="4"
+		fi
+	fi
+
+	mnf_info -P "$pin_num" -p "$pin"
+}
+
+save_sim() {
+	local sim="$1"
+	local pin
+	local modem
+	local position
+	local primary
+	local sim_count
+
+	json_init
+	json_load_file /etc/board.json
+
+	json_get_keys modems modems
+	json_select modems
+
+	config_get pin "$sim" pincode ""
+	config_get modem "$sim" modem
+	config_get position "$sim" position
+	config_get primary "$sim" primary 0
+
+	local cur_pin=$(mnf_info -S "$position")
+
+	[ "$?" -ne 0 ] && return
+
+	local builtin=$(is_builtin_modem "$modem")
+
+	[ "$builtin" -eq 0 ] && {
+		return
+	}
+
+	modem_id="$modem"
+
+	for modem in $modems; do
+		json_select "$modem"
+		json_get_var sim_count simcount
+	done
+
+	[ "$sim_count" -gt 1 ] && [ "$primary" -eq 1 ] && [ -n "$modem" ] && {
+		switch_sim "$position" "$modem" "$modem_id"
+	}
+
+	[ "$cur_pin" = "$pin" ] && return
+
+	[ -z "$pin" ] && {
+		pin="erase"
+	}
+
+	local dual_modem=$(is_dual_modem)
+
+	handle_mnf_pin "$builtin" "$position" "$pin" "$dual_modem"
+}
+
+get_active_sim() {
+	local active_sim
+
+	json_init
+	json_load "$(ubus call $1 get_sim_slot)"
+	json_get_var active_sim "index" 0
+
+	echo "$active_sim"
+}
+
+switch_sim() {
+	local position="$1"
+	local modem="$2"
+	local modem_id="$3"
+	local sim
+	local mdm_ubus_obj
+	local retry_max=5
+	local retry_count=0
+
+	while [ -z "$(ubus -S list gsm.modem*)" ]
+	do
+		[ "$retry_count" = "$retry_max" ] && {
+			logger -t "simcard" "Failed to find GSM ubus object"
+			return
+		}
+		retry_count=$((retry_count + 1))
+		sleep 1
+	done
+
+	mdm_ubus_obj="$(find_mdm_ubus_obj "$modem_id")"
+
+	[ -z "$mdm_ubus_obj" ] && return
+
+	sim="$(get_active_sim $mdm_ubus_obj)"
+
+	while [ -z "$sim" ] || [ "$sim" -eq 0 ]; do
+		logger -t "simcard" "Failed to retrieve active simcard. retrying..."
+		sleep 1
+		sim="$(get_active_sim $mdm_ubus_obj)"
+	done
+
+	if [ "$position" -ne "$sim" ]; then
+		ubus call "$mdm_ubus_obj" set_func "{\"func\":\"minimal\",\"reset\":false}" >/dev/null
+		ubus call "$mdm_ubus_obj" set_sim_slot "{\"index\":$position}" >/dev/null
+		logger -t "simcard" "Setting SIM slot to $position"
+	fi
+}
+
+service_triggers() {
+	procd_add_reload_trigger "simcard"
+}
+
+start_service() {
+	config_load simcard
+	config_foreach save_sim sim
+}

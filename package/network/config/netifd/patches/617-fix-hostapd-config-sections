@@ -1,0 +1,57 @@
+--- a/config.c
++++ b/config.c
+@@ -559,6 +559,39 @@ config_parse_wireless_device(struct uci_
+ 	wireless_device_create(drv, s->e.name, b.head);
+ }
+ 
++static void
++config_parse_wireless_interface_extra(struct blob_buf *b, const char *wifi_id, char* type)
++{
++	struct uci_element *f;
++	void *array = blobmsg_open_array(b, type);
++
++	uci_foreach_element(&uci_wireless->sections, f) {
++		struct uci_section *s = uci_to_section(f);
++
++		const char *s_wifi_id = uci_lookup_option_string(uci_ctx, s, "wifi_id");
++
++		if (!s_wifi_id || strcmp(s->type, type) != 0 || strcmp(wifi_id, s_wifi_id) != 0)
++			continue;
++
++		char *s_name = alloca(strlen(s->type) + 16);
++		sprintf(s_name, "@%s[%d]", s->type, config_section_idx(s));
++
++		void *table = blobmsg_open_table(b, s->anonymous ? s_name : s->e.name);
++
++		struct uci_element *e;
++		uci_foreach_element(&s->options, e) {
++			struct uci_option *o = uci_to_option(e);
++			if (o->type != UCI_TYPE_STRING)
++				continue;
++			blobmsg_add_string(b, o->e.name, o->v.string);
++		}
++
++		blobmsg_close_table(b, table);
++	}
++
++	blobmsg_close_array(b, array);
++}
++
+ static struct wireless_interface*
+ config_parse_wireless_interface(struct wireless_device *wdev, struct uci_section *s)
+ {
+@@ -569,6 +602,14 @@ config_parse_wireless_interface(struct w
+ 
+ 	blob_buf_init(&b, 0);
+ 	uci_to_blob(&b, s, wdev->drv->interface.config);
++
++	const char *wifi_id = uci_lookup_option_string(uci_ctx, s, "wifi_id");
++	config_parse_wireless_interface_extra(&b, wifi_id, "nai-realm");
++	config_parse_wireless_interface_extra(&b, wifi_id, "venue");
++	config_parse_wireless_interface_extra(&b, wifi_id, "hs20_oper_friendly_name");
++	config_parse_wireless_interface_extra(&b, wifi_id, "hs20_conn_capab");
++	config_parse_wireless_interface_extra(&b, wifi_id, "anqp_3gpp_cell_net");
++
+ 	return wireless_interface_create(wdev, b.head, s->anonymous ? name : s->e.name);
+ }
+ 

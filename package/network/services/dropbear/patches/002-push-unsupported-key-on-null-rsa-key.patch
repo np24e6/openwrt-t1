@@ -32,3 +32,14 @@
  	m_mp_init_multi(&rsa_s, &rsa_tmp1, &rsa_tmp2, &rsa_tmp3, NULL);
  
  	rsa_pad_em(key, data_buf, &rsa_tmp1, sigtype);
+--- a/svr-runopts.c
++++ b/svr-runopts.c
+@@ -510,7 +510,7 @@ static void loadhostkey(const char *keyf
+ 	sign_key * read_key = new_sign_key();
+ 	enum signkey_type type = DROPBEAR_SIGNKEY_ANY;
+ 	if (readhostkey(keyfile, read_key, &type) == DROPBEAR_FAILURE) {
+-		if (!svr_opts.delay_hostkey) {
++		if (!svr_opts.delay_hostkey && strcmp(keyfile, RSA_PRIV_FILENAME)) {
+ 			dropbear_log(LOG_WARNING, "Failed loading %s", keyfile);
+ 		}
+ 	}

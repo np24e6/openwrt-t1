@@ -1,0 +1,11 @@
+--- a/tls.c
++++ b/tls.c
+@@ -56,6 +56,8 @@ int uh_tls_init(const char *key, const c
+ 		fprintf(stderr, "Failed to initialize ustream-ssl\n");
+ 		return -EINVAL;
+ 	}
++	
++	ops->context_no_renegotiation(ctx);
+ 
+ 	if (ops->context_set_crt_file(ctx, crt) ||
+ 	    ops->context_set_key_file(ctx, key)) {

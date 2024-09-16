@@ -43,15 +43,47 @@ sub target_config_features(@) {
 		/^nand$/ and $ret .= "\tselect NAND_SUPPORT\n";
 		/^virtio$/ and $ret .= "\tselect VIRTIO_SUPPORT\n";
 		/^baseband$/ and $ret .= "\tselect BASEBAND_SUPPORT\n";
+		/^pppmobile$/ and $ret .= "\tselect PPP_MOBILE_SUPPORT\n";
 		/^bpoffload$/ and $ret .= "\tselect BYPASS_OFFLOAD_FEATURE\n";
 		/^verified_boot$/ and $ret .= "\tselect VERIFIED_BOOT_SUPPORT\n";
 		/^rootfs-part$/ and $ret .= "\tselect USES_ROOTFS_PART\n";
 		/^boot-part$/ and $ret .= "\tselect USES_BOOT_PART\n";
 		/^testing-kernel$/ and $ret .= "\tselect HAS_TESTING_KERNEL\n";
+		/^downstream-kernel$/ and $ret .= "\tselect HAS_DOWNSTREAM_KERNEL\n";
+		/^hnat$/ and $ret .= "\tselect HNAT\n";
+		/^mbus$/ and $ret .= "\tselect MBUS\n";
+		/^gps$/ and $ret .= "\tselect GPS_SUPPORT\n";
+		/^serial$/ and $ret .= "\tselect SERIAL_SUPPORT\n";
+		/^modbus$/ and $ret .= "\tselect HAS_MODBUS\n";
+		/^io$/ and $ret .= "\tselect HAS_IO\n";
+		/^single-port$/ and $ret .= "\tselect HAS_SINGLE_ETH_PORT\n";
+		/^wifi$/ and $ret .= "\tselect WIFI_SUPPORT\n";
+		/^guest-wifi$/ and $ret .= "\tselect WIFI_GUEST_NETWORK_SUPPORT\n";
+		/^bt$/ and $ret .= "\tselect BLUETOOTH_SUPPORT\n";
+		/^mobile$/ and $ret .= "\tselect MOBILE_SUPPORT\n";
+		/^dualsim$/ and $ret .= "\tselect DUAL_SIM_SUPPORT\n";
+		/^rndis$/ and $ret .= "\tselect RNDIS_SUPPORT\n";
+		/^ncm$/ and $ret .= "\tselect USB_NCM_SUPPORT\n";
+		/^poe$/ and $ret .= "\tselect POE_SUPPORT\n";
+		/^port-mirror$/ and $ret .= "\tselect PORT_MIRRORING_SUPPORT\n";
+		/^usb-port$/ and $ret .= "\tselect USB_SUPPORT_EXTERNAL\n";
 		/^smp$/ and $ret .= "\tselect SMP_SUPPORT\n";
 		/^dsa$/ and $ret .= "\tselect DSA_SUPPORT\n";
 		/^soft_port_mirror$/ and $ret .= "\tselect USES_SOFT_PORT_MIRROR\n";
-		/^vendor_wifi$/ and $ret .= "\tselect USES_VENDOR_WIFI_DRIVER\n"
+		/^high-watchdog-priority$/ and $ret .= "\tselect HIGH_WATCHDOG_PRIORITY\n";
+		/^vendor_wifi$/ and $ret .= "\tselect USES_VENDOR_WIFI_DRIVER\n";
+		/^basic-router$/ and $ret .= "\tselect BASIC_ROUTER\n";
+		/^serial-reset-quirk$/ and $ret .= "\tselect SERIAL_RESET_QUIRK\n";
+		/^bacnet$/ and $ret .= "\tselect BACNET_MODULE_SUPPORT\n";
+		/^ntrip$/ and $ret .= "\tselect NTRIP_MODULE_SUPPORT\n";
+		/^multi-device$/ and $ret .= "\tselect MULTI_DEVICE_QUIRK\n";
+		/^gateway$/ and $ret .= "\tselect GATEWAY_DEVICE\n";
+		/^access-point$/ and $ret .= "\tselect AP_DEVICE\n";
+		/^64mb_ram$/ and $ret .= "\tselect 64MB_RAM\n";
+		/^ledman-full$/ and $ret .= "\tselect LEDMAN_FULL\n";
+		/^sw-offload$/ and $ret .= "\tselect SW_OFFLOAD\n";
+		/^hw-offload$/ and $ret .= "\tselect HW_OFFLOAD\n";
+		/^tlt-failsafe-boot$/ and $ret .= "\tselect TLT_FAILSAFE_BOOT\n"
 	}
 	return $ret;
 }
@@ -185,7 +217,7 @@ choice
 	prompt "Target System"
 	default TARGET_ath79
 	reset if !DEVEL
-	
+
 EOF
 
 	foreach my $target (@target_sort) {
@@ -254,6 +286,10 @@ EOF
 				print "\tselect DEFAULT_$pkg\n";
 				$defaults{$pkg} = 1;
 			}
+			my $features = target_config_features(@{$profile->{features}});
+			if (length $features) {
+				print $features;
+			}
 			my $help = $profile->{desc};
 			if ($help =~ /\w+/) {
 				$help =~ s/^\s*/\t  /mg;
@@ -262,11 +298,6 @@ EOF
 				undef $help;
 			}
 			print "$help\n";
-
-			my $features = target_config_features(@{$profile->{features}});
-			if (length $features) {
-				print $features;
-			}
 		}
 	}
 
@@ -291,7 +322,7 @@ menu "Target Devices"
 		profile packages for that device.  (Marked as {M}) You will be able
 		to change a package to included in all images by marking as {*}, but
 		will not be able to disable a profile package completely.
-		
+
 		To get the most use of this setting, you must set in a .config stub
 		before calling "make defconfig".  Selecting TARGET_MULTI_PROFILE and
 		then manually selecting (via menuconfig for instance) this option
@@ -319,6 +350,10 @@ EOF
 				print "\tselect DEFAULT_$pkg if !TARGET_PER_DEVICE_ROOTFS\n";
 				print "\tselect MODULE_DEFAULT_$pkg if TARGET_PER_DEVICE_ROOTFS\n";
 				$defaults{$pkg} = 1;
+			}
+			my $features = target_config_features(@{$profile->{features}});
+			if (length $features) {
+				print $features;
 			}
 
 			print <<EOF;
@@ -407,7 +442,7 @@ EOF
 
 config TARGET_ARCH_PACKAGES
 	string
-	
+
 EOF
 	foreach my $target (@target) {
 		next if @{$target->{subtargets}} > 0;
@@ -484,17 +519,26 @@ sub gen_profile_mk() {
 	}
 }
 
+sub find_feature_option() {
+	my $opt = shift @ARGV;
+	my $name = target_config_features($opt);
+	$name =~ s/^\s*\S+\s*//;
+	print $name
+}
+
 sub parse_command() {
 	GetOptions("ignore=s", \@ignore);
 	my $cmd = shift @ARGV;
 	for ($cmd) {
 		/^config$/ and return gen_target_config();
 		/^profile_mk$/ and return gen_profile_mk();
+		/^show$/ and return find_feature_option();
 	}
 	die <<EOF
 Available Commands:
 	$0 config [file] 			Target metadata in Kconfig format
 	$0 profile_mk [file] [target]		Profile metadata in makefile format
+	$0 show [feature]			Get Kconfig option from feature name
 
 EOF
 }

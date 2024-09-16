@@ -1,0 +1,12 @@
+--- a/main.c
++++ b/main.c
+@@ -544,8 +544,7 @@ int main(int argc, char **argv)
+ 			return 1;
+ 		}
+ 
+-		if (uh_tls_init(tls_key, tls_crt, tls_ciphers))
+-		    return 1;
++		uh_tls_init(tls_key, tls_crt, tls_ciphers);
+ 	}
+ #endif
+ 

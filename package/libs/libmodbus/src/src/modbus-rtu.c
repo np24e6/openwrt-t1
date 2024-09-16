@@ -1,7 +1,7 @@
 /*
- * Copyright © Stéphane Raimbault <stephane.raimbault@gmail.com>
+ * Copyright © 2001-2011 Stéphane Raimbault <stephane.raimbault@gmail.com>
  *
- * SPDX-License-Identifier: LGPL-2.1-or-later
+ * SPDX-License-Identifier: LGPL-2.1+
  */
 
 #include <stdio.h>
@@ -92,7 +92,7 @@ static const uint8_t table_crc_lo[] = {
 static int _modbus_set_slave(modbus_t *ctx, int slave)
 {
     /* Broadcast address is 0 (MODBUS_BROADCAST_ADDRESS) */
-    if (slave >= 0 && slave <= 247) {
+    if (slave >= 0 && slave <= 255) {
         ctx->slave = slave;
     } else {
         errno = EINVAL;
@@ -137,9 +137,9 @@ static uint16_t crc16(uint8_t *buffer, uint16_t buffer_length)
 
     /* pass through message buffer */
     while (buffer_length--) {
-        i = crc_lo ^ *buffer++; /* calculate the CRC  */
-        crc_lo = crc_hi ^ table_crc_hi[i];
-        crc_hi = table_crc_lo[i];
+        i = crc_hi ^ *buffer++; /* calculate the CRC  */
+        crc_hi = crc_lo ^ table_crc_hi[i];
+        crc_lo = table_crc_lo[i];
     }
 
     return (crc_hi << 8 | crc_lo);
@@ -155,11 +155,8 @@ static int _modbus_rtu_prepare_response_tid(const uint8_t *req, int *req_length)
 static int _modbus_rtu_send_msg_pre(uint8_t *req, int req_length)
 {
     uint16_t crc = crc16(req, req_length);
-
-    /* According to the MODBUS specs (p. 14), the low order byte of the CRC comes
-     * first in the RTU message */
-    req[req_length++] = crc & 0x00FF;
     req[req_length++] = crc >> 8;
+    req[req_length++] = crc & 0x00FF;
 
     return req_length;
 }
@@ -356,7 +353,7 @@ static int _modbus_rtu_pre_check_confirmation(modbus_t *ctx, const uint8_t *req,
     }
 }
 
-/* The check_crc16 function shall return 0 if the message is ignored and the
+/* The check_crc16 function shall return 0 is the message is ignored and the
    message length if the CRC is valid. Otherwise it shall return -1 and set
    errno to EMBBADCRC. */
 static int _modbus_rtu_check_integrity(modbus_t *ctx, uint8_t *msg,
@@ -377,7 +374,7 @@ static int _modbus_rtu_check_integrity(modbus_t *ctx, uint8_t *msg,
     }
 
     crc_calculated = crc16(msg, msg_length - 2);
-    crc_received = (msg[msg_length - 1] << 8) | msg[msg_length - 2];
+    crc_received = (msg[msg_length - 2] << 8) | msg[msg_length - 1];
 
     /* Check CRC of msg */
     if (crc_calculated == crc_received) {
@@ -499,9 +496,6 @@ static int _modbus_rtu_connect(modbus_t *ctx)
     case 250000:
         dcb.BaudRate = 250000;
         break;
-    case 256000:
-        dcb.BaudRate = 256000;
-        break;
     case 460800:
         dcb.BaudRate = 460800;
         break;
@@ -595,7 +589,7 @@ static int _modbus_rtu_connect(modbus_t *ctx)
 #endif
 
     ctx->s = open(ctx_rtu->device, flags);
-    if (ctx->s < 0) {
+    if (ctx->s == -1) {
         if (ctx->debug) {
             fprintf(stderr, "ERROR Can't open the device %s (%s)\n",
                     ctx_rtu->device, strerror(errno));
@@ -863,7 +857,7 @@ static int _modbus_rtu_connect(modbus_t *ctx)
        ONCLR ant others needs OPOST to be enabled
     */
 
-    /* Raw output */
+    /* Raw ouput */
     tios.c_oflag &=~ OPOST;
 
     /* C_CC         Control characters
@@ -1150,7 +1144,7 @@ static void _modbus_rtu_close(modbus_t *ctx)
                 (int)GetLastError());
     }
 #else
-    if (ctx->s >= 0) {
+    if (ctx->s != -1) {
         tcsetattr(ctx->s, TCSANOW, &ctx_rtu->old_tios);
         close(ctx->s);
         ctx->s = -1;

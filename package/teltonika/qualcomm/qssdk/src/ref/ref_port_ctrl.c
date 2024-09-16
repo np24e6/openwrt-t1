@@ -291,7 +291,7 @@ int qca_ar8327_vlan_recovery(struct qca_phy_priv *priv)
 
 	mutex_lock(&priv->reg_mutex);
 
-	memset(portmask, 0, sizeof(portmask));
+	memset(portmask, 0, AR8327_NUM_PORTS * sizeof(fal_pbmp_t));
 	if (!priv->init) {
 		/*Handle VLAN 0 entry*/
 		if (priv->vlan_id[0] == 0 && priv->vlan_table[0] == 0) {

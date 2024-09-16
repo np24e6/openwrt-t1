@@ -1,5 +1,5 @@
 /*
- * Copyright © Stéphane Raimbault <stephane.raimbault@gmail.com>
+ * Copyright © 2008-2014 Stéphane Raimbault <stephane.raimbault@gmail.com>
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -27,7 +27,6 @@ int send_crafted_request(modbus_t *ctx, int function,
                          uint16_t max_value, uint16_t bytes,
                          int backend_length, int backend_offset);
 int equal_dword(uint16_t *tab_reg, const uint32_t value);
-int is_memory_equal(const void *s1, const void *s2, size_t size);
 
 #define BUG_REPORT(_cond, _format, _args ...) \
     printf("\nLine %d: assertion error for '%s': " _format "\n", __LINE__, # _cond, ## _args)
@@ -40,11 +39,6 @@ int is_memory_equal(const void *s1, const void *s2, size_t size);
         goto close;                               \
     }                                             \
 };
-
-int is_memory_equal(const void *s1, const void *s2, size_t size)
-{
-    return (memcmp(s1, s2, size) == 0);
-}
 
 int equal_dword(uint16_t *tab_reg, const uint32_t value) {
     return ((tab_reg[0] == (value >> 16)) && (tab_reg[1] == (value & 0xFFFF)));
@@ -114,6 +108,13 @@ int main(int argc, char *argv[])
         modbus_free(ctx);
         return -1;
     }
+    modbus_get_response_timeout(ctx, &new_response_to_sec, &new_response_to_usec);
+
+    printf("** UNIT TESTING **\n");
+
+    printf("1/1 No response timeout modification on connect: ");
+    ASSERT_TRUE(old_response_to_sec == new_response_to_sec &&
+                old_response_to_usec == new_response_to_usec, "");
 
     /* Allocate and initialize the memory to store the bits */
     nb_points = (UT_BITS_NB > UT_INPUT_BITS_NB) ? UT_BITS_NB : UT_INPUT_BITS_NB;
@@ -125,13 +126,6 @@ int main(int argc, char *argv[])
         UT_REGISTERS_NB : UT_INPUT_REGISTERS_NB;
     tab_rp_registers = (uint16_t *) malloc(nb_points * sizeof(uint16_t));
     memset(tab_rp_registers, 0, nb_points * sizeof(uint16_t));
-
-    printf("** UNIT TESTING **\n");
-
-    printf("1/1 No response timeout modification on connect: ");
-    modbus_get_response_timeout(ctx, &new_response_to_sec, &new_response_to_usec);
-    ASSERT_TRUE(old_response_to_sec == new_response_to_sec &&
-                old_response_to_usec == new_response_to_usec, "");
 
     printf("\nTEST WRITE/READ:\n");
 
@@ -293,26 +287,26 @@ int main(int argc, char *argv[])
     /** FLOAT **/
     printf("1/4 Set/get float ABCD: ");
     modbus_set_float_abcd(UT_REAL, tab_rp_registers);
-    ASSERT_TRUE(is_memory_equal(tab_rp_registers, UT_IREAL_ABCD_SET, 4), "FAILED Set float ABCD");
-    real = modbus_get_float_abcd(UT_IREAL_ABCD_GET);
+    ASSERT_TRUE(equal_dword(tab_rp_registers, UT_IREAL_ABCD), "FAILED Set float ABCD");
+    real = modbus_get_float_abcd(tab_rp_registers);
     ASSERT_TRUE(real == UT_REAL, "FAILED (%f != %f)\n", real, UT_REAL);
 
     printf("2/4 Set/get float DCBA: ");
     modbus_set_float_dcba(UT_REAL, tab_rp_registers);
-    ASSERT_TRUE(is_memory_equal(tab_rp_registers, UT_IREAL_DCBA_SET, 4), "FAILED Set float DCBA");
-    real = modbus_get_float_dcba(UT_IREAL_DCBA_GET);
+    ASSERT_TRUE(equal_dword(tab_rp_registers, UT_IREAL_DCBA), "FAILED Set float DCBA");
+    real = modbus_get_float_dcba(tab_rp_registers);
     ASSERT_TRUE(real == UT_REAL, "FAILED (%f != %f)\n", real, UT_REAL);
 
     printf("3/4 Set/get float BADC: ");
     modbus_set_float_badc(UT_REAL, tab_rp_registers);
-    ASSERT_TRUE(is_memory_equal(tab_rp_registers, UT_IREAL_BADC_SET, 4), "FAILED Set float BADC");
-    real = modbus_get_float_badc(UT_IREAL_BADC_GET);
+    ASSERT_TRUE(equal_dword(tab_rp_registers, UT_IREAL_BADC), "FAILED Set float BADC");
+    real = modbus_get_float_badc(tab_rp_registers);
     ASSERT_TRUE(real == UT_REAL, "FAILED (%f != %f)\n", real, UT_REAL);
 
     printf("4/4 Set/get float CDAB: ");
     modbus_set_float_cdab(UT_REAL, tab_rp_registers);
-    ASSERT_TRUE(is_memory_equal(tab_rp_registers, UT_IREAL_CDAB_SET, 4), "FAILED Set float CDAB");
-    real = modbus_get_float_cdab(UT_IREAL_CDAB_GET);
+    ASSERT_TRUE(equal_dword(tab_rp_registers, UT_IREAL_CDAB), "FAILED Set float CDAB");
+    real = modbus_get_float_cdab(tab_rp_registers);
     ASSERT_TRUE(real == UT_REAL, "FAILED (%f != %f)\n", real, UT_REAL);
 
     printf("\nAt this point, error messages doesn't mean the test has failed\n");
@@ -539,7 +533,7 @@ int main(int argc, char *argv[])
     rc = modbus_report_slave_id(ctx, NB_REPORT_SLAVE_ID, tab_rp_bits);
     ASSERT_TRUE(rc == NB_REPORT_SLAVE_ID, "");
 
-    /* Slave ID is an arbitrary number for libmodbus */
+    /* Slave ID is an arbitraty number for libmodbus */
     ASSERT_TRUE(rc > 0, "");
 
     /* Run status indicator is ON */
@@ -628,7 +622,7 @@ int main(int argc, char *argv[])
         printf("1/2 Too small byte timeout (3ms < 5ms): ");
         ASSERT_TRUE(rc == -1 && errno == ETIMEDOUT, "");
 
-        /* Wait remaining bytes before flushing */
+        /* Wait remaing bytes before flushing */
         usleep(11 * 5000);
         modbus_flush(ctx);
 
@@ -679,6 +673,9 @@ int main(int argc, char *argv[])
     ASSERT_TRUE(ctx == NULL && errno == EINVAL, "");
 
     ctx = modbus_new_rtu("/dev/dummy", 0, 'A', 0, 0);
+    ASSERT_TRUE(ctx == NULL && errno == EINVAL, "");
+
+    ctx = modbus_new_tcp_pi(NULL, NULL);
     ASSERT_TRUE(ctx == NULL && errno == EINVAL, "");
 
     printf("\nALL TESTS PASS WITH SUCCESS.\n");
@@ -785,13 +782,6 @@ int test_server(modbus_t *ctx, int use_backend)
      */
     modbus_get_response_timeout(ctx, &old_response_to_sec, &old_response_to_usec);
     modbus_set_response_timeout(ctx, 0, 600000);
-
-    int old_s = modbus_get_socket(ctx);
-    modbus_set_socket(ctx, -1);
-    rc = modbus_receive(ctx, rsp);
-    modbus_set_socket(ctx, old_s);
-    printf("* modbus_receive with invalid socket: ");
-    ASSERT_TRUE(rc == -1, "FAILED (%d)\n", rc);
 
     req_length = modbus_send_raw_request(ctx, read_raw_req, READ_RAW_REQ_LEN);
     printf("* modbus_send_raw_request: ");

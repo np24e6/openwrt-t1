@@ -2,9 +2,8 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=modbusgwd
-PKG_VERSION:=2023-02-13
 
-PKG_SOURCE_VERSION:=8d2d85a04317b2b454bdc73d3d6f295093021729
+PKG_SOURCE_VERSION:=7.5
 
 include $(INCLUDE_DIR)/package.mk
 

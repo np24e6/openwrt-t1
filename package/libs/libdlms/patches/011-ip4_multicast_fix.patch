@@ -1,0 +1,13 @@
+Index: libdlms-c65175ef/development/src/gxsetmalloc.c
+===================================================================
+--- libdlms-c65175ef.orig/development/src/gxsetmalloc.c
++++ libdlms-c65175ef/development/src/gxsetmalloc.c
+@@ -2556,7 +2556,7 @@ int cosem_setIP4Setup(dlmsSettings* sett
+                 tmp3 = (dlmsVARIANT*)gxmalloc(sizeof(dlmsVARIANT));
+ 
+                 if ((ret = var_init(tmp3)) != 0 ||
+-                    (ret = var_copy(tmp, tmp3)) != 0 ||
++                    (ret = var_copy(tmp3, tmp)) != 0 ||
+                     (ret = va_push(&object->multicastIPAddress, tmp3)) != 0)
+                 {
+                     break;

@@ -8,7 +8,6 @@ fix_bind() {
 	uci_set "ipsec" "$1" "bind_to" "$new_bind_to"
 }
 
-
 num_proposal() {
 	local section="$1"
 	case "${section}" in
@@ -17,7 +16,6 @@ num_proposal() {
 	esac
 	uci_rename ipsec "$section" "${section}_1"
 }
-
 
 num_remote() {
 	local section="$1"

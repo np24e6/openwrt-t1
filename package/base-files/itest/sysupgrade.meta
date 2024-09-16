@@ -1,0 +1,1 @@
+{  "metadata_version": "1.1", "compat_version": "1.0", "version":"<FW_VERSION>", "device_code": [".*"], "hwver": [".*"], "batch": [".*"], "serial": [".*"],   "supported_devices":["<SUPPORTED_DEVICES>"], "version_wrt": { "dist": "OpenWrt", "version": "21.02.0", "revision": "r16279-5cc0535800", "target": "", "board": "" }, "hw_support": { }, "hw_mods": { } }

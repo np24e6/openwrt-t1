@@ -1,0 +1,423 @@
+--- a/system-linux.c
++++ b/system-linux.c
+@@ -72,6 +72,7 @@
+ #include "device.h"
+ #include "system.h"
+ #include "utils.h"
++#include "port_link.h"
+
+ #if LINUX_VERSION_CODE < KERNEL_VERSION(4,4,300)
+ enum ethtool_link_mode_bit_indices {
+@@ -1899,6 +1900,79 @@
+ 		s->arp_accept = strtoul(buf, NULL, 0);
+ 		s->flags |= DEV_OPT_ARP_ACCEPT;
+ 	}
++}
++
++void
++set_port_adv(struct ethtool_cmd *ecmd, int adv)
++{
++	static const struct {
++		__u32 advertisement;
++	} advert[] = {
++		{ ADVERTISED_10baseT_Half },
++		{ ADVERTISED_10baseT_Full },
++		{ ADVERTISED_10baseT_Full | ADVERTISED_10baseT_Full },
++		{ ADVERTISED_100baseT_Half },
++		{ ADVERTISED_10baseT_Half | ADVERTISED_100baseT_Half },
++		{ ADVERTISED_10baseT_Full | ADVERTISED_100baseT_Half },
++		{ ADVERTISED_10baseT_Half | ADVERTISED_10baseT_Full | ADVERTISED_100baseT_Half },
++		{ ADVERTISED_100baseT_Full },
++		{ ADVERTISED_10baseT_Half | ADVERTISED_100baseT_Full },
++		{ ADVERTISED_10baseT_Full | ADVERTISED_100baseT_Full },
++		{ ADVERTISED_10baseT_Half | ADVERTISED_10baseT_Full | ADVERTISED_100baseT_Full },
++		{ ADVERTISED_100baseT_Half | ADVERTISED_100baseT_Full },
++		{ ADVERTISED_10baseT_Half | ADVERTISED_100baseT_Half | ADVERTISED_100baseT_Full },
++		{ ADVERTISED_10baseT_Full | ADVERTISED_100baseT_Half | ADVERTISED_100baseT_Full },
++		{ ADVERTISED_10baseT_Half | ADVERTISED_10baseT_Full | ADVERTISED_100baseT_Half | ADVERTISED_100baseT_Full },
++	};
++
++	if (adv < 1 || adv >= MAX_ADV_VAL) {
++		ecmd->advertising = ecmd->supported;
++		return;
++	}
++
++	ecmd->advertising = advert[adv - 1].advertisement;
++}
++
++int set_dev_link(const char *ifname, bool autoneg, bool duplex, int speed, int advert)
++{
++	if (!ifname) {
++		return EXIT_FAILURE;
++	}
++
++	struct ethtool_cmd ecmd = { 0 };
++	ecmd.cmd = ETHTOOL_GSET;
++
++	struct ifreq ifr = { 0 };
++	ifr.ifr_data = (caddr_t)&ecmd;
++
++	strncpy(ifr.ifr_name, ifname, sizeof(ifr.ifr_name) - 1);
++
++	if (ioctl(sock_ioctl, SIOCETHTOOL, &ifr) != 0) {
++		return EXIT_FAILURE;
++	}
++
++	ecmd.cmd = ETHTOOL_SSET;
++
++	ecmd.autoneg = autoneg;
++	if (autoneg) {
++		set_port_adv(&ecmd, advert);
++		goto end;
++	}
++
++	ecmd.duplex = duplex ? DUPLEX_FULL : DUPLEX_HALF;
++	
++	switch(speed) {
++	case SPEED_10:
++	case SPEED_100:
++	case SPEED_1000:
++		ethtool_cmd_speed_set(&ecmd, speed);
++		break;
++	default:
++		ethtool_cmd_speed_set(&ecmd, SPEED_UNKNOWN);
++	}
++
++end:
++	return ioctl(sock_ioctl, SIOCETHTOOL, &ifr);
+ }
+ 
+ void
+
+--- a/system.h
++++ b/system.h
+@@ -18,6 +18,7 @@
+ #include <sys/time.h>
+ #include <sys/socket.h>
+ #include <arpa/inet.h>
++#include <linux/ethtool.h>
+ #include "device.h"
+ #include "interface-ip.h"
+ #include "iprule.h"
+@@ -313,5 +314,7 @@
+ int system_link_netns_move(struct device *dev, const pid_t target_ns, const char *target_ifname);
+ int system_netns_open(const pid_t target_ns);
+ int system_netns_set(int netns_fd);
++int set_dev_link(const char *ifname, bool autoneg, bool duplex, int speed, int advert);
++void set_port_adv(struct ethtool_cmd *ecmd, int adv);
+ 
+ #endif
+
+--- a/config.c
++++ b/config.c
+@@ -27,8 +27,10 @@
+ #include "proto.h"
+ #include "wireless.h"
+ #include "config.h"
++#include "port_link.h"
+ 
+ bool config_init = false;
++static int link_supp = -1;
+ 
+ static struct uci_context *uci_ctx;
+ static struct uci_package *uci_network;
+@@ -705,6 +707,22 @@
+ 	}
+ }
+ 
++static int
++config_find_port_section(struct uci_section *s)
++{
++	if (!s) {
++		return EXIT_FAILURE;
++	}
++
++	struct port_entry *port_section = ret_port_section(s, uci_ctx);
++	if (!port_section) {
++		return EXIT_FAILURE;
++	}
++
++	vlist_add(&port_entries, &port_section->node, port_section->ifname);
++
++	return EXIT_SUCCESS;
++}
+
+ static struct blob_attr *
+ config_find_blobmsg_attr(struct blob_attr *attr, const char *name, int type)
+@@ -754,6 +772,63 @@
+		return;
+
+	board_netdevs = blob_memdup(cur);
++}
++
++static int
++get_board_hwinfo_bool(const char *value)
++{
++	struct blob_attr *cur = NULL;
++	struct blob_buf hwinfo_blob = { 0 };
++
++	int ret = -1;
++
++	if (blob_buf_init(&hwinfo_blob, 0)) {
++		return -1;
++	}
++
++	if (!blobmsg_add_json_from_file(&hwinfo_blob, DEFAULT_BOARD_JSON)) {
++		goto end;
++	}
++
++	cur = config_find_blobmsg_attr(hwinfo_blob.head, "hwinfo", BLOBMSG_TYPE_TABLE);
++	if (!cur) {
++		ret = -1;
++		goto end;
++	}
++
++	cur = config_find_blobmsg_attr(cur, value, BLOBMSG_TYPE_BOOL);
++	if (!cur) {
++		ret = -1;
++		goto end;
++	}
++
++	ret = blobmsg_get_bool(cur);
++
++end:
++	blob_buf_free(&hwinfo_blob);
++
++	return ret;
++}
++
++static void
++config_init_ports(void)
++{
++	struct uci_element *e = NULL;
++
++	if (!link_supp || (link_supp == -1 && (link_supp = get_board_hwinfo_bool("port_link")) <= 0)) {
++		return;
++	}
++
++	uci_foreach_element(&uci_network->sections, e) {
++
++		struct uci_section *s = uci_to_section(e);
++		if (!s || strcmp(s->type, "port")) {
++			continue;
++		}
++
++		config_find_port_section(s);
++	}
++
+ }
+ 
+ int
+@@ -781,6 +856,7 @@
+ 	config_init_board();
+ 
+ 	vlist_update(&interfaces);
++	vlist_update(&port_entries);
+ 	config_init = true;
+ 
+ 	device_reset_config();
+@@ -803,5 +879,7 @@
+ 	interface_start_pending();
+ 	wireless_start_pending();
+ 
++	config_init_ports();
++	vlist_flush(&port_entries);
+ 	return ret;
+ }
+
+--- a/port_link.c
++++ b/port_link.c
+@@ -0,0 +1,141 @@
++#include "netifd.h"
++#include "port_link.h"
++#include "device.h"
++#include "system.h"
++
++struct vlist_tree port_entries = {0};
++
++struct port_entry *
++ret_port_section(struct uci_section *s, struct uci_context *uci_ctx)
++{
++	if (!s || !uci_ctx || !s->e.name) {
++		return NULL;
++	}
++
++	char *sec_name = NULL, *end = NULL;
++	const char *tmp = NULL;
++
++	struct port_entry *port_section = calloc_a(sizeof(struct port_entry), &sec_name, IF_NAMESIZE);
++	if (!port_section) {
++		return NULL;
++	}
++
++	tmp = uci_lookup_option_string(uci_ctx, s, "ifname");
++	if (!tmp) {
++		goto release;
++	}
++
++	snprintf(sec_name, IF_NAMESIZE - 1, "%s", tmp);
++
++	port_section->ifname = sec_name;
++	port_section->enabled = true;
++
++	tmp = uci_lookup_option_string(uci_ctx, s, "enabled");
++	if (tmp && tmp[0] == '0') {
++		port_section->enabled = false;
++	}
++
++	tmp = uci_lookup_option_string(uci_ctx, s, "autoneg");
++	if (tmp && !strcmp(tmp, "on")) {
++		port_section->autoneg = true;
++	}
++
++	tmp = uci_lookup_option_string(uci_ctx, s, "duplex");
++	if (tmp && tmp[0] == 'f') {
++		port_section->duplex = true;
++	}
++
++	tmp = uci_lookup_option_string(uci_ctx, s, "speed");
++	if (tmp) {
++		port_section->speed = strtol(tmp, &end, 10);
++	}
++
++	tmp = uci_lookup_option_string(uci_ctx, s, "advert");
++	if (tmp) {
++		port_section->advert = strtol(tmp, &end, 0);
++	}
++
++	return port_section;
++
++release:
++	free(port_section);
++	return NULL;
++}
++
++static int
++set_port_state(const char *ifname, bool state) {
++
++	struct device *dev = device_find(ifname);
++	if (!dev) {
++		return EXIT_FAILURE;
++	}
++
++	return dev->set_state(dev, state);
++}
++
++static void
++cleanup_and_restore_port(struct port_entry *port_old)
++{
++	if (!port_old) {
++		return;
++	}
++
++	set_port_state(port_old->ifname, true);
++	set_dev_link(port_old->ifname, true, false, false, 0);
++
++	free(port_old);
++}
++
++static int
++update_port_state(struct port_entry *port_old, struct port_entry *port_new)
++{
++	int ret = EXIT_SUCCESS;
++
++	if (port_old->enabled != port_new->enabled) {
++		set_port_state(port_new->ifname, port_new->enabled);
++
++		if (!port_new->enabled) {
++			return ret;
++		}
++
++		return set_dev_link(port_new->ifname, port_new->autoneg, port_new->duplex, port_new->speed, port_new->advert);
++	}
++
++	if (port_old->autoneg != port_new->autoneg || port_old->duplex != port_new->duplex ||
++			port_old->speed != port_new->speed || port_old->advert != port_new->advert) {
++		ret = set_dev_link(port_new->ifname, port_new->autoneg, port_new->duplex, port_new->speed, port_new->advert);
++	}
++	
++	return ret;
++}
++
++static void
++port_entry_update(struct vlist_tree *tree, struct vlist_node *node_new,
++		struct vlist_node *node_old)
++{
++	struct port_entry *port_old = NULL, *port_new = NULL;
++
++	if (node_old) {
++		port_old = container_of(node_old, struct port_entry, node);
++	}
++
++	if (node_new) {
++		port_new = container_of(node_new, struct port_entry, node);
++	}
++
++	if (node_old && node_new) {
++		update_port_state(port_old, port_new);
++
++	} else if (node_old) {
++		cleanup_and_restore_port(port_old);
++
++	} else if (node_new) {
++		set_port_state(port_new->ifname, port_new->enabled);
++		set_dev_link(port_new->ifname, port_new->autoneg, port_new->duplex, port_new->speed, port_new->advert);
++	}
++}
++
++static void __init ports_init(void)
++{
++	vlist_init(&port_entries, avl_strcmp, port_entry_update);
++}
+
+--- a/port_link.h
++++ b/port_link.h
+@@ -0,0 +1,35 @@
++#ifndef __NETIFD_PORT_LINK_H
++#define __NETIFD_PORT_LINK_H
++
++#define BFR_SIZE 256
++#define MAX_ADV_VAL 47
++
++extern struct vlist_tree port_entries;
++
++struct port_entry {
++	bool enabled;
++
++	bool autoneg;
++	bool duplex;
++	int speed;
++	int advert;
++
++	char *ifname;
++
++	struct vlist_node node;
++};
++
++/**
++ * @brief return @struct port_entry with info from /etc/config/network port section
++ *
++ * @param s port section
++ * @param uci_ctx allocated uci context
++ * @param eth0_addr_val eth0 value from addr_assign_type file
++ *
++ * @return pointer to malloced port_entry struct on success | NULL on failure
++ *
++ * @note use free() at the end
++*/
++struct port_entry *ret_port_section(struct uci_section *s, struct uci_context *uci_ctx);
++
++#endif // __NETIFD_PORT_LINK_H
+
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -21,7 +21,7 @@
+ 	iprule.c proto.c proto-static.c proto-shell.c
+ 	config.c device.c bridge.c veth.c vlan.c alias.c
+ 	macvlan.c ubus.c vlandev.c wireless.c
+-	extdev.c bonding.c)
++	extdev.c bonding.c port_link.c)
+ 
+ 
+ SET(LIBS
+

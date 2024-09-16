@@ -1,11 +1,11 @@
 #!/bin/sh
 
-set -xxe
+#set -xxe
 
 SELF="$0"
 ROOTFS_PATH="$(pwd)/bin/targets/x86/64-glibc/openwrt-x86-64-teltonika_x86_64-rootfs.tar.gz"
 NETWORK_ENABLE="${NETWORK_ENABLE:-0}"
-NETWORK_PREFIX="${NETWORK_PREFIX:-192.168.1}"
+NETWORK_PREFIX="${NETWORK_PREFIX:-192.168.33}"
 IMAGE_NAME="openwrt-rootfs:$NETWORK_PREFIX"
 NETWORK_NAME="none"
 
@@ -56,9 +56,7 @@ if [ -z "$PREBUILD" ]; then
 	cat <<EOT > "$DOCKERFILE"
 	FROM scratch
 	ADD $(basename $ROOTFS_PATH) /
-	RUN sed 's/pi_ip="192.168.1.1/pi_ip="$NETWORK_PREFIX.1"/'; \
-		sed 's/pi_broadcast="192.168.1.255/pi_broadcast="$NETWORK_PREFIX.255"/'; \
-		echo "console::askfirst:/usr/libexec/login.sh" >> /etc/inittab; \
+	RUN echo "console::askfirst:/usr/libexec/login.sh" >> /etc/inittab; \
 		echo "::askconsole:/usr/libexec/login.sh" >> /etc/inittab
 	EXPOSE 22 80 443
 	USER root

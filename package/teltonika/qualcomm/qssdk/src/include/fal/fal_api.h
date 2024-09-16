@@ -1236,6 +1236,7 @@ extern "C" {
 #define IP_API \
     SW_API_DEF(SW_API_IP_HOST_ADD, fal_ip_host_add), \
     SW_API_DEF(SW_API_IP_HOST_DEL, fal_ip_host_del), \
+    SW_API_DEF(SW_API_IP_HOST_DEL_ALL, fal_ip_host_del_all), \
     SW_API_DEF(SW_API_IP_HOST_GET, fal_ip_host_get), \
     SW_API_DEF(SW_API_IP_HOST_NEXT, fal_ip_host_next), \
     SW_API_DEF(SW_API_IP_HOST_COUNTER_BIND, fal_ip_host_counter_bind), \
@@ -1312,6 +1313,7 @@ extern "C" {
 #define IP_API_PARAM \
     SW_API_DESC(SW_API_IP_HOST_ADD) \
     SW_API_DESC(SW_API_IP_HOST_DEL) \
+    SW_API_DESC(SW_API_IP_HOST_DEL_ALL) \
     SW_API_DESC(SW_API_IP_HOST_GET) \
     SW_API_DESC(SW_API_IP_HOST_NEXT) \
     SW_API_DESC(SW_API_IP_HOST_COUNTER_BIND) \

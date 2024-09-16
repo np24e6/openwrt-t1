@@ -27,7 +27,7 @@ define Package/relayd
   CATEGORY:=Network
   SUBMENU:=Routing and Redirection
   TITLE:=Transparent routing / relay daemon
-  DEPENDS:=+libubox +vuci-app-relayd-ui
+  DEPENDS:=+libubox +vuci-app-relayd-ui +libubus
   ifeq (m, $(CONFIG_PACKAGE_relayd))
     PKG_TLT_NAME:=Relay configuration
     PKG_ROUTER:=$(TLT_PLATFORM_NAME)
@@ -41,6 +41,23 @@ define Package/relayd/install
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/relayd $(1)/usr/sbin/relayd
 	$(INSTALL_DIR) $(1)/etc/init.d
 	$(INSTALL_BIN) ./files/relay.init $(1)/etc/init.d/relayd
+endef
+
+define Package/relayd/postinst
+	#!/bin/sh
+
+	[ -z "$${IPKG_INSTROOT}" ] || exit 0
+
+	[ "$$(uci -q get network.relayd)" != "" ] && exit 0
+
+	uci -q batch <<-EOF
+		set network.relayd='interface'
+		set network.relayd.disabled='1'
+		set network.relayd.proto='relay'
+	EOF
+
+	uci -q commit network
+	exit 0
 endef
 
 define Package/relayd/prerm

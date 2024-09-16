@@ -287,7 +287,7 @@ qca_ar8327_sw_hw_apply(struct switch_dev *dev)
 
     portmask = aos_mem_alloc(sizeof(fal_pbmp_t) * dev->ports);
 
-    memset(portmask, 0, sizeof(portmask));
+    memset(portmask, 0, dev->ports * sizeof(fal_pbmp_t));
     if (!priv->init) {
         /*Handle VLAN 0 entry*/
         if (priv->vlan_id[0] == 0 && priv->vlan_table[0] == 0) {

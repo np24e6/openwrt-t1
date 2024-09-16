@@ -30,7 +30,8 @@ do_mount_root() {
 		echo "- config restore -"
 		mv /sysupgrade.tgz /tmp/
 		cp /etc/passwd /etc/group /etc/shadow /tmp
-		echo 'etc/rc.d/*' >/tmp/exclusions
+		echo 'etc/rc.d/*' > /tmp/exclusions
+		echo 'etc/profile' >> /tmp/exclusions
 		tar -C / -xzf /tmp/sysupgrade.tgz -X '/tmp/exclusions'
 		rm -f /tmp/sysupgrade.tgz /tmp/exclusions
 		missing_lines /tmp/passwd /etc/passwd >> /etc/passwd
