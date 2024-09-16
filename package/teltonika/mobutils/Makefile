@@ -6,10 +6,10 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=mobutils
-PKG_VERSION:=2024-01-18
+PKG_VERSION:=2024-03-13
 PKG_RELEASE:=1
 
-PKG_SOURCE_VERSION:=3.5.1
+PKG_SOURCE_VERSION:=3.5.2
 
 PKG_FIXUP:=autoreconf
 
@@ -53,7 +53,7 @@ define Package/mobutils-sms_utilities
 	DEPENDS+=mobutils +libgsm +libcgi +MOBILE_SUPPORT:libmdcollect \
 		+libboardjson +liblog +SMS_UTILS_HANDLER_IO:iomand \
 		+SMS_UTILS_HANDLER_GPS:libgps +libcurl +@LIBCURL_SMTP \
-		+libparam +SMS_UTILS_HANDLER_RMS:librms
+		+libparam +SMS_UTILS_HANDLER_RMS:librms +liblpac
 endef
 
 define Package/mobutils-sms_utilities/conffiles
@@ -76,6 +76,7 @@ CONFIGURE_ARGS += \
 	$(if $(CONFIG_SMS_UTILS_HANDLER_RMS),--enable-rms) \
 	$(if $(CONFIG_SMS_UTILS_HANDLER_EXEC),--enable-exec) \
 	$(if $(CONFIG_SMS_UTILS_HANDLER_API),--enable-api) \
+	$(if $(CONFIG_SMS_UTILS_HANDLER_ESIM),--enable-esim) \
 	$(if $(CONFIG_SMS_FWD_HANDLER_HTTP),--enable-fwd-http) \
 	$(if $(CONFIG_SMS_FWD_HANDLER_REPLY),--enable-fwd-reply) \
 	$(if $(CONFIG_SMS_FWD_HANDLER_SMS),--enable-fwd-sms) \

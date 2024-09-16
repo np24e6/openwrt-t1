@@ -143,6 +143,14 @@ ucidef_set_hwinfo() {
 	json_select ..
 }
 
+ucidef_set_esim() {
+	
+	json_select_object hwinfo
+	json_add_boolean "esim" 1
+	json_select ..
+	
+}
+
 ucidef_set_release_version() {
 	json_add_string release_version "$1"
 }

@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/ash
 . /usr/share/libubox/jshn.sh
 
 ### Static defines
@@ -63,7 +63,7 @@ parse_from_ubus_rsp() {
     echo "$ubus_rsp" | grep "$1" |  cut -d'"' -f 4
 }
 
-validate_connection()  {
+validate_connection() {
     if ping -q -c 1 -W 5 8.8.8.8 >/dev/null; then
         debug "[INFO] internet connection is working"
         CONNECTION_STATUS="ACTIVE"
@@ -132,7 +132,7 @@ stop_services() {
 
 is_modem_live() {
     result=$(gsmctl ${MODEM_N:+-N "$MODEM_N"} -A "AT")
-    case "$result" in 
+    case "$result" in
     *OK*)
         live="1"
         return
@@ -260,16 +260,16 @@ setup_ssh() {
         echo "Or alternatively using \"-r\" option."
         graceful_exit
     fi
-    
+
     SSH_PATH="/root/.ssh"
     TMP_SSH_PATH="/tmp/known_hosts"
-    
+
     chmod 755 $SSHFS_PATH
-    
+
     key=$(cat $SSH_PATH/known_hosts | grep -c $HOSTNAME) > /dev/null 2>&1
     if [ "$key" = "0" ]; then
         debug "[INFO] Downloading key"
-        
+
         curl -Ss --ssl-reqd https://$HOSTNAME/download/$TMP_SSH_PATH \
         --output $TMP_SSH_PATH --connect-timeout 90
         [ -f $SSH_PATH ] || mkdir -p $SSH_PATH
@@ -279,9 +279,9 @@ setup_ssh() {
 
 mount_sshfs() {
     [ -f $FW_PATH ] || mkdir -p $FW_PATH
-    
+
     debug "[INFO] Checking old mount"
-    
+
     if [ -n "$(ls -A $FW_PATH)" ]; then
         echo "[ERROR] $FW_PATH Not Empty. Unmounting"
         umount "$FW_PATH"
@@ -292,7 +292,7 @@ mount_sshfs() {
     else
         debug "[INFO] Old mount: Empty"
     fi
-    
+
     # Mounting remote partition
     if [ "$DEVICE" = "QuectelUNISOC" ]; then
         exec_sshfs "RG500U//$VERSION" "$FW_PATH"
@@ -324,7 +324,7 @@ retry_backup=0
 backupnvr() {
     debug "[INFO] Meiglink device lets backup NVRAM"
     NV_RESULT=$(gsmctl -N "$MODEM_N" -A AT+NVBURS=2)
-    exec_ubus_call "$MODEM_N" "info" 
+    exec_ubus_call "$MODEM_N" "info"
     nvresultcheck
     #if no backup exists then we make one.
     if [ $NV_FAILED = 1 ]; then
@@ -368,13 +368,13 @@ setDevice() {
         exec_ubus_call "$MODEM_N" "get_firmware"
         MODEM=$(parse_from_ubus_rsp "firmware")
         case $MODEM in
-        EC200*) 
+        EC200*)
             DEVICE="QuectelASR"
             ;;
-        RG500U*) 
+        RG500U*)
             DEVICE="QuectelUNISOC"
             ;;
-        *) 
+        *)
             ;;
         esac
     fi
@@ -384,10 +384,10 @@ setDevice() {
         MODEM=$(parse_from_ubus_rsp "firmware")
         echo "fw: $MODEM"
         case $MODEM in
-        SLM770*) 
+        SLM770*)
             DEVICE="MeiglinkASR"
             ;;
-        *) 
+        *)
             ;;
         esac
     fi
@@ -429,7 +429,7 @@ get_fw_list() {
     MODEM=$(parse_from_ubus_rsp "firmware")
 
     if [ "$DEVICE" = "Quectel" ]; then
-        MODEM_SHORT=$(echo "$MODEM" | cut -b -7)
+        MODEM_SHORT=$(echo "$MODEM" | cut -b -8)
     elif [ "$DEVICE" = "QuectelASR" ] || [ "$DEVICE" = "QuectelUNISOC" ]; then
         MODEM_SHORT=$(echo "$MODEM" | cut -b -8)
     elif [ "$DEVICE" = "Meiglink" ]; then
@@ -449,6 +449,8 @@ get_fw_list() {
         get_compatible_fw_list "SLM770/fwlist.txt"
     elif [ "$DEVICE" = "QuectelUNISOC" ]; then
         get_compatible_fw_list "RG500U/fwlist.txt"
+    elif [[ $MODEM =~ "RG520NEB" ]]; then
+        get_compatible_fw_list "RG520NEB/fwlist.txt"
     else
         get_compatible_fw_list "fwlist.txt"
     fi
@@ -571,13 +573,13 @@ common_validation() {
 
 ### Generic methods (Mainly for Qualcomm devices)
 
-generic_validation()  {
+generic_validation() {
     #User has specified tty port for non legacy mode (it will not be used)
     if [ "$TTY_PORT" != "" ] &&
     [ "$LEGACY_MODE" = "0" ]; then
         echo "[WARN] Warning you specified ttyUSB port but it will not be used for non legacy(fastboot) flash!"
     fi
-    
+
     #Legacy mode is only for Quectel modems
     if [ "$LEGACY_MODE" = "1" ] && [ "$DEVICE" != "Quectel" ]; then
         echo "[ERROR] Legacy mode only supported for Quectel routers."
@@ -588,9 +590,9 @@ generic_validation()  {
     if [ "$LEGACY_MODE" = "1" ] && [ "$DEVICE" = "Quectel" ] && [ "$TTY_PORT" = "" ]; then
         echo "[ERROR] ttyUSB port not specified. The detection will be done by QFlash."
     fi
-    
+
     setFlasherPath
-    
+
     if [ ! -f "$FLASHER_PATH" ]; then
         echo "[ERROR] Flasher not found. You need to use \"-r\" option to install missing dependencies."
         helpFunction
@@ -598,16 +600,16 @@ generic_validation()  {
     fi
 }
 
-generic_prep()  {
+generic_prep() {
     /etc/init.d/modem_trackd stop
     NEED_SERVICE_RESTART="1"
-    
+
     #backup NVRAM
     #it is done in the flasher now, but just in case..
     if [ "$DEVICE" = "Meiglink" ] && [ "$SKIP_VALIDATION" = "0" ]; then
         backupnvr
     fi
-    
+
     #go into edl/disable mobile connection.
     if [ $LEGACY_MODE = "0" ]; then
         if [ "$DEVICE" = "Quectel" ]; then
@@ -622,28 +624,28 @@ generic_prep()  {
 
     #Wait for backup connection to kick in.
     sleep 10
-    
+
     #check if connection is working
     if [ "$USER_PATH" = "0" ]; then
         validate_connection
     fi
-    
+
     if [ $USER_PATH = "0" ]; then
         setup_ssh
         mount_sshfs
     fi
     debug "[INFO] Checking firmware path"
-    
+
     if [ -z "$(ls -A $FW_PATH)" ]; then
         echo "[ERROR] firmware directory is empty. Mount failed? Exiting..."
         graceful_exit
     fi
-    
+
     #some firmware sanity checks
     if [ "$DEVICE" = "Quectel" ] &&
     [ $LEGACY_MODE = "0" ] &&
     [ -z "$(ls -A $FW_PATH/update/firehose/)" ]; then
-        echo "[ERROR] No firehose folder found. Either the firmware is not right or you must use legacy mode (-l option)"  
+        echo "[ERROR] No firehose folder found. Either the firmware is not right or you must use legacy mode (-l option)"
         if [ "$USER_PATH" = "0" ]; then
             umount "$FW_PATH"
         fi
@@ -654,11 +656,11 @@ generic_prep()  {
     stop_services
 }
 
-generic_flash()  {
+generic_flash() {
     if [ "$DEVICE" = "Meiglink" ]; then
         $FLASHER_PATH -d -f "$FW_PATH" ${MODEM_USB_ID:+-s /sys/bus/usb/devices/"$MODEM_USB_ID"}
     fi
-    
+
     if [ "$DEVICE" = "Quectel" ]; then
         if [ $LEGACY_MODE = "1" ]; then
             #fastboot
@@ -666,7 +668,7 @@ generic_flash()  {
         else
             #firehose
             find_modem_edl_device
-            [ "$sys_path" != "" ] && confirm_modem_usb_id "$sys_path" "$MODEM_USB_ID"            
+            [ "$sys_path" != "" ] && confirm_modem_usb_id "$sys_path" "$MODEM_USB_ID"
             if [ "$confirm_modem_usb_id_result" == "0" ]; then
                 $FLASHER_PATH qfirehose -n -f "$FW_PATH/update/firehose/" ${sys_path:+-s $sys_path}
             else #"" and "1"
@@ -677,15 +679,15 @@ generic_flash()  {
     if [ "$DEVICE" = "QuectelUNISOC" ]; then
         "$FLASHER_PATH" -f "$FW_PATH/update.pac"
     fi
-    
+
     sleep 10
-        
+
     if [ "$USER_PATH" = "0" ]; then
         umount "$FW_PATH"
     fi
 }
 
-generic_start()  {
+generic_start() {
     generic_validation
     generic_prep
     echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
@@ -699,14 +701,14 @@ generic_start()  {
 
 ### TRB modem specific flashing functions
 
-trb_validation()  {
+trb_validation() {
     if [ "$USER_PATH" = "1" ]; then
         echo "Please use modem_upgrade directly."
         graceful_exit
     fi
 }
 
-trb_prep()  {
+trb_prep() {
     UPDATE_BIN="/modem_update.bin"
     echo "[INFO] Downloading firmware"
 
@@ -723,9 +725,9 @@ trb_prep()  {
     fi
 }
 
-trb_flash()  {
+trb_flash() {
     check_result=$(modem_upgrade --check  --file "$UPDATE_BIN")
-    
+
     case "$check_result" in
         *"Validation successful"*)
             modem_upgrade --file "$UPDATE_BIN"
@@ -740,7 +742,7 @@ trb_flash()  {
     reboot
 }
 
-trb_start()  {
+trb_start() {
     trb_validation
     trb_prep
     echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
@@ -759,14 +761,14 @@ ASR_validation() {
     [ "$LEGACY_MODE" = "0" ]; then
         echo "[WARN] Warning! You specified ttyUSB port but it will not be used for non legacy(fastboot) flash!"
     fi
-      
+
     if [ "$LEGACY_MODE" = "1" ]; then
         echo "[ERROR] ASR modems don't support legacy mode."
         graceful_exit
     fi
-    
+
     setFlasherPath
-    
+
     if [ ! -f "$FLASHER_PATH" ]; then
         echo "[ERROR] Flasher not found. You need to use \"-r\" option to install missing dependencies."
         helpFunction
@@ -779,7 +781,7 @@ ASR_prep() {
     if [ "$DEVICE" = "MeiglinkASR" ] && [ "$SKIP_VALIDATION" = "0" ]; then
         backupnvr
     fi
-    
+
     if [ "$USER_PATH" = "0" ]; then
         UPDATE_BIN="/tmp/modem_update.bin"
         echo "[INFO] Downloading firmware"
@@ -793,7 +795,7 @@ ASR_prep() {
             --output "$UPDATE_BIN" --connect-timeout 300
         elif [ "$DEVICE" = "MeiglinkASR" ]; then
             curl -Ss --ssl-reqd https://$HOSTNAME/SLM770/"$VERSION" \
-            --output "$UPDATE_BIN" --connect-timeout 300    
+            --output "$UPDATE_BIN" --connect-timeout 300
         else
             echo "[ERROR] Unknown device($DEVICE)."
             graceful_exit
@@ -815,7 +817,7 @@ ASR_prep() {
     #We need to turn on EDL mode via AT command
     if [ "$DEVICE" = "MeiglinkASR" ]; then
         gsmctl ${MODEM_N:+-N "$MODEM_N"} -A "AT+MEIGEDL"
-        NEED_MODEM_RESTART="1" 
+        NEED_MODEM_RESTART="1"
     fi
 
     stop_services
@@ -898,7 +900,7 @@ while [ -n "$1" ]; do
 		-p) shift
 			if [ "$1" != "" ]; then
                 USER_PATH="1"
-                FW_PATH="$1"         
+                FW_PATH="$1"
             else
                 echo "[ERROR] path not specified."
                 helpFunction

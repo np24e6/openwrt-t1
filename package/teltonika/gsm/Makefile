@@ -7,7 +7,7 @@ include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=gsm
 
-PKG_SOURCE_VERSION:=1.3.5
+PKG_SOURCE_VERSION:=1.3.7
 
 GPL_INCLUDE_HEADERS:=1
 
@@ -32,7 +32,7 @@ define Package/libgsm
 	CATEGORY:=Libraries
 	TITLE:=A library for manage gsm API. Read, list, delete, etc. For parse AT commands
 	DEPENDS:=+libblobmsg-json +libubus +libubox +libboardjson +IO_SUPPORT:iomand
-	ABI_VERSION:=1.0
+	ABI_VERSION:=1.1
 endef
 
 define Package/liburc

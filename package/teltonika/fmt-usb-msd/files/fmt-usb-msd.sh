@@ -32,9 +32,14 @@ refresh_msd() {
 }
 
 msdos_pt() {
+	local r;
 	sync
 	for dev in $msd*; do
-		[ -e $dev ] && umount -f $dev
+		[ -e $dev ] && r=$(umount -f $dev 2>&1)
+		strstr "$r" "Resource busy" && {
+			logger "$r"
+			return 1
+		}
 	done
 
 	dd if=/dev/zero of=$msd bs=1M count=16 conv=fsync || {
@@ -128,7 +133,15 @@ add_space_consumption() {
 }
 
 is_in_use() {
-	grep -q $1 /etc/config/$2 2>&- && killall -0 $3 2>&-
+	grep -q "$1" /etc/config/$2 2>&- && killall -0 $3 2>&-
+}
+
+get_usb() {
+	local file="/tmp/board.json"
+	local path usb_jack
+	path=$(readlink -f $1)
+	usb_jack="$(jsonfilter -i $file -e '@.usb_jack')"
+	strstr "$path" "$usb_jack" && echo usb || echo internal
 }
 
 add_description() {
@@ -140,7 +153,7 @@ add_description() {
 		t='sd'
 	else
 		d="$(cat $path/model)"
-		t='usb'
+		t="$(get_usb $path)"
 	fi
 
 	d="${d#${d%%[![:space:]]*}}"
@@ -169,13 +182,15 @@ add_unmountable() {
 	local MOUNT=$(extract_field MOUNT $line)
 	local TYPE=$(extract_field TYPE $line)
 	local LABEL=$(extract_field LABEL $line)
+	
+	[ -z "$MOUNT" ] && return 1
 
 	# if not overlay and not mounted on /mnt/*, return
 	local overlay_uuid="$(uci -q get fstab.overlay.uuid)"
 	if [ -n "$overlay_uuid" -a "$overlay_uuid" = "$UUID" -a "$MOUNT" = "/overlay" ]; then
 		local is_overlay=1
 	elif [ -z "$MOUNT" -o -n "${MOUNT%%/mnt/*}" ]; then
-		return
+		return 0
 	else
 		local is_overlay=0
 	fi
@@ -191,11 +206,12 @@ add_unmountable() {
 		[ -n "$LABEL" ] && json_add_string label $LABEL
 
 		[ $is_overlay -eq 1 ] && json_add_string in_use memexp || {
-			is_in_use $MOUNT samba smbd && json_add_string in_use samba
-			is_in_use $MOUNT minidlna minidlna && json_add_string in_use dlna
+			is_in_use "$MOUNT" samba smbd && json_add_string in_use samba
+			is_in_use "$MOUNT" minidlna minidlna && json_add_string in_use dlna
 		}
 		json_add_string status mounted
 	json_close_object
+	return 0
 }
 
 devices() {
@@ -211,9 +227,10 @@ devices() {
 			bd=${bd%$d*}${bd#*$d}
 			break
 		done
-		add_unmountable "DEVICE=\"${line/:*/}\" ${line/*: /}"
+		add_unmountable "DEVICE=\"${line/:*/}\" ${line/*: /}" || bd="$bd$d"
 	done
 	for d in $bd; do
+		[ "$(cat "/sys/block/$d/size")" = '0' ] && continue
 		json_add_object $d
 			json_add_string dev /dev/$d
 			add_description $d

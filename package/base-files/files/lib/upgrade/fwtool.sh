@@ -21,9 +21,14 @@
 # 17 - Only authorized firmware is allowed
 
 fwtool_msg() {
+	local file="/tmp/fwtool_last_error"
+
 	v "$1"
 	ubus call log write_ext "{'event': '$1', 'sender': 'sysupgrade', 'table': 1, 'write_db': 1}"
-	echo "$2" > /tmp/fwtool_last_error
+
+	if [ ! -f "$file" ] || [ "$(cat "$file")" = "0" ]; then
+		echo "$2" > "$file"
+	fi
 }
 
 fwtool_pre_upgrade() {

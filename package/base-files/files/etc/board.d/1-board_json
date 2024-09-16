@@ -319,6 +319,7 @@ setup_json() {
 		wifi ethernet || ucidef_set_hwinfo dual_sim mobile wifi ethernet ios nat_offloading port_link
 		[ "${model:4:2}" = "01" ] && ucidef_set_release_version "7.3.1"
 		ucidef_set_network_options "vlans" 16 "max_mtu" 1500 "readonly_vlans" 2
+		[ "${model:7:1}" = "1" ] && [ "${model::6}" = "RUT901" ] && ucidef_set_esim
 		;;
 	RUT906* |\
 	RUT956*)

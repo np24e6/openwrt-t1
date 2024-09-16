@@ -1,3 +1,43 @@
+# 2024-03-21 00.07.06.8
+
+### New
+
+* Mobile: added support for RG520N-EB module (ID: 17119)
+* WebUI: added eSIM support (ID: 16427)
+* SMS Utilities: added eSIM handling rules to RUT901 devices (ID: 16427)
+
+### Improvements
+
+* IPSec: disabled libgmp in favor of openssl (ID: 16692)
+* System: improved firmware validation messages (ID: 17260)
+* IPSec: updated Strongswan to 5.9.6 (ID: 17179)
+
+### Fix
+
+* IPSec: increased charon load timeout (ID: 17179)
+* Interfaces: fixed error when trying to save static WAN interface (ID: 16894)
+* Ledman: fixed signal strenght leds indication for RUT2 and RUT9 family devices (ID: 16908)
+* Mobile: fixed an issue where RMS was reporting incorrect signal values with SLM750 modems (ID: 16967)
+* IPSec: fixed loading of large private keys (ID: 17179)
+
+# 2024-03-13 00.07.06.7
+
+### New
+
+* Mobile: added support for RG520N-EB module (ID: 17119)
+* SMS Utilities: added eSIM handling rules to RUT901 devices (ID: 16427)
+
+### Improvements
+
+* IPSec: disabled libgmp in favor of openssl (ID: 16692)
+
+### Fix
+
+* IPSec: increased charon load timeout (ID: 17179)
+* Interfaces: fixed error when trying to save static WAN interface (ID: 16894)
+* Ledman: fixed signal strenght leds indication for RUT2 and RUT9 family devices (ID: 16908)
+* Mobile: fixed an issue where RMS was reporting incorrect signal values with SLM750 modems (ID: 16967)
+
 # 2024-02-26 00.07.06.6
 
 ### New

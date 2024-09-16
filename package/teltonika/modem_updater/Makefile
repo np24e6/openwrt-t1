@@ -6,7 +6,7 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=modem_updater
-PKG_SOURCE_VERSION:=5.0
+PKG_SOURCE_VERSION:=5.1
 
 include $(INCLUDE_DIR)/package.mk
 

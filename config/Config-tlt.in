@@ -517,6 +517,8 @@ config MOBILE_SUPPORT
 	imply PACKAGE_post-get-mobile
 	imply PACKAGE_mctl
 	imply PACKAGE_urcd
+	imply PACKAGE_esim-lpac
+	imply PACKAGE_lua_lpac
 	imply BUSYBOX_CONFIG_FEATURE_NETIFD
 
 config MODEM_UPDATER_SUPPORT

@@ -8,7 +8,6 @@ PKG_NAME:=greengrass
 PKG_VERSION:=1.11.4
 PKG_RELEASE:=1
 
-PKG_SOURCE_URL=$(TLT_PACKAGE_API)/$(PKG_NAME)/$(PKG_VERSION)
 PKG_UPSTREAM_URL:=https://d1onfpft10uf5o.cloudfront.net/greengrass-core/downloads/$(PKG_VERSION)/
 PKG_SOURCE:=$(PKG_NAME)-openwrt-armv7l-$(PKG_VERSION).tar.gz
 PKG_HASH:=fce721a94d8d5607bf0fecad693eea604034ebfc35e948fea79bfb2b9d6d75bb

@@ -18,7 +18,7 @@ define gpl_clear_vars
 		sed -i '/define Build\/Compile/,/endef/d' "$(1)/Makefile"; \
 		sed -i "/^PKG_MIRROR_HASH:=/d" "$(1)/Makefile"; \
 		sed -i "/^PKG_SOURCE_PROTO:=/d" "$(1)/Makefile"; \
-		sed -i "/^PKG_SOURCE_URL:=/d" "$(1)/Makefile"; \
+		sed -i "/^PKG_SOURCE_URL/d" "$(1)/Makefile"; \
 		sed -i "/^PKG_MIRROR_HASH:=/d" "$(1)/Makefile"; \
 	)
 endef

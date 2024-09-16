@@ -275,6 +275,7 @@ do_save_conffiles() {
 			find /greengrass/certs/ -name "*.key"						# AWS Greengrass private and public keys
 		}
 		[ -d /etc/hostapd ] && find "/etc/hostapd/" -name "*.psk"		# hostapd psk files
+		[ -e /etc/lpac_config.json ] && echo "/etc/lpac_config.json"            # lpac library config file
 	} >>"$CONFFILES"
 
 	ask_bool 0 "Edit config file list" && vi "$CONFFILES"

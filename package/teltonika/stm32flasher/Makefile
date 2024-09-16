@@ -6,7 +6,6 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=stm32flasher
 
-PKG_SOURCE_URL=$(TLT_GIT)/packages/r2ec.git
 PKG_SOURCE_VERSION:=2.6.2
 
 include $(INCLUDE_DIR)/package.mk

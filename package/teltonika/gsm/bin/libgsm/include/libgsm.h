@@ -85,6 +85,7 @@ typedef enum {
 	LGSM_CACHE_SIM_PIN1,
 	LGSM_CACHE_SIM_PUK1,
 	LGSM_CACHE_TEMPERATURE,
+	LGSM_CACHE_RSSI,
 	LGSM_CACHE_MAX,
 } lgsm_cache_t;
 
@@ -623,6 +624,19 @@ typedef enum {
 } lgsm_gea_algo_attrs_t;
 
 typedef enum {
+	LGSM_USBCFG_VID,
+	LGSM_USBCFG_PID,
+	LGSM_USBCFG_DIAG,
+	LGSM_USBCFG_NMEA,
+	LGSM_USBCFG_AT_PORT,
+	LGSM_USBCFG_MODEM,
+	LGSM_USBCFG_RMNET,
+	LGSM_USBCFG_ADB,
+	LGSM_USBCFG_UAC,
+	LGSM_USBCFG_MAX,
+} lgsm_usbcfg_t;
+
+typedef enum {
 	LGSM_UBUS_INFO,
 	LGSM_UBUS_EXEC,
 	LGSM_UBUS_FW,
@@ -794,6 +808,8 @@ typedef enum {
 	LGSM_UBUS_SET_NR5G_DISABLE_MODE,
 	LGSM_UBUS_GET_GEA_ALGORYTHM,
 	LGSM_UBUS_DISABLE_GEA_1_2_ALGORYTHM,
+	LGSM_UBUS_SET_USBCFG,
+	LGSM_UBUS_GET_USBCFG,
 	//------
 	__LGSM_UBUS_MAX,
 } lgsm_method_t;
@@ -1019,6 +1035,7 @@ typedef struct {
 	char serial_num[32];
 	char imei[16];
 	char imsi[16];
+	uint32_t rssi_value;
 	uint32_t baudrate;
 	uint32_t simcount;
 	uint32_t ubus_obj_id;
@@ -1260,6 +1277,18 @@ typedef struct {
 	int stat_id;
 } lgsm_gea_algo_t;
 
+typedef struct {
+	char *vid;
+	char *pid;
+	bool diag;
+	bool nmea;
+	bool at_port;
+	bool modem;
+	bool rmnet;
+	bool adb;
+	bool uac;
+} lgsm_usbcfg_info_t;
+
 typedef enum {
 	LGSM_LABEL_STRING,
 	LGSM_LABEL_INT,
@@ -1338,6 +1367,7 @@ typedef enum {
 	LGSM_LABEL_DISABLE_5G_MODE_T,
 	LGSM_LABEL_GEA_ALGO_T,
 	LGSM_LABEL_ERROR,
+	LGSM_LABEL_USBCFG_T,
 } lgsm_resp_label_t;
 
 typedef union {
@@ -1415,6 +1445,7 @@ typedef union {
 	enum gnss_operation_mode_id gnss_oper_mode;
 	enum dpo_mode_id dpo_mode;
 	enum disable_nr5g_mode_id disable_5g_mode;
+	lgsm_usbcfg_info_t usbcfg;
 } lgsm_resp_data;
 
 typedef struct {
@@ -3554,6 +3585,13 @@ void handle_get_disable_5g_mode_rsp(struct blob_attr *info, lgsm_structed_info_t
    */
 void handle_get_gea_algo(struct blob_attr *info, lgsm_structed_info_t *parsed);
 
+/**
+   * Parse dhcpv6 state method response
+   * @param[ptr]   info      Blob from gsmd.
+   * @param[ptr]   parsed    Parsed union readable information.
+   */
+void handle_get_usbcfg_rsp(struct blob_attr *info, lgsm_structed_info_t *parsed);
+
 /*********************
 *  STRUCT HANDLERS  *
 *********************/
@@ -3710,6 +3748,20 @@ lgsm_err_t lgsm_handle_obj_methods_structed(struct ubus_context *ctx, lgsm_metho
    */
 lgsm_err_t lgsm_set_ltesms_format(struct ubus_context *ctx, enum urc_lte_sms_format mode, func_t *resp,
 				  uint32_t modem_num);
+
+/*
+ * Set modem functionality
+ * @param[ptr]  ctx        Ubus context.
+ * @param[in]   modem_num  Modem number.
+ * @param[in]   nmea       NMEA port config value
+ * @param[in]   modem      Modem port config value
+ * @param[in]   adb        ADB port config value
+ * @param[in]   uac        UAC port config value
+ * @param[in]   resp       Status code for modem setting configuration.
+ * @return lgsm_err_t. Return function status code.
+ */
+lgsm_err_t lgsm_set_usbcfg(struct ubus_context *ctx, bool nmea, bool modem, bool adb, bool uac, func_t *resp,
+			   uint32_t modem_num);
 
 /**
    * Checks if 'info' blob contains error message

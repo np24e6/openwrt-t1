@@ -39,12 +39,16 @@ fix_sms_utils(){
 			uci_remove "sms_utils" "$sec"
 		}
 		;;
+	"esim_list"|"esim_change"|"esim_install")
+		[ "$esim" -eq 1 ] || {
+			uci_remove "sms_utils" "$sec"
+		}
 	esac
 }
 
 json_load_file "/etc/board.json"
 json_select hwinfo
-json_get_vars dual_sim wifi mobile gps ios
+json_get_vars dual_sim wifi mobile gps ios esim
 
 config_load "sms_utils"
 config_foreach fix_sms_utils "rule"

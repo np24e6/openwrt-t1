@@ -7,7 +7,7 @@ include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=mobifd
 
-PKG_SOURCE_VERSION:=4.2
+PKG_SOURCE_VERSION:=4.3
 
 include $(INCLUDE_DIR)/package.mk
 
