@@ -49,6 +49,8 @@ PATCH_DIR=../patches/$(GCC_VERSION)
 BUGURL=http://bugs.openwrt.org/
 PKGVERSION=OpenWrt GCC $(PKG_VERSION) $(REVISION)
 
+PKG_LICENSE:=GPL-3.0-with-GCC-exception
+
 HOST_BUILD_PARALLEL:=1
 
 include $(INCLUDE_DIR)/toolchain-build.mk

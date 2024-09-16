@@ -124,14 +124,6 @@ do_flash_ubi() {
 	local mtdname=$2
 	local mtdpart
 	local primaryboot
-	local attempts_limit=30
-
-	mtdpart=$(grep "\"${mtdname}\"" /proc/mtd | awk -F: '{print $1}')
-	while [ $attempts_limit -gt 0 ]; do
-		ubidetach -p /dev/${mtdpart} && break
-		attempts_limit=$((attempts_limit-1))
-		sleep 1
-	done
 
 	# Fail safe upgrade
 	[ -f /proc/boot_info/$mtdname/upgradepartition ] && {
@@ -145,8 +137,11 @@ do_flash_ubi() {
 		mtdname=$(cat /proc/boot_info/$mtdname/upgradepartition)
 	}
 
+	CI_UBIPART="${mtdname}" # set root partition label for backup
+
 	mtdpart=$(grep "\"${mtdname}\"" /proc/mtd | awk -F: '{print $1}')
 	ubiformat /dev/${mtdpart} -y -f /tmp/sysupgrade.${bin}.bin
+	ubiattach -p "/dev/${mtdpart}"
 }
 
 do_flash_tz() {
@@ -284,29 +279,12 @@ platform_do_upgrade_ipq() {
 		do_flash_bootconfig bootconfig "0:BOOTCONFIG"
 		do_flash_bootconfig bootconfig1 "0:BOOTCONFIG1"
 		platform_version_upgrade
-	
+
+		nand_do_upgrade_success
 		return 0;
 		;;
 	esac
 
 	echo "Upgrade failed!"
 	return 1;
-}
-
-platform_copy_config() {
-	mkdir -p /tmp/overlay
-
-	local mtdname=rootfs
-	local mtdpart
-
-	[ -f /proc/boot_info/$mtdname/upgradepartition ] && {
-		mtdname=$(cat /proc/boot_info/$mtdname/upgradepartition)
-	}
-
-	mtdpart=$(grep "\"${mtdname}\"" /proc/mtd | awk -F: '{print $1}')
-	ubiattach -p /dev/${mtdpart}
-	mount -t ubifs ubi0:rootfs_data /tmp/overlay
-	cp /tmp/sysupgrade.tgz /tmp/overlay/
-	sync
-	umount /tmp/overlay
 }

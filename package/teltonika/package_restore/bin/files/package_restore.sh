@@ -35,41 +35,13 @@ PLATFORM="$(jsonfilter -i /etc/board.json -e @.model.platform)"
 [ -s "$PACKAGE_FILE" ] || exit 0
 
 needed_packets=$(awk '/ - /{print $1}' "$PACKAGE_FILE")
+[ -z "$needed_packets" ] && exit 0
 
 third_party_pkg=$(uci_get package_restore package_restore 3rd_party_pkg)
-
-for i in $needed_packets; do
-	[ -s /usr/lib/opkg/info/"$i".control ] && sed -i "/$i/d" "$PACKAGE_FILE"
-done
-
-needed_packets=$(awk '/ - /{print $1}' "$PACKAGE_FILE")
-hotspot_themes=$(echo "$needed_packets" | grep "hs_theme")
-
-[ -z "$hotspot_themes" ] || {
-	for i in $hotspot_themes; do
-		theme=$(echo "$i" | awk -F "hs_theme_" '{print $2}')
-		uci -q delete landingpage."$theme"
-	done
-	uci -q commit landingpage
-}
-
-languages=$(echo "$needed_packets" | grep "vuci-i18n-")
-[ -z "$languages" ] || {
-	uci -q delete vuci.languages
-	section=$(uci add vuci internal)
-	uci -q rename "vuci.$section"="languages"
-	uci -q set vuci.languages.en="English"
-	uci -q commit vuci
-}
-
-while [ -e "/var/lock/opkg.lock" ]; do
-	sleep "$TIME_OF_SLEEP"
-done
-
 while :; do
 	needed_packets=$(awk '/ - /{print $1}' "$PACKAGE_FILE")
 	if [ "$third_party_pkg" = "1" ]; then
-		/bin/opkg -f /etc/tlt_opkg.conf update 2> /dev/null
+		/bin/opkg --force_feeds /etc/opkg/openwrt/distfeeds.conf -f /etc/tlt_opkg.conf update 2> /dev/null
 	else
 		/bin/opkg --force_feeds /etc/opkg/teltonikafeeds.conf -f /etc/tlt_opkg.conf update 2> /dev/null
 	fi
@@ -79,10 +51,61 @@ while :; do
 	sleep "$TIME_OF_SLEEP"
 done
 
+pkg_names="" # names mapped from AppName, ready to be used for pkg install. e.g. azure_iothub=vuci-app-azure-iothub-ui
 for i in $needed_packets; do
+	p=$(echo "$available_packages" | awk  "BEGIN { FS=\"\n\" ; RS = \"\n\n\" } /AppName: $i\n/" | grep "Package:" | sed 's/.* //g') # or default
+	[ -z "$p" ] && p="$i"
+	pkg_names="$pkg_names
+		$i=$p"
+done
+
+for i in $pkg_names; do
+	p_name="${i#*=}"
+	app_name="${i%=*}"
+	[ -s /usr/lib/opkg/info/"$p_name".control ] && sed -i "/$app_name/d" "$PACKAGE_FILE"
+done
+
+hotspot_themes=$(echo "$pkg_names" | grep "hs_theme")
+
+[ -z "$hotspot_themes" ] || {
+	for i in $hotspot_themes; do
+		p_name="${i#*=}"
+		theme=$(echo "$p_name" | awk -F "hs_theme_" '{print $2}')
+		uci -q delete landingpage."$theme"
+	done
+	uci -q commit landingpage
+}
+
+languages=$(echo "$pkg_names" | grep "vuci-i18n-")
+[ -z "$languages" ] || {
+	for i in $languages; do
+		p_name="${i#*=}"
+		lang=$(echo "$p_name" | awk -F "vuci-i18n-" '{print $2}')
+		case "$lang" in
+			french) short_code="fr" ;;
+			german) short_code="de" ;;
+			japanese) short_code="ja" ;;
+			portuguese) short_code="pt" ;;
+			russian) short_code="ru" ;;
+			spanish) short_code="es" ;;
+			turkish) short_code="tr" ;;
+			*) continue ;;
+		esac
+		uci -q delete vuci.languages."$short_code"
+	done
+	uci -q commit vuci
+}
+
+while [ -e "/var/lock/opkg.lock" ]; do
+	sleep "$TIME_OF_SLEEP"
+done
+
+for i in $pkg_names; do
+	p_name="${i#*=}"
+	app_name="${i%=*}"
 	router_check=0
-	exists=$(echo "$available_packages" | grep -wc "Package: $i")
-	router=$(echo "$available_packages" | sed -n "/Package: $i$/,/Package:/p" | grep -w "Router:" | awk -F ": " '{print $2}')
+	exists=$(echo "$available_packages" | grep -wc "Package: $p_name")
+	router=$(echo "$available_packages" | sed -n "/Package: $p_name$/,/Package:/p" | grep -w "Router:" | awk -F ": " '{print $2}')
 
 	if [ "$router" = "$PLATFORM" ]; then
 		router_check=1
@@ -97,30 +120,31 @@ for i in $needed_packets; do
 
 	flash_free=$(df -k | grep -w overlayfs | tail -1 | awk '{print $4}')
 	flash_free=$((flash_free * 1000))
-	pkg_size=$(/sbin/opkg-call "$i")
+	pkg_size=$(/sbin/opkg-call "$p_name")
 	[ "$flash_free" -le "$pkg_size" ] && router_check=0
-	[ "$exists" -ne 0 -a "$router_check" -ne 0 ] && /bin/opkg install -f /etc/tlt_opkg.conf "$i" 2> /dev/null
+	[ "$exists" -ne 0 -a "$router_check" -ne 0 ] && /bin/opkg install -f /etc/tlt_opkg.conf "$p_name" 2> /dev/null
 
-	[ -s /usr/lib/opkg/info/"$i".control ] || {
-		echo "$(cat $PACKAGE_FILE | grep -w -m 1 $i)" >> "$FAILED_PACKAGES"
-		sed -i "/$i/d" "$PACKAGE_FILE"
+	[ -s /usr/lib/opkg/info/"$p_name".control ] || {
+		echo "$(cat $PACKAGE_FILE | grep -w -m 1 $app_name)" >> "$FAILED_PACKAGES"
+		sed -i "/$app_name/d" "$PACKAGE_FILE"
 		continue
 	}
 
-	pkg_reboot=$(cat /usr/lib/opkg/info/"$i".control | grep -w 'pkg_reboot:' | awk '{print $2}')
+	pkg_reboot=$(cat /usr/lib/opkg/info/"$p_name".control | grep -w 'pkg_reboot:' | awk '{print $2}')
 	[ "$pkg_reboot" = "1" ] && PKG_REBOOT=1
-	sed -i "/$i/d" "$PACKAGE_FILE"
+	sed -i "/$app_name/d" "$PACKAGE_FILE"
 	/etc/init.d/rpcd reload; /etc/init.d/vuci restart
 	touch /tmp/vuci/reload_routes
 done
 
 [ "$third_party_pkg" = "1" ] && {
-	needed_packets=$(cat "$PACKAGE_FILE")
-	for i in $needed_packets; do
+	for i in $pkg_names; do
+		p_name="${i#*=}"
+		app_name="${i%=*}"
 		status=$(opkg status "$i")
-		[ -z "$status" ] && opkg install "$i" >/dev/null 2>&1
-		[ -s /usr/lib/opkg/info/"$i".control ] || logger "Failed to install package '$i'"
-		sed -i "/$i/d" "$PACKAGE_FILE"
+		[ -z "$status" ] && opkg install "$p_name" >/dev/null 2>&1
+		[ -s /usr/lib/opkg/info/"$p_name".control ] || logger "Failed to install package '$p_name'"
+		sed -i "/$app_name/d" "$PACKAGE_FILE"
 	done
 }
 

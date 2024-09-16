@@ -147,7 +147,7 @@ append_params() {
 	local v
 	local s="$1"
 	local key_encrypted
-	config_get key_encrypted "$s" key_encrypted ""
+	config_get_bool key_encrypted "$s" key_encrypted 0
 	shift
 	for p in "$@"; do
 		config_get v "$s" "$p"
@@ -248,16 +248,17 @@ openvpn_add_instance() {
 	config_get network_mask "$name" 'network_mask'
 	config_get server_ip "$name" 'server_ip'
 	config_get server_netmask "$name" 'server_netmask'
+	config_get status "$name" 'status'
 
 	[ -n "$local_ip" ] && [ -n "$remote_ip" ] && echo "ifconfig $local_ip $remote_ip" >> /var/etc/openvpn-"$name".conf
 	[ -n "$local_ipv6" ] && [ -n "$remote_ipv6" ] && echo "ifconfig-ipv6 $local_ipv6 $remote_ipv6" >> /var/etc/openvpn-"$name".conf
 	[ -n "$network_ip" ] && [ -n "$network_mask" ] && echo "route $network_ip $network_mask" >> /var/etc/openvpn-"$name".conf
 	[ -n "$server_ip" ] && [ -n "$server_netmask" ] && echo "server $server_ip $server_netmask" >> /var/etc/openvpn-"$name".conf
+	[ -z "$status" ] && echo "status /var/run/openvpn.$name.status 10" >> /var/etc/openvpn-"$name".conf
 
 	procd_open_instance "$name"
 	procd_set_param command "$PROG" \
 		--syslog "openvpn($name)" \
-		--status "/var/run/openvpn.$name.status" "10" \
 		--cd "$dir" \
 		--config "/var/etc/openvpn-$name.conf"
 	procd_set_param file "$dir/$conf"
@@ -290,7 +291,7 @@ add_authentication_to_config() {
 	config_get server_list "$section_id" server_list ""
 	config_get key_direction "$section_id" key_direction ""
 	config_get auth_user_pass "$section_id" auth_user_pass ""
-	config_get key_encrypted "$section_id" key_encrypted ""
+	config_get_bool key_encrypted "$section_id" key_encrypted 0
 
 	if [ "$auth" == "tls/pass" ] || [ "$auth" == "pass" ] || [ "$server_list" == "custom" ]; then
 		if [ -f "$auth_user_pass" ] && [ "$role" == "client" ]; then
@@ -368,7 +369,7 @@ start_instance() {
 		cp "$config" "$OPENVPN_CONFIG"
 		local dev="$(cat ${OPENVPN_CONFIG} | grep "^dev " | cut -f2 -d' ')"
 		[ "$dev" != "${dev#tun}" ] && sed -i "s/dev .*/dev tun_${type:0:1}_${s}/" "$OPENVPN_CONFIG"
-		[ "$dev" != "${dev#tap}" ] && sed -i "s/dev .*/dev tap/" "$OPENVPN_CONFIG"
+		[ "$dev" != "${dev#tap}" ] && sed -i "s/dev .*/dev tap_${type:0:1}_${s}/" "$OPENVPN_CONFIG"
 
 		echo "" >> "$OPENVPN_CONFIG"
 		config_get_bool upload_files "$s" 'upload_files' 0
@@ -376,20 +377,15 @@ start_instance() {
 		if [ "$upload_files" -eq 1 ]; then
 			add_authentication_to_config "$s" "$OPENVPN_CONFIG"
 		fi
+
+		config_get status "$s" 'status'
+		if [ -n "$status" ]; then
+			[ "$status" = "${status##* }" ] && num=" 10"
+			echo "status ${status}${num}" >> "$OPENVPN_CONFIG"
+		fi
+
 		append UCI_STARTED "$config" "$LIST_SEP"
 		openvpn_add_instance "$s" "${OPENVPN_CONFIG%/*}" "${OPENVPN_CONFIG##*/}"
-		{
-			echo "script-security 2"
-			echo "down /etc/openvpn/updown.sh"
-		} >> "$OPENVPN_CONFIG"
-		
-		if [ "$type" = "client" ]; then
-			{
-				echo "auth-nocache"
-				echo "up /etc/openvpn/updown.sh"
-			} >> "$OPENVPN_CONFIG"
-		fi
-		
 		return
 	fi
 

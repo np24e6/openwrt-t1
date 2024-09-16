@@ -1,0 +1,13 @@
+Index: uhttpd-2021-03-21-15346de8/client.c
+===================================================================
+--- uhttpd-2021-03-21-15346de8.orig/client.c
++++ uhttpd-2021-03-21-15346de8/client.c
+@@ -568,7 +568,7 @@ void uh_client_notify_state(struct clien
+ 
+ 	if (!s->write_error && cl->state != CLIENT_STATE_CLEANUP) {
+ 		if (cl->state == CLIENT_STATE_DATA)
+-			return;
++			return client_close(cl);
+ 
+ 		if (!s->eof || s->w.data_bytes)
+ 			return;

@@ -30,15 +30,10 @@ define Package/mwan3
      +iptables \
      +iptables-mod-conntrack-extra \
      +iptables-mod-ipopt \
-     +jshn \
-     +vuci-app-mwan3-ui
+     +jshn
    TITLE:=Multiwan hotplug script with connection tracking support
    MAINTAINER:=Florian Eckert <fe@dev.tdt.de>
    PKGARCH:=all
-	ifeq (m, $(CONFIG_PACKAGE_$(PKG_NAME)))
-		PKG_TLT_NAME:=Failover
-		PKG_ROUTER:=$(TLT_PLATFORM_NAME)
-	endif
 endef
 
 define Package/mwan3/description

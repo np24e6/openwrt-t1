@@ -7,7 +7,9 @@ include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=gsm
 
-PKG_SOURCE_VERSION:=1.3.7
+PKG_SOURCE_VERSION:=1.4.1
+
+PKG_LICENSE:=Teltonika-closed
 
 GPL_INCLUDE_HEADERS:=1
 
@@ -17,7 +19,7 @@ define Package/gsmd
 	SECTION:=net
 	CATEGORY:=Network
 	TITLE:=Simple server to route AT commands to modem
-	DEPENDS:= +libusb-1.0 +libubus +libubox +libuci +libblobmsg-json +modems +libe4c +kmod-usb-serial-option
+	DEPENDS:= +libusb-1.0 +libubus +libubox +libuci +libblobmsg-json +modems +kmod-usb-serial-option
 endef
 
 define Package/gsmctl
@@ -32,7 +34,7 @@ define Package/libgsm
 	CATEGORY:=Libraries
 	TITLE:=A library for manage gsm API. Read, list, delete, etc. For parse AT commands
 	DEPENDS:=+libblobmsg-json +libubus +libubox +libboardjson +IO_SUPPORT:iomand
-	ABI_VERSION:=1.1
+	ABI_VERSION:=1.0
 endef
 
 define Package/liburc

@@ -7,6 +7,8 @@ PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.xz
 PKG_SOURCE_URL:=@GNU/autoconf-archive
 PKG_HASH:=17195c833098da79de5778ee90948f4c5d90ed1a0cf8391b4ab348e2ec511e3f
 
+PKG_LICENSE:=GPL-3.0-or-later
+
 include $(INCLUDE_DIR)/host-build.mk
 include $(INCLUDE_DIR)/gpl.mk
 

@@ -7,7 +7,7 @@ help_and_exit() {
 	printf "Usage: upload_opkg.sh [-c [MONTHS]] [ -d | -p ] DEVICE
 
 Options:
-	-c | --cleanup MONTHS	Cleanup packages that are older than MONTHS (minimum and default: 1).
+	-c | --cleanup DAYS	Cleanup packages that are older than DAYS (default: 15).
 					DEVICE argument is not required, all devices will be cleaned up.
 	-d | --demo		Upload to OPKG test server
 	-p | --production	Upload to OPKG production server
@@ -32,7 +32,7 @@ check_missing() {
 
 cleanup() {
 	local path=${1}/
-	local mtime=+${2:-30}
+	local mtime=+${2:-15}
 
 	local df_cmd="df --block-size=1 --output=used '$path' | tail -n1"
 	local fmt='%7d MB'
@@ -49,8 +49,8 @@ cleanup() {
 while [ $# -gt 0 ]; do
 	case $1 in
 	--cleanup | -c)
-		days=$(($2 * 30))
-		[ $days -lt 30 ] && days=30
+		days=$((2))
+		[ $days -lt 1 ] && days=
 		shift 1
 		;;
 	--production | -p)

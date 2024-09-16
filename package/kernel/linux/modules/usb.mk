@@ -1667,6 +1667,9 @@ XHCI_MODULES := xhci-hcd xhci-pci xhci-plat-hcd
 ifdef CONFIG_TARGET_ramips_mt7621
   XHCI_MODULES += xhci-mtk
 endif
+ifdef CONFIG_TARGET_mediatek_mt7981
+  XHCI_MODULES += xhci-mtk-hcd
+endif
 XHCI_FILES := $(wildcard $(patsubst %,$(LINUX_DIR)/drivers/usb/host/%.ko,$(XHCI_MODULES)))
 XHCI_AUTOLOAD := $(patsubst $(LINUX_DIR)/drivers/usb/host/%.ko,%,$(XHCI_FILES))
 

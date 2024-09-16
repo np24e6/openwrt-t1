@@ -1,0 +1,20 @@
+#!/bin/sh
+. /lib/functions.sh
+
+config_file="/etc/config/wireless"
+section_name="radio1"
+
+[ ! -f "$config_file" ] && exit 0
+uci get wireless."$section_name" &> /dev/null || exit 0
+
+config_load "wireless"
+channels=""
+
+config_get channels "$section_name" "channels"
+
+[ -z "$channels" ] && { 
+    uci_set "wireless" "radio1" "channels" "36-165"
+    uci_commit "wireless"
+}
+
+exit 0

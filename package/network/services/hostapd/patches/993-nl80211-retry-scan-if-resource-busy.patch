@@ -1,0 +1,46 @@
+Index: hostapd-2023-09-08-e5ccbfc6/src/ap/acs.c
+===================================================================
+--- hostapd-2023-09-08-e5ccbfc6.orig/src/ap/acs.c	2024-04-09 13:35:17.535098238 +0300
++++ hostapd-2023-09-08-e5ccbfc6/src/ap/acs.c	2024-04-09 13:36:20.314708282 +0300
+@@ -1293,7 +1293,7 @@
+ static int acs_request_scan(struct hostapd_iface *iface)
+ {
+ 	struct wpa_driver_scan_params params;
+-	int i, *freq;
++	int i, *freq, retries = 15;
+ 	int num_channels;
+ 	struct hostapd_hw_modes *mode;
+ 
+@@ -1332,11 +1332,14 @@
+ 		   iface->acs_num_completed_scans + 1,
+ 		   iface->conf->acs_num_scans);
+ 
+-	if (hostapd_driver_scan(iface->bss[0], &params) < 0) {
+-		wpa_printf(MSG_ERROR, "ACS: Failed to request initial scan");
+-		acs_cleanup(iface);
+-		os_free(params.freqs);
+-		return -1;
++	while (hostapd_driver_scan(iface->bss[0], &params) < 0) {
++		if (retries-- <= 0) {
++			wpa_printf(MSG_ERROR, "ACS: Failed to request initial scan");
++			acs_cleanup(iface);
++			os_free(params.freqs);
++			return -1;
++		}
++		os_sleep(0, 200000);
+ 	}
+ 
+ 	os_free(params.freqs);
+Index: hostapd-2023-09-08-e5ccbfc6/src/drivers/driver_nl80211_scan.c
+===================================================================
+--- hostapd-2023-09-08-e5ccbfc6.orig/src/drivers/driver_nl80211_scan.c	2024-04-09 13:35:17.535098238 +0300
++++ hostapd-2023-09-08-e5ccbfc6/src/drivers/driver_nl80211_scan.c	2024-04-09 13:35:17.535098238 +0300
+@@ -386,7 +386,7 @@
+ 	if (ret) {
+ 		wpa_printf(MSG_DEBUG, "nl80211: Scan trigger failed: ret=%d "
+ 			   "(%s)", ret, strerror(-ret));
+-		if (drv->hostapd && is_ap_interface(drv->nlmode)) {
++		if (drv->hostapd && is_ap_interface(drv->nlmode) && ret != -EBUSY) {
+ 			enum nl80211_iftype old_mode = drv->nlmode;
+ 
+ 			/*

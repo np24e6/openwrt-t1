@@ -16,6 +16,8 @@ PKG_HASH:=06430880aaf4919c5f99fc629da7000347421668c2cf32bced2d401aac276508
 
 PKG_RELEASE:=1
 
+PKG_LICENSE:=GPL-2.0
+
 include $(INCLUDE_DIR)/host-build.mk
 include $(INCLUDE_DIR)/gpl.mk
 

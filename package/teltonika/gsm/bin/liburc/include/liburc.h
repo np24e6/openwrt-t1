@@ -101,8 +101,17 @@ typedef enum {
 
 typedef enum {
 	EMM_ERR_VAL,
+	EMM_ERR_ENUM_ID,
+	EMM_ERR_MODEM_ID,
 	EMM_ERR_T_MAX,
 } urc_emm_err_t;
+
+typedef enum {
+	MM5G_ERR_VAL,
+	MM5G_ERR_ENUM_ID,
+	MM5G_ERR_MODEM_ID,
+	MM5G_ERR_T_MAX,
+} urc_5gmm_err_t;
 
 typedef enum {
 	QNETDEVCTL_VAL,
@@ -111,8 +120,16 @@ typedef enum {
 
 typedef enum {
 	ESM_ERR_VAL,
+	ESM_ERR_ENUM_ID,
+	ESM_ERR_MODEM_ID,
 	ESM_ERR_T_MAX,
 } urc_esm_err_t;
+
+typedef enum {
+	URC_NET_MODE_VALUE,
+	URC_NET_MODE_MODEM_ID,
+	__URC_NET_MODE_MAX,
+} urc_net_mode_t;
 
 typedef enum {
 	LURC_SUCCESS,
@@ -181,12 +198,25 @@ struct sim_status_t {
 };
 
 struct emm_err_t {
-	enum emm_cause_id cause_id;
+	uint32_t emm_error_value;
+	enum emm_cause_id enum_val;
 	const char *modem_id;
 };
 
 struct esm_err_t {
-	enum esm_cause_id cause_id;
+	uint32_t esm_error_value;
+	enum esm_cause_id enum_val;
+	const char *modem_id;
+};
+
+struct mm5g_err_t {
+	uint32_t mm5g_error_value;
+	enum mm5g_cause_id enum_val;
+	const char *modem_id;
+};
+
+struct net_mode_t {
+	enum net_mode_id mode;
 	const char *modem_id;
 };
 

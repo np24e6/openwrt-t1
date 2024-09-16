@@ -10,7 +10,7 @@ include $(TOPDIR)/rules.mk
 PKG_NAME:=sqm-scripts
 PKG_SOURCE_VERSION:=5d7e7977e14e147d5bcfa8a5f01636c7ab230fa4
 PKG_VERSION:=1.5.1
-PKG_RELEASE:=1
+PKG_RELEASE:=2
 
 PKG_SOURCE_PROTO:=git
 PKG_SOURCE_URL:=https://github.com/tohojo/sqm-scripts
@@ -26,13 +26,9 @@ define Package/sqm-scripts
   CATEGORY:=Base system
   DEPENDS:=+tc +kmod-sched-core +kmod-ifb +iptables \
 	+iptables-mod-ipopt +iptables-mod-conntrack-extra \
-	+kmod-sched-cake +vuci-app-sqm-ui
+	+kmod-sched-cake
   TITLE:=SQM Scripts (QoS)
   PKGARCH:=all
-  ifeq (m, $(CONFIG_PACKAGE_sqm-scripts))
-    PKG_TLT_NAME:=SQM
-    PKG_ROUTER:=$(TLT_PLATFORM_NAME)
-  endif
 endef
 
 define Package/sqm-scripts/description
@@ -46,6 +42,8 @@ endef
 
 define Package/sqm-scripts/install
 	make -C $(PKG_BUILD_DIR) DESTDIR=$(1) PLATFORM=openwrt install
+	$(INSTALL_DIR) $(1)/etc/config
+	$(INSTALL_CONF) ./files/sqm.conf $(1)/etc/config/sqm
 endef
 
 $(eval $(call BuildPackage,sqm-scripts))

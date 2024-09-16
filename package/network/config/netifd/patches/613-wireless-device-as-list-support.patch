@@ -12,7 +12,7 @@ Index: netifd-2024-01-04-c18cc79d/config.c
 +			struct uci_option *opt = uci_lookup_option(uci_ctx, s, "device");
 +			struct uci_element *el;
 +
-+			if(opt->type != UCI_TYPE_LIST) {
++			if(!opt || opt->type != UCI_TYPE_LIST) {
 +				continue;
 +			}
 +

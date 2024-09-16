@@ -1,12 +1,7 @@
 #!/bin/sh
 
-. /usr/share/libubox/jshn.sh
-
 is_ios_enabled() {
-	local ios
-	json_load_file "/etc/board.json" &&
-		json_select hwinfo &&
-		json_get_var ios ios && [ "$ios" = "1" ]
+	[ "$(jsonfilter -q -i /etc/board.json -e '@.hwinfo.ios')" = "true" ]
 }
 
 # set_tty_duplex <device_path> <duplex>
@@ -14,7 +9,11 @@ set_tty_duplex() {
 	# duplex mode only applies for rs485
 	[ "$1" != "/dev/rs485" ] && return
 
-	echo $2 > /sys/class/gpio/rs485_rx_en/value
+	output=$(gpiofind GPIO_RS485_RX_EN)
+
+	[ -z "$output" ] && return
+
+	gpioset $output=$2
 }
 
 # set_tty_options <device_path> <baudrate> <databits> <parity> <stopbits> <flowcontrol> <duplex> <echo>

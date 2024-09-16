@@ -27,6 +27,10 @@ is_trb5() {
 	mnf_info -n | grep "TRB5" > /dev/null 2>&1
 }
 
+is_swm() {
+	mnf_info -n | grep "SWM" > /dev/null 2>&1
+}
+
 get_device_name() {
 	local name
 
@@ -67,8 +71,6 @@ get_traps_io_mib() {
 }
 
 device_name=$(get_device_name)
-base="${device_name##*RUTM}"
-router_type="${device_name%$base}"
 MIB_file="/etc/snmp/${device_name}.mib"
 board_json_file="/etc/board.json"
 
@@ -104,13 +106,13 @@ is_true "gps" && gps=1
 traps=1
 iface=1
 # Hotspot is available on all devices except TSW switches
-! is_switch && hotspot=1
+( ! is_switch ) && ( ! is_swm ) && hotspot=1
 is_true "ios" && ios=1
 is_true "wifi" && wireless=1
 ! is_switch && if_vlan=1
-( jsonfilter -q -i $board_json_file -e "$.switch" 1>/dev/null || is_switch || [ $router_type = 'RUTM' ]) && port_vlan=1
+( jsonfilter -q -i $board_json_file -e "$.switch" 1>/dev/null || is_switch || is_true "dsa") && port_vlan=1
 [ $if_vlan -eq 1 ]  || [ $port_vlan -eq 1 ] && vlan_gen=1
-( ! is_switch ) && ( ! is_trb5 ) && sqm=1
+( ! is_switch ) && ( ! is_trb5 ) && ( ! is_swm ) && sqm=1
 (is_installed "port_eventsd") && port=1
 
 # Unset 'traps' if neither 'mobile' nor 'ios' or 'hotspot' are supported
@@ -130,12 +132,12 @@ wireless_mib=$(cat $MODULES_DIR/wireless.mib)
 if_vlan_mib=$(cat $MODULES_DIR/vlan_if.mib)
 iface_mib=$(cat $MODULES_DIR/iface.mib)
 
-if [ -n "$router_type" ] && [ "$router_type" = "RUTM" ]; then
-	port_vlan_mib=$(cat $MODULES_DIR/vlan_port_rutm.mib)
-elif is_switch; then
+if is_switch; then
 	port_vlan_mib=$(cat $MODULES_DIR/vlan_port_switch.mib)
+elif is_true "dsa"; then
+	port_vlan_mib=$(cat $MODULES_DIR/vlan_port_dsa.mib)
 else
-	port_vlan_mib=$(cat $MODULES_DIR/vlan_port.mib)
+	port_vlan_mib=$(cat $MODULES_DIR/vlan_port_non_dsa.mib)
 fi
 
 sqm_mib=$(cat $MODULES_DIR/sqm.mib)

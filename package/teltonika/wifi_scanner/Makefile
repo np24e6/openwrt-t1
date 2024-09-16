@@ -6,13 +6,14 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=wifi_scanner
-PKG_VERSION:=2023-11-23
+PKG_VERSION:=2024-04-12
 PKG_RELEASE:=1
 
-PKG_SOURCE_VERSION:=1.7.1
+PKG_SOURCE_VERSION:=1.8.1
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_SOURCE_VERSION)-$(PKG_VERSION)
 PKG_SOURCE:=$(PKG_SOURCE_SUBDIR).tar.gz
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_SOURCE_SUBDIR)
+PKG_LICENSE:=Teltonika-closed
 
 include $(INCLUDE_DIR)/package.mk
 
@@ -20,12 +21,7 @@ define Package/$(PKG_NAME)
 	SECTION:=base
 	CATEGORY:=Base system
 	TITLE:=$(PKG_NAME)
-	DEPENDS:=+libuci +libubox +libtlt-logger +libubus +lsqlite3 +libiwinfo \
-			+vuci-app-wifi-scanner-ui +data-sender-mod-wifiscan
-	ifeq (m, $(CONFIG_PACKAGE_$(PKG_NAME)))
-		PKG_TLT_NAME:=Wifi Scanner
-		PKG_ROUTER:=$(TLT_PLATFORM_NAME)
-	endif
+	DEPENDS:=+libuci +libubox +libtlt-logger +libubus +lsqlite3 +libiwinfo +data-sender-mod-wifiscan
 endef
 
 define Package/$(PKG_NAME)/description

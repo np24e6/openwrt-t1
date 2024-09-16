@@ -1,0 +1,35 @@
+#!/bin/sh
+
+. /lib/functions.sh
+PACKAGE_FILE="/etc/package_restore.txt"
+
+get_enabled() {
+	local enabled
+
+	config_get_bool enabled "$1" "$2" "0"
+
+	[ "$enabled" -eq 1 ] && ENABLED="1"
+}
+
+check_config() {
+	local config="$1"
+	local section="$2"
+	local enabled_option="$3"
+	local pkg_name="$4"
+	local full_name="$5"
+
+	if [ -f "$PACKAGE_FILE" ] && grep -q -w "$pkg_name" "$PACKAGE_FILE"; then
+		return
+	fi
+
+	ENABLED="0"
+	config_load "$config"
+	config_foreach get_enabled "$section" "$enabled_option"
+
+	[ "$ENABLED" -eq 1 ] && echo "$pkg_name - $full_name" >> "$PACKAGE_FILE"
+}
+
+check_config "samba" "samba" "enabled" "vuci-app-samba-ui" "Network shares"
+check_config "wireless" "wifi-iface" "hs20" "vuci-app-hotspot2-ui" "Hotspot 2.0"
+
+exit 0

@@ -7,7 +7,8 @@ include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=port_eventsd
 
-PKG_SOURCE_VERSION:=1.8
+PKG_SOURCE_VERSION:=1.9.2
+PKG_LICENSE:=Teltonika-closed
 
 include $(INCLUDE_DIR)/package.mk
 

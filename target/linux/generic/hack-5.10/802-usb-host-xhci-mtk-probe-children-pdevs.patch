@@ -1,0 +1,28 @@
+usb: host: xhci-mtk: probe children pdevs
+
+Probe platform devices that could be defined as children of the xhci-mtk
+conrtoller.
+
+Index: linux-5.10.206/drivers/usb/host/xhci-mtk.c
+===================================================================
+--- linux-5.10.206.orig/drivers/usb/host/xhci-mtk.c
++++ linux-5.10.206/drivers/usb/host/xhci-mtk.c
+@@ -18,6 +18,7 @@
+ #include <linux/pm_runtime.h>
+ #include <linux/regmap.h>
+ #include <linux/regulator/consumer.h>
++#include <linux/of_platform.h>
+ 
+ #include "xhci.h"
+ #include "xhci-mtk.h"
+@@ -567,6 +568,10 @@ static int xhci_mtk_probe(struct platfor
+ 	if (ret)
+ 		goto dealloc_usb2_hcd;
+ 
++	ret = of_platform_populate(node, NULL, NULL, dev);
++	if (ret)
++		goto dealloc_usb2_hcd;
++
+ 	return 0;
+ 
+ dealloc_usb2_hcd:

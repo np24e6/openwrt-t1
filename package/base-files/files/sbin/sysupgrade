@@ -285,7 +285,8 @@ do_save_conffiles() {
 
 	for i in $opkg_packets; do
 		tlt_name=$(grep "tlt_name:" "$i" | awk -F ": " '{print $2}')
-		pkg_name=$(grep "Package:" "$i" | awk -F ": " '{print $2}')
+		pkg_name=$(grep "AppName:" "$i" | awk -F ": " '{print $2}')
+		[ -z "$pkg_name" ] && pkg_name=$(grep "Package:" "$i" | awk -F ": " '{print $2}')
 		echo "$pkg_name - $tlt_name" >> /etc/package_restore.txt
 	done
 
@@ -686,6 +687,8 @@ else
 		\"table\": 1,
 		\"write_db\": 1,
 	}"
+
+	touch /log/reboot
 
 	json_init
 	json_add_string prefix "$RAM_ROOT"

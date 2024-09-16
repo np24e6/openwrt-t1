@@ -168,7 +168,7 @@ ${FDT_NODE}
 	};
 
 	configurations {
-		default = \"${DEFAULT_CONFIG}\";
+		default = \"${CONFIG}\";
 ${CONFIG_NODE}
 	};
 };"

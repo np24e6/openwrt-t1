@@ -2,13 +2,14 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=dnp3
-PKG_VERSION:=2023-12-08
+PKG_VERSION:=2024-04-02
 PKG_RELEASE:=1
 
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
-PKG_SOURCE_VERSION:=7.6
+PKG_SOURCE_VERSION:=7.7
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_SOURCE_SUBDIR)
+PKG_LICENSE:=Teltonika-closed
 
 include $(INCLUDE_DIR)/package.mk
 
@@ -17,18 +18,20 @@ define Package/dnp3
 	CATEGORY:=Network
 	TITLE:=dnp3 stack
 	DEPENDS:=+libstdcpp +libuci +libubus +libopenssl +libsqlite3 +MOBILE_SUPPORT:libgsm \
-		+GPS_SUPPORT:libgps +libtlt_uci +MOBILE_SUPPORT:libmdcollect +libjson-c +opendnp3 \
-		+vuci-app-dnp3-ui +libubox +libblobmsg-json +libmnfinfo +data-sender-mod-dnp3
-	PKG_TLT_NAME:=DNP3
-	PKG_ROUTER:=$(TLT_PLATFORM_NAME)
+		+GPS_SUPPORT:libgps +libtlt_uci +libtlt_termios +MOBILE_SUPPORT:libmdcollect +libjson-c +opendnp3 \
+		+libubox +libblobmsg-json +libmnfinfo +data-sender-mod-dnp3 +IO_SUPPORT:iomand +MOBILE_SUPPORT:libboardjson
 endef
 
+ifeq ($(CONFIG_IO_SUPPORT),y)
+CMAKE_OPTIONS += -DIO_SUPPORT=TRUE
+endif
+
 ifeq ($(CONFIG_GPS_SUPPORT),y)
-CMAKE_OPTIONS=-DGPS_SUPPORT=TRUE
+CMAKE_OPTIONS += -DGPS_SUPPORT=TRUE
 endif
 
 ifeq ($(CONFIG_MOBILE_SUPPORT),y)
-CMAKE_OPTIONS=+ -DMOBILE_SUPPORT=TRUE
+CMAKE_OPTIONS += -DMOBILE_SUPPORT=TRUE
 endif
 
 define Package/dnp3/conffiles
@@ -37,7 +40,9 @@ define Package/dnp3/conffiles
 endef
 
 define Package/dnp3/description
-	Teltonika dnp3 application stack
+	DNP3 application stack which includes client and outstation.
+	DNP3 client is designed for reading data from DNP3 outstations and storing in local database.
+	DNP3 outstation is designed for DNP3 clients to read device data.
 endef
 
 

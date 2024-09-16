@@ -1,0 +1,144 @@
+Index: mwan3-2.10.12/files/usr/share/15-mwan3
+===================================================================
+--- mwan3-2.10.12.orig/files/usr/share/15-mwan3
++++ mwan3-2.10.12/files/usr/share/15-mwan3
+@@ -10,12 +10,13 @@ initscript=/etc/init.d/mwan3
+ 
+ 
+ SCRIPTNAME="mwan3-hotplug"
++IFNAME=$INTERFACE
+ [ "$ACTION" = "ifup" ] || [ "$ACTION" = "ifdown" ] || [ "$ACTION" = "connected" ] || [ "$ACTION" = "disconnected" ] || exit 1
+-[ -n "$INTERFACE" ] || exit 2
++[ -n "$IFNAME" ] || exit 2
+ [ "$FIRSTCONNECT" = "1" ] || [ "$MWAN3_SHUTDOWN" = "1" ] && exit 0
+ 
+ if { [ "$ACTION" = "ifup" ] || [ "$ACTION" = "connected" ] ; } && [ -z "$DEVICE" ]; then
+-	LOG notice "$ACTION called on $INTERFACE with no device set"
++	LOG notice "$ACTION called on $IFNAME with no device set"
+ 	exit 3
+ fi
+ 
+@@ -25,85 +26,91 @@ mwan3_init
+ 
+ /etc/init.d/mwan3 running || {
+ 	[ "$MWAN3_STARTUP" = "init" ] || procd_lock
+-	LOG notice "mwan3 hotplug $ACTION on $INTERFACE not called because globally disabled"
+-	mwan3_flush_conntrack "$INTERFACE" "$ACTION"
++	LOG notice "mwan3 hotplug $ACTION on $IFNAME not called because globally disabled"
++	mwan3_flush_conntrack "$IFNAME" "$ACTION"
+ 	exit 0
+ }
+ 
+ $IPT4 -S mwan3_hook &>/dev/null || {
+-	LOG warn "hotplug called on $INTERFACE before mwan3 has been set up"
++	LOG warn "hotplug called on $IFNAME before mwan3 has been set up"
+ 	exit 0
+ }
+ 
+ if [ "$MWAN3_STARTUP" != "init" ] && [ "$ACTION" = "ifup" ]; then
+-	mwan3_set_user_iface_rules $INTERFACE $DEVICE
++	mwan3_set_user_iface_rules $IFNAME $DEVICE
++fi
++
++config_get_bool enabled $IFNAME 'enabled' '0'
++#Check if maybe the interface in question is mobile and update mwan
++if [ "${enabled}" -eq 0 ] && [  ${IFNAME: -2} = "_4" -o  ${IFNAME: -2} = "_6" ]; then
++	IFNAME=${IFNAME::-2}
++	config_get_bool enabled $IFNAME 'enabled' '0'
+ fi
+ 
+-config_get_bool enabled $INTERFACE 'enabled' '0'
+ [ "${enabled}" -eq 1 ] || {
+-	LOG notice "mwan3 hotplug on $INTERFACE not called because interface disabled"
++	LOG notice "mwan3 hotplug on $IFNAME not called because interface disabled"
+ 	exit 0
+ }
+ 
+-config_get initial_state $INTERFACE initial_state "online"
++config_get initial_state $IFNAME initial_state "online"
+ if [ "$initial_state" = "offline" ]; then
+-	status=$(cat $MWAN3TRACK_STATUS_DIR/$INTERFACE/STATUS 2>/dev/null || echo unknown)
++	status=$(cat $MWAN3TRACK_STATUS_DIR/$IFNAME/STATUS 2>/dev/null || echo unknown)
+ 	[ "$status" = "online" ] || status=offline
+ else
+ 	status=online
+ fi
+ 
+-LOG notice "Execute $ACTION event on interface $INTERFACE (${DEVICE:-unknown})"
++LOG notice "Execute $ACTION event on interface $IFNAME (${DEVICE:-unknown})"
+ 
+ case "$ACTION" in
+ 	connected)
+-		wan_status=$(cat "/var/run/mwan3track/${INTERFACE}/STATE")
++		wan_status=$(cat "/var/run/mwan3track/${IFNAME}/STATE")
+ 		[ "$wan_status" = "connected" ] && return
+ 
+-		echo "connected" > /var/run/mwan3track/${INTERFACE}/STATE
+-		mwan3_set_iface_hotplug_state $INTERFACE "online"
++		echo "connected" > /var/run/mwan3track/${IFNAME}/STATE
++		mwan3_set_iface_hotplug_state $IFNAME "online"
+ 		mwan3_set_policies_iptables
+-		mwan3_set_event $INTERFACE
++		mwan3_set_event $IFNAME
+ 		;;
+ 	ifup)
+-		mwan3_get_true_iface true_ifname $INTERFACE
++		mwan3_get_true_iface true_ifname $IFNAME
+ 		network_get_device dev $true_ifname
+ 		[ -n "$dev" ] && DEVICE=$dev
+ 
+-		mwan3_create_iface_iptables $INTERFACE $DEVICE
+-		mwan3_create_iface_rules $INTERFACE $DEVICE
+-		mwan3_set_iface_hotplug_state $INTERFACE "$status"
++		mwan3_create_iface_iptables $IFNAME $DEVICE
++		mwan3_create_iface_rules $IFNAME $DEVICE
++		mwan3_set_iface_hotplug_state $IFNAME "$status"
+ 		if [ "$MWAN3_STARTUP" != "init" ]; then
+-			mwan3_create_iface_route $INTERFACE $DEVICE
++			mwan3_create_iface_route $IFNAME $DEVICE
+ 			mwan3_set_general_rules
+ 			[ "$status" = "online" ] && {
+ 				mwan3_set_policies_iptables
+-				mwan3_set_event $INTERFACE
++				mwan3_set_event $IFNAME
+ 			}
+ 		fi
+-		[ "$ACTION" = ifup ] && procd_running mwan3 "track_$INTERFACE" && procd_send_signal mwan3 "track_$INTERFACE" USR2
++		[ "$ACTION" = ifup ] && procd_running mwan3 "track_$IFNAME" && procd_send_signal mwan3 "track_$IFNAME" USR2
+ 		;;
+ 	disconnected)
+-		iface_disabled=$(uci_get network ${INTERFACE} disabled)
+-		[ "$iface_disabled" -eq 1 ] && echo "disabled" > /var/run/mwan3track/${INTERFACE}/STATUS
++		iface_disabled=$(uci_get network ${IFNAME} disabled)
++		[ "$iface_disabled" -eq 1 ] && echo "disabled" > /var/run/mwan3track/${IFNAME}/STATUS
+ 
+-		echo "disconnected" > /var/run/mwan3track/${INTERFACE}/STATE
+-		mwan3_set_iface_hotplug_state $INTERFACE "offline"
++		echo "disconnected" > /var/run/mwan3track/${IFNAME}/STATE
++		mwan3_set_iface_hotplug_state $IFNAME "offline"
+ 		mwan3_set_policies_iptables
+-		mwan3_set_fail_event $INTERFACE
++		mwan3_set_fail_event $IFNAME
+ 		;;
+ 	ifdown)
+-		mwan3_set_iface_hotplug_state $INTERFACE "offline"
+-		mwan3_delete_iface_ipset_entries $INTERFACE
+-		mwan3_delete_iface_rules $INTERFACE
+-		mwan3_delete_iface_route $INTERFACE
+-		mwan3_delete_iface_iptables $INTERFACE
+-		procd_running mwan3 "track_$INTERFACE" && procd_send_signal mwan3 "track_$INTERFACE" USR1
++		mwan3_set_iface_hotplug_state $IFNAME "offline"
++		mwan3_delete_iface_ipset_entries $IFNAME
++		mwan3_delete_iface_rules $IFNAME
++		mwan3_delete_iface_route $IFNAME
++		mwan3_delete_iface_iptables $IFNAME
++		procd_running mwan3 "track_$IFNAME" && procd_send_signal mwan3 "track_$IFNAME" USR1
+ 		mwan3_set_policies_iptables
+ 	;;
+ esac
+ 
+-mwan3_flush_conntrack "$INTERFACE" "$ACTION"
++mwan3_flush_conntrack "$IFNAME" "$ACTION"
+ 
+ flush_conntrack() {
+ 	local enabled

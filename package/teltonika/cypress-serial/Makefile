@@ -1,17 +1,15 @@
 #
-# Copyright (C) 2021 Teltonika
-#
-# This is free software, licensed under the GNU General Public License v2.
+# Copyright (C) 2024 Teltonika-Networks
 #
 
 include $(TOPDIR)/rules.mk
-include $(INCLUDE_DIR)/download.mk
 include $(INCLUDE_DIR)/kernel.mk
 
 PKG_NAME:=cypress-serial
 
-
 PKG_SOURCE_VERSION:=1.1.1
+
+PKG_LICENSE:=GPL-2.0
 
 GPL_INCLUDE_SRC:=1
 

@@ -289,6 +289,7 @@ proto_pptp_init_config() {
 	proto_config_add_string "server"
 	proto_config_add_string "interface"
 	proto_config_add_boolean "client_to_client"
+	proto_config_add_boolean "defaultroute"
 	available=1
 	no_device=1
 	lasterror=1
@@ -298,11 +299,37 @@ proto_pptp_setup() {
 	local config="$1"
 	local iface="$2"
 
-	local ip serv_addr server interface
-	json_get_vars interface server
+	local ip serv_addr server interface s mwan_enabled status num gw metric device proto defaultroute
+	local mwan_enable=0
+	local i=1
+	json_get_vars server defaultroute
 	[ -n "$server" ] && {
+		status="$(ubus call mwan3 status | jsonfilter -e '@.interfaces.*.status' 2>/dev/null)"
+		for s in $status; do
+			i=$((i+1))
+			[ "$s" = "online" ] && {
+				mwan_enabled=1
+				num="$i"
+			}
+		done
 		for ip in $(resolveip -t 5 "$server"); do
-			( proto_add_host_dependency "$config" "$ip" $interface )
+			if [ "$mwan_enabled" = 1 ]; then
+				interface="$(mwan3 interfaces | awk "NR==$num" | awk '{print $2}')"
+				network_get_protocol proto "$interface"
+				if [ "$proto" = "wwan" ]; then
+					network_get_device device "${interface}_4"
+				else
+					network_get_device device "${interface}"
+				fi
+			elif [ "$defaultroute" = 1 ]; then
+				device="$(ip route show default | head -n 1 | awk -F"dev " '{print $2}' | sed 's/\s.*$//')"
+			fi
+			if [ -n "$device" ]; then
+				gw="$(ip route show default dev $device | head -n 1 | awk -F"via " '{print $2}' | sed 's/\s.*$//')"
+				metric="$(ip route show default dev $device | awk -F"metric " '{print $2}' | sed 's/\s.*$//')"
+				ip route delete "$ip"
+				[ -n "$gw" ] && ip route add "$ip" via "$gw" dev "$device" metric "$metric" || ip route add "$ip" dev "$device" metric "$metric"
+			fi
 			serv_addr=1
 		done
 	}
@@ -323,6 +350,14 @@ proto_pptp_setup() {
 }
 
 proto_pptp_teardown() {
+	local ip server disabled
+	disabled="$(uci -q get network.$1.disabled)"
+	json_get_vars server
+	[ -n "$server" ] && [ "$disabled" = 1 ] && {
+		for ip in $(resolveip -t 5 "$server"); do
+			ip route delete "$ip"
+		done
+	}
 	ppp_generic_teardown "$@"
 }
 
@@ -338,21 +373,19 @@ proto_sstp_init_config() {
 	no_device=1
 }
 
-create_option_file() {
-	local sstp_option="$1"
-	local options="$2"
-	echo "$sstp_option" >> "$options"
-}
 proto_sstp_setup() {
 	local config="$1"
 	local ifname="sstp-$config"
-	local options="/etc/ppp/peers/$ifname"
-	local server ip serv_addr ca username password defaultroute
+	mkdir -p /var/etc/sstp
+	local options="/var/etc/sstp/options.${ifname}"
+	local server ip serv_addr ca username password defaultroute default_dev gw metric up opts
 
 	json_get_vars server ca username password defaultroute
+	json_get_values opts sstp_options
 	
-	config_load network
-	config_list_foreach "$config" sstp_options create_option_file "$options"
+	for opt in $opts; do
+		echo "$opt" >> "$options"
+	done
 	[ -e "$options" ] && options="file $options" || options=
 
 	server_and_port=$server
@@ -361,7 +394,14 @@ proto_sstp_setup() {
 	[ -n "$server" ] && {
 		for ip in $(resolveip -t 5 "$server"); do
 			#ADDS STATIC ROUTE TO SERVER VIA ONE GATEWAY
-			( proto_add_host_dependency "$config" "$ip" )
+			default_dev="$(ip --json route show default | jsonfilter -e '@.*.dev' | head -n1)"
+			[ -n "$default_dev" ] && {
+				gw="$(ip --json route show default | jsonfilter -e '@[@.dev="'"$default_dev"'"].gateway' | head -n1)"
+				metric="$(ip --json route show default | jsonfilter -e '@[@.dev="'"$default_dev"'"].metric' | head -n1)"
+				[ -z "$metric" ] && metric="0"
+				[ -n "$gw" ] && ip route add "$ip" via "$gw" dev "$default_dev" metric "$metric" || \
+								ip route add "$ip" dev "$default_dev" metric "$metric"
+			}
 			serv_addr=1
 		done
 	}
@@ -382,25 +422,34 @@ proto_sstp_setup() {
 	done
 	[ "$load" = "1" ] && sleep 1
 
-	proto_init_update "$ifname" 1
-	proto_send_update "$config"
+	up=$(ifstatus "${config}" | jsonfilter -e "@.up")
+	[ "$up" = "true" ] && {
+		proto_init_update "$ifname" 1
+		proto_send_update "$config"
+	}
 
-	proto_run_command "$config" sstpc ${ca:+--ca-cert $ca} --cert-warn --log-level 1 \
+	proto_run_command "$config" sstpc \
+	${ca:+--ca-cert $ca} \
+	--cert-warn \
+	--log-level 1 \
 	--tls-ext ${username:+--user $username} ${password:+--password $password} \
+	--ipparam "$config" \
 	$server_and_port \
-	nodetach ipparam "$config" \
-	ifname $ifname \
+	ipparam "$config" \
+	ifname "$ifname" \
+	nodetach \
 	usepeerdns \
 	${defaultroute:+replacedefaultroute defaultroute} \
 	ip-up-script /lib/netifd/ppp-up \
 	ip-down-script /lib/netifd/ppp-down \
+	lcp-echo-interval 20 \
+	lcp-echo-failure 5 \
 	$options
-
 }
 
 proto_sstp_teardown() {
 	local server
-	local options="/etc/ppp/peers/sstp-$1"
+	local options="/var/etc/sstp/options.sstp-${1}"
 	json_get_vars server
 	server="${server%%:*}" # split server and port
 

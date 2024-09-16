@@ -228,6 +228,9 @@ define Package/ppp/install
 	$(LN) /tmp/resolv.conf.ppp $(1)/etc/ppp/resolv.conf
 	$(INSTALL_DIR) $(1)/lib/netifd/proto
 	$(INSTALL_BIN) ./files/ppp.sh $(1)/lib/netifd/proto/
+	$(LN) /lib/netifd/proto/ppp.sh $(1)/lib/netifd/proto/pppoe.sh
+	$(LN) /lib/netifd/proto/ppp.sh $(1)/lib/netifd/proto/pppoa.sh
+	$(LN) /lib/netifd/proto/ppp.sh $(1)/lib/netifd/proto/pptp.sh
 	if [ -e "./files/lib/netifd/ppp-up-$(call device_shortname)" ]; then \
 		$(INSTALL_BIN) ./files/lib/netifd/ppp-up-$(call device_shortname) $(1)/lib/netifd/ppp-up; \
 	else \

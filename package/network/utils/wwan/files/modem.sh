@@ -176,8 +176,10 @@ add_sms_storage_config(){
 
 	config_load "simcard"
 	config_foreach check_modem_id simman "$device" "1" info_modem_id
-	
+
 	[ "$MODEM_FOUND" = "1" ] && return
+
+        [ -z "$device" ] && return
 
 	uci_add simcard simman
 	uci_set simcard "$CONFIG_SECTION" free "5"

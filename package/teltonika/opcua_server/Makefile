@@ -2,9 +2,10 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=opcua_server
-PKG_VERSION:=2024-02-01
+PKG_VERSION:=2024-04-02
 PKG_RELEASE:=1
-PKG_SOURCE_VERSION:=7.6.5
+PKG_LICENSE:=Teltonika-closed
+PKG_SOURCE_VERSION:=7.7
 
 include $(INCLUDE_DIR)/package.mk
 
@@ -12,14 +13,12 @@ define Package/opcua_server
 	SECTION:=net
 	CATEGORY:=Network
 	TITLE:=OPC UA server
-	DEPENDS:=+open62541 +libmnfinfo +libuci +libtlt_uci +libubus +libboardjson +vuci-app-opcua-server-ui \
+	DEPENDS:=+open62541 +libmnfinfo +libuci +libtlt_uci +libubus +libboardjson \
 		+GPS_SUPPORT:libgps +MOBILE_SUPPORT:libgsm +IO_SUPPORT:iomand
-	PKG_TLT_NAME:=OPC UA Server
-	PKG_ROUTER:=$(TLT_PLATFORM_NAME)
 endef
 
 define Package/opcua_master/description
-	OPC UA server by Teltonika
+	OPC UA server designed for OPC UA clients to read device data.
 endef
 
 define Package/opcua_master/conffiles

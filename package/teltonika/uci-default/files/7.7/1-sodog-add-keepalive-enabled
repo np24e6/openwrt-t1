@@ -1,0 +1,32 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+CONFIG="rs_overip"
+
+add_keepalive_enabled() {
+	local section="$1"
+	local keepalive_enabled
+	local protocol
+	local keepalive_time
+	local keepalive_interval
+	local keepalive_probes
+
+	config_get protocol "$section" "protocol" "-1"
+	config_get keepalive_enabled "$section" "keepalive_enabled" "-1"
+	if [ "$keepalive_enabled" = "-1" ] && [ "$protocol" = "0" ]; then
+		config_get keepalive_time "$section" "keepalive_time" "0"
+		config_get keepalive_interval "$section" "keepalive_interval" "0"
+		config_get keepalive_probes "$section" "keepalive_probes" "0"
+
+		if [ "$keepalive_time" != "0" ] || [ "$keepalive_interval" != "0" ] || [ "$keepalive_probes" != "0" ]; then
+			uci_set "$CONFIG" "$section" keepalive_enabled "1"
+		else
+			uci_set "$CONFIG" "$section" keepalive_enabled "0"
+		fi
+	fi
+}
+
+config_load "$CONFIG"
+config_foreach add_keepalive_enabled
+uci_commit "$CONFIG"

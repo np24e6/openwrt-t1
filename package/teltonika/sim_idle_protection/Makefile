@@ -3,7 +3,9 @@ include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=sim_idle_protection
 
-PKG_SOURCE_VERSION:=2.0
+PKG_SOURCE_VERSION:=3.0
+
+PKG_LICENSE:=Teltonika-closed
 
 include $(INCLUDE_DIR)/package.mk
 
@@ -11,23 +13,11 @@ define Package/$(PKG_NAME)
 	SECTION:=base
 	CATEGORY:=Base system
 	TITLE:=sim idle protection
-	DEPENDS:=+vuci-app-sim-idle-protection-ui
-	ifeq (m, $(CONFIG_PACKAGE_$(PKG_NAME)))
-		PKG_TLT_NAME:=SIM Idle Protection
-		PKG_ROUTER:=$(TLT_PLATFORM_NAME)
-	endif
-endef
-
-define Package/$(PKG_NAME)/teltonika_rutx
-	PKG_ROUTER:=RUTX09 RUTX11 RUTXR1 RUTX14 RUTX50
-endef
-
-define Package/$(PKG_NAME)/teltonika_rutm
-	PKG_ROUTER:=RUTM09 RUTM11 RUTM14 RUTM50 RUTM51
 endef
 
 define Package/$(PKG_NAME)/description
-	Keep your SIM card alive when is not in use
+	Package enabling periodic switching to a secondary SIM card for data
+	connection, preventing SIM card blockage due to inactivity.
 endef
 
 define Package/$(PKG_NAME)/conffiles

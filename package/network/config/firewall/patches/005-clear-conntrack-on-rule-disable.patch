@@ -1,7 +1,7 @@
-Index: firewall-2021-03-23-61db17ed/main.c
+Index: firewall-2022-02-17-4cd7d4f3/main.c
 ===================================================================
---- firewall-2021-03-23-61db17ed.orig/main.c
-+++ firewall-2021-03-23-61db17ed/main.c
+--- firewall-2022-02-17-4cd7d4f3.orig/main.c
++++ firewall-2022-02-17-4cd7d4f3/main.c
 @@ -31,11 +31,116 @@
  #include "ubus.h"
  #include "iptables.h"
@@ -236,7 +236,7 @@ Index: firewall-2021-03-23-61db17ed/main.c
  static void free_state(struct fw3_state *state)
  {
  	struct list_head *cur, *tmp;
-@@ -281,6 +494,41 @@ static int start(void)
+@@ -275,6 +488,41 @@ static int start(void)
  	return rv;
  }
  
@@ -278,7 +278,7 @@ Index: firewall-2021-03-23-61db17ed/main.c
  static int reload(void)
  {
  	int rv = 1;
-@@ -293,11 +541,16 @@ static int reload(void)
+@@ -287,11 +535,16 @@ static int reload(void)
  
  	fw3_hotplug_zones(run_state, false);
  
@@ -292,10 +292,10 @@ Index: firewall-2021-03-23-61db17ed/main.c
  
  		for (table = FW3_TABLE_FILTER; table <= FW3_TABLE_RAW; table++) {
 +			printf("Table %d \n", table);
- 			if (!fw3_has_table(family == FW3_FAMILY_V6, fw3_flag_names[table]))
+ 			if (!(handle = fw3_ipt_open(family, table)))
  				continue;
  
-@@ -494,10 +747,14 @@ int main(int argc, char **argv)
+@@ -485,10 +738,14 @@ int main(int argc, char **argv)
  			goto out;
  		}
  	}
@@ -311,7 +311,7 @@ Index: firewall-2021-03-23-61db17ed/main.c
  	if (optind >= argc) {
  		rv = usage();
  		goto out;
-@@ -555,6 +812,7 @@ int main(int argc, char **argv)
+@@ -546,6 +803,7 @@ int main(int argc, char **argv)
  	} else if (!strcmp(argv[optind], "reload")) {
  		if (fw3_lock()) {
  			build_state(true);
@@ -319,7 +319,7 @@ Index: firewall-2021-03-23-61db17ed/main.c
  			rv = reload();
  			fw3_unlock();
  		}
-@@ -574,11 +832,15 @@ int main(int argc, char **argv)
+@@ -565,11 +823,15 @@ int main(int argc, char **argv)
  	}
  
  out:
@@ -335,10 +335,10 @@ Index: firewall-2021-03-23-61db17ed/main.c
 +
  	return rv;
  }
-Index: firewall-2021-03-23-61db17ed/rules.h
+Index: firewall-2022-02-17-4cd7d4f3/rules.h
 ===================================================================
---- firewall-2021-03-23-61db17ed.orig/rules.h
-+++ firewall-2021-03-23-61db17ed/rules.h
+--- firewall-2022-02-17-4cd7d4f3.orig/rules.h
++++ firewall-2022-02-17-4cd7d4f3/rules.h
 @@ -30,6 +30,10 @@ extern const struct fw3_option fw3_rule_
  
  void fw3_load_rules(struct fw3_state *state, struct uci_package *p, struct blob_attr *a);

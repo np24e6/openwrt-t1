@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/ash
 . /lib/netifd/uqmi_shared_functions.sh
 [ -n "$INCLUDE_ONLY" ] || {
 	. /lib/functions.sh
@@ -50,7 +50,7 @@ proto_qmux_setup() {
 	local interface="$1"
 
 	local ipv4 ipv6 delay mtu qmimux qmux ifid deny_roaming ret leasetime mac
-	local multisim="0" active_sim="1"
+	local active_sim="1"
 
 	local dataformat connstat old_cb gobinet method
 	local device apn auth username password pdp modem pdptype sim dhcp dhcpv6
@@ -75,38 +75,20 @@ proto_qmux_setup() {
 	sleep "$delay"
 
 	[ -z "$sim" ] && sim=$(get_config_sim "$interface")
-	check_pdp_context "$pdp" "$modem" || {
-		proto_notify_error "$interface" "NO_DEVICE"
-		proto_block_restart "$interface"
-	}
 
-#~ Parameters part------------------------------------------------------
+#~ SIM Parameters part------------------------------------------------------
 
-	service_name="wds"
-	options="--timeout 6000"
+	echo "Quering active sim position"
+	json_set_namespace gobinet old_cb
+	json_load "$(ubus call $gsm_modem get_sim_slot)"
+	json_get_var active_sim index
+	json_set_namespace $old_cb
 
-	#Check sim positions count in simcard config
-	get_sim_count(){
-		local section=$1
-		local sim_modem sim_position
-		config_get sim_modem "$section" modem
-		config_get sim_position "$section" position
-		[ "$modem" = "$sim_modem" ] && [ "$sim_position" -gt 1 ] && multisim="1"
-	}
-	config_load simcard
-	config_foreach get_sim_count sim
-
-	#Check sim position in simd if modem is registered as multisim
-	[ "$multisim" = "1" ] && {
-		echo "Quering active sim position"
-		json_set_namespace gobinet old_cb
-		json_load "$(ubus call $gsm_modem get_sim_slot)"
-		json_get_var active_sim index
-		json_set_namespace $old_cb
-	}
-
-	#Restart if check failed
-	[ "$active_sim" -ge 1 ] && [ "$active_sim" -le 2 ] || return
+# 	Restart if check failed
+	if [ "$active_sim" -lt 1 ] || [ "$active_sim" -gt 2 ]; then
+		echo "Bad active sim: $active_sim."
+		return
+	fi
 
 	# check if current sim and interface sim match
 	[ "$active_sim" = "$sim" ] || {
@@ -128,6 +110,7 @@ proto_qmux_setup() {
 			config_get deny_roaming "$section" deny_roaming "0"
 		}
 	}
+	config_load simcard
 	config_foreach get_simcard_parameters "sim"
 
 	get_qmimux_by_id() {
@@ -152,11 +135,13 @@ proto_qmux_setup() {
 		let "ifid++"
 	}
 
-#~ ---------------------------------------------------------------------
+#~ Network part ---------------------------------------------------------------------
 
 	[ -n "$ctl_device" ] && device="$ctl_device"
 	[ -z "$timeout" ] && timeout="30"
 	[ -z "$metric" ] && metric="1"
+	service_name="wds"
+	options="--timeout 6000"
 
 	#~ Find interface name
 	devname="$(basename "$device")"
@@ -195,7 +180,7 @@ proto_qmux_setup() {
 	dataformat="$(uqmi -d "$device" $options --wda-get-data-format)"
 	qmi_error_handle "$dataformat" "$error_cnt" "$modem" || return 1
 
-	if [ "$dataformat" = '"raw-ip"' ]; then
+	if [[ "$dataformat" =~ '"raw-ip"' ]]; then
 
 		[ -f "/sys/class/net/$ifname/qmi/raw_ip" ] || {
 			echo "Device only supports raw-ip mode but is missing this \
@@ -219,28 +204,12 @@ required driver attribute: /sys/class/net/$ifname/qmi/raw_ip"
 
 	[ "$deny_roaming" -ne "0" ] && deny_roaming="yes" || deny_roaming="no"
 
-	apn="$(uci -q get network.$interface.apn)"
-	echo "Starting network $interface using APN: $apn"
-
-	auth="$(uci -q get network.$interface.auth)"
-	[ -n "$auth" ] && [ "$auth" != "none" ] && {
-		username="$(uci -q get network.$interface.username)"
-		password="$(uci -q get network.$interface.password)"
-	}
-
 	cid="$(uqmi -d "$device" $options --get-client-id wds)"
 	qmi_error_handle "$cid" "$error_cnt" "$modem" || return 1
 
 #~ Do not add TABS!
 call_uqmi_command "uqmi -d $device $options --set-client-id wds,$cid --release-client-id wds \
---modify-profile --profile-identifier 3gpp,${pdp} \
---profile-name profile${pdp} \
---roaming-disallowed-flag ${deny_roaming} \
-${username:+ --username $username} \
-${password:+ --password $password} \
-${auth:+ --auth-type $auth} \
-${apn:+ --apn $apn} \
-${pdptype:+ --pdp-type $pdptype}"
+--modify-profile 3gpp,${pdp} --profile-name ${pdp} --roaming-disallowed-flag ${deny_roaming}"
 
 	retry_before_reinit="$(cat /tmp/conn_retry_$interface)" 2>/dev/null
 	[ -z "$retry_before_reinit" ] && retry_before_reinit="0"
@@ -269,8 +238,7 @@ ${ifid} --ep-iface-number ${ep_iface} --set-client-id wds,${cid_4}"
 
 		#~ Start PS call
 		pdh_4=$(call_uqmi_command "uqmi -d $device $options --set-client-id wds,$cid_4 \
---start-network ${apn:+--apn $apn} --profile $pdp ${auth:+ --auth-type $auth --username $username \
---password $password}" "true")
+--start-network --profile $pdp --ip-family ipv4" "true")
 
 		echo "pdh4: $pdh_4"
 
@@ -304,6 +272,7 @@ ${ifid} --ep-iface-number ${ep_iface} --set-client-id wds,${cid_4}"
 		fi
 		echo "cid6: $cid_6"
 
+		#~ Bind context to port
 		call_uqmi_command "uqmi -d $device $options --wds-bind-mux-data-port --mux-id $ifid \
 --ep-iface-number $ep_iface --set-client-id wds,$cid_6"
 
@@ -314,9 +283,7 @@ ${ifid} --ep-iface-number ${ep_iface} --set-client-id wds,${cid_4}"
 
 		#~ Start PS call
 		pdh_6=$(call_uqmi_command "uqmi -d $device $options --set-client-id wds,$cid_6 \
---start-network ${apn:+--apn $apn} --profile $pdp ${auth:+ --auth-type $auth --username $username \
---password $password}" "true")
-
+--start-network --profile $pdp --ip-family ipv6" "true")
 
 		echo "pdh6: $pdh_6"
 
@@ -377,9 +344,8 @@ ${ifid} --ep-iface-number ${ep_iface} --set-client-id wds,${cid_4}"
 		#Passthrough
 		[ "$method" = "passthrough" ] && {
 			iptables -w -tnat -I postrouting_rule -o "$qmimux" -j SNAT --to "$bridge_ipaddr"
-			ip route add default dev "$qmimux"
+			ip route add default dev "$qmimux" metric "$metric"
 		}
-
 	}
 
 	[ "$method" != "bridge" ] && [ "$method" != "passthrough" ] && \
@@ -426,7 +392,8 @@ proto_qmux_teardown() {
 	#~ We need to put some time taking actions to background
 	local interface="$1"
 	local qmiif mif conn_proto
-	local device bridge_ipaddr method braddr_f
+	local device bridge_ipaddr method
+	local braddr_f="/var/run/${interface}_braddr"
 	json_get_vars device
 
 	[ -n "$ctl_device" ] && device="$ctl_device"
@@ -435,9 +402,10 @@ proto_qmux_teardown() {
 
 	conn_proto="qmux"
 
-	braddr_f="/var/run/${interface}_braddr"
-	method=$(grep -o 'method:[^ ]*' $braddr_f 2> /dev/null | cut -d':' -f2)
-	bridge_ipaddr=$(grep -o 'bridge_ipaddr:[^ ]*' $braddr_f 2> /dev/null | cut -d':' -f2)
+	[ -f "$braddr_f" ] && {
+		method=$(get_braddr_var method "$interface")
+		bridge_ipaddr=$(get_braddr_var bridge_ipaddr "$interface")
+	}
 
 	mif=$(cat "/var/run/${conn_proto}/${interface}.up" 2>/dev/null | head -1)
 	qmiif=$(cat "/var/run/${conn_proto}/${interface}.up" 2>/dev/null | tail -1)
@@ -458,20 +426,26 @@ proto_qmux_teardown() {
 		ip route del "$bridge_ipaddr"
 		ubus call network.interface down "{\"interface\":\"mobile_bridge\"}"
 		rm -f "/tmp/dnsmasq.d/bridge" 2>/dev/null
-		swconfig dev switch0 set soft_reset 5 &
+
+		if is_device_dsa ; then
+			restart_dsa_interfaces
+		else
+			swconfig dev switch0 set soft_reset 5 &
+		fi
 		rm -f "$braddr_f" 2> /dev/null
+
+	        #Clear passthrough and bridge params
+		iptables -t nat -F postrouting_rule
+
+		local zone="$(fw3 -q network "$interface" 2>/dev/null)"
+		iptables -F forwarding_${zone}_rule
+
+		ip neigh flush proxy
+		ip neigh flush dev br-lan
 	}
 
 	# Remove device after interfaces are down
 	remove_qmimux "$qmiif" "$mif"
-
-	#Clear passthrough and bridge params
-	iptables -t nat -F postrouting_rule
-
-	local zone="$(fw3 -q network "$interface" 2>/dev/null)"
-	iptables -F forwarding_${zone}_rule
-
-	ip neigh flush proxy
 
 	proto_init_update "*" 0
 	proto_send_update "$interface"

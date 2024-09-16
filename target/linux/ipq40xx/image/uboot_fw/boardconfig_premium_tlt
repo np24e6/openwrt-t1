@@ -34,7 +34,7 @@ nand_flash_conf=nand-flash.conf
 nor_flash_conf=nor-flash.conf
 emmc_flash_conf=emmc-flash.conf
 machid=0x8010000
-norplusnand_partition=nor-plus-nand-parition.xml
+norplusnand_partition=nor-plus-nand-partition.xml
 norplusnand_flash_conf=norplusnand-flash.conf
 norplusnand_partition_mbn=norplusnand-system-partition-ipq40xx.bin
 
@@ -74,6 +74,6 @@ nand_flash_conf=nand-flash.conf
 nor_flash_conf=nor-flash.conf
 emmc_flash_conf=emmc-flash.conf
 machid=0x8010100
-norplusnand_partition=nor-plus-nand-parition.xml
+norplusnand_partition=nor-plus-nand-partition.xml
 norplusnand_flash_conf=norplusnand-flash.conf
 norplusnand_partition_mbn=norplusnand-system-partition-ipq40xx.bin

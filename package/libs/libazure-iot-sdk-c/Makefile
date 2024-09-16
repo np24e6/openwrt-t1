@@ -13,6 +13,8 @@ PKG_SOURCE_VERSION:=3fd808bee3c88f8578dcc30c0a6d1d396c172070
 # Need this to not redownload source each time it is compiled
 PKG_MIRROR_HASH:=a39263d0de257d188cc26fa86510b1ac
 
+PKG_LICENSE:=MIT
+
 include $(INCLUDE_DIR)/package.mk
 include $(INCLUDE_DIR)/cmake.mk
 

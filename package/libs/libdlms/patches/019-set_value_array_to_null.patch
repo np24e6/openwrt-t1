@@ -1,0 +1,14 @@
+Index: libdlms-6d6e0f0c/development/src/dlms.c
+===================================================================
+--- libdlms-6d6e0f0c.orig/development/src/dlms.c
++++ libdlms-6d6e0f0c/development/src/dlms.c
+@@ -1050,6 +1050,9 @@ int getEnum(gxByteBuffer* buff, gxDataIn
+     {
+         return ret;
+     }
++
++    value->Arr = NULL;
++
+     if ((value->vt & DLMS_DATA_TYPE_BYREF) == 0)
+     {
+         value->vt = DLMS_DATA_TYPE_ENUM;

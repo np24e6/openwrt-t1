@@ -1,13 +1,14 @@
 #
-# Copyright (C) 2022 Teltonika
+# Copyright (C) 2024 Teltonika-Networks
 #
 
 include $(TOPDIR)/rules.mk
-include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=ledman
 
-PKG_SOURCE_VERSION:=2.14.4
+PKG_SOURCE_VERSION:=2.16.2
+
+PKG_LICENSE:=Teltonika-closed
 
 include $(INCLUDE_DIR)/package.mk
 
@@ -17,7 +18,7 @@ define Package/ledman-full
 	TITLE:=LED status manager
 	PROVIDES:=ledman
 	VARIANT:=full
-	DEPENDS:= +libubus +libubox +libgsm +libuci +libtlt_uci +libmnfinfo +libnl-tiny +libgpiod +gpiod-tools
+	DEPENDS:= +libubus +libubox +libgsm +liburc +libuci +libtlt_uci +libmnfinfo +libnl-tiny +libgpiod +gpiod-tools
 	DEPENDS+= +POE_SUPPORT:libpoeman
 endef
 

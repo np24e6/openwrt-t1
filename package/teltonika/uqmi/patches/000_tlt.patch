@@ -1,7 +1,7 @@
 diff --recursive --unified --new-file --no-dereference orig/.gitignore src/.gitignore
 --- orig/.gitignore	2023-11-09 07:11:45.000000000 +0000
-+++ src/.gitignore	1970-01-01 00:00:00.000000000 +0000
-@@ -1,10 +0,0 @@
++++ src/.gitignore	2024-04-25 07:20:16.000000000 +0000
+@@ -1,10 +1 @@
 -uqmi
 -.*
 -Makefile
@@ -12,9 +12,11 @@ diff --recursive --unified --new-file --no-dereference orig/.gitignore src/.giti
 -qmi-message-*.h
 -qmi-message-*.c
 -qmi-errors.c
++.vscode/
+\ No newline at end of file
 diff --recursive --unified --new-file --no-dereference orig/.gitlab-ci.yml src/.gitlab-ci.yml
 --- orig/.gitlab-ci.yml	1970-01-01 00:00:00.000000000 +0000
-+++ src/.gitlab-ci.yml	2024-01-24 06:27:29.000000000 +0000
++++ src/.gitlab-ci.yml	2024-04-25 07:20:16.000000000 +0000
 @@ -0,0 +1,20 @@
 +include:
 +  - project: teltonika/ci-templates
@@ -39,7 +41,7 @@ diff --recursive --unified --new-file --no-dereference orig/.gitlab-ci.yml src/.
 \ No newline at end of file
 diff --recursive --unified --new-file --no-dereference orig/CMakeLists.txt src/CMakeLists.txt
 --- orig/CMakeLists.txt	2023-11-09 07:11:45.000000000 +0000
-+++ src/CMakeLists.txt	2024-01-24 06:27:29.000000000 +0000
++++ src/CMakeLists.txt	2024-04-25 07:20:16.000000000 +0000
 @@ -4,11 +4,11 @@
  
  OPTION(BUILD_STATIC OFF)
@@ -94,9 +96,20 @@ diff --recursive --unified --new-file --no-dereference orig/CMakeLists.txt src/C
 +	LIBRARY DESTINATION lib
  	RUNTIME DESTINATION sbin
  )
+diff --recursive --unified --new-file --no-dereference orig/commands-dms.c src/commands-dms.c
+--- orig/commands-dms.c	2023-11-09 07:17:16.000000000 +0000
++++ src/commands-dms.c	2024-04-25 07:20:16.000000000 +0000
+@@ -49,6 +49,7 @@
+ 		[QMI_DMS_RADIO_INTERFACE_GSM] = "gsm",
+ 		[QMI_DMS_RADIO_INTERFACE_UMTS] = "umts",
+ 		[QMI_DMS_RADIO_INTERFACE_LTE] = "lte",
++		[QMI_DMS_RADIO_INTERFACE_5GNR] = "5gnr",
+ 	};
+ 	const char *service_cap[] = {
+ 		[QMI_DMS_DATA_SERVICE_CAPABILITY_NONE] = "none",
 diff --recursive --unified --new-file --no-dereference orig/commands-nas.c src/commands-nas.c
 --- orig/commands-nas.c	2023-11-09 07:17:16.000000000 +0000
-+++ src/commands-nas.c	2024-01-24 06:27:29.000000000 +0000
++++ src/commands-nas.c	2024-04-25 07:20:16.000000000 +0000
 @@ -924,6 +924,18 @@
  		[QMI_NAS_REGISTRATION_STATE_REGISTRATION_DENIED] = "registering_denied",
  		[QMI_NAS_REGISTRATION_STATE_UNKNOWN] = "unknown",
@@ -145,9 +158,147 @@ diff --recursive --unified --new-file --no-dereference orig/commands-nas.c src/c
  	blobmsg_close_table(&status, c);
  }
  
+diff --recursive --unified --new-file --no-dereference orig/commands-uim.c src/commands-uim.c
+--- orig/commands-uim.c	2023-11-09 07:17:16.000000000 +0000
++++ src/commands-uim.c	2024-04-25 07:20:16.000000000 +0000
+@@ -19,6 +19,8 @@
+  * Boston, MA 02110-1301 USA.
+  */
+ 
++static int uim_slot = 0;
++
+ #define cmd_uim_verify_pin1_cb no_cb
+ static enum qmi_cmd_result
+ cmd_uim_verify_pin1_prepare(struct qmi_dev *qmi, struct qmi_request *req, struct qmi_msg *msg, char *arg)
+@@ -59,6 +61,16 @@
+ {
+ 	struct qmi_uim_get_card_status_response res;
+ 	void * const card_table = blobmsg_open_table(&status, NULL);
++	static const char *card_application_states[] = {
++		[QMI_UIM_CARD_APPLICATION_STATE_UNKNOWN] = "unknown",
++		[QMI_UIM_CARD_APPLICATION_STATE_DETECTED] = "detected",
++		[QMI_UIM_CARD_APPLICATION_STATE_PIN1_OR_UPIN_PIN_REQUIRED] = "pin-required",
++		[QMI_UIM_CARD_APPLICATION_STATE_PUK1_OR_UPIN_PUK_REQUIRED] = "puk-required",
++		[QMI_UIM_CARD_APPLICATION_STATE_CHECK_PERSONALIZATION_STATE] = "check-personalization-state",
++		[QMI_UIM_CARD_APPLICATION_STATE_PIN1_BLOCKED] = "pin1-blocked",
++		[QMI_UIM_CARD_APPLICATION_STATE_ILLEGAL] = "illegal",
++		[QMI_UIM_CARD_APPLICATION_STATE_READY] = "ready",
++	};
+ 
+ 	qmi_parse_uim_get_card_status_response(msg, &res);
+ 
+@@ -66,6 +78,7 @@
+ 		if (res.data.card_status.cards[i].card_state != QMI_UIM_CARD_STATE_PRESENT)
+ 			continue;
+ 
++		uint8_t card_application_state = QMI_UIM_CARD_APPLICATION_STATE_UNKNOWN;
+ 		uint8_t pin1_state = res.data.card_status.cards[i].upin_state;
+ 		uint8_t pin1_retries = res.data.card_status.cards[i].upin_retries;
+ 		uint8_t puk1_retries = res.data.card_status.cards[i].upuk_retries;
+@@ -78,6 +91,8 @@
+ 			if (res.data.card_status.cards[i].applications[j].type == QMI_UIM_CARD_APPLICATION_TYPE_UNKNOWN)
+ 				continue;
+ 
++			card_application_state = pin1_state = res.data.card_status.cards[i].applications[j].state;
++
+ 			if (!res.data.card_status.cards[i].applications[j].upin_replaces_pin1) {
+ 				pin1_state = res.data.card_status.cards[i].applications[j].pin1_state;
+ 				pin1_retries = res.data.card_status.cards[i].applications[j].pin1_retries;
+@@ -92,6 +107,11 @@
+ 			break; /* handle first application only for now */
+ 		}
+ 
++		if (card_application_state > QMI_UIM_CARD_APPLICATION_STATE_READY)
++			card_application_state = QMI_UIM_CARD_APPLICATION_STATE_UNKNOWN;
++
++		blobmsg_add_u32(&status, "card_slot", i + 1); /* Slot is idx + 1 */
++		blobmsg_add_string(&status, "card_application_state", card_application_states[card_application_state]);
+ 		blobmsg_add_string(&status, "pin1_status", get_pin_status(pin1_state));
+ 		blobmsg_add_u32(&status, "pin1_verify_tries", pin1_retries);
+ 		blobmsg_add_u32(&status, "pin1_unlock_tries", puk1_retries);
+@@ -113,3 +133,53 @@
+ 	qmi_set_uim_get_card_status_request(msg);
+ 	return QMI_CMD_REQUEST;
+ }
++
++#define cmd_uim_slot_cb no_cb
++static enum qmi_cmd_result
++cmd_uim_slot_prepare(struct qmi_dev *qmi, struct qmi_request *req, struct qmi_msg *msg, char *arg)
++{
++	char *err;
++	int value = strtoul(arg, &err, 10);
++	if ((err && *err) || value < 1 || value > 2) {
++		uqmi_add_error("Invalid UIM-Slot value. Allowed: [1,2]");
++		return QMI_CMD_EXIT;
++	}
++
++	uim_slot = value;
++
++	return QMI_CMD_DONE;
++}
++
++#define cmd_uim_power_off_cb no_cb
++static enum qmi_cmd_result
++cmd_uim_power_off_prepare(struct qmi_dev *qmi, struct qmi_request *req, struct qmi_msg *msg, char *arg)
++{
++	struct qmi_uim_power_off_sim_request data = {
++		QMI_INIT(slot, uim_slot)
++	};
++
++	if (!uim_slot) {
++		uqmi_add_error("UIM-Slot not set. Use --uim-slot <slot> to set it.");
++		return QMI_CMD_EXIT;
++	}
++
++	qmi_set_uim_power_off_sim_request(msg, &data);
++	return QMI_CMD_REQUEST;
++}
++
++#define cmd_uim_power_on_cb no_cb
++static enum qmi_cmd_result
++cmd_uim_power_on_prepare(struct qmi_dev *qmi, struct qmi_request *req, struct qmi_msg *msg, char *arg)
++{
++	struct qmi_uim_power_on_sim_request data = {
++		QMI_INIT(slot, uim_slot)
++	};
++
++	if (!uim_slot) {
++		uqmi_add_error("UIM-Slot not set. Use --uim-slot <slot> to set it.");
++		return QMI_CMD_EXIT;
++	}
++
++	qmi_set_uim_power_on_sim_request(msg, &data);
++	return QMI_CMD_REQUEST;
++}
+diff --recursive --unified --new-file --no-dereference orig/commands-uim.h src/commands-uim.h
+--- orig/commands-uim.h	2023-11-09 07:17:16.000000000 +0000
++++ src/commands-uim.h	2024-04-25 07:20:16.000000000 +0000
+@@ -20,13 +20,20 @@
+  */
+ 
+ #define __uqmi_uim_commands												\
++	__uqmi_command(uim_slot, uim-slot, required, CMD_TYPE_OPTION), \
+ 	__uqmi_command(uim_verify_pin1, uim-verify-pin1, required, QMI_SERVICE_UIM), \
+ 	__uqmi_command(uim_verify_pin2, uim-verify-pin2, required, QMI_SERVICE_UIM), \
+-	__uqmi_command(uim_get_sim_state, uim-get-sim-state, no, QMI_SERVICE_UIM) \
++	__uqmi_command(uim_get_sim_state, uim-get-sim-state, no, QMI_SERVICE_UIM), \
++	__uqmi_command(uim_power_off, uim-power-off, no, QMI_SERVICE_UIM), \
++	__uqmi_command(uim_power_on, uim-power-on, no, QMI_SERVICE_UIM) \
+ 
+ 
+ #define uim_helptext \
+ 		"  --uim-verify-pin1 <pin>:          Verify PIN1 (new devices)\n" \
+ 		"  --uim-verify-pin2 <pin>:          Verify PIN2 (new devices)\n" \
+-		"  --uim-get-sim-state:                  Get current SIM state\n" \
++		"  --uim-get-sim-state:              Get current SIM state\n" \
++		"  --uim-power-off:                  Power off SIM card\n" \
++		"    --uim-slot:                     SIM slot [1-2]\n" \
++		"  --uim-power-on:                   Power on SIM card\n" \
++		"    --uim-slot:                     SIM slot [1-2]\n" \
+ 
 diff --recursive --unified --new-file --no-dereference orig/commands-wda.c src/commands-wda.c
 --- orig/commands-wda.c	2023-11-09 07:17:16.000000000 +0000
-+++ src/commands-wda.c	2024-01-24 06:27:29.000000000 +0000
++++ src/commands-wda.c	2024-04-25 07:20:16.000000000 +0000
 @@ -31,30 +31,231 @@
  	{ "raw-ip", QMI_WDA_LINK_LAYER_PROTOCOL_RAW_IP },
  };
@@ -278,7 +429,7 @@ diff --recursive --unified --new-file --no-dereference orig/commands-wda.c src/c
 +#define cmd_wda_downlink_data_aggregation_max_datagrams_cb no_cb
 +
 +static enum qmi_cmd_result cmd_wda_downlink_data_aggregation_max_datagrams_prepare(
-+	struct qmi_dev * qmi, struct qmi_request * req, struct qmi_msg * msg,
++	struct qmi_dev *qmi, struct qmi_request *req, struct qmi_msg *msg,
 +	char *arg)
 +{
 +	uint32_t max_datagrams = strtoul(arg, NULL, 10);
@@ -290,7 +441,7 @@ diff --recursive --unified --new-file --no-dereference orig/commands-wda.c src/c
 +#define cmd_wda_uplink_data_aggregation_max_datagrams_cb no_cb
 +
 +static enum qmi_cmd_result cmd_wda_uplink_data_aggregation_max_datagrams_prepare(
-+	struct qmi_dev * qmi, struct qmi_request * req, struct qmi_msg * msg,
++	struct qmi_dev *qmi, struct qmi_request *req, struct qmi_msg *msg,
 +	char *arg)
  {
 +	uint32_t max_datagrams = strtoul(arg, NULL, 10);
@@ -408,7 +559,7 @@ diff --recursive --unified --new-file --no-dereference orig/commands-wda.c src/c
  static enum qmi_cmd_result
 diff --recursive --unified --new-file --no-dereference orig/commands-wda.h src/commands-wda.h
 --- orig/commands-wda.h	2023-11-09 07:11:45.000000000 +0000
-+++ src/commands-wda.h	2024-01-24 06:27:29.000000000 +0000
++++ src/commands-wda.h	2024-04-25 07:20:16.000000000 +0000
 @@ -20,11 +20,32 @@
   */
  
@@ -447,158 +598,921 @@ diff --recursive --unified --new-file --no-dereference orig/commands-wda.h src/c
  
 diff --recursive --unified --new-file --no-dereference orig/commands-wds.c src/commands-wds.c
 --- orig/commands-wds.c	2023-11-09 07:17:16.000000000 +0000
-+++ src/commands-wds.c	2024-01-24 06:27:29.000000000 +0000
-@@ -24,6 +24,30 @@
++++ src/commands-wds.c	2024-04-25 07:20:16.000000000 +0000
+@@ -20,44 +20,120 @@
+  */
+ 
+ #include <stdlib.h>
++#include <stdint.h>
+ #include <arpa/inet.h>
  
  #include "qmi-message.h"
  
-+#define LOG(...) do { \
-+	fprintf(stdout, ##__VA_ARGS__); fflush(stdout); \
-+} while (0);
++#define LOG(...)                                                                                             \
++	do {                                                                                                 \
++		fprintf(stdout, ##__VA_ARGS__);                                                              \
++		fflush(stdout);                                                                              \
++	} while (0);
 +
-+#define DD LOG("DD[***\%s:\%d]\\n", __func__, __LINE__)
++#define DD LOG("DD[###\%s:\%d***]\\n", __func__, __LINE__)
 +
-+static struct {
-+	uint32_t mux_id;
-+	uint32_t iface_number;
-+	//QmiDataEndpointType endpoint_type;
-+} wds_endpoint_info;
++#define qmi_set_endpoint_info_sequence(_data, _type, _index)                                                 \
++	do {                                                                                                 \
++		(_data)->data.endpoint_info.endpoint_type    = (_type);                                      \
++		(_data)->data.endpoint_info.interface_number = (_index);                                     \
++	} while (0);
 +
-+static struct {
-+	QmiWdsProfileType type;
-+	QmiWdsPdpType pdp_type;
-+	QmiWdsAuthentication authentication;
-+	uint32_t profile_index;
-+	char *profile_name;
-+	bool no_roam;
-+	char *username;
-+	char *password;
-+	char *apn;
-+} wds_modify_profile_info;
++#define qmi_set_profile_identifier_sequence(_data, _type, _index)                                            \
++	do {                                                                                                 \
++		(_data)->data.profile_identifier.profile_type  = (_type);                                    \
++		(_data)->data.profile_identifier.profile_index = (_index);                                   \
++	} while (0);
 +
++static const struct {
++	const char *auth_name;
++	QmiWdsAuthentication auth;
++} auth_modes[] = {
++	{ "none", QMI_WDS_AUTHENTICATION_NONE },
++	{ "pap", QMI_WDS_AUTHENTICATION_PAP },
++	{ "chap", QMI_WDS_AUTHENTICATION_CHAP },
++	{ "both", QMI_WDS_AUTHENTICATION_PAP | QMI_WDS_AUTHENTICATION_CHAP },
++};
++
++static const struct {
++	const char *ipfam_name;
++	const QmiWdsIpFamily mode;
++} ipfam_modes[] = {
++	{ "ipv4", QMI_WDS_IP_FAMILY_IPV4 },
++	{ "ipv6", QMI_WDS_IP_FAMILY_IPV6 },
++	{ "unspecified", QMI_WDS_IP_FAMILY_UNSPECIFIED },
++};
++
++static const struct {
++	const char *pdp_name;
++	const QmiWdsPdpType type;
++} pdp_types[] = {
++	{ "ipv4", QMI_WDS_PDP_TYPE_IPV4 },
++	{ "ppp", QMI_WDS_PDP_TYPE_PPP },
++	{ "ipv6", QMI_WDS_PDP_TYPE_IPV6 },
++	{ "ipv4v6", QMI_WDS_PDP_TYPE_IPV4_OR_IPV6 },
++};
++
++static const struct {
++	const char *profile_name;
++	const QmiWdsProfileType profile;
++} profile_types[] = {
++	{ "3gpp", QMI_WDS_PROFILE_TYPE_3GPP },
++	{ "3gpp2", QMI_WDS_PROFILE_TYPE_3GPP2 },
++};
++
++//initializing default global structs
  static struct qmi_wds_start_network_request wds_sn_req = {
- 	QMI_INIT(authentication_preference,
- 	         QMI_WDS_AUTHENTICATION_PAP | QMI_WDS_AUTHENTICATION_CHAP),
-@@ -35,6 +59,7 @@
- cmd_wds_set_apn_prepare(struct qmi_dev *qmi, struct qmi_request *req, struct qmi_msg *msg, char *arg)
+-	QMI_INIT(authentication_preference,
+-	         QMI_WDS_AUTHENTICATION_PAP | QMI_WDS_AUTHENTICATION_CHAP),
++	QMI_INIT(authentication_preference, QMI_WDS_AUTHENTICATION_PAP | QMI_WDS_AUTHENTICATION_CHAP),
++	QMI_INIT(ip_family_preference, QMI_WDS_IP_FAMILY_IPV4),
++	QMI_INIT(profile_index_3gpp, 1),
+ };
++
+ static struct qmi_wds_stop_network_request wds_stn_req;
+ 
+-#define cmd_wds_set_apn_cb no_cb
+-static enum qmi_cmd_result
+-cmd_wds_set_apn_prepare(struct qmi_dev *qmi, struct qmi_request *req, struct qmi_msg *msg, char *arg)
++static struct qmi_wds_modify_profile_request wds_mp_req = {
++	QMI_INIT_SEQUENCE(profile_identifier, .profile_type = QMI_WDS_PROFILE_TYPE_3GPP,
++			  .profile_index = 1, ),
++	QMI_INIT(apn_disabled_flag, false),
++};
++
++static struct qmi_wds_create_profile_request wds_cp_req = {
++	QMI_INIT(profile_type, QMI_WDS_PROFILE_TYPE_3GPP),
++	QMI_INIT(apn_disabled_flag, false),
++};
++
++static struct qmi_wds_bind_mux_data_port_request wds_bind_mux_port_req = {
++	QMI_INIT_SEQUENCE(endpoint_info, .endpoint_type = QMI_DATA_ENDPOINT_TYPE_HSUSB,
++			  .interface_number = 1, ),
++	QMI_INIT(client_type, QMI_WDS_CLIENT_TYPE_TETHERED),
++};
++
++/**************************************************************
++	commands preparing for uqmi call global variables
++**************************************************************/
++
++//===================== prepare APN to global structs =================
++static enum qmi_cmd_result cmd_wds_set_apn_prepare(struct qmi_dev *qmi, struct qmi_request *req,
++						   struct qmi_msg *msg, char *arg)
  {
  	qmi_set_ptr(&wds_sn_req, apn, arg);
-+	wds_modify_profile_info.apn = arg;
++	qmi_set_ptr(&wds_mp_req, apn_name, arg);
++	qmi_set_ptr(&wds_cp_req, apn_name, arg);
  	return QMI_CMD_DONE;
  }
  
-@@ -57,6 +82,7 @@
- 		if (strcasecmp(modes[i].name, arg) != 0)
+-#define cmd_wds_set_auth_cb no_cb
+-static enum qmi_cmd_result
+-cmd_wds_set_auth_prepare(struct qmi_dev *qmi, struct qmi_request *req, struct qmi_msg *msg, char *arg)
+-{
+-	static const struct {
+-		const char *name;
+-		QmiWdsAuthentication auth;
+-	} modes[] = {
+-		{ "pap", QMI_WDS_AUTHENTICATION_PAP },
+-		{ "chap", QMI_WDS_AUTHENTICATION_CHAP },
+-		{ "both", QMI_WDS_AUTHENTICATION_PAP | QMI_WDS_AUTHENTICATION_CHAP },
+-		{ "none", QMI_WDS_AUTHENTICATION_NONE },
+-	};
+-	int i;
+-
+-	for (i = 0; i < ARRAY_SIZE(modes); i++) {
+-		if (strcasecmp(modes[i].name, arg) != 0)
++//===================== prepare AUTHORIZATION mode to global structs =================
++static enum qmi_cmd_result cmd_wds_set_auth_prepare(struct qmi_dev *qmi, struct qmi_request *req,
++						    struct qmi_msg *msg, char *arg)
++{
++	for (int i = 0; i < ARRAY_SIZE(auth_modes); i++) {
++		if (strcasecmp(auth_modes[i].auth_name, arg) != 0) {
  			continue;
++		}
  
-+		wds_modify_profile_info.authentication = modes[i].auth;
- 		qmi_set(&wds_sn_req, authentication_preference, modes[i].auth);
+-		qmi_set(&wds_sn_req, authentication_preference, modes[i].auth);
++		qmi_set(&wds_sn_req, authentication_preference, auth_modes[i].auth);
++		qmi_set(&wds_mp_req, authentication, auth_modes[i].auth);
++		qmi_set(&wds_cp_req, authentication, auth_modes[i].auth);
  		return QMI_CMD_DONE;
  	}
-@@ -70,6 +96,7 @@
- cmd_wds_set_username_prepare(struct qmi_dev *qmi, struct qmi_request *req, struct qmi_msg *msg, char *arg)
+ 
+@@ -65,50 +141,45 @@
+ 	return QMI_CMD_EXIT;
+ }
+ 
+-#define cmd_wds_set_username_cb no_cb
+-static enum qmi_cmd_result
+-cmd_wds_set_username_prepare(struct qmi_dev *qmi, struct qmi_request *req, struct qmi_msg *msg, char *arg)
++//===================== prepare AUTHORIZATION USERNAME to global structs =================
++static enum qmi_cmd_result cmd_wds_set_username_prepare(struct qmi_dev *qmi, struct qmi_request *req,
++							struct qmi_msg *msg, char *arg)
  {
  	qmi_set_ptr(&wds_sn_req, username, arg);
-+	wds_modify_profile_info.username = arg;
++	qmi_set_ptr(&wds_mp_req, username, arg);
++	qmi_set_ptr(&wds_cp_req, username, arg);
  	return QMI_CMD_DONE;
  }
  
-@@ -78,6 +105,7 @@
- cmd_wds_set_password_prepare(struct qmi_dev *qmi, struct qmi_request *req, struct qmi_msg *msg, char *arg)
+-#define cmd_wds_set_password_cb no_cb
+-static enum qmi_cmd_result
+-cmd_wds_set_password_prepare(struct qmi_dev *qmi, struct qmi_request *req, struct qmi_msg *msg, char *arg)
++//===================== prepare AUTHORIZATION PASSWORD to global structs =================
++static enum qmi_cmd_result cmd_wds_set_password_prepare(struct qmi_dev *qmi, struct qmi_request *req,
++							struct qmi_msg *msg, char *arg)
  {
  	qmi_set_ptr(&wds_sn_req, password, arg);
-+	wds_modify_profile_info.password = arg;
++	qmi_set_ptr(&wds_mp_req, password, arg);
++	qmi_set_ptr(&wds_cp_req, password, arg);
  	return QMI_CMD_DONE;
  }
  
-@@ -126,14 +154,20 @@
+-#define cmd_wds_set_autoconnect_cb no_cb
+-static enum qmi_cmd_result
+-cmd_wds_set_autoconnect_prepare(struct qmi_dev *qmi, struct qmi_request *req, struct qmi_msg *msg, char *arg)
++//===================== prepare AUTOCONNECT to global structs =================
++static enum qmi_cmd_result cmd_wds_set_autoconnect_prepare(struct qmi_dev *qmi, struct qmi_request *req,
++							   struct qmi_msg *msg, char *arg)
+ {
+ 	qmi_set(&wds_sn_req, enable_autoconnect, true);
+ 	qmi_set(&wds_stn_req, disable_autoconnect, true);
+ 	return QMI_CMD_DONE;
+ }
+ 
+-#define cmd_wds_set_ip_family_pref_cb no_cb
+-static enum qmi_cmd_result
+-cmd_wds_set_ip_family_pref_prepare(struct qmi_dev *qmi, struct qmi_request *req, struct qmi_msg *msg, char *arg)
+-{
+-	static const struct {
+-		const char *name;
+-		const QmiWdsIpFamily mode;
+-	} modes[] = {
+-		{ "ipv4", QMI_WDS_IP_FAMILY_IPV4 },
+-		{ "ipv6", QMI_WDS_IP_FAMILY_IPV6 },
+-		{ "unspecified", QMI_WDS_IP_FAMILY_UNSPECIFIED },
+-	};
+-	int i;
+-
+-	for (i = 0; i < ARRAY_SIZE(modes); i++) {
+-		if (strcasecmp(modes[i].name, arg) != 0)
++//===================== prepare IP FAMILY to global structs =================
++static enum qmi_cmd_result cmd_wds_set_ip_family_pref_prepare(struct qmi_dev *qmi, struct qmi_request *req,
++							      struct qmi_msg *msg, char *arg)
++{
++	for (int i = 0; i < ARRAY_SIZE(ipfam_modes); i++) {
++		if (strcasecmp(ipfam_modes[i].ipfam_name, arg) != 0) {
+ 			continue;
++		}
+ 
+-		qmi_set(&wds_sn_req, ip_family_preference, modes[i].mode);
++		qmi_set(&wds_sn_req, ip_family_preference, ipfam_modes[i].mode);
+ 		return QMI_CMD_DONE;
+ 	}
+ 
+@@ -116,36 +187,125 @@
+ 	return QMI_CMD_EXIT;
+ }
+ 
+-#define cmd_wds_set_profile_cb no_cb
+-static enum qmi_cmd_result
+-cmd_wds_set_profile_prepare(struct qmi_dev *qmi, struct qmi_request *req, struct qmi_msg *msg, char *arg)
++//===================== prepare PDP-TYPE to global structs =================
++static enum qmi_cmd_result cmd_wds_set_pdp_type_prepare(struct qmi_dev *qmi, struct qmi_request *req,
++							struct qmi_msg *msg, char *arg)
+ {
+-	uint32_t idx = strtoul(arg, NULL, 10);
++	for (int i = 0; i < ARRAY_SIZE(pdp_types); i++) {
++		if (strcasecmp(pdp_types[i].pdp_name, arg) != 0) {
++			continue;
++		}
+ 
+-	qmi_set(&wds_sn_req, profile_index_3gpp, idx);
++		qmi_set(&wds_mp_req, pdp_type, pdp_types[i].type);
++		qmi_set(&wds_cp_req, pdp_type, pdp_types[i].type);
++		return QMI_CMD_DONE;
++	}
++
++	uqmi_add_error("Invalid value (valid: ppp, ipv4, ipv6, ipv4v6)");
++	return QMI_CMD_EXIT;
++}
++
++//===================== prepare prifile-number to global structs =================
++static enum qmi_cmd_result cmd_wds_set_profile_prepare(struct qmi_dev *qmi, struct qmi_request *req,
++						       struct qmi_msg *msg, char *arg)
++{
++	char *endptr = NULL;
++
++	unsigned long idx = strtoul(arg, &endptr, 10);
++	if (*endptr != '\0') {
++		uqmi_add_error("Error: Invalid input");
++		return QMI_CMD_EXIT;
++	} else if (idx > UINT8_MAX) {
++		uqmi_add_error("Error: Input value out of range");
++		return QMI_CMD_EXIT;
++	}
++
++	qmi_set(&wds_sn_req, profile_index_3gpp, (uint8_t)idx);
  	return QMI_CMD_DONE;
  }
  
 -static void
-+void
- cmd_wds_start_network_cb(struct qmi_dev *qmi, struct qmi_request *req, struct qmi_msg *msg)
- {
- 	struct qmi_wds_start_network_response res;
--
- 	qmi_parse_wds_start_network_response(msg, &res);
--	if (res.set.packet_data_handle)
+-cmd_wds_start_network_cb(struct qmi_dev *qmi, struct qmi_request *req, struct qmi_msg *msg)
+-{
+-	struct qmi_wds_start_network_response res;
++//===================== prepare mux-id-number to global structs =================
++static enum qmi_cmd_result cmd_wds_mux_id_prepare(struct qmi_dev *qmi, struct qmi_request *req,
++						  struct qmi_msg *msg, char *arg)
++{
++	char *endptr = NULL;
 +
-+	if (res.set.packet_data_handle && res.data.packet_data_handle != 0) {
- 		blobmsg_add_u32(&status, NULL, res.data.packet_data_handle);
-+	} else {
-+		LOG("%s\"\n", qmi_wds_verbose_call_end_reason_get_string(
-+					res.data.verbose_call_end_reason.type,
-+					res.data.verbose_call_end_reason.reason));
++	unsigned long idx = strtoul(arg, &endptr, 10);
++	if (*endptr != '\0') {
++		uqmi_add_error("Error: Invalid input");
++		return QMI_CMD_EXIT;
++	} else if (idx > UINT8_MAX) {
++		uqmi_add_error("Error: Input value out of range");
++		return QMI_CMD_EXIT;
 +	}
-+
- }
  
- static enum qmi_cmd_result
-@@ -243,6 +277,51 @@
- 	return QMI_CMD_EXIT;
- }
- 
-+#define cmd_wds_bind_mux_data_port_cb no_cb
-+
-+static enum qmi_cmd_result
-+cmd_wds_bind_mux_data_port_prepare(struct qmi_dev *qmi, struct qmi_request *req,
-+				   struct qmi_msg *msg, char *arg)
-+{
-+	struct qmi_wds_bind_mux_data_port_request wds_mux_req = {
-+		QMI_INIT_SEQUENCE(
-+				  endpoint_info,
-+				  .endpoint_type = QMI_DATA_ENDPOINT_TYPE_HSUSB,
-+				  .interface_number = wds_endpoint_info.iface_number,
-+				  ),
-+		QMI_INIT(mux_id, wds_endpoint_info.mux_id),
-+		QMI_INIT(client_type, QMI_WDS_CLIENT_TYPE_TETHERED),
-+	};
-+
-+	qmi_set_wds_bind_mux_data_port_request(msg, &wds_mux_req);
-+        return QMI_CMD_REQUEST;
-+}
-+
-+#define cmd_wds_mux_id_cb no_cb
-+
-+static enum qmi_cmd_result cmd_wds_mux_id_prepare(struct qmi_dev *qmi,
-+						  struct qmi_request *req,
-+						  struct qmi_msg *msg,
-+						  char *arg)
-+{
-+	uint32_t mux_num = strtoul(arg, NULL, 10);
-+
-+	wds_endpoint_info.mux_id = mux_num;
+-	qmi_parse_wds_start_network_response(msg, &res);
+-	if (res.set.packet_data_handle)
+-		blobmsg_add_u32(&status, NULL, res.data.packet_data_handle);
++	qmi_set(&wds_bind_mux_port_req, mux_id, (uint8_t)idx);
 +	return QMI_CMD_DONE;
 +}
 +
-+#define cmd_wds_ep_iface_number_cb no_cb
-+
-+static enum qmi_cmd_result
-+cmd_wds_ep_iface_number_prepare(struct qmi_dev *qmi, struct qmi_request *req,
-+				struct qmi_msg *msg, char *arg)
++//===================== prepare iface-number to global structs =================
++static enum qmi_cmd_result cmd_wds_ep_iface_number_prepare(struct qmi_dev *qmi, struct qmi_request *req,
++							   struct qmi_msg *msg, char *arg)
 +{
-+        uint32_t iface_num = strtoul(arg, NULL, 10);
++	char *endptr = NULL;
 +
-+        wds_endpoint_info.iface_number = iface_num;
-+        return QMI_CMD_DONE;
++	unsigned long idx = strtoul(arg, &endptr, 10);
++	if (*endptr != '\0') {
++		uqmi_add_error("Error: Invalid input");
++		return QMI_CMD_EXIT;
++	} else if (idx > UINT8_MAX) {
++		uqmi_add_error("Error: Input value out of range");
++		return QMI_CMD_EXIT;
++	}
++
++	qmi_set_endpoint_info_sequence(&wds_bind_mux_port_req, QMI_DATA_ENDPOINT_TYPE_HSUSB,
++					       (uint8_t)idx);
++	return QMI_CMD_DONE;
 +}
++
++//===================== prepare ROAMING flag to global structs =================
++static enum qmi_cmd_result cmd_wds_set_roaming_disallowed_flag_prepare(struct qmi_dev *qmi,
++								       struct qmi_request *req,
++								       struct qmi_msg *msg, char *arg)
++{
++	if (!strcasecmp(arg, "yes") || !strcasecmp(arg, "true")) {
++		qmi_set(&wds_mp_req, roaming_disallowed_flag, true);
++		qmi_set(&wds_cp_req, roaming_disallowed_flag, true);
++	} else if (!strcasecmp(arg, "no") || !strcasecmp(arg, "false")) {
++		qmi_set(&wds_mp_req, roaming_disallowed_flag, false);
++		qmi_set(&wds_cp_req, roaming_disallowed_flag, false);
++	} else {
++		uqmi_add_error("Invalid flag (valid: yes, true, no, false)");
++		return QMI_CMD_EXIT;
++	}
++
++	return QMI_CMD_DONE;
+ }
+ 
+-static enum qmi_cmd_result
+-cmd_wds_start_network_prepare(struct qmi_dev *qmi, struct qmi_request *req, struct qmi_msg *msg, char *arg)
++//===================== prepare profile-name to global structs =================
++static enum qmi_cmd_result cmd_wds_set_profile_name_prepare(struct qmi_dev *qmi, struct qmi_request *req,
++							    struct qmi_msg *msg, char *arg)
++{
++	qmi_set_ptr(&wds_mp_req, profile_name, arg);
++	qmi_set_ptr(&wds_cp_req, profile_name, arg);
++	return QMI_CMD_DONE;
++}
++
++/***************************************************
++	commands preparing for uqmi call functions
++****************************************************/
++
++//===================== prepare start-network request call =================
++static enum qmi_cmd_result cmd_wds_start_network_prepare(struct qmi_dev *qmi, struct qmi_request *req,
++							 struct qmi_msg *msg, char *arg)
+ {
+ 	qmi_set_wds_start_network_request(msg, &wds_sn_req);
+ 	return QMI_CMD_REQUEST;
+ }
+ 
+-#define cmd_wds_stop_network_cb no_cb
+-static enum qmi_cmd_result
+-cmd_wds_stop_network_prepare(struct qmi_dev *qmi, struct qmi_request *req, struct qmi_msg *msg, char *arg)
++//===================== prepare stop-network request call =================
++static enum qmi_cmd_result cmd_wds_stop_network_prepare(struct qmi_dev *qmi, struct qmi_request *req,
++							struct qmi_msg *msg, char *arg)
+ {
+ 	uint32_t pdh = strtoul(arg, NULL, 0);
+ 
+@@ -154,87 +314,230 @@
+ 	return QMI_CMD_REQUEST;
+ }
+ 
+-static void
+-cmd_wds_get_packet_service_status_cb(struct qmi_dev *qmi, struct qmi_request *req, struct qmi_msg *msg)
++//===================== prepare get-dormancy-status request call =================
++static enum qmi_cmd_result cmd_wds_get_dormancy_status_prepare(struct qmi_dev *qmi, struct qmi_request *req,
++							       struct qmi_msg *msg, char *arg)
+ {
+-	struct qmi_wds_get_packet_service_status_response res;
+-	const char *data_status[] = {
+-		[QMI_WDS_CONNECTION_STATUS_UNKNOWN] = "unknown",
+-		[QMI_WDS_CONNECTION_STATUS_DISCONNECTED] = "disconnected",
+-		[QMI_WDS_CONNECTION_STATUS_CONNECTED] = "connected",
+-		[QMI_WDS_CONNECTION_STATUS_SUSPENDED] = "suspended",
+-		[QMI_WDS_CONNECTION_STATUS_AUTHENTICATING] = "authenticating",
+-	};
+-	int s = 0;
++	qmi_set_wds_get_dormancy_status_request(msg);
++	return QMI_CMD_REQUEST;
++}
+ 
+-	qmi_parse_wds_get_packet_service_status_response(msg, &res);
+-	if (res.set.connection_status &&
+-	    res.data.connection_status < ARRAY_SIZE(data_status))
+-		s = res.data.connection_status;
++//===================== prepare get0default-profile request call =================
++static enum qmi_cmd_result cmd_wds_get_default_profile_prepare(struct qmi_dev *qmi, struct qmi_request *req,
++							       struct qmi_msg *msg, char *arg)
++{
++	for (int i = 0; i < ARRAY_SIZE(profile_types); i++) {
++		if (strcasecmp(profile_types[i].profile_name, arg) != 0) {
++			continue;
++		}
+ 
+-	blobmsg_add_string(&status, NULL, data_status[s]);
++		struct qmi_wds_get_default_profile_number_request type_family = { QMI_INIT_SEQUENCE(
++			profile_type, .type = profile_types[i].profile,
++			.family = QMI_WDS_PROFILE_FAMILY_TETHERED, ) };
++
++		qmi_set_wds_get_default_profile_number_request(msg, &type_family);
++		return QMI_CMD_REQUEST;
++	}
++
++	uqmi_add_error("Invalid value (valid: 3gpp or 3gpp2)");
++	return QMI_CMD_EXIT;
++}
++
++//===================== prepare modify profile request call =================
++static enum qmi_cmd_result cmd_wds_modify_profile_prepare(struct qmi_dev *qmi, struct qmi_request *req,
++							  struct qmi_msg *msg, char *arg)
++{
++	int id;
++	char *s;
++	char *p_type;
++
++	s = strchr(arg, ',');
++	if (!s) {
++		fprintf(stderr, "Invalid argument\n");
++		return QMI_CMD_EXIT;
++	}
++	*s = 0;
++	s++;
++
++	id = strtoul(s, &s, 0);
++	if (s && *s) {
++		fprintf(stderr, "Invalid argument\n");
++		return QMI_CMD_EXIT;
++	}
++	if (id > UINT8_MAX) {
++		uqmi_add_error("Error: Input value out of range");
++		return QMI_CMD_EXIT;
++	}
++
++	p_type = strtok(arg, ",");
++
++	for (int i = 0; i < ARRAY_SIZE(profile_types); i++) {
++		if (strcasecmp(profile_types[i].profile_name, p_type) != 0) {
++			continue;
++		}
++
++		qmi_set_profile_identifier_sequence(&wds_mp_req, profile_types[i].profile, (uint8_t)id);
++
++		qmi_set_wds_modify_profile_request(msg, &wds_mp_req);
++		return QMI_CMD_REQUEST;
++	}
++
++	uqmi_add_error("Invalid value (valid: 3gpp or 3gpp2)");
++	return QMI_CMD_EXIT;
++}
++
++//===================== prepare get-profile-settings request call =================
++static enum qmi_cmd_result cmd_wds_get_profile_settings_prepare(struct qmi_dev *qmi, struct qmi_request *req,
++								struct qmi_msg *msg, char *arg)
++{
++	int id;
++	char *s;
++	char *p_type;
++
++	s = strchr(arg, ',');
++	if (!s) {
++		fprintf(stderr, "Invalid argument: %s\n", arg);
++		return QMI_CMD_EXIT;
++	}
++	*s = 0;
++	s++;
++
++	id = strtoul(s, &s, 0);
++	if (s && *s) {
++		fprintf(stderr, "Invalid argument: %s\n", arg);
++		return QMI_CMD_EXIT;
++	}
++	if (id > UINT8_MAX) {
++		uqmi_add_error("Error: Input value out of range");
++		return QMI_CMD_EXIT;
++	}
++
++	p_type = strtok(arg, ",");
++
++	for (int i = 0; i < ARRAY_SIZE(profile_types); i++) {
++		if (strcasecmp(profile_types[i].profile_name, p_type) != 0) {
++			continue;
++		}
++		struct qmi_wds_get_profile_settings_request p_num = { QMI_INIT_SEQUENCE(
++			profile_id, .profile_type = profile_types[i].profile,
++			.profile_index = (uint8_t)id, ) };
++		qmi_set_wds_get_profile_settings_request(msg, &p_num);
++		return QMI_CMD_REQUEST;
++	}
++
++	uqmi_add_error("Invalid value (valid: 3gpp or 3gpp2)");
++	return QMI_CMD_EXIT;
++}
++
++//===================== prepare get-current-settings request call =================
++static enum qmi_cmd_result cmd_wds_get_current_settings_prepare(struct qmi_dev *qmi, struct qmi_request *req,
++								struct qmi_msg *msg, char *arg)
++{
++	struct qmi_wds_get_current_settings_request gcs_req;
++	memset(&gcs_req, '\0', sizeof(struct qmi_wds_get_current_settings_request));
++	qmi_set(&gcs_req, requested_settings,
++		QMI_WDS_GET_CURRENT_SETTINGS_REQUESTED_SETTINGS_PDP_TYPE |
++			QMI_WDS_GET_CURRENT_SETTINGS_REQUESTED_SETTINGS_DNS_ADDRESS |
++			QMI_WDS_GET_CURRENT_SETTINGS_REQUESTED_SETTINGS_GRANTED_QOS |
++			QMI_WDS_GET_CURRENT_SETTINGS_REQUESTED_SETTINGS_IP_ADDRESS |
++			QMI_WDS_GET_CURRENT_SETTINGS_REQUESTED_SETTINGS_GATEWAY_INFO |
++			QMI_WDS_GET_CURRENT_SETTINGS_REQUESTED_SETTINGS_MTU |
++			QMI_WDS_GET_CURRENT_SETTINGS_REQUESTED_SETTINGS_DOMAIN_NAME_LIST |
++			QMI_WDS_GET_CURRENT_SETTINGS_REQUESTED_SETTINGS_IP_FAMILY);
++	qmi_set_wds_get_current_settings_request(msg, &gcs_req);
++	return QMI_CMD_REQUEST;
+ }
+ 
+-static enum qmi_cmd_result
+-cmd_wds_get_packet_service_status_prepare(struct qmi_dev *qmi, struct qmi_request *req, struct qmi_msg *msg, char *arg)
++//===================== prepare bind-mux-data-port request call =================
++static enum qmi_cmd_result cmd_wds_bind_mux_data_port_prepare(struct qmi_dev *qmi, struct qmi_request *req,
++							      struct qmi_msg *msg, char *arg)
++{
++	qmi_set_wds_bind_mux_data_port_request(msg, &wds_bind_mux_port_req);
++	return QMI_CMD_REQUEST;
++}
++
++//===================== prepare create-profile request call =================
++static enum qmi_cmd_result cmd_wds_create_profile_prepare(struct qmi_dev *qmi, struct qmi_request *req,
++							  struct qmi_msg *msg, char *arg)
++{
++	for (int i = 0; i < ARRAY_SIZE(profile_types); i++) {
++		if (strcasecmp(profile_types[i].profile_name, arg) != 0) {
++			continue;
++		}
++		qmi_set_ptr(&wds_cp_req, profile_type, profile_types[i].profile);
++
++		qmi_set_wds_create_profile_request(msg, &wds_cp_req);
++		return QMI_CMD_REQUEST;
++	}
++
++	uqmi_add_error("Invalid value (valid: 3gpp or 3gpp2)");
++	return QMI_CMD_EXIT;
++}
++
++//===================== prepare get-package-service-status request call =================
++static enum qmi_cmd_result cmd_wds_get_packet_service_status_prepare(struct qmi_dev *qmi,
++								     struct qmi_request *req,
++								     struct qmi_msg *msg, char *arg)
+ {
+ 	qmi_set_wds_get_packet_service_status_request(msg);
+ 	return QMI_CMD_REQUEST;
+ }
+ 
+-#define cmd_wds_set_autoconnect_settings_cb no_cb
+-static enum qmi_cmd_result
+-cmd_wds_set_autoconnect_settings_prepare(struct qmi_dev *qmi, struct qmi_request *req, struct qmi_msg *msg, char *arg)
++//===================== prepare get-autoconnect-settings request call =================
++static enum qmi_cmd_result cmd_wds_set_autoconnect_settings_prepare(struct qmi_dev *qmi,
++								    struct qmi_request *req,
++								    struct qmi_msg *msg, char *arg)
+ {
+ 	struct qmi_wds_set_autoconnect_settings_request ac_req;
+-	const char *modes[] = {
++	const char *auto_modes[] = {
+ 		[QMI_WDS_AUTOCONNECT_SETTING_DISABLED] = "disabled",
+-		[QMI_WDS_AUTOCONNECT_SETTING_ENABLED] = "enabled",
+-		[QMI_WDS_AUTOCONNECT_SETTING_PAUSED] = "paused",
++		[QMI_WDS_AUTOCONNECT_SETTING_ENABLED]  = "enabled",
++		[QMI_WDS_AUTOCONNECT_SETTING_PAUSED]   = "paused",
+ 	};
+-	int i;
+ 
+-	for (i = 0; i < ARRAY_SIZE(modes); i++) {
+-		if (strcasecmp(modes[i], arg) != 0)
++	for (int i = 0; i < ARRAY_SIZE(auto_modes); i++) {
++		if (strcasecmp(auto_modes[i], arg) != 0) {
+ 			continue;
++		}
+ 
+ 		qmi_set(&ac_req, status, i);
+ 		qmi_set_wds_set_autoconnect_settings_request(msg, &ac_req);
+-		return QMI_CMD_DONE;
++		return QMI_CMD_REQUEST;
+ 	}
+ 
+-	uqmi_add_error("Invalid value (valid: disabled, enabled, paused)");
++	uqmi_add_error("Invalid autoconnect value (valid: disabled, enabled, paused)");
+ 	return QMI_CMD_EXIT;
+ }
+ 
+-#define cmd_wds_reset_cb no_cb
+-static enum qmi_cmd_result
+-cmd_wds_reset_prepare(struct qmi_dev *qmi, struct qmi_request *req, struct qmi_msg *msg, char *arg)
++//===================== prepare get-autoconnect-settings request call =================
++static enum qmi_cmd_result cmd_wds_get_autoconnect_settings_prepare(struct qmi_dev *qmi,
++								    struct qmi_request *req,
++								    struct qmi_msg *msg, char *arg)
++{
++	qmi_set_wds_get_autoconnect_settings_request(msg);
++	return QMI_CMD_REQUEST;
++}
++
++//===================== prepare set-wst-reset request call =================
++static enum qmi_cmd_result cmd_wds_reset_prepare(struct qmi_dev *qmi, struct qmi_request *req,
++						 struct qmi_msg *msg, char *arg)
+ {
+ 	qmi_set_wds_reset_request(msg);
+ 	return QMI_CMD_REQUEST;
+ }
+ 
+-#define cmd_wds_set_ip_family_cb no_cb
+-static enum qmi_cmd_result
+-cmd_wds_set_ip_family_prepare(struct qmi_dev *qmi, struct qmi_request *req, struct qmi_msg *msg, char *arg)
++//===================== prepare set-ip-family request call =================
++static enum qmi_cmd_result cmd_wds_set_ip_family_prepare(struct qmi_dev *qmi, struct qmi_request *req,
++							 struct qmi_msg *msg, char *arg)
+ {
+ 	struct qmi_wds_set_ip_family_request ipf_req;
+-	const struct ip_modes {
+-		const char *name;
+-		const QmiWdsIpFamily mode;
+-	} modes[] = {
+-		{ "ipv4", QMI_WDS_IP_FAMILY_IPV4 },
+-		{ "ipv6", QMI_WDS_IP_FAMILY_IPV6 },
+-		{ "unspecified", QMI_WDS_IP_FAMILY_UNSPECIFIED },
+-	};
+-	int i;
+ 
+-	for (i = 0; i < ARRAY_SIZE(modes); i++) {
+-		if (strcasecmp(modes[i].name, arg) != 0)
++	for (int i = 0; i < ARRAY_SIZE(ipfam_modes); i++) {
++		if (strcasecmp(ipfam_modes[i].ipfam_name, arg) != 0) {
+ 			continue;
++		}
+ 
+-		qmi_set(&ipf_req, preference, modes[i].mode);
++		qmi_set(&ipf_req, preference, ipfam_modes[i].mode);
+ 		qmi_set_wds_set_ip_family_request(msg, &ipf_req);
+ 		return QMI_CMD_REQUEST;
+ 	}
+@@ -243,6 +546,147 @@
+ 	return QMI_CMD_EXIT;
+ }
+ 
++/***************************************************
++	Handler parsing callbacks from uqmi call
++****************************************************/
++#define cmd_wds_set_auth_cb		       no_cb
++#define cmd_wds_set_apn_cb		       no_cb
++#define cmd_wds_set_username_cb		       no_cb
++#define cmd_wds_set_password_cb		       no_cb
++#define cmd_wds_set_autoconnect_cb	       no_cb
++#define cmd_wds_set_ip_family_pref_cb	       no_cb
++#define cmd_wds_set_pdp_type_cb		       no_cb
++#define cmd_wds_no_roaming_cb		       no_cb
++#define cmd_wds_set_profile_cb		       no_cb
++#define cmd_wds_set_autoconnect_settings_cb    no_cb
++#define cmd_wds_reset_cb		       no_cb
++#define cmd_wds_set_ip_family_cb	       no_cb
++#define cmd_wds_mux_id_cb		       no_cb
++#define cmd_wds_ep_iface_number_cb	       no_cb
++#define cmd_wds_set_profile_identifier_cb      no_cb
++#define cmd_wds_set_roaming_disallowed_flag_cb no_cb
++#define cmd_wds_set_profile_name_cb	       no_cb
++#define cmd_wds_bind_mux_data_port_cb	       no_cb
++#define cmd_wds_stop_network_cb		       no_cb
++
++//===================== start-network CB handler =================
++void cmd_wds_start_network_cb(struct qmi_dev *qmi, struct qmi_request *req, struct qmi_msg *msg)
++{
++	struct qmi_wds_start_network_response res;
++	qmi_parse_wds_start_network_response(msg, &res);
++
++	if (res.set.packet_data_handle && res.data.packet_data_handle != 0) {
++		blobmsg_add_u32(&status, NULL, res.data.packet_data_handle);
++	} else {
++		LOG("%s\"\n",
++		    qmi_wds_verbose_call_end_reason_get_string(res.data.verbose_call_end_reason.type,
++							       res.data.verbose_call_end_reason.reason));
++	}
++}
++
++//===================== modify-profile CB handler =================
++static void cmd_wds_modify_profile_cb(struct qmi_dev *qmi, struct qmi_request *req, struct qmi_msg *msg)
++{
++	struct qmi_wds_modify_profile_response res;
++	qmi_parse_wds_modify_profile_response(msg, &res);
++}
++
++//===================== create-profile CB handler =================
++static void cmd_wds_create_profile_cb(struct qmi_dev *qmi, struct qmi_request *req, struct qmi_msg *msg)
++{
++	struct qmi_wds_create_profile_response res;
++	void *p;
++
++	qmi_parse_wds_create_profile_response(msg, &res);
++
++	if (res.set.profile_identifier) {
++		p = blobmsg_open_table(&status, NULL);
++		blobmsg_add_u32(&status, "created-profile", res.data.profile_identifier.profile_index);
++		blobmsg_close_table(&status, p);
++	}
++}
++
++//===================== get-package-service-status CB handler =================
++static void cmd_wds_get_packet_service_status_cb(struct qmi_dev *qmi, struct qmi_request *req,
++						 struct qmi_msg *msg)
++{
++	struct qmi_wds_get_packet_service_status_response res;
++	const char *data_status[] = {
++		[QMI_WDS_CONNECTION_STATUS_UNKNOWN]	   = "unknown",
++		[QMI_WDS_CONNECTION_STATUS_DISCONNECTED]   = "disconnected",
++		[QMI_WDS_CONNECTION_STATUS_CONNECTED]	   = "connected",
++		[QMI_WDS_CONNECTION_STATUS_SUSPENDED]	   = "suspended",
++		[QMI_WDS_CONNECTION_STATUS_AUTHENTICATING] = "authenticating",
++	};
++	int s = 0;
++
++	qmi_parse_wds_get_packet_service_status_response(msg, &res);
++	if (res.set.connection_status && res.data.connection_status < ARRAY_SIZE(data_status)) {
++		s = res.data.connection_status;
++	}
++
++	blobmsg_add_string(&status, NULL, data_status[s]);
++}
++
++//===================== get-autoconnect-settings CB handler =================
++static void cmd_wds_get_autoconnect_settings_cb(struct qmi_dev *qmi, struct qmi_request *req,
++						struct qmi_msg *msg)
++{
++	struct qmi_wds_get_autoconnect_settings_response res;
++	void *p;
++
++	const char *modes[] = {
++		[QMI_WDS_AUTOCONNECT_SETTING_DISABLED] = "disabled",
++		[QMI_WDS_AUTOCONNECT_SETTING_ENABLED]  = "enabled",
++		[QMI_WDS_AUTOCONNECT_SETTING_PAUSED]   = "paused",
++	};
++
++	const char *autoconnect_roaming_settings[] = {
++		[QMI_WDS_AUTOCONNECT_SETTING_ROAMING_ALLOWED]	= "allowed",
++		[QMI_WDS_AUTOCONNECT_SETTING_ROAMING_HOME_ONLY] = "home only",
++	};
++
++	qmi_parse_wds_get_autoconnect_settings_response(msg, &res);
++
++	p = blobmsg_open_table(&status, NULL);
++
++	if (res.set.status && (int)res.data.status < ARRAY_SIZE(modes)) {
++		blobmsg_add_string(&status, "status", modes[res.data.status]);
++	}
++	if (res.set.roaming && (int)res.data.roaming < ARRAY_SIZE(autoconnect_roaming_settings)) {
++		blobmsg_add_string(&status, "roaming", autoconnect_roaming_settings[res.data.roaming]);
++	}
++
++	blobmsg_close_table(&status, p);
++}
++
++//===================== get-profile-settings CB handler =================
++static void cmd_wds_get_profile_settings_cb(struct qmi_dev *qmi, struct qmi_request *req, struct qmi_msg *msg)
++{
++	struct qmi_wds_get_profile_settings_response res;
++
++	void *p;
++
++	qmi_parse_wds_get_profile_settings_response(msg, &res);
++
++	p = blobmsg_open_table(&status, NULL);
++
++	blobmsg_add_string(&status, "apn", res.data.apn_name);
++	if (res.set.pdp_type && (int)res.data.pdp_type < ARRAY_SIZE(pdp_types)) {
++		blobmsg_add_string(&status, "pdp-type", pdp_types[res.data.pdp_type].pdp_name);
++	}
++	blobmsg_add_string(&status, "username", res.data.username);
++	blobmsg_add_string(&status, "password", res.data.password);
++	if (res.set.authentication && (int)res.data.authentication < ARRAY_SIZE(auth_modes)) {
++		blobmsg_add_string(&status, "auth", auth_modes[res.data.authentication].auth_name);
++	}
++	blobmsg_add_u8(&status, "no-roaming", res.data.roaming_disallowed_flag);
++	blobmsg_add_u8(&status, "apn-disabled", res.data.apn_disabled_flag);
++	blobmsg_close_table(&status, p);
++}
++
++//===================== get-current-setting-status CB handler =================
 +
  static void wds_to_ipv4(const char *name, const uint32_t addr)
  {
  	struct in_addr ip_addr;
-@@ -363,3 +442,135 @@
- 	qmi_set_wds_get_current_settings_request(msg, &gcs_req);
- 	return QMI_CMD_REQUEST;
+@@ -258,65 +702,59 @@
+ 	uint16_t ip_addr[8];
+ 	int i;
+ 
+-	for (i = 0; i < ARRAY_SIZE(ip_addr); i++)
++	for (i = 0; i < ARRAY_SIZE(ip_addr); i++) {
+ 		ip_addr[i] = htons(addr[i]);
++	}
+ 
+ 	blobmsg_add_string(&status, name, inet_ntop(AF_INET6, &ip_addr, buf, sizeof(buf)));
  }
-+
-+static void
-+cmd_wds_get_dormancy_status_cb(struct qmi_dev *qmi, struct qmi_request *req, struct qmi_msg *msg)
-+{
+ 
+-static void
+-cmd_wds_get_current_settings_cb(struct qmi_dev *qmi, struct qmi_request *req, struct qmi_msg *msg)
++static void cmd_wds_get_current_settings_cb(struct qmi_dev *qmi, struct qmi_request *req, struct qmi_msg *msg)
+ {
+ 	void *v4, *v6, *d, *t;
+ 	struct qmi_wds_get_current_settings_response res;
+-	const char *pdptypes[] = {
+-		[QMI_WDS_PDP_TYPE_IPV4] = "ipv4",
+-		[QMI_WDS_PDP_TYPE_PPP] = "ppp",
+-		[QMI_WDS_PDP_TYPE_IPV6] = "ipv6",
+-		[QMI_WDS_PDP_TYPE_IPV4_OR_IPV6] = "ipv4-or-ipv6",
+-	};
+-	const struct ip_modes {
+-		const char *name;
+-		const QmiWdsIpFamily mode;
+-	} modes[] = {
+-		{ "ipv4", QMI_WDS_IP_FAMILY_IPV4 },
+-		{ "ipv6", QMI_WDS_IP_FAMILY_IPV6 },
+-		{ "unspecified", QMI_WDS_IP_FAMILY_UNSPECIFIED },
+-	};
+ 	int i;
+ 
+ 	qmi_parse_wds_get_current_settings_response(msg, &res);
+ 
+ 	t = blobmsg_open_table(&status, NULL);
+ 
+-	if (res.set.pdp_type && (int) res.data.pdp_type < ARRAY_SIZE(pdptypes))
+-		blobmsg_add_string(&status, "pdp-type", pdptypes[res.data.pdp_type]);
++	if (res.set.pdp_type && (int)res.data.pdp_type < ARRAY_SIZE(pdp_types)) {
++		blobmsg_add_string(&status, "pdp-type", pdp_types[res.data.pdp_type].pdp_name);
++	}
+ 
+ 	if (res.set.ip_family) {
+-		for (i = 0; i < ARRAY_SIZE(modes); i++) {
+-			if (modes[i].mode != res.data.ip_family)
++		for (i = 0; i < ARRAY_SIZE(ipfam_modes); i++) {
++			if (ipfam_modes[i].mode != res.data.ip_family) {
+ 				continue;
+-			blobmsg_add_string(&status, "ip-family", modes[i].name);
++			}
++			blobmsg_add_string(&status, "ip-family", ipfam_modes[i].ipfam_name);
+ 			break;
+ 		}
+ 	}
+ 
+-	if (res.set.mtu)
++	if (res.set.mtu) {
+ 		blobmsg_add_u32(&status, "mtu", res.data.mtu);
++	}
+ 
+ 	/* IPV4 */
+ 	v4 = blobmsg_open_table(&status, "ipv4");
+ 
+-	if (res.set.ipv4_address)
++	if (res.set.ipv4_address) {
+ 		wds_to_ipv4("ip", res.data.ipv4_address);
+-	if (res.set.primary_ipv4_dns_address)
++	}
++	if (res.set.primary_ipv4_dns_address) {
+ 		wds_to_ipv4("dns1", res.data.primary_ipv4_dns_address);
+-	if (res.set.secondary_ipv4_dns_address)
++	}
++	if (res.set.secondary_ipv4_dns_address) {
+ 		wds_to_ipv4("dns2", res.data.secondary_ipv4_dns_address);
+-	if (res.set.ipv4_gateway_address)
++	}
++	if (res.set.ipv4_gateway_address) {
+ 		wds_to_ipv4("gateway", res.data.ipv4_gateway_address);
+-	if (res.set.ipv4_gateway_subnet_mask)
++	}
++	if (res.set.ipv4_gateway_subnet_mask) {
+ 		wds_to_ipv4("subnet", res.data.ipv4_gateway_subnet_mask);
++	}
+ 	blobmsg_close_table(&status, v4);
+ 
+ 	/* IPV6 */
+@@ -330,10 +768,12 @@
+ 		wds_to_ipv6("gateway", res.data.ipv6_gateway_address.address);
+ 		blobmsg_add_u32(&status, "gw-prefix-length", res.data.ipv6_gateway_address.prefix_length);
+ 	}
+-	if (res.set.ipv6_primary_dns_address)
++	if (res.set.ipv6_primary_dns_address) {
+ 		wds_to_ipv6("dns1", res.data.ipv6_primary_dns_address);
+-	if (res.set.ipv6_secondary_dns_address)
++	}
++	if (res.set.ipv6_secondary_dns_address) {
+ 		wds_to_ipv6("dns2", res.data.ipv6_secondary_dns_address);
++	}
+ 
+ 	blobmsg_close_table(&status, v6);
+ 
+@@ -346,20 +786,39 @@
+ 	blobmsg_close_table(&status, t);
+ }
+ 
+-static enum qmi_cmd_result
+-cmd_wds_get_current_settings_prepare(struct qmi_dev *qmi, struct qmi_request *req, struct qmi_msg *msg, char *arg)
++//===================== get-dormancy-status CB handler =================
++static void cmd_wds_get_dormancy_status_cb(struct qmi_dev *qmi, struct qmi_request *req, struct qmi_msg *msg)
+ {
+-	struct qmi_wds_get_current_settings_request gcs_req;
+-	memset(&gcs_req, '\0', sizeof(struct qmi_wds_get_current_settings_request));
+-	qmi_set(&gcs_req, requested_settings,
+-		QMI_WDS_GET_CURRENT_SETTINGS_REQUESTED_SETTINGS_PDP_TYPE |
+-		QMI_WDS_GET_CURRENT_SETTINGS_REQUESTED_SETTINGS_DNS_ADDRESS |
+-		QMI_WDS_GET_CURRENT_SETTINGS_REQUESTED_SETTINGS_GRANTED_QOS |
+-		QMI_WDS_GET_CURRENT_SETTINGS_REQUESTED_SETTINGS_IP_ADDRESS |
+-		QMI_WDS_GET_CURRENT_SETTINGS_REQUESTED_SETTINGS_GATEWAY_INFO |
+-		QMI_WDS_GET_CURRENT_SETTINGS_REQUESTED_SETTINGS_MTU |
+-		QMI_WDS_GET_CURRENT_SETTINGS_REQUESTED_SETTINGS_DOMAIN_NAME_LIST |
+-		QMI_WDS_GET_CURRENT_SETTINGS_REQUESTED_SETTINGS_IP_FAMILY);
+-	qmi_set_wds_get_current_settings_request(msg, &gcs_req);
+-	return QMI_CMD_REQUEST;
 +	struct qmi_wds_get_dormancy_status_response res;
 +	const char *dormancy_types[] = {
-+		[QMI_WDS_DORMANCY_STATUS_UNKNOWN] = "unknown",
-+		[QMI_WDS_DORMANCY_STATUS_TRAFFIC_CHANNEL_ACTIVE] = "traffic-channel-active",
++		[QMI_WDS_DORMANCY_STATUS_UNKNOWN]		  = "unknown",
++		[QMI_WDS_DORMANCY_STATUS_TRAFFIC_CHANNEL_ACTIVE]  = "traffic-channel-active",
 +		[QMI_WDS_DORMANCY_STATUS_TRAFFIC_CHANNEL_DORMANT] = "traffic-channel-dormant",
 +	};
 +	void *c;
@@ -615,166 +1529,130 @@ diff --recursive --unified --new-file --no-dereference orig/commands-wds.c src/c
 +	blobmsg_close_table(&status, c);
 +}
 +
-+static enum qmi_cmd_result
-+cmd_wds_get_dormancy_status_prepare(struct qmi_dev *qmi, struct qmi_request *req, struct qmi_msg *msg, char *arg)
++//===================== get-default-profile CB handler =================
++static void cmd_wds_get_default_profile_cb(struct qmi_dev *qmi, struct qmi_request *req, struct qmi_msg *msg)
 +{
-+	qmi_set_wds_get_dormancy_status_request(msg);
-+	return QMI_CMD_REQUEST;
-+}
++	struct qmi_wds_get_default_profile_number_response res;
++	void *p;
++	qmi_parse_wds_get_default_profile_number_response(msg, &res);
 +
-+// ---- MODIFY PROFILE ----
-+#define cmd_wds_modify_profile_cb no_cb
++	p = blobmsg_open_table(&status, NULL);
 +
-+static enum qmi_cmd_result
-+cmd_wds_modify_profile_prepare(struct qmi_dev *qmi, struct qmi_request *req, struct qmi_msg *msg, char *arg)
-+{
-+	struct qmi_wds_modify_profile_request wds_mod_prof_req = {
-+		QMI_INIT_SEQUENCE(profile_identifier,
-+				  .profile_type = wds_modify_profile_info.type,
-+				  .profile_index = wds_modify_profile_info.profile_index),
-+		QMI_INIT_PTR(profile_name, wds_modify_profile_info.profile_name),
-+		QMI_INIT_PTR(username, wds_modify_profile_info.username),
-+		QMI_INIT_PTR(password, wds_modify_profile_info.password),
-+		QMI_INIT_PTR(apn_name, wds_modify_profile_info.apn),
-+		QMI_INIT(roaming_disallowed_flag, wds_modify_profile_info.no_roam),
-+		QMI_INIT(authentication, wds_modify_profile_info.authentication),
-+		QMI_INIT(pdp_type, wds_modify_profile_info.pdp_type),
-+	};
++	blobmsg_add_u32(&status, "default-profile", res.data.index);
 +
-+	qmi_set_wds_modify_profile_request(msg, &wds_mod_prof_req);
-+	return QMI_CMD_REQUEST;
-+}
-+
-+#define cmd_wds_set_profile_identifier_cb no_cb
-+
-+static enum qmi_cmd_result
-+cmd_wds_set_profile_identifier_prepare(struct qmi_dev *qmi, struct qmi_request *req, struct qmi_msg *msg, char *arg)
-+{
-+	char *tmp = NULL;
-+
-+	tmp = strtok(arg, ",");
-+
-+	if (!strcmp(tmp, "3gpp2")) {
-+		wds_modify_profile_info.type = QMI_WDS_PROFILE_TYPE_3GPP2;
-+	} else if (!strcmp(tmp, "3gpp")) {
-+		wds_modify_profile_info.type = QMI_WDS_PROFILE_TYPE_3GPP;
-+	} else {
-+		uqmi_add_error("Invalid profile type (valid: 3gpp, 3gpp2)");
-+		return QMI_CMD_EXIT;
-+	}
-+
-+	tmp = strtok(NULL, "\0");
-+	wds_modify_profile_info.profile_index = strtol(tmp, NULL, 10);
-+
-+	return QMI_CMD_DONE;
-+}
-+
-+#define cmd_wds_set_roaming_disallowed_flag_cb no_cb
-+
-+static enum qmi_cmd_result
-+cmd_wds_set_roaming_disallowed_flag_prepare(struct qmi_dev *qmi, struct qmi_request *req, struct qmi_msg *msg, char *arg)
-+{
-+	if (!strcasecmp(arg, "yes") || !strcasecmp(arg, "true")) {
-+		wds_modify_profile_info.no_roam = 1;
-+	} else if (!strcasecmp(arg, "no") || !strcasecmp(arg, "false")) {
-+		wds_modify_profile_info.no_roam = 0;
-+	} else {
-+		uqmi_add_error("Invalid flag (valid: yes, true, no, false)");
-+		return QMI_CMD_EXIT;
-+	}
-+
-+	return QMI_CMD_DONE;
-+}
-+
-+#define cmd_wds_set_profile_name_cb no_cb
-+
-+static enum qmi_cmd_result
-+cmd_wds_set_profile_name_prepare(struct qmi_dev *qmi, struct qmi_request *req, struct qmi_msg *msg, char *arg)
-+{
-+	wds_modify_profile_info.profile_name = arg;
-+	return QMI_CMD_DONE;
-+}
-+
-+#define cmd_wds_set_pdp_type_cb no_cb
-+
-+static enum qmi_cmd_result
-+cmd_wds_set_pdp_type_prepare(struct qmi_dev *qmi, struct qmi_request *req, struct qmi_msg *msg, char *arg)
-+{
-+	const struct pdp_modes {
-+		const char *name;
-+		const QmiWdsPdpType mode;
-+	} modes[] = {
-+		{ "ip", QMI_WDS_PDP_TYPE_IPV4 },
-+		{ "ipv4", QMI_WDS_PDP_TYPE_IPV4 },
-+		{ "ipv6", QMI_WDS_PDP_TYPE_IPV6 },
-+		{ "ppp", QMI_WDS_PDP_TYPE_PPP },
-+		{ "ipv4v6", QMI_WDS_PDP_TYPE_IPV4_OR_IPV6 },
-+	};
-+	int i;
-+
-+	for (i = 0; i < ARRAY_SIZE(modes); i++) {
-+		if (strcasecmp(modes[i].name, arg) != 0)
-+			continue;
-+
-+		wds_modify_profile_info.pdp_type = modes[i].mode;
-+		return QMI_CMD_DONE;
-+	}
-+
-+	uqmi_add_error("Invalid value (valid: ipv4, ipv6, ppp, ipv4v6)");
-+	return QMI_CMD_EXIT;
-+}
++	blobmsg_close_table(&status, p);
+ }
 diff --recursive --unified --new-file --no-dereference orig/commands-wds.h src/commands-wds.h
 --- orig/commands-wds.h	2023-11-09 07:17:16.000000000 +0000
-+++ src/commands-wds.h	2024-01-24 06:27:29.000000000 +0000
-@@ -28,13 +28,21 @@
- 	__uqmi_command(wds_set_ip_family_pref, ip-family, required, CMD_TYPE_OPTION), \
- 	__uqmi_command(wds_set_autoconnect, autoconnect, no, CMD_TYPE_OPTION), \
- 	__uqmi_command(wds_set_profile, profile, required, CMD_TYPE_OPTION), \
-+	__uqmi_command(wds_modify_profile, modify-profile, no, QMI_SERVICE_WDS), \
-+	__uqmi_command(wds_set_profile_identifier, profile-identifier, required, CMD_TYPE_OPTION), \
-+	__uqmi_command(wds_set_roaming_disallowed_flag, roaming-disallowed-flag, required, CMD_TYPE_OPTION), \
-+	__uqmi_command(wds_set_profile_name, profile-name, required, CMD_TYPE_OPTION), \
-+	__uqmi_command(wds_set_pdp_type, pdp-type, required, CMD_TYPE_OPTION), \
- 	__uqmi_command(wds_stop_network, stop-network, required, QMI_SERVICE_WDS), \
- 	__uqmi_command(wds_get_packet_service_status, get-data-status, no, QMI_SERVICE_WDS), \
- 	__uqmi_command(wds_set_ip_family, set-ip-family, required, QMI_SERVICE_WDS), \
- 	__uqmi_command(wds_set_autoconnect_settings, set-autoconnect, required, QMI_SERVICE_WDS), \
- 	__uqmi_command(wds_reset, reset-wds, no, QMI_SERVICE_WDS), \
++++ src/commands-wds.h	2024-04-25 07:20:16.000000000 +0000
+@@ -19,36 +19,73 @@
+  * Boston, MA 02110-1301 USA.
+  */
+ 
+-#define __uqmi_wds_commands \
+-	__uqmi_command(wds_start_network, start-network, no, QMI_SERVICE_WDS), \
+-	__uqmi_command(wds_set_apn, apn, required, CMD_TYPE_OPTION), \
+-	__uqmi_command(wds_set_auth, auth-type, required, CMD_TYPE_OPTION), \
+-	__uqmi_command(wds_set_username, username, required, CMD_TYPE_OPTION), \
+-	__uqmi_command(wds_set_password, password, required, CMD_TYPE_OPTION), \
+-	__uqmi_command(wds_set_ip_family_pref, ip-family, required, CMD_TYPE_OPTION), \
+-	__uqmi_command(wds_set_autoconnect, autoconnect, no, CMD_TYPE_OPTION), \
+-	__uqmi_command(wds_set_profile, profile, required, CMD_TYPE_OPTION), \
+-	__uqmi_command(wds_stop_network, stop-network, required, QMI_SERVICE_WDS), \
+-	__uqmi_command(wds_get_packet_service_status, get-data-status, no, QMI_SERVICE_WDS), \
+-	__uqmi_command(wds_set_ip_family, set-ip-family, required, QMI_SERVICE_WDS), \
+-	__uqmi_command(wds_set_autoconnect_settings, set-autoconnect, required, QMI_SERVICE_WDS), \
+-	__uqmi_command(wds_reset, reset-wds, no, QMI_SERVICE_WDS), \
 -	__uqmi_command(wds_get_current_settings, get-current-settings, no, QMI_SERVICE_WDS) \
++#define __uqmi_wds_commands                                                                                  \
++	__uqmi_command(wds_start_network, start-network, no, QMI_SERVICE_WDS),                               \
++		__uqmi_command(wds_set_apn, apn, required, CMD_TYPE_OPTION),                                 \
++		__uqmi_command(wds_set_auth, auth-type, required, CMD_TYPE_OPTION),                          \
++		__uqmi_command(wds_set_username, username, required, CMD_TYPE_OPTION),                       \
++		__uqmi_command(wds_set_password, password, required, CMD_TYPE_OPTION),                       \
++		__uqmi_command(wds_set_ip_family_pref, ip-family, required, CMD_TYPE_OPTION),                \
++		__uqmi_command(wds_set_autoconnect, autoconnect, no, CMD_TYPE_OPTION),                       \
++		__uqmi_command(wds_set_profile, profile, required, CMD_TYPE_OPTION),                         \
++		__uqmi_command(wds_set_roaming_disallowed_flag, roaming-disallowed-flag, required,           \
++			       CMD_TYPE_OPTION),                                                             \
++		__uqmi_command(wds_set_profile_name, profile-name, required, CMD_TYPE_OPTION),               \
++		__uqmi_command(wds_set_pdp_type, pdp-type, required, CMD_TYPE_OPTION),                       \
++		__uqmi_command(wds_stop_network, stop-network, required, QMI_SERVICE_WDS),                   \
++		__uqmi_command(wds_get_packet_service_status, get-data-status, no, QMI_SERVICE_WDS),         \
++		__uqmi_command(wds_set_ip_family, set-ip-family, required, QMI_SERVICE_WDS),                 \
++		__uqmi_command(wds_set_autoconnect_settings, set-autoconnect, required, QMI_SERVICE_WDS),    \
++		__uqmi_command(wds_get_autoconnect_settings, get-autoconnect, no, QMI_SERVICE_WDS),          \
++		__uqmi_command(wds_reset, reset-wds, no, QMI_SERVICE_WDS),                                   \
++		__uqmi_command(wds_get_dormancy_status, get-dormancy-status, no, QMI_SERVICE_WDS),           \
++		__uqmi_command(wds_bind_mux_data_port, wds-bind-mux-data-port, no, QMI_SERVICE_WDS),         \
++		__uqmi_command(wds_mux_id, mux-id, required, CMD_TYPE_OPTION),                               \
++		__uqmi_command(wds_ep_iface_number, ep-iface-number, required, CMD_TYPE_OPTION),             \
++		__uqmi_command(wds_get_profile_settings, get-profile-settings, required,                     \
++			       QMI_SERVICE_WDS),                                                             \
++		__uqmi_command(wds_get_default_profile, get-default-profile, required, QMI_SERVICE_WDS),     \
++		__uqmi_command(wds_create_profile, create-profile, required, QMI_SERVICE_WDS),               \
++		__uqmi_command(wds_modify_profile, modify-profile, required, QMI_SERVICE_WDS),               \
++		__uqmi_command(wds_get_current_settings, get-current-settings, no, QMI_SERVICE_WDS)
+ 
++#define wds_helptext                                                                                                     \
++	"  --start-network:                         Start network connection (use with options below)\n"                 \
++	"       --apn <apn>:                        Use APN\n"                                                           \
++	"       --auth-type pap|chap|both|none:     Use network authentication type\n"                                   \
++	"       --username <name>:                  Use network username\n"                                              \
++	"       --password <password>:              Use network password\n"                                              \
++	"       --ip-family <family>:               Use ip-family for the connection (ipv4, ipv6, unspecified)\n"        \
++	"       --autoconnect:                      Enable automatic connect/reconnect\n"                                \
++	"       --profile <index>:                  Use connection profile\n"                                            \
++	"  --stop-network <pdh>:                    Stop network connection (use with option below)\n"                   \
++	"       --autoconnect:                      Disable automatic connect/reconnect\n"                               \
++	"  --get-data-status:                       Get current data access status\n"                                    \
++	"  --set-ip-family <val>:                   Set ip-family (ipv4, ipv6, unspecified)\n"                           \
++	"  --set-autoconnect <val>:                 Set autoconnect settings (roaming settings optional)\n"              \
++	"  --get-autoconnect:                       Get automatic settings status\n"                                     \
++	"  --get-current-settings:                  Get current connection settings\n"                                   \
++	"  --get-dormancy-status:	            Get current dormancy status\n"                                       \
++	"  --wds-bind-mux-data-port:	            Bind qmux data port to controller device (use with options below)\n" \
++	"       --mux-id <id>:		            Set qmux port id\n"                                                  \
++	"       --ep-iface-number <number>:         Set endpoint interface number\n"                                     \
++	"  --get-profile-settings <val,pdp>:        Get APN profile settings (3gpp, 3gpp2),pdp\n"                        \
++	"  --get-default-profile <val>:             Get default profile number (3gpp, 3gpp2)\n"                          \
++	"  --create-profile <val>                   Create profile (3gpp, 3gpp2)\n"                                      \
++	"       --apn <apn>:                        Use APN\n"                                                           \
++	"       --pdp-type ipv4|ipv6|ipv4v6>:       Use pdp-type for the connection\n"                                   \
++	"       --username <name>:                  Use network username\n"                                              \
++	"       --password <password>:              Use network password\n"                                              \
++	"       --auth-type pap|chap|both|none:     Use network authentication type\n"                                   \
++	"       --roaming-disallowed-flag <bool> :  Use roaming disallowed flag (yes, true, no, false)\n"                \
++	"       --profile-name <name>:	            Use profile name\n"                                                  \
++	"  --modify-profile <val>,#                 Modify profile number (3gpp, 3gpp2)\n"                               \
++	"       --apn <apn>:                        Use APN\n"                                                           \
++	"       --pdp-type ipv4|ipv6|ipv4v6>:       Use pdp-type for the connection\n"                                   \
++	"       --username <name>:                  Use network username\n"                                              \
++	"       --password <password>:              Use network password\n"                                              \
++	"       --auth-type pap|chap|both|none:     Use network authentication type\n"                                   \
++	"       --roaming-disallowed-flag <bool> :  Use roaming disallowed flag (yes, true, no, false)\n"                \
++	"       --profile-name <name>:	            Use profile name\n"
+ 
+-#define wds_helptext \
+-		"  --start-network:                  Start network connection (use with options below)\n" \
+-		"    --apn <apn>:                    Use APN\n" \
+-		"    --auth-type pap|chap|both|none: Use network authentication type\n" \
+-		"    --username <name>:              Use network username\n" \
+-		"    --password <password>:          Use network password\n" \
+-		"    --ip-family <family>:           Use ip-family for the connection (ipv4, ipv6, unspecified)\n" \
+-		"    --autoconnect:                  Enable automatic connect/reconnect\n" \
+-		"    --profile <index>:              Use connection profile\n" \
+-		"  --stop-network <pdh>:             Stop network connection (use with option below)\n" \
+-		"    --autoconnect:                  Disable automatic connect/reconnect\n" \
+-		"  --get-data-status:                Get current data access status\n" \
+-		"  --set-ip-family <val>:            Set ip-family (ipv4, ipv6, unspecified)\n" \
+-		"  --set-autoconnect <val>:          Set automatic connect/reconnect (disabled, enabled, paused)\n" \
+-		"  --get-current-settings:           Get current connection settings\n" \
 -
-+	__uqmi_command(wds_get_current_settings, get-current-settings, no, QMI_SERVICE_WDS), \
-+	__uqmi_command(wds_get_dormancy_status, get-dormancy-status, no, QMI_SERVICE_WDS), \
-+	__uqmi_command(wds_bind_mux_data_port, wds-bind-mux-data-port, no, QMI_SERVICE_WDS), \
-+	__uqmi_command(wds_mux_id, mux-id, required, CMD_TYPE_OPTION), \
-+	__uqmi_command(wds_ep_iface_number, ep-iface-number, required, CMD_TYPE_OPTION) \
- 
- #define wds_helptext \
- 		"  --start-network:                  Start network connection (use with options below)\n" \
-@@ -45,10 +53,21 @@
- 		"    --ip-family <family>:           Use ip-family for the connection (ipv4, ipv6, unspecified)\n" \
- 		"    --autoconnect:                  Enable automatic connect/reconnect\n" \
- 		"    --profile <index>:              Use connection profile\n" \
-+		"  --modify-profile:                 Modify pdp configuration (with options below)\n" \
-+		"    --profile-identifier <type>,<pdp>: Use profile identifier (3gpp,3gpp2|number)\n" \
-+		"    --roaming-disallowed-flag <bool> : Use roaming disallowed flag\n" \
-+		"    --profile-name <name>:	     Use profile name\n" \
-+		"    --pdp-type <type>:		     Use pdp profile type (ipv4, ipv6, ppp, ipv4v6)\n" \
- 		"  --stop-network <pdh>:             Stop network connection (use with option below)\n" \
- 		"    --autoconnect:                  Disable automatic connect/reconnect\n" \
- 		"  --get-data-status:                Get current data access status\n" \
- 		"  --set-ip-family <val>:            Set ip-family (ipv4, ipv6, unspecified)\n" \
- 		"  --set-autoconnect <val>:          Set automatic connect/reconnect (disabled, enabled, paused)\n" \
- 		"  --get-current-settings:           Get current connection settings\n" \
-+		"  --get-dormancy-status:	     Get current dormancy status\n" \
-+		"  --wds-bind-mux-data-port:	     Bind qmux data port to controller device (use with options below)\n" \
-+		"    --mux-id <id>:		     Set qmux port id\n" \
-+		"    --ep-iface-number <number>:     Set endpoint interface number\n" \
-+
 +void cmd_wds_start_network_cb(struct qmi_dev *qmi, struct qmi_request *req, struct qmi_msg *msg);
- 
 diff --recursive --unified --new-file --no-dereference orig/commands.c src/commands.c
 --- orig/commands.c	2023-11-09 07:11:45.000000000 +0000
-+++ src/commands.c	2024-01-24 06:27:29.000000000 +0000
++++ src/commands.c	2024-04-25 07:20:16.000000000 +0000
 @@ -19,11 +19,13 @@
   * Boston, MA 02110-1301 USA.
   */
@@ -964,9 +1842,23 @@ diff --recursive --unified --new-file --no-dereference orig/commands.c src/comma
  #include "commands-wds.c"
  #include "commands-dms.c"
  #include "commands-nas.c"
+@@ -257,6 +427,13 @@
+ 	blobmsg_add_string(&status, NULL, msg);
+ 	return QMI_CMD_EXIT;
+ }
++
++int uqmi_overwrite_error(const char *msg)
++{
++	blob_buf_init(&status, 0);
++	blobmsg_add_string(&status, NULL, msg);
++	return QMI_CMD_EXIT;
++}
+ 
+ bool uqmi_run_commands(struct qmi_dev *qmi)
+ {
 diff --recursive --unified --new-file --no-dereference orig/commands.h src/commands.h
 --- orig/commands.h	2023-11-09 07:11:45.000000000 +0000
-+++ src/commands.h	2024-01-24 06:27:29.000000000 +0000
++++ src/commands.h	2024-04-25 07:20:16.000000000 +0000
 @@ -59,6 +59,7 @@
  	__uqmi_command(set_client_id, set-client-id, required, CMD_TYPE_OPTION), \
  	__uqmi_command(get_client_id, get-client-id, required, QMI_SERVICE_CTL), \
@@ -975,9 +1867,16 @@ diff --recursive --unified --new-file --no-dereference orig/commands.h src/comma
  	__uqmi_wds_commands, \
  	__uqmi_dms_commands, \
  	__uqmi_nas_commands, \
+@@ -78,5 +79,6 @@
+ void uqmi_add_command(char *arg, int longidx);
+ bool uqmi_run_commands(struct qmi_dev *qmi);
+ int uqmi_add_error(const char *msg);
++int uqmi_overwrite_error(const char *msg);
+ 
+ #endif
 diff --recursive --unified --new-file --no-dereference orig/data/gen-verbose-error-list.pl src/data/gen-verbose-error-list.pl
 --- orig/data/gen-verbose-error-list.pl	1970-01-01 00:00:00.000000000 +0000
-+++ src/data/gen-verbose-error-list.pl	2024-01-24 06:27:29.000000000 +0000
++++ src/data/gen-verbose-error-list.pl	2024-04-25 07:20:16.000000000 +0000
 @@ -0,0 +1,116 @@
 +#!/usr/bin/env perl
 +use strict;
@@ -1097,7 +1996,7 @@ diff --recursive --unified --new-file --no-dereference orig/data/gen-verbose-err
 +
 diff --recursive --unified --new-file --no-dereference orig/data/qmi-service-wda.json src/data/qmi-service-wda.json
 --- orig/data/qmi-service-wda.json	2023-11-09 07:17:16.000000000 +0000
-+++ src/data/qmi-service-wda.json	2024-01-24 06:27:29.000000000 +0000
++++ src/data/qmi-service-wda.json	2024-04-25 07:20:16.000000000 +0000
 @@ -80,10 +80,25 @@
                       "since"         : "1.18",
                       "format"        : "sequence",
@@ -1129,7 +2028,7 @@ diff --recursive --unified --new-file --no-dereference orig/data/qmi-service-wda
                       "id"            : "0x10",
 diff --recursive --unified --new-file --no-dereference orig/dev.c src/dev.c
 --- orig/dev.c	2023-11-09 07:11:45.000000000 +0000
-+++ src/dev.c	2024-01-24 06:27:29.000000000 +0000
++++ src/dev.c	2024-04-25 07:20:16.000000000 +0000
 @@ -28,6 +28,11 @@
  #include "qmi-errors.h"
  #include "qmi-errors.c"
@@ -1138,7 +2037,7 @@ diff --recursive --unified --new-file --no-dereference orig/dev.c src/dev.c
 +#include "libuqmi.h"
 +
 +#define DEFAULT_CALL_TIMEOUT 8 * 1000
-+#define DEFAULT_MAX_REQUEST  3
++#define DEFAULT_MAX_REQUEST  8
  
  bool cancel_all_requests = false;
  
@@ -1197,7 +2096,7 @@ diff --recursive --unified --new-file --no-dereference orig/dev.c src/dev.c
  
  	if (msg->qmux.service == QMI_SERVICE_CTL)
  		tid = msg->ctl.transaction;
-@@ -105,12 +104,27 @@
+@@ -105,12 +104,29 @@
  		tid = le16_to_cpu(msg->svc.transaction);
  
  	list_for_each_entry(req, &qmi->req, list) {
@@ -1205,6 +2104,7 @@ diff --recursive --unified --new-file --no-dereference orig/dev.c src/dev.c
 +		if (req->service != msg->qmux.service) {
 +			qmi->read_req_retry++;
 +			if (qmi->read_req_retry >= DEFAULT_MAX_REQUEST) {
++				qmi->request_timeout.cb = _cancel_request_timeout;
 +				uloop_timeout_set(&qmi->request_timeout, 0);
 +				return;
 +			}
@@ -1216,6 +2116,7 @@ diff --recursive --unified --new-file --no-dereference orig/dev.c src/dev.c
 +		if (req->tid != tid) {
 +			qmi->read_req_retry++;
 +			if (qmi->read_req_retry >= DEFAULT_MAX_REQUEST) {
++				qmi->request_timeout.cb = _cancel_request_timeout;
 +				uloop_timeout_set(&qmi->request_timeout, 0);
 +				return;
 +			}
@@ -1227,7 +2128,7 @@ diff --recursive --unified --new-file --no-dereference orig/dev.c src/dev.c
  		__qmi_request_complete(qmi, req, msg);
  		return;
  	}
-@@ -123,6 +137,9 @@
+@@ -123,6 +139,9 @@
  	char *buf;
  	int len, msg_len;
  
@@ -1237,7 +2138,7 @@ diff --recursive --unified --new-file --no-dereference orig/dev.c src/dev.c
  
  	while (1) {
  		buf = ustream_get_read_buf(us, &len);
-@@ -194,6 +211,11 @@
+@@ -194,6 +213,11 @@
  
  	dump_packet("Send packet", buf, len);
  	ustream_write(&qmi->sf.stream, buf, len, false);
@@ -1249,7 +2150,7 @@ diff --recursive --unified --new-file --no-dereference orig/dev.c src/dev.c
  	return 0;
  }
  
-@@ -322,7 +344,6 @@
+@@ -322,7 +346,6 @@
  	for (idx = 0; connected; idx++, connected >>= 1) {
  		if (!(connected & 1))
  			continue;
@@ -1257,7 +2158,7 @@ diff --recursive --unified --new-file --no-dereference orig/dev.c src/dev.c
  		if (qmi->service_keep_cid & (1 << idx))
  			continue;
  
-@@ -364,6 +385,7 @@
+@@ -364,6 +387,7 @@
  	INIT_LIST_HEAD(&qmi->req);
  	qmi->ctl_tid = 1;
  	qmi->buf = msgbuf.u.buf;
@@ -1267,12 +2168,13 @@ diff --recursive --unified --new-file --no-dereference orig/dev.c src/dev.c
  }
 diff --recursive --unified --new-file --no-dereference orig/libuqmi.c src/libuqmi.c
 --- orig/libuqmi.c	1970-01-01 00:00:00.000000000 +0000
-+++ src/libuqmi.c	2024-01-24 06:27:29.000000000 +0000
-@@ -0,0 +1,49 @@
++++ src/libuqmi.c	2024-04-25 07:20:16.000000000 +0000
+@@ -0,0 +1,57 @@
 +#include <stdio.h>
 +#include <stdlib.h>
 +
 +#include "libuqmi.h"
++#include "commands.h"
 +
 +#ifdef DEBUG_PACKET
 +void dump_packet(const char *prefix, void *ptr, int len)
@@ -1318,11 +2220,18 @@ diff --recursive --unified --new-file --no-dereference orig/libuqmi.c src/libuqm
 +	fprintf(stderr, "Request timed out\n");
 +	handle_exit_signal(0);
 +}
++
++void _cancel_request_timeout(struct uloop_timeout *timeout)
++{
++	uqmi_overwrite_error("Request canceled");
++	fprintf(stderr, "Request canceled\n");
++	handle_exit_signal(0);
++}
 \ No newline at end of file
 diff --recursive --unified --new-file --no-dereference orig/libuqmi.h src/libuqmi.h
 --- orig/libuqmi.h	1970-01-01 00:00:00.000000000 +0000
-+++ src/libuqmi.h	2024-01-24 06:27:29.000000000 +0000
-@@ -0,0 +1,15 @@
++++ src/libuqmi.h	2024-04-25 07:20:16.000000000 +0000
+@@ -0,0 +1,16 @@
 +#ifndef __LIBUQMI_H
 +#define __LIBUQMI_H
 +
@@ -1332,6 +2241,7 @@ diff --recursive --unified --new-file --no-dereference orig/libuqmi.h src/libuqm
 +
 +void handle_exit_signal(int signal);
 +void _request_timeout_handler(struct uloop_timeout *timeout);
++void _cancel_request_timeout(struct uloop_timeout *timeout);
 +
 +void dump_packet(const char *prefix, void *ptr, int len);
 +
@@ -1340,7 +2250,7 @@ diff --recursive --unified --new-file --no-dereference orig/libuqmi.h src/libuqm
 +#endif
 diff --recursive --unified --new-file --no-dereference orig/main.c src/main.c
 --- orig/main.c	2023-11-09 07:11:45.000000000 +0000
-+++ src/main.c	2024-01-24 06:27:29.000000000 +0000
++++ src/main.c	2024-04-25 07:20:16.000000000 +0000
 @@ -28,9 +28,11 @@
  #include <errno.h>
  #include <getopt.h>
@@ -1363,7 +2273,7 @@ diff --recursive --unified --new-file --no-dereference orig/main.c src/main.c
  		wds_helptext
  		dms_helptext
  		uim_helptext
-@@ -79,44 +82,11 @@
+@@ -79,50 +82,17 @@
  	return 1;
  }
  
@@ -1403,13 +2313,21 @@ diff --recursive --unified --new-file --no-dereference orig/main.c src/main.c
 -
  int main(int argc, char **argv)
  {
- 	static struct qmi_dev dev;
+-	static struct qmi_dev dev;
 -	int ch, ret;
-+	int ch, ret, pid;
++	static struct qmi_dev dev = { 0 };
++	int ch, pid, ret;
 +	char uq_pid[32] = { 0 };
  
  	uloop_init();
  	signal(SIGINT, handle_exit_signal);
+ 	signal(SIGTERM, handle_exit_signal);
+ 
+-	while ((ch = getopt_long(argc, argv, "d:k:smt:", uqmi_getopt, NULL)) != -1) {
++	while ((ch = getopt_long(argc, argv, "d:k:smt:r:", uqmi_getopt, NULL)) != -1) {
+ 		int cmd_opt = CMD_OPT(ch);
+ 
+ 		if (ch < 0 && cmd_opt >= 0 && cmd_opt < __UQMI_COMMAND_LAST) {
 @@ -147,26 +117,34 @@
  			dev.is_mbim = true;
  			break;
@@ -1449,7 +2367,7 @@ diff --recursive --unified --new-file --no-dereference orig/main.c src/main.c
  }
 diff --recursive --unified --new-file --no-dereference orig/qmi-enums-wds.h src/qmi-enums-wds.h
 --- orig/qmi-enums-wds.h	2023-11-09 07:17:16.000000000 +0000
-+++ src/qmi-enums-wds.h	2024-01-24 06:27:29.000000000 +0000
++++ src/qmi-enums-wds.h	2024-04-25 07:20:16.000000000 +0000
 @@ -37,14 +37,14 @@
  
  /**
@@ -2265,7 +3183,7 @@ diff --recursive --unified --new-file --no-dereference orig/qmi-enums-wds.h src/
      QMI_WDS_IP_SUPPORT_TYPE_IPV4   = 0,
 diff --recursive --unified --new-file --no-dereference orig/qmi-message.c src/qmi-message.c
 --- orig/qmi-message.c	2023-11-09 07:11:45.000000000 +0000
-+++ src/qmi-message.c	2024-01-24 06:27:29.000000000 +0000
++++ src/qmi-message.c	2024-04-25 07:20:16.000000000 +0000
 @@ -24,6 +24,15 @@
  #include <stdlib.h>
  
@@ -2318,7 +3236,7 @@ diff --recursive --unified --new-file --no-dereference orig/qmi-message.c src/qm
 +}
 diff --recursive --unified --new-file --no-dereference orig/qmi-message.h src/qmi-message.h
 --- orig/qmi-message.h	2023-11-09 07:11:45.000000000 +0000
-+++ src/qmi-message.h	2024-01-24 06:27:29.000000000 +0000
++++ src/qmi-message.h	2024-04-25 07:20:16.000000000 +0000
 @@ -122,5 +122,6 @@
  int qmi_complete_request_message(struct qmi_msg *qm);
  int qmi_check_message_status(void *buf, unsigned int len);
@@ -2328,8 +3246,21 @@ diff --recursive --unified --new-file --no-dereference orig/qmi-message.h src/qm
  #endif
 diff --recursive --unified --new-file --no-dereference orig/uqmi.h src/uqmi.h
 --- orig/uqmi.h	2023-11-09 07:11:45.000000000 +0000
-+++ src/uqmi.h	2024-01-24 06:27:29.000000000 +0000
-@@ -72,6 +72,8 @@
++++ src/uqmi.h	2024-04-25 07:20:16.000000000 +0000
+@@ -65,6 +65,12 @@
+ };
+ #undef __qmi_service
+ 
++#define ELOG(...) do { \
++	fprintf(stderr, ##__VA_ARGS__); fflush(stderr); \
++} while (0);
++
++#define EE ELOG("EE[###\%s:\%d***]\\n", __func__, __LINE__)
++
+ struct qmi_dev;
+ struct qmi_request;
+ struct qmi_msg;
+@@ -72,6 +78,8 @@
  typedef void (*request_cb)(struct qmi_dev *qmi, struct qmi_request *req, struct qmi_msg *msg);
  
  struct qmi_dev {
@@ -2338,7 +3269,7 @@ diff --recursive --unified --new-file --no-dereference orig/uqmi.h src/uqmi.h
  	struct ustream_fd sf;
  
  	struct list_head req;
-@@ -90,6 +92,9 @@
+@@ -90,6 +98,9 @@
  	void *buf;
  
  	bool is_mbim;

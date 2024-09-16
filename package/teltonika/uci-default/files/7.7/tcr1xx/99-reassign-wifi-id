@@ -1,0 +1,36 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+function check_wifi_id(){
+    local section="$1"
+    local wifi_id
+
+    config_get wifi_id "$section" "wifi_id"
+    echo "$wifi_id_list" | grep "$wifi_id" -q && dup_sec="$dup_sec $section" || wifi_id_list="$wifi_id_list $wifi_id"
+}
+
+function reassign_wifi_id(){
+    section=$1
+    for id in $(seq 0 99); do
+        echo "$wifi_id_list" | grep "wifi$id" -q || break
+    done
+    wifi_id_list="$wifi_id_list wifi$id"
+    uci_set "wireless" "$section" "wifi_id" "wifi$id"
+}
+
+config_load "wireless"
+
+dup_sec=
+wifi_id_list=
+
+config_foreach check_wifi_id "wifi-iface"
+
+[ -n "$dup_sec" ] && {
+    for sec in $dup_sec; do
+        reassign_wifi_id $sec
+    done
+    uci commit "wireless"
+}
+
+exit 0

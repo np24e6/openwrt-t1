@@ -1,0 +1,15 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+enable=1
+bus="/dev/i2c-0"
+
+config_load poe
+config_get enable poe enable "1"
+config_get bus poe bus "/dev/i2c-0"
+
+uci_set poe poe "enable" "$enable"
+uci_set poe poe "bus" "$bus"
+
+uci_commit poe

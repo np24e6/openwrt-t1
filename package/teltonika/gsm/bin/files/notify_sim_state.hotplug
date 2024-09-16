@@ -9,7 +9,9 @@ json_load "$DATA"
 json_get_var PIN_STATE pin_state
 
 # Only NOT inserted event
-[ "$PIN_STATE" = "10" ] || exit 0
+if [ "$PIN_STATE" != "10" ] && [ "$PIN_STATE" != "2" ]; then
+    exit 0
+fi
 
 ubus call log write_ext "{
 	\"event\": \"SIM state changed to not inserted ($(get_modem_type "$MODEM_ID") modem)\",

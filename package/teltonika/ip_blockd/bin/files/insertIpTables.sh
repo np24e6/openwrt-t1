@@ -22,9 +22,9 @@ check_and_remove() {
     local ipt=$1 # for ipv6 support
     local rule=$2
 
-    $ipt -C "$rule"
+    $ipt -C $rule >& /dev/null
     [ "$?" = "0" ] && {
-        $ipt -D "$rule"
+        $ipt -D $rule
     }
 }
 

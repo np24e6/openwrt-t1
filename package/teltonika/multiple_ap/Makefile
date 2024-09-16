@@ -6,10 +6,11 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=multiple_ap
-PKG_VERSION:=2023-12-06
+PKG_VERSION:=2024-04-04
 PKG_RELEASE:=1
+PKG_LICENSE:=Teltonika-closed
 
-PKG_SOURCE_VERSION:=7.6
+PKG_SOURCE_VERSION:=7.7
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_SOURCE_SUBDIR)
@@ -34,7 +35,7 @@ define Package/multiple_ap/install
 	$(INSTALL_DIR) $(1)/etc/config/
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/files/multiple_ap.sh $(1)/usr/sbin/multiple_ap.sh
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/files/multi_wifi.init $(1)/etc/init.d/multi_wifi
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/files/multi_wifi.config $(1)/etc/config/multi_wifi
+	$(INSTALL_CONF) $(PKG_BUILD_DIR)/files/multi_wifi.config $(1)/etc/config/multi_wifi
 endef
 
 

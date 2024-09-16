@@ -33,6 +33,29 @@
 
 #include "ar40xx.h"
 
+void
+ar40xx_psgmii_self_test(struct ar40xx_priv *priv, bool recal);
+
+void
+ar40xx_psgmii_self_test_clean(struct ar40xx_priv *priv);
+
+static void
+ar40xx_mac_mode_init(struct ar40xx_priv *priv, u32 mode);
+
+static void
+ar40xx_init_port(struct ar40xx_priv *priv, int port);
+
+void
+ar40xx_init_globals(struct ar40xx_priv *priv);
+
+static void
+ar40xx_ess_reset(struct ar40xx_priv *priv);
+
+static int
+ar40xx_sw_reset_switch(struct switch_dev *dev);
+
+static int ar40xx_cpuport_setup(struct ar40xx_priv *priv);
+
 static struct ar40xx_priv *ar40xx_priv;
 
 #define MIB_DESC(_s , _o, _n)	\
@@ -1329,6 +1352,226 @@ static int ar40xx_set_port_speed_advertisement(struct switch_dev *dev, const str
 	return 0;
 }
 
+static int ar40xx_psgmii_self_test_simple(struct switch_dev *dev, const struct switch_attr *attr,
+				 struct switch_val *value) {
+	struct ar40xx_priv *priv = swdev_to_ar40xx(dev);
+	int i;
+	u32 port_status[6];
+
+	cancel_delayed_work_sync(&priv->qm_dwork);
+
+	if (value->value.i != 0)
+		ar40xx_ess_reset(priv);
+
+	for (i = 1; i < 6; i++) {
+		port_status[i] = ar40xx_read(priv, AR40XX_REG_PORT_STATUS(i));
+		ar40xx_write(priv, AR40XX_REG_PORT_STATUS(i),
+			     AR40XX_PORT_AUTO_LINK_EN | 
+			     AR40XX_PORT_DUPLEX |
+			     AR40XX_PORT_TXHALF_FLOW);
+	}
+
+	ar40xx_psgmii_self_test(priv, value->value.i);
+	ar40xx_psgmii_self_test_clean(priv);
+
+	for (i = 1; i < 6; i++) {
+		ar40xx_write(priv, AR40XX_REG_PORT_STATUS(i), port_status[i]);
+	}
+
+	if (value->value.i != 0) {
+		ar40xx_mac_mode_init(priv, priv->mac_mode);
+
+		for (i = 0; i < priv->dev.ports; i++)
+			ar40xx_init_port(priv, i);
+
+		ar40xx_init_globals(priv);
+		
+		ar40xx_sw_reset_switch(&priv->dev);
+
+		/* at last, setup cpu port */
+		ar40xx_cpuport_setup(priv);
+	}
+
+	schedule_delayed_work(&priv->qm_dwork,
+			      msecs_to_jiffies(AR40XX_QM_WORK_DELAY));
+	return 0;
+}
+
+static void ar40xx_dump_switch_regs(struct ar40xx_priv *priv, u32 start, u32 stop, const char *name) {
+	char *buf = NULL;
+	u32 addr;
+
+	buf = kmalloc(stop - start, GFP_ATOMIC);
+
+	for (addr = start; addr < stop; addr += 4) {
+		*((u32 *)&buf[addr - start]) = ar40xx_read(priv, addr);
+	}
+
+	pr_alert("========== AR40xx SWITCH REGISTERS 0x%08x - 0x%08x(%s) ==========\n", start, stop - 1, name);
+	print_hex_dump(KERN_ALERT, "ar40xx ", DUMP_PREFIX_OFFSET, 32, 4, buf, stop - start, false);
+
+	kfree(buf);
+}
+
+static void ar40xx_dump_psgmii_phy_regs(struct ar40xx_priv *priv, u32 start, u32 stop, const char *name) {
+	char *buf = NULL;
+	u32 addr;
+
+	buf = kmalloc(stop - start, GFP_ATOMIC);
+
+	for (addr = start; addr < stop; addr += 4) {
+		*((u32 *)&buf[addr - start]) = ar40xx_psgmii_read(priv, addr);
+	}
+
+	pr_alert("========== AR40xx PSGMII PHY REGISTERS 0x%08x - 0x%08x(%s) ==========\n", start, stop - 1, name);
+	print_hex_dump(KERN_ALERT, "ar40xx ", DUMP_PREFIX_OFFSET, 32, 4, buf, stop - start, false);
+
+	kfree(buf);
+}
+
+static void ar40xx_dump_mdio_regs(struct ar40xx_priv *priv, int phy, int start, int stop) {
+	u32 addr;
+
+	pr_alert("========== AR40xx PHY%d REGISTERS 0x%02x - 0x%02x ==========\n", phy, start, stop - 1);
+
+	for (addr = start; addr < stop; addr++) {
+		if (addr == 0x0d || addr == 0x0e)
+			continue;
+
+		pr_alert("PHY%d 0x%02x: %04x\n", phy, addr, mdiobus_read(priv->mii_bus, phy, addr));
+	}
+}	
+
+static u16 ar40xx_mmd1_dump_table[] = {
+	0x5,
+	0x8,
+	0x52,
+	0x53,
+	0x54,
+};
+
+static u16 ar40xx_mmd3_dump_table[] = {
+	0x0,
+	0x1,
+	0x5,
+	0x8,
+	0x14,
+	0x16,
+	0x8012,
+	0X804A,
+	0X804B,
+	0X804C,
+	0X805A,
+	0X805A,
+	0x8064,
+	0x8065,
+	0x8066,
+	0x8067,
+	0x8068,
+};
+
+static u16 ar40xx_mmd7_dump_table[] = {
+	0x0,
+	0x5,
+	0X3C,
+	0X3D,
+	0X8000,
+	0X8005,
+	0X800E,
+	0X800F,
+	0X8011,
+	0X8012,
+	0X8016,
+	0X8028,
+	0X8029,
+	0X802A,
+	0X802B,
+	0X802C,
+	0X802D,
+	0X802E,
+	0X802F,
+	0X805E,
+	0X8073,
+	0X8074,
+	0X8075,
+	0X8076,
+	0X8077,
+	0X807E,
+};
+
+static void ar40xx_dump_mmd_regs(struct ar40xx_priv *priv, int phy, int mmd, u16 *mmd_table, int mmd_table_len) {
+	int i;
+
+	pr_alert("========== AR40xx PHY%d MMD%d REGISTERS ==========\n", phy, mmd);
+
+	for (i = 0; i < mmd_table_len; i++) {
+		u16 reg = mmd_table[i];
+		pr_alert("PHY%d MMD%d 0x%04x: %04x\n", phy, mmd, reg, ar40xx_phy_mmd_read(priv, phy, mmd, reg));
+	}
+}
+
+static void ar40xx_dump_dbg_regs(struct ar40xx_priv *priv, int phy) {
+	int i;
+
+	static u16 dbg_table[] = { 0x0b, 0x10, 0x11, 0x12, 0x1f };
+
+	pr_alert("========== AR40xx PHY%d DEBUG REGISTERS ==========\n", phy);
+
+	for (i = 0; i < ARRAY_SIZE(dbg_table); i++) {
+		u16 reg = dbg_table[i];
+		u16 val;
+
+		ar40xx_phy_dbg_read(priv, phy, reg, &val);
+
+		pr_alert("PHY%d DBG 0x%04x: %04x\n", phy, reg, val);
+	}
+}
+
+static void ar40xx_dump_all_regs(struct ar40xx_priv *priv) {
+	int i;
+	
+	ar40xx_dump_switch_regs(priv, 0x0000, 0x00e4, "Global control");
+	ar40xx_dump_switch_regs(priv, 0x0100, 0x0168, "EEE control");
+	ar40xx_dump_switch_regs(priv, 0x0200, 0x0270, "Parser control");
+	ar40xx_dump_switch_regs(priv, 0x0400, 0x0454, "ACL");
+	ar40xx_dump_switch_regs(priv, 0x0600, 0x0718, "Lookup");
+	ar40xx_dump_switch_regs(priv, 0x0800, 0x0b70, "QM");
+	ar40xx_dump_switch_regs(priv, 0x0c00, 0x0c80, "PKT");
+	ar40xx_dump_switch_regs(priv, 0x0e00, 0x0e98, "L3");
+
+	ar40xx_dump_psgmii_phy_regs(priv, 0x0000, 0x7fc, "psgmii-phy");
+
+	for (i = 0; i <= 5; i++) {
+		ar40xx_dump_mdio_regs(priv, i, 0, 0x20);
+	}
+
+	for (i = 0; i <= 5; i++) {
+		ar40xx_dump_mmd_regs(priv, i, 1, ar40xx_mmd1_dump_table, ARRAY_SIZE(ar40xx_mmd1_dump_table));
+	}
+
+	for (i = 0; i <= 5; i++) {
+		ar40xx_dump_mmd_regs(priv, i, 3, ar40xx_mmd3_dump_table, ARRAY_SIZE(ar40xx_mmd3_dump_table));
+	}
+
+	for (i = 0; i <= 5; i++) {
+		ar40xx_dump_mmd_regs(priv, i, 7, ar40xx_mmd7_dump_table, ARRAY_SIZE(ar40xx_mmd7_dump_table));
+	}
+
+	for (i = 0; i <= 5; i++) {
+		ar40xx_dump_dbg_regs(priv, i);
+	}
+}
+
+static int ar40xx_dump_regs(struct switch_dev *dev, const struct switch_attr *attr,
+			    struct switch_val *value) 
+{
+	struct ar40xx_priv *priv = swdev_to_ar40xx(dev);
+	
+	ar40xx_dump_all_regs(priv);
+
+	return 0;
+}
+
 static const struct switch_attr ar40xx_sw_attr_globals[] = {
 	{
 		.type	     = SWITCH_TYPE_INT,
@@ -1407,6 +1650,19 @@ static const struct switch_attr ar40xx_sw_attr_globals[] = {
 		.description = "Set fiber/copper combo preference",
 		.set = ar40xx_sw_set_preference,
 		.get = ar40xx_sw_get_preference,
+		.max = 1
+	},
+	{
+		.type = SWITCH_TYPE_NOVAL,
+		.name = "dump_regs",
+		.description = "Dump switch, PHY registers",
+		.set = ar40xx_dump_regs,
+	},
+	{
+		.type = SWITCH_TYPE_INT,
+		.name = "psgmii_self_test",
+		.description = "Perform psgmii self test (1 = Perform psgmii recalibration)",
+		.set = ar40xx_psgmii_self_test_simple,
 		.max = 1
 	},
 };
@@ -1644,6 +1900,8 @@ ar40xx_psgmii_single_phy_testing(struct ar40xx_priv *priv, int phy)
 		/* success */
 		priv->phy_t_status &= (~BIT(phy));
 	} else {
+		pr_info("PHY %d single tx_all_ok %x, tx_error %x\n", phy, tx_all_ok, tx_error);
+		pr_info("PHY %d single rx_all_ok %x, rx_error %x\n", phy, rx_all_ok, rx_error);
 		pr_info("PHY %d single test PSGMII issue happen!\n", phy);
 		priv->phy_t_status |= BIT(phy);
 	}
@@ -1705,6 +1963,8 @@ ar40xx_psgmii_all_phy_testing(struct ar40xx_priv *priv)
 			/* success */
 			priv->phy_t_status &= ~BIT(phy + 8);
 		} else {
+			pr_info("PHY %d all tx_all_ok %x, tx_error %x\n", phy, tx_all_ok, tx_error);
+			pr_info("PHY %d all rx_all_ok %x, rx_error %x\n", phy, rx_all_ok, rx_error);
 			pr_info("PHY%d test see issue!\n", phy);
 			priv->phy_t_status |= BIT(phy + 8);
 		}
@@ -1714,12 +1974,13 @@ ar40xx_psgmii_all_phy_testing(struct ar40xx_priv *priv)
 }
 
 void
-ar40xx_psgmii_self_test(struct ar40xx_priv *priv)
+ar40xx_psgmii_self_test(struct ar40xx_priv *priv, bool recal)
 {
 	u32 i, phy;
 	struct mii_bus *bus = priv->mii_bus;
 
-	ar40xx_malibu_psgmii_ess_reset(priv);
+	if (recal)
+		ar40xx_malibu_psgmii_ess_reset(priv);
 
 	/* switch to access MII reg for copper */
 	mdiobus_write(bus, 4, 0x1f, 0x8500);
@@ -1749,7 +2010,7 @@ ar40xx_psgmii_self_test(struct ar40xx_priv *priv)
 
 		ar40xx_psgmii_all_phy_testing(priv);
 
-		if (priv->phy_t_status)
+		if (recal && priv->phy_t_status)
 			ar40xx_malibu_psgmii_ess_reset(priv);
 		else
 			break;
@@ -1884,7 +2145,7 @@ ar40xx_hw_init(struct ar40xx_priv *priv)
 	if (!priv->mii_bus)
 		return -1;
 
-	ar40xx_psgmii_self_test(priv);
+	ar40xx_psgmii_self_test(priv, true);
 	ar40xx_psgmii_self_test_clean(priv);
 
 	ar40xx_mac_mode_init(priv, priv->mac_mode);
@@ -1949,7 +2210,7 @@ static int qca_qm_error_check(struct ar40xx_priv *priv)
 	qm_err_int = reg_val & BIT(14);
 
 	if(qm_err_int){
-		pr_info("ar40xx qm_err_int bit is set\n");
+		pr_info_once("ar40xx qm_err_int bit is set\n");
 		return 1;
 	}
 

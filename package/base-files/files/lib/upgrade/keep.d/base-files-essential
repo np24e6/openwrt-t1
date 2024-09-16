@@ -11,3 +11,4 @@
 /etc/firewall.user
 /usr/lib/mdcollectd/mdcollectd.db_new.gz
 /etc/vuci-uploads/
+/usr/share/ip_block/attempts.db

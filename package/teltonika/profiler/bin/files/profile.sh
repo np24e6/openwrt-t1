@@ -85,8 +85,10 @@ __add_conf_files() {
 
 	for i in $(grep -s "^/etc/config/" "$filelist"); do
 		cfg_name=$(basename "$i")
-
-		cp "$i" "${TMP_DIR}/etc/config/"
+		local destination_file="${TMP_DIR}/etc/config/$cfg_name"
+		# Check if the file already exists in the destination directory
+		[ -s "$destination_file" ] && continue
+		cp "$i" "$destination_file"
 		sed -i "/$cfg_name/d" "/etc/profiles/${profile}.md5"
 		md5sum "$i" >>"/etc/profiles/${profile}.md5"
 	done
@@ -127,7 +129,7 @@ __update_tar() {
 	for profile in /etc/profiles/*.tar.gz; do
 		tar xzf "$profile" -C "$TMP_DIR"
 		name=$(basename "$profile" .tar.gz)
-		eval "$cb '$name' '$filelist'"
+		$cb "$name" "$filelist"
 		[ -e "/tmp/keep_files" ] && keep=" -T /tmp/keep_files"
 
 		tar cz${keep} -f "$profile" -C "$TMP_DIR" "."
@@ -150,7 +152,7 @@ do_save_conffiles() {
 
 	[ -z "$conf_tar" ] && return 1
 	[ -z "$(rootfs_type)" ] && {
-		echo "Cannot save config while running from ramdisk."
+		log "Cannot save config while running from ramdisk."
 		ask_bool 0 "Abort" && exit
 		return 0
 	}

@@ -153,4 +153,6 @@
 			};
 		};
 	};
+
+	/delete-node/ ioman;
 };

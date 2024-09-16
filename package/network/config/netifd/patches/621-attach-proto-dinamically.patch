@@ -1,0 +1,185 @@
+--- a/handler.c
++++ b/handler.c
+@@ -20,8 +20,9 @@
+ #include "netifd.h"
+ #include "system.h"
+ #include "handler.h"
+-
+-static int
++#include "proto.h"
++
++int
+ netifd_dir_push(int fd)
+ {
+ 	int prev_fd = open(".", O_RDONLY | O_DIRECTORY);
+@@ -31,7 +32,7 @@
+ 	return prev_fd;
+ }
+ 
+-static void
++void
+ netifd_dir_pop(int prev_fd)
+ {
+ 	if (prev_fd < 0)
+@@ -75,6 +76,11 @@
+		return;
+
+	name = json_object_get_string(tmp);
++
++	if (check_if_proto_exists(name)) {
++		return;
++	}
++
+	cb(script, name, obj);
+ }
+
+@@ -137,7 +143,7 @@
+ 			       "missing field '%s'\n", config_file, err_missing);
+ }
+ 
+-static void
++void
+ netifd_parse_script_handler(const char *name, script_dump_cb cb)
+ {
+ 	struct json_tokener *tok = NULL;
+
+--- a/handler.h
++++ b/handler.h
+@@ -47,5 +47,7 @@
+ void netifd_init_script_handlers(int dir_fd, script_dump_cb cb);
+ void netifd_init_extdev_handlers(int dir_fd, create_extdev_handler_cb cb);
+ char *netifd_handler_parse_config(struct uci_blob_param_list *config, json_object *obj);
+-
++void netifd_parse_script_handler(const char *name, script_dump_cb cb);
++int netifd_dir_push(int fd);
++void netifd_dir_pop(int prev_fd);
+ #endif
+
+--- a/proto-shell.c
++++ b/proto-shell.c
+@@ -888,7 +888,7 @@
+ 	return NULL;
+ }
+ 
+-static void
++void
+ proto_shell_add_handler(const char *script, const char *name, json_object *obj)
+ {
+ 	struct proto_shell_handler *handler;
+@@ -953,5 +953,17 @@
+ 	if (proto_fd < 0)
+ 		return;
+ 
+-	netifd_init_script_handlers(proto_fd, proto_shell_add_handler);
+-}
++	/**
++	 * Removed proto script init logic to interface_alloc method. This used to load
++	 * all the scripts from /lib/netifd/proto at startup which caused some device startup delay.
++	*/
++	//netifd_init_script_handlers(proto_fd, proto_shell_add_handler);
++}
++
++int open_shell_dir(void) {
++	return netifd_dir_push(proto_fd);
++}
++
++void close_shell_dir(int fd) {
++	netifd_dir_pop(fd);
++}
+
+--- a/proto.c
++++ b/proto.c
+@@ -16,7 +16,6 @@
+ #include <stdlib.h>
+ #include <stdio.h>
+ #include <limits.h>
+-
+ #include <arpa/inet.h>
+ #include <netinet/in.h>
+
+@@ -25,6 +24,11 @@
+ #include "interface.h"
+ #include "interface-ip.h"
+ #include "proto.h"
++#include "handler.h"
++
++#define _PATH_PREF_START "./"
++#define _PATH_PREF_END ".sh"
++#define BFR_512 512
+ 
+ static struct avl_tree handlers;
+ 
+@@ -569,6 +573,30 @@
+ 	.attach = default_proto_attach,
+ };
+ 
++static void
++find_required_proto(const char *proto_name)
++{
++	struct proto_handler *proto = NULL;
++	char full_proto_path[BFR_512] = { 0 };
++
++	if (!proto_name) { 
++		return;
++	}
++
++	if (avl_find_element(&handlers, proto_name, proto, avl)) {
++		return;
++	}
++
++	snprintf(full_proto_path, BFR_512, _PATH_PREF_START "%s" _PATH_PREF_END, proto_name);
++
++	int prev_fd = open_shell_dir();
++
++	netifd_parse_script_handler(full_proto_path, proto_shell_add_handler);
++
++	close_shell_dir(prev_fd);
++}
++
++
+ static const struct proto_handler *
+ get_proto_handler(const char *name)
+ {
+@@ -579,6 +607,20 @@
+ 
+ 	if (!handlers.comp)
+ 		return NULL;
++
++	find_required_proto(name);
++
++	return avl_find_element(&handlers, name, proto, avl);
++}
++
++struct proto_handler *
++check_if_proto_exists(const char *name) {
++
++	struct proto_handler *proto = NULL;
++
++	if (!name) {
++		return NULL;
++	}
+ 
+ 	return avl_find_element(&handlers, name, proto, avl);
+ }
+
+--- a/proto.h
++++ b/proto.h
+@@ -13,6 +13,8 @@
+  */
+ #ifndef __NETIFD_PROTO_H
+ #define __NETIFD_PROTO_H
++
++#include <json-c/json.h>
+ 
+ struct interface;
+ struct interface_proto_state;
+@@ -82,5 +84,8 @@
+ int proto_apply_ip_settings(struct interface *iface, struct blob_attr *attr, bool ext);
+ void proto_dump_handlers(struct blob_buf *b);
+ void proto_shell_init(void);
+-
++int open_shell_dir(void);
++void close_shell_dir(int fd);
++void proto_shell_add_handler(const char *script, const char *name, json_object *obj);
++struct proto_handler *check_if_proto_exists(const char *name);
+ #endif

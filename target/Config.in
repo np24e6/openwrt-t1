@@ -20,7 +20,6 @@ config GPIO_SUPPORT
 	bool
 
 config PCI_SUPPORT
-	select AUDIO_SUPPORT
 	bool
 
 config PCIE_SUPPORT
@@ -33,7 +32,6 @@ config PWM_SUPPORT
 	bool
 
 config USB_SUPPORT
-	select AUDIO_SUPPORT
 	bool
 
 config USB_GADGET_SUPPORT
@@ -113,6 +111,9 @@ config PPP_MOBILE_SUPPORT
 config BYPASS_OFFLOAD_FEATURE
 	bool
 
+config HAVE_QRTR_PIPE_ENDPOINTS
+	bool
+
 config VERIFIED_BOOT_SUPPORT
 	bool
 
@@ -129,6 +130,9 @@ config HAS_SINGLE_ETH_PORT
 	bool
 
 config HAS_IO
+	bool
+
+config HAS_POWER_CONTROL
 	bool
 
 config HAS_MODBUS
@@ -177,6 +181,9 @@ config SW_OFFLOAD
 	bool
 
 config HW_OFFLOAD
+	bool
+
+config MODEM_RESET_QUIRK
 	bool
 
 # Architecture selection

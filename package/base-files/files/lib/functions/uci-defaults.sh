@@ -669,23 +669,24 @@ ucidef_set_network_options() {
 
 ucidef_set_poe() {
 	json_add_object poe
-		json_add_int "chip_count" "$1"
-		json_add_int "budget" "$2"
-		json_add_int "poe_ports" "$3"
-		shift 3
-		json_add_array ports
-			while [ $# -gt 0 ]
-			do
-				json_add_object ""
-					json_add_string "name" "$1"
-					json_add_string "class" "$2"
-					json_add_int "budget" "$3"
-				json_close_object
-				shift 3
-			done
-		json_close_array
-		json_add_array poe_chips
-		json_close_array
+	json_add_string "bus" "/dev/$1"
+	json_add_int "chip_count" "$2"
+	json_add_int "budget" "$3"
+	json_add_int "poe_ports" "$4"
+	shift 4
+	json_add_array ports
+		while [ $# -gt 0 ]
+		do
+			json_add_object ""
+			json_add_string "name" "$1"
+			json_add_string "class" "$2"
+			json_add_int "budget" "$3"
+			json_close_object
+			shift 3
+		done
+	json_close_array
+	json_add_array poe_chips
+	json_close_array
 	json_close_object
 }
 
@@ -711,6 +712,13 @@ ucidef_set_poe_chip() {
 ucidef_usbcheck() {
 	json_add_object usbcheck
 		json_add_string path "$1"
+	json_close_object
+}
+
+ucidef_usbhubcheck() {
+	json_add_object usbhubcheck
+		json_add_string usb_id "$1"
+		json_add_string gpio "$2"
 	json_close_object
 }
 

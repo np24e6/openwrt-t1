@@ -15,6 +15,8 @@ PKG_SOURCE_URL:=@GNU/$(PKG_NAME)
 PKG_HASH:=63aede5c6d33b6d9b13511cd0be2cac046f2e70fd0a07aa9573a04a82783af96
 PKG_CAT:=xzcat
 
+PKG_LICENSE:=GPL-2.0-or-later
+
 HOST_BUILD_PARALLEL:=1
 
 include $(INCLUDE_DIR)/host-build.mk

@@ -6,8 +6,9 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=opcua_client
-PKG_VERSION:=2024-01-25
-PKG_SOURCE_VERSION:=7.6.5
+PKG_VERSION:=2024-04-04
+PKG_SOURCE_VERSION:=7.7-1
+PKG_LICENSE:=Teltonika-closed
 
 include $(INCLUDE_DIR)/package.mk
 
@@ -16,13 +17,11 @@ define Package/$(PKG_NAME)
 	CATEGORY:=Network
 	TITLE:=OPC UA client by Teltonika
 	DEPENDS:=+libuci +libtlt_uci +libtlt_utils +libubox +libubus +libsqlite3 \
-		+open62541 +vuci-app-opcua-ui +data-sender-mod-opcua
-	PKG_TLT_NAME:=OPC UA Client
-	PKG_ROUTER:=$(TLT_PLATFORM_NAME)
+		+open62541 +data-sender-mod-opcua
 endef
 
 define Package/$(PKG_NAME)/description
-	OPC UA client by Teltonika
+	OPC UA client designed for reading data from OPC UA servers and storing read data in local database.
 endef
 
 define Package/$(PKG_NAME)/conffiles
@@ -34,7 +33,9 @@ define Package/$(PKG_NAME)/install
 	$(INSTALL_DIR) $(1)/etc/config
 	$(INSTALL_DIR) $(1)/etc/init.d
 	$(INSTALL_DIR) $(1)/usr/bin
+	$(INSTALL_DIR) $(1)/usr/lib/rpcd
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/opcua_client $(1)/usr/bin/opcua_client
+	$(CP) $(PKG_BUILD_DIR)/opcua_client.so $(1)/usr/lib/rpcd/opcua_client.so
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/files/opcua_client.init $(1)/etc/init.d/opcua_client
 	$(INSTALL_CONF) $(PKG_BUILD_DIR)/files/opcua_client.conf $(1)/etc/config/opcua_client
 endef
@@ -44,6 +45,8 @@ endef
 
 define Package/$(PKG_NAME)/postinst
         #!/bin/sh
+
+	/etc/init.d/rpcd reload
 
         [ -z "$${IPKG_INSTROOT}" ] || exit 0
         [ -e /lib/data_sender/libdata_sender.sh ] || exit 0

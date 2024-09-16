@@ -16,6 +16,8 @@ PKG_SOURCE_URL:=https://github.com/Kitware/CMake/releases/download/v$(PKG_VERSIO
 		https://cmake.org/files/v3.19/
 PKG_HASH:=1d266ea3a76ef650cdcf16c782a317cb4a7aa461617ee941e389cb48738a3aba
 
+PKG_LICENSE:=BSD-3-Clause
+
 HOST_BUILD_PARALLEL:=1
 HOST_CONFIGURE_PARALLEL:=1
 

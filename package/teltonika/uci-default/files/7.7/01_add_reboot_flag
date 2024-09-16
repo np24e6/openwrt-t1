@@ -1,0 +1,4 @@
+#!/bin/sh
+
+touch /log/reboot
+exit 0

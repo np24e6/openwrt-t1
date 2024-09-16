@@ -1,0 +1,21 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2006-2011 OpenWrt.org
+
+START=20
+STOP=90
+
+entry_id="memleak_watcher"
+cron_file='/etc/crontabs/root'
+
+rm_cron_entry() {
+	[ -f "$1" ] || return
+	sed -i'' -e "/#$2/d" "$1"
+}
+
+boot() {
+	[ -f "$cron_file" ] && grep -qEe "$entry_id$" "$cron_file" && return
+	rm_cron_entry "$cron_file" "$entry_id"
+
+	echo "8 */1 * * * /sbin/memleak_watcher -l #$entry_id" >>"$cron_file"
+	/etc/init.d/cron restart &
+}

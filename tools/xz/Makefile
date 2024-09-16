@@ -17,6 +17,8 @@ PKG_CPE_ID:=cpe:/a:tukaani:xz
 
 HOST_BUILD_PARALLEL:=1
 
+PKG_LICENSE:=PUBLICDOMAIN
+
 include $(INCLUDE_DIR)/host-build.mk
 include $(INCLUDE_DIR)/gpl.mk
 

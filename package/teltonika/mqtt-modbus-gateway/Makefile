@@ -2,8 +2,8 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=mqtt-modbus-gateway
-PKG_VERSION:=2024-01-04
-PKG_SOURCE_VERSION:=7.6.2
+PKG_VERSION:=2024-04-02
+PKG_SOURCE_VERSION:=7.7
 PKG_LICENSE:=Teltonika-closed
 
 # TARGET_CFLAGS += -ggdb3 -O0
@@ -14,16 +14,11 @@ define Package/mqtt-modbus-gateway
 		SECTION:=net
 		CATEGORY:=Network
 		TITLE:=MQTT Modbus Gateway
-		DEPENDS:=+libmosquitto +vuci-app-modbus-gateway-ui +libmodbus +libmnfinfo +libtlt_uci +libuci
-
-		ifeq (m, $(CONFIG_PACKAGE_mqtt-modbus-gateway))
-			PKG_TLT_NAME:=MQTT Modbus gateway
-			PKG_ROUTER:=$(TLT_PLATFORM_NAME)
-		endif
+		DEPENDS:=+libmosquitto +libmodbus +libmnfinfo +libtlt_uci +libtlt_termios +libuci
 endef
 
 define Package/mqtt-modbus-gateway/description
-		This application provides MQTT Modbus Gateway
+		MQTT-Modbus Gateway is a service meant to read/write MODBUS TCP/RTU servers via MQTT messages.
 endef
 
 define Package/mqtt-modbus-gateway/conffiles

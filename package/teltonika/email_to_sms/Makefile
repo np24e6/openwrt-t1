@@ -14,6 +14,8 @@ PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_SOURCE_VERSION)-$(PKG_VERSION)
 PKG_SOURCE:=$(PKG_SOURCE_SUBDIR).tar.gz
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_SOURCE_SUBDIR)
 
+PKG_LICENSE:=Teltonika-closed
+
 include $(INCLUDE_DIR)/package.mk
 
 define Package/email_to_sms

@@ -38,7 +38,6 @@ ubus_call() {
 fixup_interface() {
 	local config="$1"
 	local ifname type device l3dev
-
 	config_get type "$config" type
 	config_get ifname "$config" ifname
 	[ "bridge" = "$type" ] && ifname="br-$config"
@@ -156,13 +155,15 @@ check_dsa_switch() {
 
 	json_select network
 
-		json_select lan
+		if json_select lan; then
 			json_get_values ports ports
-		json_select ..
+			json_select ..
+		fi
 
-		json_select wan
+		if json_select wan; then
 			json_get_vars device
-		json_select ..
+			json_select ..
+		fi
 
 	json_select ..
 

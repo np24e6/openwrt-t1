@@ -197,9 +197,9 @@ $(eval $(call TestHostCommand,ldconfig-stub,Failed to install stub, \
 	touch $(STAGING_DIR_HOST)/bin/ldconfig && \
 	chmod +x $(STAGING_DIR_HOST)/bin/ldconfig))
 
-$(eval $(call TestHostCommand,node,Please install NodeJS >= 12.0, \
+$(eval $(call TestHostCommand,node,Please install NodeJS >= 18.0, \
 	node --version 2>&1 | awk -F. \
-		'{major=int(substr($$$$$$$$1,2,length($$$$$$$$1)-1)); if(major < 12) exit 1}'))
+		'{major=int(substr($$$$$$$$1,2,length($$$$$$$$1)-1)); if(major < 18) exit 1}'))
 
 $(eval $(call SetupHostCommand,npm,Please install the 'npm' package, \
 	npm --version))

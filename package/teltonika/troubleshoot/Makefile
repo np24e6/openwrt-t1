@@ -7,6 +7,8 @@ include $(TOPDIR)/rules.mk
 PKG_NAME:=troubleshoot
 PKG_VERSION:=1.1
 
+PKG_LICENSE:=Teltonika-closed
+
 include $(INCLUDE_DIR)/package.mk
 
 define Package/troubleshoot

@@ -1,7 +1,43 @@
 #!/bin/sh
 
-# reset SMS limit database
-rm /log/sms.db  &>/dev/null
+PROG_NAME="firstboot"
 
+usage_print() {
+        echo "Usage: $PROG_NAME [-y][-f]"
+        echo "-y skip the confirmation dialog"
+        echo "-f reset to factory defaults"
+}
+
+for arg in "$@"
+do
+        case "$arg" in
+                "-y" | "-Y")
+                        CONFIRM="1"
+                ;;
+                "-f" | "-F")
+                        FACTORY="1"
+                ;;
+                *)        
+                        usage_print
+	                return 1
+                ;;
+        esac        
+done
+
+if [ "$CONFIRM" != "1" ]; then
+	echo "This will erase all settings and remove any installed packages. Are you sure? [N/y]"
+	read -r answer
+	if [ "$answer" = "${answer#[Yy]}" ]; then
+		return 1
+	fi
+fi
+
+if [ "$FACTORY" = "1" ]; then
+        # wipe all from log
+        rm -fr /log/*
+else
+        # reset SMS limit database
+        rm /log/sms.db  &>/dev/null
+fi;
 # now perform rootfs reset
-/sbin/jffs2reset $@
+/sbin/jffs2reset "-y"

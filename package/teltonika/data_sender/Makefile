@@ -3,9 +3,11 @@ include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=data-sender
 
-PKG_SOURCE_VERSION:=1.4
+PKG_SOURCE_VERSION:=1.5
 
 PKG_FIXUP:=autoreconf
+
+PKG_LICENSE:=Teltonika-closed
 
 include $(INCLUDE_DIR)/package.mk
 
@@ -20,7 +22,7 @@ endef
 
 define Package/data-sender
   $(call Package/data-sender/Default)
-  DEPENDS:=+libuci +libtlt-logger +libubox +libblobmsg-json +libubus +vuci-app-data-sender-ui
+  DEPENDS:=+libuci +libtlt-logger +libubox +libblobmsg-json +libubus +libjson-c
   TITLE:=Data sender daemon by Teltonika
   MENU:=1
 endef

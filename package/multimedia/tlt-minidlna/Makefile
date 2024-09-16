@@ -36,19 +36,9 @@ define Package/tlt-minidlna
   TITLE:=UPnP A/V & DLNA Media Server
   URL:=http://minidlna.sourceforge.net/
   DEPENDS:= +libpthread +libexif +libjpeg +libsqlite3 +libffmpeg-audio-dec \
-  	+libid3tag +libflac +libvorbis +libuuid +vuci-app-minidlna-ui +libubus \
+  	+libid3tag +libflac +libvorbis +libuuid +libubus \
 	+libubox $(ICONV_DEPENDS) $(INTL_DEPENDS)
   USERID:=minidlna:minidlna
-  PKG_TLT_NAME:=DLNA
-  PKG_ROUTER:=$(TLT_PLATFORM_NAME)
-endef
-
-define Package/tlt-minidlna/teltonika_rut9xx
-  PKG_ROUTER:=RUT955
-endef
-
-define Package/tlt-minidlna/teltonika_rut9m
-  PKG_ROUTER:=RUT956 RUT906
 endef
 
 define Package/tlt-minidlna/description

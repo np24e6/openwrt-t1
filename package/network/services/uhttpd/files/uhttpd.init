@@ -80,6 +80,11 @@ start_instance()
 	config_get disabled "$cfg" disabled "0"
 	[ "$disabled" = "1" ] && return
 
+	[ -h "/etc/hotplug.d/iface/91-trigger-vuci-routes-reload" ] || \
+		ln -s /usr/share/uhttpd/91-trigger-vuci-routes-reload.hotplug /etc/hotplug.d/iface/91-trigger-vuci-routes-reload
+	[ -h "/etc/hotplug.d/net/91-trigger-vuci-routes-reload" ] || \
+		ln -s /usr/share/uhttpd/91-trigger-vuci-routes-reload.hotplug /etc/hotplug.d/net/91-trigger-vuci-routes-reload
+
 	procd_open_instance
 	procd_set_param respawn 0 5 0
 	procd_set_param stderr 1
@@ -159,4 +164,9 @@ service_triggers()
 start_service() {
 	config_load uhttpd
 	config_foreach start_instance uhttpd
+}
+
+stop_service() {
+	[ -h "/etc/hotplug.d/iface/91-trigger-vuci-routes-reload" ] && rm /etc/hotplug.d/iface/91-trigger-vuci-routes-reload &>/dev/null
+	[ -h "/etc/hotplug.d/net/91-trigger-vuci-routes-reload" ] && rm /etc/hotplug.d/net/91-trigger-vuci-routes-reload &>/dev/null
 }

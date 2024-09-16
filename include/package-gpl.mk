@@ -113,12 +113,15 @@ define gpl_install_orig_w_patch
 	$(eval PKG_UPSTREAM_URL:=)
 	$(call gpl_install_mixed,$(1))
 	$(eval PKG_UPSTREAM_URL:=$(OLD_PKG_UPSTREAM_URL))
+	$(eval STRIP_COMPONENTS?=1)
+	$(eval STRIP_COMPONENTS:=$(STRIP_COMPONENTS))
+
 (\
 	mkdir -p "$(1)/orig"; \
 	cd "$(1)/orig"; \
 	case $(PKG_UPSTREAM_FILE) in \
-	*.tar.bz2|*.tbz2)	tar xjf "$(DL_DIR)/$(PKG_UPSTREAM_FILE)" --strip-components=1	;; \
-	*.tar.gz|*.tgz)		tar xzf "$(DL_DIR)/$(PKG_UPSTREAM_FILE)" --strip-components=1	;; \
+	*.tar.bz2|*.tbz2)	tar xjf "$(DL_DIR)/$(PKG_UPSTREAM_FILE)" --strip-components=$(STRIP_COMPONENTS)	;; \
+	*.tar.gz|*.tgz)		tar xzf "$(DL_DIR)/$(PKG_UPSTREAM_FILE)" --strip-components=$(STRIP_COMPONENTS)	;; \
 	*.bz2)			bunzip2 "$(DL_DIR)/$(PKG_UPSTREAM_FILE)"	;; \
 	*.rar)			unrar x "$(DL_DIR)/$(PKG_UPSTREAM_FILE)"	;; \
 	*.gz)			gunzip "$(DL_DIR)/$(PKG_UPSTREAM_FILE)"		;; \

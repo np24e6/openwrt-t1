@@ -3,6 +3,7 @@
 local libspeedtest = require ("libspeedtest")
 local socket =  require("socket")
 local jsc = require("luci.jsonc")
+local util = require("vuci.util")
 
 local SERVER, WARNING, ERROR, isError, res
 local STATE = "START"
@@ -178,6 +179,24 @@ local function fetchServerList()
     return body
 end
 
+local function getConfig()
+    -- check that internet exists before trying to resolve speedtest
+    ping = util.ubus("file", "exec", {
+        command = "ping",
+        params = {"1.1.1.1", "-c1"}
+    })
+
+    local body = ""
+    if ping.code == 0 then
+        body = libspeedtest.getbody("https://www.speedtest.net/speedtest-config.php") or ""
+    end
+
+    local client_line = body.match(body, '<client.-/>') or ""
+    isp = string.match(client_line, 'isp="([^"]+)"')
+    ip = string.match(client_line, 'ip="([^"]+)"')
+    return {isp = isp, ip = ip}
+end
+
 local function getServerList()
     local body, file
 
@@ -209,7 +228,7 @@ local function flagCheck(num,flag)
     local tmp = 0;
 
     if flag == "--help" or flag == "-h" then
-        print("usage: speedtest [options]\nAvailible options are:\n--help      shows usage of file\n-s          set silent mode\n-u [url]    set server\n-t [time]   set test time\n-g          get server list")
+        print("usage: speedtest [options]\nAvailable options are:\n--help      shows usage of file\n-s          set silent mode\n-u [url]    set server\n-t [time]   set test time\n-g          get server list\n-i          get client info")
         exit()
     elseif flag == "-s" then
         SILENT = true;
@@ -240,6 +259,10 @@ local function flagCheck(num,flag)
             TIME = arg[num + 1]
             tmp = 1
         end
+    elseif flag == "-i" then
+        config = getConfig()
+        print(string.format('{"ip": "%s", "isp": "%s"}', config.ip or "", config.isp or ""))
+        exit()
     else
         print("The is no such option as "..flag)
     end
@@ -330,7 +353,8 @@ if not SILENT then
 end
 
 STATE = "TESTING_DOWNLOAD"
-isError, res = libspeedtest.testspeed(SERVER..":8080/download", TIME, false)
+isError, res = libspeedtest.testspeed(SERVER..":8080/download?size=92233720368547758", TIME, false, 4)
+-- some servers like speedtest.bite.lt will not work unless a size is specified
 if isError then
     ERROR = res
     writeData()
@@ -342,7 +366,7 @@ writeToJSON(DSPEED, DBYTES, USPEED, UBYTES)
 socket.sleep(3.75)
 
 STATE = "TESTING_UPLOAD"
-isError, res = libspeedtest.testspeed(SERVER..":8080/speedtest/upload.php", TIME, true)
+isError, res = libspeedtest.testspeed(SERVER..":8080/speedtest/upload.php", TIME, true, 4)
 if isError then
     ERROR = res
     writeData()

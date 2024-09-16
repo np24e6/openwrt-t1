@@ -14,6 +14,8 @@ PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_SOURCE_VERSION)-$(PKG_VERSION)
 PKG_SOURCE:=$(PKG_SOURCE_SUBDIR).tar.gz
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_SOURCE_SUBDIR)
 
+PKG_LICENSE:=Teltonika-closed
+
 include $(INCLUDE_DIR)/package.mk
 
 define Package/smpp
@@ -21,22 +23,13 @@ define Package/smpp
 	CATEGORY:=Base system
 	TITLE:=SMPP Transceiver
 	DEPENDS:=+libsmpp34 +libubox +libtlt-logger +libgsm +liburc \
-		+libubus +libboardjson +vuci-app-smpp-ui
+		+libubus +libboardjson
 	#USERID:=smppd=454:smppd=454
-	PKG_TLT_NAME:=SMPP
-	PKG_ROUTER:=$(TLT_PLATFORM_NAME)
-endef
-
-define Package/smpp/teltonika_rutx
-  PKG_ROUTER:=RUTX09 RUTX11 RUTX12 RUTX14 RUTXR1 RUTX50
-endef
-
-define Package/smpp/teltonika_rutm
-	PKG_ROUTER:=RUTM09 RUTM11 RUTM12 RUTM14 RUTM50 RUTM51
 endef
 
 define Package/smpp/description
-	SMPP Transceiver
+	SMPP package that provides SMPP protocol
+	services for flexible short message data transfer.
 endef
 
 define Package/smpp/conffiles

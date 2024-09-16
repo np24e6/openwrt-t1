@@ -2,9 +2,8 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=dlms_client
-PKG_VERSION:=2024-01-24
-PKG_SOURCE_VERSION:=7.6.5
-PKG_BUILD_DEPENDS:=libdlms
+PKG_VERSION:=2024-04-02
+PKG_SOURCE_VERSION:=7.7
 
 PKG_UPSTREAM_VERSION:=0b368c2b7986027dfdb500334b3c70cadb32a21e
 PKG_UPSTREAM_URL:=https://git.teltonika.lt/api/v4/projects/352/packages/generic/GuruDLMS/$(PKG_UPSTREAM_VERSION)
@@ -19,14 +18,12 @@ define Package/$(PKG_NAME)
 	SECTION:=net
 	CATEGORY:=Network
 	TITLE:=DLMS Client for COSEM device monitoring
-	DEPENDS:=+libsqlite3 +libubus +libubox +libuci +libtlt_uci +libtlt-logger +libpthread \
-		+vuci-app-dlms-ui +data-sender-mod-dlms
-	PKG_TLT_NAME:=DLMS Client
-        PKG_ROUTER:=$(TLT_PLATFORM_NAME)
+	DEPENDS:=+libsqlite3 +libubus +libubox +libuci +libtlt_uci +libtlt_termios +libtlt-logger +libpthread \
+		+data-sender-mod-dlms +libdlms
 endef
 
 define Package/$(PKG_NAME)/description
-	DLMS Client for COSEM device monitoring by Teltonika
+	DLMS client designed for reading data from COSEM devices and storing read data in local database.
 endef
 
 define Package/$(PKG_NAME)/conffiles
@@ -34,10 +31,11 @@ define Package/$(PKG_NAME)/conffiles
 endef
 
 define Package/$(PKG_NAME)/install
-	$(INSTALL_DIR) $(1)/etc/config $(1)/etc/init.d $(1)/usr/sbin
+	$(INSTALL_DIR) $(1)/etc/config $(1)/etc/init.d $(1)/usr/sbin $(1)/usr/lib/rpcd
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/files/dlms_client.conf $(1)/etc/config/dlms_client
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/files/dlms_client.init $(1)/etc/init.d/dlms_client
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/dlms_client $(1)/usr/sbin/dlms_client
+	$(CP) $(PKG_BUILD_DIR)/dlms_client.so $(1)/usr/lib/rpcd/dlms_client.so
 endef
 
 define Build/Test
@@ -45,6 +43,8 @@ endef
 
 define Package/$(PKG_NAME)/postinst
 	#!/bin/sh
+
+	/etc/init.d/rpcd reload
 
 	[ -z "$${IPKG_INSTROOT}" ] || exit 0
 	[ -e /lib/data_sender/libdata_sender.sh ] || exit 0

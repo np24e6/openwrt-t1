@@ -7,9 +7,11 @@ include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=smslimit
 
-PKG_SOURCE_VERSION:=5.1
+PKG_SOURCE_VERSION:=6.0
 
 GPL_INCLUDE_HEADERS:=1
+
+PKG_LICENSE:=Teltonika-closed
 
 include $(INCLUDE_DIR)/package.mk
 
@@ -20,6 +22,10 @@ define Package/rpcd-mod-smslimit
   CATEGORY:=Libraries
   TITLE:=SMS Limit rpcd module
   DEPENDS:=+rpcd +lsqlite3 +libubus +libgsm
+endef
+
+define Package/rpcd-mod-smslimit/description
+	Package allows setting a limit on SMS messages sent from a SIM card within a specified period.
 endef
 
 define Build/InstallDev

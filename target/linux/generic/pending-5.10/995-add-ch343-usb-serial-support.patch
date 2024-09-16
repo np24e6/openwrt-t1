@@ -28,7 +28,7 @@
  	select USB_EZUSB_FX2
 --- a/drivers/usb/class/cdc-acm.c
 +++ b/drivers/usb/class/cdc-acm.c
-@@ -1929,6 +1929,21 @@ static const struct usb_device_id acm_id
+@@ -1932,6 +1932,21 @@ static const struct usb_device_id acm_id
  	},
  #endif
  

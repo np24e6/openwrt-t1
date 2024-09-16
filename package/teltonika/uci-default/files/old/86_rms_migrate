@@ -12,4 +12,8 @@
   rm /etc/config/rms_connect_timer
 }
 
+config_load rms_mqtt
+uci_remove rms_mqtt "rms_connect_mqtt" "debug"
+uci_commit "rms_mqtt"
+
 exit 0

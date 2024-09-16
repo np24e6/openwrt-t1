@@ -1,7 +1,7 @@
-Index: firewall-2021-03-23-61db17ed/main.c
+Index: firewall-2022-02-17-4cd7d4f3/main.c
 ===================================================================
---- firewall-2021-03-23-61db17ed.orig/main.c
-+++ firewall-2021-03-23-61db17ed/main.c
+--- firewall-2022-02-17-4cd7d4f3.orig/main.c
++++ firewall-2022-02-17-4cd7d4f3/main.c
 @@ -32,18 +32,15 @@
  #include "iptables.h"
  #include "helpers.h"
@@ -163,7 +163,7 @@ Index: firewall-2021-03-23-61db17ed/main.c
  
  		return rv;
  	}
-@@ -188,28 +163,23 @@ stop(bool complete)
+@@ -188,25 +163,20 @@ stop(bool complete)
  	if (!print_family && run_state)
  		fw3_hotplug_zones(run_state, false);
  
@@ -176,9 +176,6 @@ Index: firewall-2021-03-23-61db17ed/main.c
 -		for (table = FW3_TABLE_FILTER; table <= FW3_TABLE_RAW; table++)
 -		{
 +		for (table = FW3_TABLE_FILTER; table <= FW3_TABLE_RAW; table++) {
- 			if (!fw3_has_table(family == FW3_FAMILY_V6, fw3_flag_names[table]))
- 				continue;
- 
  			if (!(handle = fw3_ipt_open(family, table)))
  				continue;
  
@@ -198,7 +195,7 @@ Index: firewall-2021-03-23-61db17ed/main.c
  				fw3_flush_rules(handle, run_state, false);
  				fw3_flush_zones(handle, run_state, false);
  			}
-@@ -238,16 +208,14 @@ stop(bool complete)
+@@ -235,16 +205,14 @@ stop(bool complete)
  	return rv;
  }
  
@@ -217,7 +214,7 @@ Index: firewall-2021-03-23-61db17ed/main.c
  		if (!print_family)
  			fw3_create_ipsets(cfg_state, family, false);
  
-@@ -257,8 +225,7 @@ start(void)
+@@ -254,8 +222,7 @@ start(void)
  		if (print_family && family != print_family)
  			continue;
  
@@ -227,16 +224,13 @@ Index: firewall-2021-03-23-61db17ed/main.c
  			warn("The %s firewall appears to be started already. "
  			     "If it is indeed empty, remove the %s file and retry.",
  			     fw3_flag_names[family], FW3_STATEFILE);
-@@ -266,16 +233,14 @@ start(void)
+@@ -263,13 +230,11 @@ start(void)
  			continue;
  		}
  
 -		for (table = FW3_TABLE_FILTER; table <= FW3_TABLE_RAW; table++)
 -		{
 +		for (table = FW3_TABLE_FILTER; table <= FW3_TABLE_RAW; table++) {
- 			if (!fw3_has_table(family == FW3_FAMILY_V6, fw3_flag_names[table]))
- 				continue;
- 
  			if (!(handle = fw3_ipt_open(family, table)))
  				continue;
  
@@ -246,7 +240,7 @@ Index: firewall-2021-03-23-61db17ed/main.c
  
  			fw3_print_default_chains(handle, cfg_state, false);
  			fw3_print_zone_chains(handle, cfg_state, false);
-@@ -302,13 +267,11 @@ start(void)
+@@ -296,13 +261,11 @@ start(void)
  		rv = 0;
  	}
  
@@ -262,7 +256,7 @@ Index: firewall-2021-03-23-61db17ed/main.c
  			fw3_run_includes(cfg_state, false);
  			fw3_hotplug_zones(cfg_state, true);
  			fw3_write_statefile(cfg_state);
-@@ -318,9 +281,7 @@ start(void)
+@@ -312,9 +275,7 @@ start(void)
  	return rv;
  }
  
@@ -273,7 +267,7 @@ Index: firewall-2021-03-23-61db17ed/main.c
  {
  	int rv = 1;
  	enum fw3_family family;
-@@ -332,21 +293,18 @@ reload(void)
+@@ -326,18 +287,15 @@ reload(void)
  
  	fw3_hotplug_zones(run_state, false);
  
@@ -286,9 +280,6 @@ Index: firewall-2021-03-23-61db17ed/main.c
 -		for (table = FW3_TABLE_FILTER; table <= FW3_TABLE_RAW; table++)
 -		{
 +		for (table = FW3_TABLE_FILTER; table <= FW3_TABLE_RAW; table++) {
- 			if (!fw3_has_table(family == FW3_FAMILY_V6, fw3_flag_names[table]))
- 				continue;
- 
  			if (!(handle = fw3_ipt_open(family, table)))
  				continue;
  
@@ -298,16 +289,13 @@ Index: firewall-2021-03-23-61db17ed/main.c
  
  			fw3_flush_rules(handle, run_state, true);
  			fw3_flush_zones(handle, run_state, true);
-@@ -366,16 +324,14 @@ start:
+@@ -357,13 +315,11 @@ start:
  
  		fw3_create_ipsets(cfg_state, family, true);
  
 -		for (table = FW3_TABLE_FILTER; table <= FW3_TABLE_RAW; table++)
 -		{
 +		for (table = FW3_TABLE_FILTER; table <= FW3_TABLE_RAW; table++) {
- 			if (!fw3_has_table(family == FW3_FAMILY_V6, fw3_flag_names[table]))
- 				continue;
- 
  			if (!(handle = fw3_ipt_open(family, table)))
  				continue;
  
@@ -317,7 +305,7 @@ Index: firewall-2021-03-23-61db17ed/main.c
  
  			fw3_print_default_chains(handle, cfg_state, true);
  			fw3_print_zone_chains(handle, cfg_state, true);
-@@ -399,8 +355,7 @@ start:
+@@ -387,8 +343,7 @@ start:
  		rv = 0;
  	}
  
@@ -327,7 +315,7 @@ Index: firewall-2021-03-23-61db17ed/main.c
  		fw3_flush_conntrack(run_state);
  
  		fw3_set_defaults(cfg_state);
-@@ -412,20 +367,17 @@ start:
+@@ -400,20 +355,17 @@ start:
  	return rv;
  }
  
@@ -348,10 +336,10 @@ Index: firewall-2021-03-23-61db17ed/main.c
 -		for (table = FW3_TABLE_FILTER; table <= FW3_TABLE_RAW; table++)
 -		{
 +		for (table = FW3_TABLE_FILTER; table <= FW3_TABLE_RAW; table++) {
- 			if (!fw3_has_table(family == FW3_FAMILY_V6, fw3_flag_names[table]))
+ 			if (!(handle = fw3_ipt_open(family, table)))
  				continue;
  
-@@ -441,18 +393,14 @@ gc(void)
+@@ -426,8 +378,7 @@ gc(void)
  	return 0;
  }
  
@@ -361,20 +349,17 @@ Index: firewall-2021-03-23-61db17ed/main.c
  {
  	struct fw3_zone *z;
  	struct fw3_device *d;
- 
--	list_for_each_entry(z, &cfg_state->zones, list)
--	{
--		list_for_each_entry(d, &z->networks, list)
--		{
+@@ -436,8 +387,7 @@ lookup_network(const char *net)
+ 	{
+ 		list_for_each_entry(d, &z->networks, list)
+ 		{
 -			if (!strcmp(d->name, net))
 -			{
-+	list_for_each_entry (z, &cfg_state->zones, list) {
-+		list_for_each_entry (d, &z->networks, list) {
 +			if (!strcmp(d->name, net)) {
  				printf("%s\n", z->name);
  				return 0;
  			}
-@@ -462,18 +410,14 @@ lookup_network(const char *net)
+@@ -447,8 +397,7 @@ lookup_network(const char *net)
  	return 1;
  }
  
@@ -384,20 +369,17 @@ Index: firewall-2021-03-23-61db17ed/main.c
  {
  	struct fw3_zone *z;
  	struct fw3_device *d;
- 
--	list_for_each_entry(z, &cfg_state->zones, list)
--	{
--		list_for_each_entry(d, &z->devices, list)
--		{
+@@ -457,8 +406,7 @@ lookup_device(const char *dev)
+ 	{
+ 		list_for_each_entry(d, &z->devices, list)
+ 		{
 -			if (!strcmp(d->name, dev))
 -			{
-+	list_for_each_entry (z, &cfg_state->zones, list) {
-+		list_for_each_entry (d, &z->devices, list) {
 +			if (!strcmp(d->name, dev)) {
  				printf("%s\n", z->name);
  				return 0;
  			}
-@@ -483,19 +427,16 @@ lookup_device(const char *dev)
+@@ -468,8 +416,7 @@ lookup_device(const char *dev)
  	return 1;
  }
  
@@ -407,20 +389,7 @@ Index: firewall-2021-03-23-61db17ed/main.c
  {
  	struct fw3_zone *z;
  	struct fw3_device *d;
- 
--	list_for_each_entry(z, &cfg_state->zones, list)
--	{
-+	list_for_each_entry (z, &cfg_state->zones, list) {
- 		if (strcmp(z->name, zone))
- 			continue;
- 
--		list_for_each_entry(d, &z->devices, list)
--		{
-+		list_for_each_entry (d, &z->devices, list) {
- 			if (device && strcmp(device, d->name))
- 				continue;
- 
-@@ -512,8 +453,7 @@ lookup_zone(const char *zone, const char
+@@ -497,8 +444,7 @@ lookup_zone(const char *zone, const char
  	return 1;
  }
  
@@ -430,7 +399,7 @@ Index: firewall-2021-03-23-61db17ed/main.c
  {
  	fprintf(stderr, "fw3 [-4] [-6] [-q] print\n");
  	fprintf(stderr, "fw3 [-q] {start|stop|flush|reload|restart}\n");
-@@ -524,17 +464,14 @@ usage(void)
+@@ -509,17 +455,14 @@ usage(void)
  	return 1;
  }
  
@@ -451,7 +420,7 @@ Index: firewall-2021-03-23-61db17ed/main.c
  		case '4':
  			family = FW3_FAMILY_V4;
  			break;
-@@ -548,7 +485,8 @@ int main(int argc, char **argv)
+@@ -533,7 +476,8 @@ int main(int argc, char **argv)
  			break;
  
  		case 'q':
@@ -461,7 +430,7 @@ Index: firewall-2021-03-23-61db17ed/main.c
  			break;
  
  		case 'h':
-@@ -560,20 +498,15 @@ int main(int argc, char **argv)
+@@ -545,20 +489,15 @@ int main(int argc, char **argv)
  	build_state(false);
  	defs = &cfg_state->defaults;
  
@@ -486,7 +455,7 @@ Index: firewall-2021-03-23-61db17ed/main.c
  			if (defs->disable_ipv6)
  				warn("IPv6 rules globally disabled in configuration");
  #ifdef DISABLE_IPV6
-@@ -582,87 +515,61 @@ int main(int argc, char **argv)
+@@ -567,87 +506,61 @@ int main(int argc, char **argv)
  #endif
  		}
  

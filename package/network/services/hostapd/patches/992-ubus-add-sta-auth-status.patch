@@ -1,0 +1,10 @@
+--- a/wpa_supplicant/ubus.c
++++ b/wpa_supplicant/ubus.c
+@@ -127,6 +127,7 @@ wpas_bss_get_status(struct ubus_context
+ 
+ 	blob_buf_init(&b, 0);
+ 	blobmsg_add_u32(&b, "disconnect_reason", wpa_s->disconnect_reason);
++	blobmsg_add_u32(&b, "auth_status", wpa_s->auth_status_code);
+ 	blobmsg_add_string(&b, "wpa_state", wpa_supplicant_state_txt(wpa_s->wpa_state));
+ 	blobmsg_add_string(&b, "conf_id", ssid->config_id);
+ 	ubus_send_reply(ctx, req, b.head);

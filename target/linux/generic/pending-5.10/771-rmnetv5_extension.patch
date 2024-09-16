@@ -291,8 +291,8 @@
  static const struct usb_device_id products[] = {
  	/* 1. CDC ECM like devices match on the control interface */
  	{	/* Huawei E392, E398 and possibly others sharing both device id and more... */
-@@ -1052,8 +1210,8 @@ static const struct usb_device_id produc
- 	{QMI_MATCH_FF_FF_FF(0x2c7c, 0x0306)},	/* Quectel EP06/EG06/EM06 */
+@@ -1053,8 +1211,8 @@ static const struct usb_device_id produc
+ 	{QMI_MATCH_FF_FF_FF(0x2c7c, 0x030b)},	/* Quectel EG060K */
  	{QMI_MATCH_FF_FF_FF(0x2c7c, 0x0512)},	/* Quectel EG12/EM12 */
  	{QMI_MATCH_FF_FF_FF(0x2c7c, 0x0620)},	/* Quectel EM160R-GL */
 -	{QMI_MATCH_FF_FF_FF(0x2c7c, 0x0800)},	/* Quectel RM500Q-GL */

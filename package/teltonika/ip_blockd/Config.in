@@ -1,0 +1,6 @@
+config IP_BLOCKD_MAC_SUPPORT
+    bool "MAC blocking support"
+    depends on PACKAGE_ip_blockd
+    default n
+    help
+        Enables MAC blocking support

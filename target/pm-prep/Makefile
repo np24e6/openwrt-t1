@@ -37,7 +37,7 @@ endef
 
 define PM/Build/Prepare
 	mkdir -p "$(PM_DIR)" && \
-	"$(SCRIPT_DIR)/prepare_tlt_pm_packages.sh" -u "$(SIGN_FILE_LIST)" "$(PKG_LIST)" "$(TOPDIR)" "$(ARCH_PACKAGES)" "$(PACKAGE_DIR)"
+	"$(SCRIPT_DIR)/prepare_tlt_pm_packages.sh" $(if $(CONFIG_GPL_BUILD),-i) -u "$(SIGN_FILE_LIST)" "$(PKG_LIST)" "$(TOPDIR)" "$(ARCH_PACKAGES)" "$(PACKAGE_DIR)"
 endef
 
 define PM/Build/Sign_ipk
@@ -46,7 +46,7 @@ endef
 
 define PM/Build
 	mkdir -p "$(PM_ZIPPED_DIR)" && \
-	"$(SCRIPT_DIR)/prepare_tlt_pm_packages.sh" -p "$(PKG_LIST)" "$(TOPDIR)" "$(ARCH_PACKAGES)" "$(PACKAGE_DIR)" && \
+	"$(SCRIPT_DIR)/prepare_tlt_pm_packages.sh" $(if $(CONFIG_GPL_BUILD),-i) -p "$(PKG_LIST)" "$(TOPDIR)" "$(ARCH_PACKAGES)" "$(PACKAGE_DIR)" && \
 	cd "$(PM_DIR)" && \
 	{ "$(SCRIPT_DIR)/ipkg-make-index.sh" . >Packages.manifest; } 2>&1 && \
 	grep -vE '^(Maintainer|LicenseFiles|Source|SourceName|Require)' Packages.manifest >Packages && \

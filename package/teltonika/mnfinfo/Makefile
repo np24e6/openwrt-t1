@@ -1,13 +1,14 @@
 #
-# Copyright (C) 2022 Teltonika
+# Copyright (C) 2024 Teltonika-Networks
 #
 
 include $(TOPDIR)/rules.mk
-include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=mnfinfo
 
-PKG_SOURCE_VERSION:=2.14
+PKG_SOURCE_VERSION:=2.16.1
+
+PKG_LICENSE:=Teltonika-closed
 
 GPL_INCLUDE_HEADERS:=1
 
@@ -17,14 +18,13 @@ define Package/mnfinfo
   SECTION:=net
   CATEGORY:=Network
   TITLE:=Device mnf-info command line interface
-  DEPENDS:=+libpthread +libmnfinfo
+  DEPENDS:=+libmnfinfo
 endef
 
 define Package/libmnfinfo
   SECTION:=libs
   CATEGORY:=Libraries
   TITLE:=Device mnf-info API library
-  DEPENDS:=+libubus +libubox +libboardjson
 endef
 
 define Package/rpcd-mod-mnfinfo
@@ -45,19 +45,11 @@ define Package/mnfinfo/install
 	$(INSTALL_DIR) $(1)/sbin
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/mnf_info $(1)/sbin/mnf_info
 
-	if [ $(TLT_PLATFORM_X86_64) ]; then \
-		$(INSTALL_DIR) $(1)/lib/firmware; \
+	$(if $(CONFIG_x86_64),\
 		$(INSTALL_DIR) $(1)/lib/firmware/mnfinfo; \
-		$(CP) $(PKG_BUILD_DIR)/x86_data/mac $(1)/lib/firmware/mnfinfo/mac; \
-		$(CP) $(PKG_BUILD_DIR)/x86_data/name $(1)/lib/firmware/mnfinfo/name; \
-		$(CP) $(PKG_BUILD_DIR)/x86_data/wps $(1)/lib/firmware/mnfinfo/wps; \
-		$(CP) $(PKG_BUILD_DIR)/x86_data/batch $(1)/lib/firmware/mnfinfo/batch; \
-		$(CP) $(PKG_BUILD_DIR)/x86_data/hwver $(1)/lib/firmware/mnfinfo/hwver; \
-		$(CP) $(PKG_BUILD_DIR)/x86_data/simpin1 $(1)/lib/firmware/mnfinfo/simpin1; \
-		$(CP) $(PKG_BUILD_DIR)/x86_data/simpin2 $(1)/lib/firmware/mnfinfo/simpin2; \
-		$(CP) $(PKG_BUILD_DIR)/x86_data/wpass $(1)/lib/firmware/mnfinfo/wpass; \
-		$(CP) $(PKG_BUILD_DIR)/x86_data/pass $(1)/lib/firmware/mnfinfo/pass; \
-	fi
+		$(CP) $(PKG_BUILD_DIR)/x86_data/* $(1)/lib/firmware/mnfinfo/; \
+		printf 2 >$(1)/lib/firmware/mnfinfo/sim_count; \
+	)
 endef
 
 define Package/libmnfinfo/install

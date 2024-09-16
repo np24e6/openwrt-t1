@@ -6,13 +6,15 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=cmStreamApp
-PKG_VERSION:=2023-12-06
+PKG_VERSION:=2024-03-05
 PKG_RELEASE:=1
 
-PKG_SOURCE_VERSION:=2.0
+PKG_SOURCE_VERSION:=2.1
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_SOURCE_VERSION)-$(PKG_VERSION)
 PKG_SOURCE:=$(PKG_SOURCE_SUBDIR).tar.gz
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_SOURCE_SUBDIR)
+
+PKG_LICENSE:=Teltonika-closed
 
 include $(INCLUDE_DIR)/package.mk
 
@@ -20,13 +22,13 @@ define Package/cmStreamApp
 	SECTION:=net
 	CATEGORY:=Network
 	TITLE:=Cumulocity - Cloud of Things stream application.
-	DEPENDS:=+libsera +libuci +MOBILE_SUPPORT:libgsm +libmnfinfo +vuci-app-cumulocity-ui
-	PKG_TLT_NAME:=Cumulocity - Cloud of Things
-	PKG_ROUTER:=$(TLT_PLATFORM_NAME)
+	DEPENDS:=+libsera +libuci +MOBILE_SUPPORT:libgsm +libmnfinfo
 endef
 
 define Package/cmStreamApp/description
-	A simple Cumulocity - Cloud of Things IoT Stream App package.
+	Cumulocity - Cloud of Things IoT application meant
+	for interaction with cloud-based Cumulocity IoT platform and
+	Telekom Cloud of Things.
 endef
 
 define Package/cmStreamApp/conffiles

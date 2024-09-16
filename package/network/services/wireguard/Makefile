@@ -23,7 +23,7 @@ endef
 define Package/wireguard
   $(call Package/wireguard/Default)
   TITLE:=WireGuard meta-package
-  DEPENDS:=+vuci-app-wireguard-ui +wireguard-tools +kmod-wireguard
+  DEPENDS:=+wireguard-tools +kmod-wireguard
 endef
 
 define Build/Prepare

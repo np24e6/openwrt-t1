@@ -20,7 +20,7 @@ PKG_BUILD_PARALLEL:=1
 
 PKG_CPE_ID:=cpe:/a:poptop:pptp_server
 
-PKG_LICENSE:=ISC
+PKG_LICENSE:=GPL-2.0
 
 include $(INCLUDE_DIR)/package.mk
 

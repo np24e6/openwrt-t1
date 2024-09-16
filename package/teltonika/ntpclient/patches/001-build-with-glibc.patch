@@ -1,0 +1,10 @@
+--- a/src/ntpclient.c	2024-01-10 12:32:36.256109604 +0200
++++ b/src/ntpclient.c	2024-01-10 12:32:47.729194217 +0200
+@@ -40,6 +40,7 @@
+ 
+ #include <math.h> // trunc()
+ #include <inttypes.h>
++#include <limits.h>
+ #include <stdio.h>
+ #include <stdlib.h>
+ #include <string.h>

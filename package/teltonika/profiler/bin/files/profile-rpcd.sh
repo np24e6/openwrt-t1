@@ -12,7 +12,7 @@
 # when listing profiles.
 LIST_COUNT=0
 
-PID_FILE="/tmp/run/profiler.pid"
+PID_FILE="/tmp/run/profiler_rpcd.pid"
 
 clean_exit() {
 	rm -f "$PID_FILE"

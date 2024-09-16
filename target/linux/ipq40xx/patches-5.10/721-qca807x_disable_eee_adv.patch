@@ -46,7 +46,7 @@
  static const struct sfp_upstream_ops qca807x_sfp_ops = {
  	.attach = phy_sfp_attach,
  	.detach = phy_sfp_detach,
-@@ -894,6 +926,8 @@ static int qca807x_probe(struct phy_devi
+@@ -899,6 +931,8 @@ static int qca807x_probe(struct phy_devi
  			ret = phy_sfp_probe(phydev, &qca807x_sfp_ops);
  	}
  

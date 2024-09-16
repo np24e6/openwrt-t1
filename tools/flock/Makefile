@@ -10,6 +10,8 @@ PKG_NAME := flock
 PKG_VERSION := 2.18
 PKG_RELEASE := 1
 
+PKG_LICENSE:=MIT
+
 include $(INCLUDE_DIR)/host-build.mk
 include $(INCLUDE_DIR)/gpl.mk
 

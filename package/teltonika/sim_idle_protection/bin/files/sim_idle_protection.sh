@@ -20,6 +20,7 @@ NO_SUITALBE_INTERFACES_FOUND=107
 NO_SUITALBE_ACTIVE_INTERFACES_FOUND=108
 NO_ACTIVE_SIM_FOUND=109
 FLOCK_FAILED=110
+WRONG_SIM=111
 
 SIM_ARG=0
 MODEM_ARG=0
@@ -114,8 +115,9 @@ get_active_sim_info() {
 # Reset sim info to its initial state
 reset_sim() {
     if [ "$SIM_CHANGE" == "1" ]; then
+        [ $INICIAL_SIM -eq $CURRENT_ACTIVE_SIM ] && logprint "SIM$INICIAL_SIM is already active" && return
         logprint "Switching back to sim$INICIAL_SIM"
-        ubus call gsm.modem$MODEM_OBJ set_sim_slot "{\"index\":$INICIAL_SIM}"
+        ubus call gsm.modem$MODEM_OBJ change_sim_slot
         wait_for_disconnect
     fi
 }
@@ -279,6 +281,12 @@ finish() {
         reset_sim
         exit "$option"
         ;;
+    "$WRONG_SIM")
+        log "Failed to change SIM slot"
+        logprint "Failed to change SIM slot"
+        reset_sim
+        exit "$option"
+        ;;
     "$FLOCK_FAILED")
         log "Ping failed"
         logprint "sim_idle_protection flock failed"
@@ -310,13 +318,16 @@ main() {
     # If current SIM slot is not that need ping from
     if [ "$SIM_ARG" != "$INICIAL_SIM" ]; then
         logprint "Switching to sim$SIM_ARG"
-        ubus call gsm.modem$MODEM_OBJ set_sim_slot "{\"index\":$SIM_ARG}"
+        ubus call gsm.modem$MODEM_OBJ change_sim_slot
         SIM_CHANGE=1
         wait_for_disconnect
     fi
 
     logprint "Waiting for sim$SIM_ARG connection"
     wait_for_connection
+
+    get_active_sim_info
+    [ $CURRENT_ACTIVE_SIM -ne $SIM_ARG ] && finish $WRONG_SIM
 
     ping_ip_all
     finish $PING_SUCCESS

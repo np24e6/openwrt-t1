@@ -41,20 +41,7 @@ endef
 define Package/samba36-server
   $(call Package/samba/Default)
   TITLE+= server
-  DEPENDS:=+USE_GLIBC:librt $(ICONV_DEPENDS) +vuci-app-samba-ui
-
-  ifeq (m, $(CONFIG_PACKAGE_samba36-server))
-    PKG_TLT_NAME:=Network shares
-    PKG_ROUTER:=$(TLT_PLATFORM_NAME)
-  endif
-endef
-
-define Package/samba36-server/teltonika_rut9xx
-  PKG_ROUTER:=RUT955
-endef
-
-define Package/samba36-server/teltonika_rut9m
-  PKG_ROUTER:=RUT956 RUT906
+  DEPENDS:=+USE_GLIBC:librt $(ICONV_DEPENDS)
 endef
 
 define Package/samba36-hotplug

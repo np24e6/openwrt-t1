@@ -25,6 +25,8 @@ EC_DL_FAILED="173"
 EC_UPD_VERIFY_FAILED="174"
 EC_UPD_START_FAILED="175"
 EC_UPGRADE_START_ERROR="176"
+EC_UPGRADE_VIA_FILE_NOT_SUPPORT="177"
+EC_NO_MOBILE_CONN="178"
 
 #prepare ENV
 modem_ids=""
@@ -106,7 +108,6 @@ while [ -n "$1" ]; do
 		-k) less_status=1;;
 		-s)
 			export_status=1
-			[ -f "$json_file_status" ] && rm "$json_file_status"
 		;;
 		-*)
 			print_help
@@ -157,7 +158,9 @@ end() {
 	local message="$2"
 	case "$option" in
 		"$UPDATE_SUCCESS" | "$UPDATE_ERROR")
-			notify_webui "stop"
+			[ "$less_status" -eq 1 ] || {
+				[ "$option" = "$UPDATE_SUCCESS" ] && notify_webui "stop" || notify_webui "error"
+			}
 			control_services "start"
 			;;
 		"$INSTANCE_RUNNING" | "$MODEM_NOT_FOUND" | "$EXPORT_END" | "$BAD_ARGUMENTS")
@@ -352,7 +355,11 @@ check_update() {
 		return 1
 	fi
 
-	strstr "$download_link" "forced" && forced="true"
+	strstr "$download_link" "forced" && {
+		forced="true"
+		# Show more status when forced
+		less_status=0
+	}
 
 	print_output "Update found! Update size: $firmware_size"
 	return 0
@@ -377,12 +384,13 @@ do_update() {
 
 	print_output "Preparing system for update!"
 
-	ubus call "$modem_id" delete_file "{\"path\":\"UFS:dfota.zip\"}" > /dev/null 2>&1
+	ubus call "$modem_id" delete_file "{\"path\":\"UFS:dfota.zip\"}" >/dev/null 2>&1
+	ubus call "$modem_id" delete_file "{\"path\":\"update:update.zip\"}" >/dev/null 2>&1
 	sleep 1
 
-	ret="$(ubus call "$modem_id" get_storage_space "{\"storage\":\"ufs\"}")"
+	ret="$(ubus call "$modem_id" get_storage_space)"
 	free_size=$(get_value_from_json "$ret" "free")
-	if [ "$free_size" -eq "$free_size" ] && [ "$firmware_size" -lt "$free_size" ]; then
+	if [ "$firmware_size" -lt "$free_size" ]; then
 		debug "modem memory check pass"
 	else
 		print_error "Not enough memory in modem filesystem!" "$EC_NOT_ENOUGH_MEM"
@@ -391,51 +399,63 @@ do_update() {
 	cmd_port=$(get_from_info "$modem_id" "tty_port")
 	echo "Found cmd port: $cmd_port"
 
-	ubus call gcont update_modems "{\"array\":\"modems\",\"state\":0,\"id\":\"${modem_id}\"}"
 	notify_webui "start"
-	sleep 2
-
-	ret=$(ubus call "$modem_id" upload_file "{\"path\":\"UFS:dfota.zip\",\"size\":${firmware_size},\"timeout\":180}")
-	echo "$ret" | grep -q "OK" || {
-		print_error "Failed to enter download mode!" "$EC_EDL_FAILED"
-		return 1
-	}
-
-	sleep 1
 
 	print_output "Starting download!"
 	json_update_modem_status "$modem_id" "downloading"
 	notify_webui "start"
 	# Add notification to rut_fota about start of downloading
 	[ -z "$MODE" ] && rut_fota --notify_server
-	if [ "$MODE" = "file" ]; then
-		cat "$MODE_PATH" > "$cmd_port"
-	else
+	if [ "$MODE" != "file" ]; then
 		if [ "$MODE" = "link" ]; then
 			download_link="$MODE_PATH"
 		fi
-		curl -s --ssl-reqd --connect-timeout 30 --max-time 900 -L "$download_link" -o "$cmd_port"
+		modem_model=$(get_from_info "$modem_id" "firmware" | head -c 6)
+
+		if [ "$modem_model" = "RG500U" ]; then
+			dfota_path="/tmp/modem_fw"
+			curl -s --ssl-reqd --connect-timeout 30 --max-time 900 -L "$download_link" -o "$dfota_path"
+			ret="$?"
+
+			[ "$ret" = "0" ] || {
+				print_error "Firmware update download was unsuccessful. Error: $ret" "$EC_DL_FAILED"
+				return 1
+			}
+		fi
+
 	fi
 
-	ret="$?"
-
-	[ "$ret" = "0" ] || {
-		print_error "Firmware update download was unsuccessful. Error: $ret" "$EC_DL_FAILED"
+	ret=$(ubus call "$modem_id" upload_file "{\"size\":${firmware_size},\"timeout\":180}")
+	echo "$ret" | grep -q "OK" || {
+		print_error "Failed to enter download mode!" "$EC_EDL_FAILED"
 		return 1
 	}
+	sleep 2
+
+	if [ "$MODE" = "file" ]; then
+		cat "$MODE_PATH" >"$cmd_port"
+	else
+		if [ "$modem_model" = "RG500U" ]; then
+			cat "$dfota_path" >"$cmd_port"
+		else
+			curl -s --ssl-reqd --connect-timeout 30 --max-time 900 -L "$download_link" -o "$cmd_port"
+		fi
+	fi
+
+	sleep 5
 
 	for i in $(seq $TOTAL_LIST_RETRIES); do
 		sleep 2
-		get_file_list_result=$(ubus call "$modem_id" get_file_list "{\"path\":\"UFS:dfota.zip\"}")
+		get_file_list_result=$(ubus call "$modem_id" get_file_list)
 		[ -z $(echo "$get_file_list_result" | grep "error") ] && break
 		debug "($i/$TOTAL_LIST_RETRIES) Retrying to get file list"
 	done
 
-	dl_file_size=$( echo "$get_file_list_result" | grep "size" | cut -d'"' -f 3 | cut -c 3- )
-	[ -n "$dl_file_size" ] &&\
-	[ -n "$firmware_size" ] &&\
-	[ "$dl_file_size" -gt 0 ] &&\
-	[ "$dl_file_size" -eq "$firmware_size" ] && {
+	dl_file_size=$(echo "$get_file_list_result" | grep "size" | cut -d'"' -f 3 | cut -c 3-)
+	[ -n "$dl_file_size" ] &&
+		[ -n "$firmware_size" ] &&
+		[ "$dl_file_size" -gt 0 ] &&
+		[ "$dl_file_size" -eq "$firmware_size" ] && {
 		print_output "Firmware update was successfully downloaded!"
 		print_output "Sending update command!"
 
@@ -451,15 +471,91 @@ do_update() {
 		ret=$(get_value_from_json "$ret" "status")
 		[ "$ret" == "OK" ] && return 0
 
+		ret=$(ubus call "$modem_id" dfota_upgrade "{\"path\":\"/mnt/data/update/update.zip\"}")
+		ret=$(get_value_from_json "$ret" "status")
+		[ "$ret" == "OK" ] && return 0
+
 		print_error "Unable to start firmware update process!" "$EC_UPD_START_FAILED"
 		return 1
 
 	}
 
-
 	debug "Download values dlsize: $dl_file_size fw: $firmware_size"
 
 	print_error "Firmware update verify was unsuccessful..." "$EC_UPD_VERIFY_FAILED"
+	return 1
+}
+
+do_update_mobile_only() {
+	#Do modem firmware update using mobile connection only
+	local free_size
+	local dl_file_size
+	local cmd_port
+	local modem_id="$1"
+	local ret
+	local ip_addr
+	local state_id
+	local state
+	local link_length=256
+
+	[ "$MODE" = "file" ] &&  {
+		print_error "Update using file is not supported on this modem" $EC_UPGRADE_VIA_FILE_NOT_SUPPORT
+		return 1
+	}
+
+	ret="$(ubus call "$modem_id" get_attached_pdp_ctx_list)"
+	ip_addr=$(get_value_from_json "$ret" "ip_addr")
+	state_id=$(get_value_from_json "$ret" "state_id")
+	state=$(gsmctl -j -O $modem_usb_id)
+
+	if [ "$state" = "Disconnected" ] && { [ -z "$ip_addr" ] || [ "$ip_addr" = "0.0.0.0" ] || \
+	[ "$ip_addr" = "0.0.0.0,0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0" ]; }; then
+		print_error "Modem firmware update is only available using mobile connection" $EC_NO_MOBILE_CONN
+		return 1
+	fi
+
+	[ -n "$MODE" ] && download_link="$MODE_PATH"
+
+	link_length="$(echo "$download_link" | wc -c)"
+	[ "$link_length" -gt 255 ] && {
+		print_error "Link length exceeds 255 bytes"
+		return 1
+	}
+
+	[ -n "$MODE" ] && {
+		# Get modem firmware size
+		firmware_size=$(curl -sI "$download_link" | awk -e '$0 ~ /^Content-Length: ([0-9]+)/ { print $2 }')
+	}
+
+	[ -z "$firmware_size" ] && {
+		print_error "Failed to get firmware_size"
+		return 1
+	}
+
+	print_output "Preparing system for update!"
+
+	ret="$(ubus call "$modem_id" get_storage_space "{\"storage\":\"ufs\"}")"
+	free_size=$(get_value_from_json "$ret" "free")
+	if [ "$firmware_size" -lt "$free_size" ]; then
+		debug "modem memory check pass"
+	else
+		print_error "Not enough memory in modem filesystem!" "$EC_NOT_ENOUGH_MEM"
+		return 1
+	fi
+
+	print_output "Starting download!"
+
+	json_update_modem_status "$modem_id" "downloading"
+	notify_webui "start"
+
+	# Add notification to rut_fota about start of downloading
+	[ -z "$MODE" ] && rut_fota --notify_server
+
+	ret=$(ubus call "$modem_id" dfota_upgrade "{\"path\":\"$download_link\"}")
+	ret=$(get_value_from_json "$ret" "status")
+	[ "$ret" == "OK" ] && return 0
+
+	print_error "Unable to start firmware update process!" "$EC_UPD_START_FAILED"
 	return 1
 }
 
@@ -472,7 +568,6 @@ track_update_status() {
 
 	# Counter and max wait time
 	counter=0
-	max_wait=30
 
 	while [ -e "/sys/bus/usb/devices/$modem_usb_id" ]; do
 		counter=$((counter+1))
@@ -524,11 +619,11 @@ json_find_modem(){
   		do
 		  	json_select $idx
 			json_get_var id id
-            if [ "$id" = "$modem_id" ]; then
+			if [ "$id" = "$modem_id" ]; then
 				#found
 				return 0
 			fi
-    		idx=$(( idx + 1 ))
+			idx=$(( idx + 1 ))
 			json_close_object
   		done
 	else
@@ -588,13 +683,7 @@ _json_update_dfota_status(){
 }
 
 json_update_dfota_status(){
-	[ "$export_status" -eq 1 ] && {
-		_json_update_dfota_status "$1" "$2"
-		[ "$2" -ne 1 ] && return
-
-		[ "$less_status" -eq 0 ] || { [ "$LAST_ERROR_CODE" != "$EC_NO_UPDATE" ] &&
-		[ "$LAST_ERROR_CODE" != "$EC_NOT_QUECTEL" ]; } && notify_webui "error"
-	}
+	[ "$export_status" -eq 1 ] && _json_update_dfota_status "$1" "$2"
 }
 
 _json_update_modem_error(){
@@ -626,6 +715,8 @@ json_update_modem_error(){
 update_loop(){
 	#Iterate modem ids
 	local modem_found=""
+	local modem_model=""
+	local updates=0
 	for m_id in $modem_ids; do
 		[ -n "$UPDATE_MODEM" ] && [ "$m_id" != "$UPDATE_MODEM" ] && continue
 		print_output "Preparing for $m_id update!"
@@ -649,11 +740,21 @@ update_loop(){
 		if [ "$forced" = "true" ] || [ "$update" = "true" ]; then
 			debug "Update flag found!"
 			control_services "stop"
-			do_update "$m_id" || {
+			modem_model=$(get_from_info "$m_id" "firmware" | head -c 6)
+			if [ "$modem_model" = "EC200A" ]; then
+				max_wait=250
+				func=do_update_mobile_only
+			else
+				max_wait=30
+				func=do_update
+			fi
+
+			$func "$m_id" && updates=$(($updates + 1)) || {
 				status="$UPDATE_ERROR"
 				json_update_modem_error "$m_id" "$LAST_ERROR" "$LAST_ERROR_CODE"
 				break
 			}
+
 			track_update_status "$m_id"
 			sleep 15
 		fi
@@ -666,6 +767,7 @@ update_loop(){
 
 	reset_on_fail "$status"
 	json_update_dfota_status "finished" "$UPDATE_FAILED"
+	[ "$updates" -eq 0 ] && status="$UPDATE_ERROR" # In case script finished and did nothing
 	end "$status" "Update script done!"
 }
 
@@ -676,6 +778,8 @@ update_loop(){
 if [ "$(pgrep -f "$0")" != "$$" ]; then
 	end "$INSTANCE_RUNNING" "Unable to start because another instance is running!"
 fi
+
+[ "$export_status" -eq 1 ] && rm -f "$json_file_status"
 
 [ "$export_info" -eq 1 ] && [ "$update" = "true" ] && end "$BAD_ARGUMENTS" "Please define only -e or -u in arguments!"
 

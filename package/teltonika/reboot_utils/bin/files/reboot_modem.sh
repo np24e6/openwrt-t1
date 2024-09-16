@@ -63,4 +63,4 @@ fi
 
 MODEM_NUM=$(get_modem_num "$MODEM_ID")
 
-/bin/ubus call mctl reboot "{\"num\":$MODEM_NUM}"
+mctl --reboot --number "$MODEM_NUM"

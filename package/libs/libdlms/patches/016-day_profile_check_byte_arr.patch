@@ -1,15 +1,16 @@
-Index: libdlms-e5cc16e1/development/src/gxsetmalloc.c
+Index: libdlms-fa855d2e/development/src/gxsetmalloc.c
 ===================================================================
---- libdlms-e5cc16e1.orig/development/src/gxsetmalloc.c
-+++ libdlms-e5cc16e1/development/src/gxsetmalloc.c
-@@ -522,6 +522,11 @@ int updateDayProfileTable(dlmsSettings*
+--- libdlms-fa855d2e.orig/development/src/gxsetmalloc.c
++++ libdlms-fa855d2e/development/src/gxsetmalloc.c
+@@ -522,6 +522,12 @@ int updateDayProfileTable(dlmsSettings*
              {
                  break;
              }
 +
-+           if (!tmp2->byteArr) {
-+                   break;
-+           }
++		if (!tmp2->byteArr) {
++			gxfree(ac);
++			break;
++		}
 +
              if (tmp2->vt == DLMS_DATA_TYPE_OCTET_STRING && tmp2->byteArr != NULL)
              {

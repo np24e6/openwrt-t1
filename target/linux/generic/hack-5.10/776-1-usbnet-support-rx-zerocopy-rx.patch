@@ -103,8 +103,8 @@ rx_fixup implentation. Also included is a helper function for doing so.
 +	if (!nskb)
 +		return NULL;
 +
-+	skb_put_data(nskb, skb->data + offset, linear_len);
 +	skb_reserve(nskb, headroom);
++	skb_put_data(nskb, skb->data + offset, linear_len);
 +
 +	if (linear_len != len) {
 +		page = virt_to_head_page(skb->data);

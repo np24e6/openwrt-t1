@@ -6,13 +6,14 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=speedtest
-PKG_VERSION:=2023-10-11
-PKG_RELEASE:=1
+PKG_VERSION:=2024-03-07
+PKG_RELEASE:=3
 
-PKG_SOURCE_VERSION:=1.6
+PKG_SOURCE_VERSION:=1.7
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_SOURCE_VERSION)-$(PKG_VERSION)
 PKG_SOURCE:=$(PKG_SOURCE_SUBDIR).tar.gz
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_SOURCE_SUBDIR)
+PKG_LICENSE:=Teltonika-closed
 
 include $(INCLUDE_DIR)/package.mk
 
@@ -22,11 +23,7 @@ define Package/speedtest
   SECTION:=base
   CATEGORY:=Base system
   TITLE:=Speedtest
-  DEPENDS:=+liblua +libcurl +vuci-app-speed-test-ui
-  ifeq (m, $(CONFIG_PACKAGE_speedtest))
-  	PKG_TLT_NAME:=Speedtest
-  	PKG_ROUTER:=$(TLT_PLATFORM_NAME)
-  endif
+  DEPENDS:=+liblua +libcurl
 endef
 
 define Package/speedtest/description

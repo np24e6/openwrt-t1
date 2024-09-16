@@ -34,9 +34,7 @@ define Package/ntpd/Default
   TITLE:=ISC ntp
   MAINTAINER:=Peter Wagner <tripolar@gmx.at>
   URL:=http://www.ntp.org/
-  DEPENDS:=+libopenssl +libpthread +libcap +vuci-app-ntpd-ui
-  PKG_TLT_NAME:=NTPD
-  PKG_ROUTER:=$(TLT_PLATFORM_NAME)
+  DEPENDS:=+libopenssl +libpthread +libcap
 endef
 
 define Package/ntpd/Default/description

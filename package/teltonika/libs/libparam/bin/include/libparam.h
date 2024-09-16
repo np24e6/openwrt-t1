@@ -71,7 +71,7 @@ typedef enum { // TODO: ADC param
 	PARAM_GPS_INFO,
 #endif
 	PARAM_FIRMWARE_ON_SERVER,
-#if defined(RUT9_PLATFORM) || defined(RUT9M_PLATFORM) || defined(RUT952_PLATFORM)
+#if defined(RUT9M_PLATFORM) || defined(RUT952_PLATFORM)
 	PARAM_EVENT_TEXT,
 #endif
 	PARAM__LEN, // must remain the last element

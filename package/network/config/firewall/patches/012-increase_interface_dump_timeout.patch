@@ -1,0 +1,13 @@
+Index: firewall-2022-02-17-4cd7d4f3/ubus.c
+===================================================================
+--- firewall-2022-02-17-4cd7d4f3.orig/ubus.c
++++ firewall-2022-02-17-4cd7d4f3/ubus.c
+@@ -53,7 +53,7 @@ fw3_ubus_connect(void)
+ 	if (ubus_lookup_id(ctx, "network.interface", &id))
+ 		goto out;
+ 
+-	if (ubus_invoke(ctx, id, "dump", b.head, dump_cb, NULL, 2000))
++	if (ubus_invoke(ctx, id, "dump", b.head, dump_cb, NULL, 15000))
+ 		goto out;
+ 
+ 	status = true;

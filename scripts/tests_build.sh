@@ -19,9 +19,6 @@ device_ip_map() {
 	rutx)
 		TARGET_IP="192.168.1.1"
 		;;
-	rut9xx)
-		TARGET_IP="192.168.1.1"
-		;;
 	*)
 		echo "Unsupported device: $device" >&"$FD"
 		exit 1

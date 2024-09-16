@@ -1,18 +1,19 @@
 #
-# Copyright (C) 2021-2023 Teltonika
+# Copyright (C) 2024 Teltonika-Networks
 #
 
 include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=gps
-PKG_VERSION:=2024-01-25
+PKG_VERSION:=2024-04-05
 PKG_RELEASE:=1
 
-PKG_SOURCE_VERSION:=7.6.5-1
+PKG_SOURCE_VERSION:=7.7-3
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_SOURCE_VERSION)-$(PKG_VERSION)
 PKG_SOURCE:=$(PKG_SOURCE_SUBDIR).tar.gz
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_SOURCE_SUBDIR)
+PKG_LICENSE:=Teltonika-closed
 
 GPL_INCLUDE_HEADERS:=1
 
@@ -22,7 +23,7 @@ define Package/gpsd
 	SECTION:=base
 	CATEGORY:=Base system
 	TITLE:=Deamon providing gps related functionality.
-	DEPENDS:=+lsqlite3 +libpthread +libuci +libtlt_uci  +liblog +libubus +liburc +libgsm +zlib +libcurl +IO_SUPPORT:iomand +libmnfinfo
+	DEPENDS:=+lsqlite3 +libpthread +libuci +libtlt_uci +liblog +libubus +liburc +libgsm +zlib +libcurl +IO_SUPPORT:iomand +libmnfinfo
 endef
 
 define Package/gpsctl
@@ -81,14 +82,18 @@ define Package/gpsd/install
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/files/gpsd.init $(1)/etc/init.d/gpsd
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/files/06_gpsd.sh $(1)/etc/hotplug.d/usb/06_gpsd
 
-	if [ $(TLT_PLATFORM_RUTX) ] || [ $(TLT_PLATFORM_RUTM) ]; then \
+	if [ $(TLT_PLATFORM_RUTX) ] || [ $(TLT_PLATFORM_RUTM) ] || [ $(TLT_PLATFORM_RUTC) ]; then \
 		$(INSTALL_CONF) $(PKG_BUILD_DIR)/files/gps_RUTX.conf $(1)/etc/config/gps; \
-	elif [ $(TLT_PLATFORM_TRB2) ] || [ $(TLT_PLATFORM_TRB2M) ]; then \
+	elif [ $(TLT_PLATFORM_TRB2M) ]; then \
+		$(INSTALL_CONF) $(PKG_BUILD_DIR)/files/gps_TRB2M.conf $(1)/etc/config/gps; \
+	elif [ $(TLT_PLATFORM_TRB2) ]; then \
 		$(INSTALL_CONF) $(PKG_BUILD_DIR)/files/gps_TRB2.conf $(1)/etc/config/gps; \
 	elif [ $(TLT_PLATFORM_RUT30X) ] || [ $(TLT_PLATFORM_RUT36X) ]; then \
 		$(INSTALL_CONF) $(PKG_BUILD_DIR)/files/gps_RUT3.conf $(1)/etc/config/gps; \
-	elif [ $(TLT_PLATFORM_RUT9) ] || [ $(TLT_PLATFORM_RUT9M) ]; then \
+	elif [ $(TLT_PLATFORM_RUT9M) ]; then \
 		$(INSTALL_CONF) $(PKG_BUILD_DIR)/files/gps_RUT9.conf $(1)/etc/config/gps; \
+	elif [ $(TLT_PLATFORM_ATRM50) ]; then \
+		$(INSTALL_CONF) $(PKG_BUILD_DIR)/files/gps_ATRM50.conf $(1)/etc/config/gps; \
 	fi;
 endef
 
@@ -108,14 +113,16 @@ define Package/avl/install
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/files/avl.init $(1)/etc/init.d/avl
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/avl/avl $(1)/usr/sbin/avl
 
-	if [ $(TLT_PLATFORM_RUTX) ] || [ $(TLT_PLATFORM_RUTM) ]; then \
+	if [ $(TLT_PLATFORM_RUTX) ] || [ $(TLT_PLATFORM_RUTM) ] || [ $(TLT_PLATFORM_RUTC) ]; then \
 		$(INSTALL_CONF) $(PKG_BUILD_DIR)/files/avl_RUTX.conf $(1)/etc/config/avl; \
 	elif [ $(TLT_PLATFORM_TRB2) ] || [ $(TLT_PLATFORM_TRB2M) ]; then \
 		$(INSTALL_CONF) $(PKG_BUILD_DIR)/files/avl_TRB2.conf $(1)/etc/config/avl; \
 	elif [ $(TLT_PLATFORM_RUT30X) ] || [ $(TLT_PLATFORM_RUT36X) ]; then \
 		$(INSTALL_CONF) $(PKG_BUILD_DIR)/files/avl_RUT3.conf $(1)/etc/config/avl; \
-	elif [ $(TLT_PLATFORM_RUT9) ] || [ $(TLT_PLATFORM_RUT9M) ]; then \
+	elif [ $(TLT_PLATFORM_RUT9M) ]; then \
 		$(INSTALL_CONF) $(PKG_BUILD_DIR)/files/avl_RUT9.conf $(1)/etc/config/avl; \
+	elif [ $(TLT_PLATFORM_ATRM50) ]; then \
+		$(INSTALL_CONF) $(PKG_BUILD_DIR)/files/avl_ATRM50.conf $(1)/etc/config/avl; \
 	fi;
 endef
 

@@ -1,0 +1,10 @@
+--- a/modules/pam_namespace/pam_namespace.h
++++ b/modules/pam_namespace/pam_namespace.h
+@@ -38,6 +38,7 @@
+ 
+ #include <stdio.h>
+ #include <stdio_ext.h>
++#include <stdint.h>
+ #include <unistd.h>
+ #include <string.h>
+ #include <ctype.h>

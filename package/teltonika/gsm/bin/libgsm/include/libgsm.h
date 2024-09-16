@@ -59,8 +59,9 @@ typedef enum {
 	LGSM_INFO_FEATURE_AUTO_IMS,
 	LGSM_INFO_FEATURE_EXTENDED_TIMEOUT,
 	LGSM_INFO_FEATURE_DHCP_FILTER,
-	LGSM_INFO_BUILTIN,
 	LGSM_INFO_FEATURE_CSD,
+	LGSM_INFO_FEATURE_FRAMED_ROUTING,
+	LGSM_INFO_BUILTIN,
 	LGSM_INFO_MAX,
 } lgsm_info_t;
 
@@ -428,6 +429,11 @@ typedef enum {
 } lgsm_m2m_attrs_t;
 
 typedef enum {
+	LGSM_FROUTING_STATE,
+	LGSM_FROUTING_MAX,
+} lgsm_frouting_attrs_t;
+
+typedef enum {
 	LGSM_SET_IMS_RESTART,
 	LGSM_SET_IMS_MAX,
 } lgsm_set_ims_attrs_t;
@@ -452,6 +458,11 @@ typedef enum {
 	LGSM_SET_VOLTE_RESTART,
 	LGSM_SET_VOLTE_MAX,
 } lgsm_set_volte_attrs_t;
+
+typedef enum {
+	LGSM_SET_AUTO_TZ_RESTART,
+	LGSM_SET_AUTO_TZ_MAX,
+} lgsm_set_auto_tz_attrs_t;
 
 typedef enum {
 	LGSM_SIM_HOTSWAP_ENABLED,
@@ -556,6 +567,19 @@ typedef enum {
 } lgsm_usbnet_mode_t;
 
 typedef enum {
+	LGSM_USBCFG_VID,
+	LGSM_USBCFG_PID,
+	LGSM_USBCFG_DIAG,
+	LGSM_USBCFG_NMEA,
+	LGSM_USBCFG_AT_PORT,
+	LGSM_USBCFG_MODEM,
+	LGSM_USBCFG_RMNET,
+	LGSM_USBCFG_ADB,
+	LGSM_USBCFG_UAC,
+	LGSM_USBCFG_MAX,
+} lgsm_usbcfg_t;
+
+typedef enum {
 	LGSM_URC_IND_CFG_URC,
 	LGSM_URC_IND_CFG_ENABLED,
 	LGSM_URC_IND_CFG_MAX,
@@ -622,19 +646,6 @@ typedef enum {
 	LGSM_GEA_ALGO_STAT,
 	LGSM_GEA_ALGO_MAX,
 } lgsm_gea_algo_attrs_t;
-
-typedef enum {
-	LGSM_USBCFG_VID,
-	LGSM_USBCFG_PID,
-	LGSM_USBCFG_DIAG,
-	LGSM_USBCFG_NMEA,
-	LGSM_USBCFG_AT_PORT,
-	LGSM_USBCFG_MODEM,
-	LGSM_USBCFG_RMNET,
-	LGSM_USBCFG_ADB,
-	LGSM_USBCFG_UAC,
-	LGSM_USBCFG_MAX,
-} lgsm_usbcfg_t;
 
 typedef enum {
 	LGSM_UBUS_INFO,
@@ -804,12 +815,18 @@ typedef enum {
 	LGSM_UBUS_SET_URC_CAUSE,
 	LGSM_UBUS_GET_DPO_MODE,
 	LGSM_UBUS_SET_DPO_MODE,
+	LGSM_UBUS_GET_RAT_PRIORITY,
+	LGSM_UBUS_SET_RAT_PRIORITY,
 	LGSM_UBUS_GET_NR5G_DISABLE_MODE,
 	LGSM_UBUS_SET_NR5G_DISABLE_MODE,
 	LGSM_UBUS_GET_GEA_ALGORYTHM,
 	LGSM_UBUS_DISABLE_GEA_1_2_ALGORYTHM,
+	LGSM_UBUS_SET_IPV6_NDP,
+	LGSM_UBUS_GET_IPV6_NDP,
 	LGSM_UBUS_SET_USBCFG,
 	LGSM_UBUS_GET_USBCFG,
+	LGSM_UBUS_GET_FROUTING_STATE,
+	LGSM_UBUS_SET_FROUTING_STATE,
 	//------
 	__LGSM_UBUS_MAX,
 } lgsm_method_t;
@@ -835,7 +852,7 @@ typedef struct {
 } lgsm_signal_query_cfg_t;
 
 enum lgsm_sig_val {
-	LGSM_SIG_VAL_RSSI = 1 << 0, ///< redeived signal strength
+	LGSM_SIG_VAL_RSSI = 1 << 0, ///< received signal strength
 	LGSM_SIG_VAL_BER  = 1 << 1, ///< channel bit error rate (in percent)
 	LGSM_SIG_VAL_RSRP = 1 << 2, ///< reference signal received power
 	LGSM_SIG_VAL_RSCP = 1 << 3, ///< received signal code power
@@ -868,6 +885,18 @@ typedef struct {
 	enum usbnet_mode_id usbnet_mode;
 	bool is_default;
 } lgsm_usbnet_info_t;
+
+typedef struct {
+	char *vid;
+	char *pid;
+	bool diag;
+	bool nmea;
+	bool at_port;
+	bool modem;
+	bool rmnet;
+	bool adb;
+	bool uac;
+} lgsm_usbcfg_info_t;
 
 typedef struct {
 	lgsm_mbn_info_t *mbn_info;
@@ -1051,6 +1080,7 @@ typedef struct {
 	bool ecm_support;
 	bool dynamic_mtu_support;
 	bool auto_ims_support;
+	bool framed_routing_support;
 	bool extended_timeout;
 	bool dhcp_filter_support;
 	bool builtin;
@@ -1277,18 +1307,6 @@ typedef struct {
 	int stat_id;
 } lgsm_gea_algo_t;
 
-typedef struct {
-	char *vid;
-	char *pid;
-	bool diag;
-	bool nmea;
-	bool at_port;
-	bool modem;
-	bool rmnet;
-	bool adb;
-	bool uac;
-} lgsm_usbcfg_info_t;
-
 typedef enum {
 	LGSM_LABEL_STRING,
 	LGSM_LABEL_INT,
@@ -1328,6 +1346,7 @@ typedef enum {
 	LGSM_LABEL_STATUS_T,
 	LGSM_LABEL_OPER_SCAN_T,
 	LGSM_LABEL_USBNET_MODE_T,
+	LGSM_LABEL_USBCFG_T,
 	LGSM_LABEL_NAT_MODE_T,
 	LGSM_LABEL_UE_USAGE_MODE_T,
 	LGSM_LABEL_IMS_STATE_T,
@@ -1339,6 +1358,7 @@ typedef enum {
 	LGSM_LABEL_SIM_HOTSWAP_T,
 	LGSM_LABEL_PS_ATT_STATE_T,
 	LGSM_LABEL_NET_CAT_T,
+	LGSM_LABEL_SET_TZ_T,
 	LGSM_LABEL_TIME_T,
 	LGSM_LABEL_ATTACHED_PDP_LIST_T,
 	LGSM_LABEL_ACT_PDP_LIST_T,
@@ -1364,10 +1384,12 @@ typedef enum {
 	LGSM_LABEL_URC_PORT_T,
 	LGSM_LABEL_GNSS_OPER_MODE_T,
 	LGSM_LABEL_DPO_MODE_T,
+	LGSM_LABEL_RAT_PRIORITY_T,
 	LGSM_LABEL_DISABLE_5G_MODE_T,
 	LGSM_LABEL_GEA_ALGO_T,
+	LGSM_LABEL_GET_IPV6_NDP_T,
+	LGSM_LABEL_FROUTING_STATE_T,
 	LGSM_LABEL_ERROR,
-	LGSM_LABEL_USBCFG_T,
 } lgsm_resp_label_t;
 
 typedef union {
@@ -1386,7 +1408,9 @@ typedef union {
 	lgsm_net_reg_info_t net_reg;
 	enum roaming_svc_id roam_mode;
 	enum net_mode_id net_mode;
+	enum rat_priority_id rat_priority_mode;
 	lgsm_usbnet_info_t usbnet;
+	lgsm_usbcfg_info_t usbcfg;
 	enum nat_mode_id nat_mode;
 	enum ue_usage_id ue_usage_mode;
 	enum fac_lock_state_t lock_state;
@@ -1445,7 +1469,7 @@ typedef union {
 	enum gnss_operation_mode_id gnss_oper_mode;
 	enum dpo_mode_id dpo_mode;
 	enum disable_nr5g_mode_id disable_5g_mode;
-	lgsm_usbcfg_info_t usbcfg;
+	enum ipv6_ndp_state_t ipv6_ndp;
 } lgsm_resp_data;
 
 typedef struct {
@@ -2380,6 +2404,17 @@ lgsm_err_t lgsm_set_nat_mode(struct ubus_context *ctx, enum nat_mode_id mode, fu
 			     uint32_t modem_num);
 
 /**
+ * Configure RAT priority mode
+ * @param[ptr]  ctx   	    Ubus ctx.
+ * @param[char] resp   	    Response from modem for the executed AT command.
+ * @param[in]   mode	    rat priority to be set.
+ * @param[in]   modem_num   Modem identification number.
+ * @return lgsm_err_t. Return function status code.
+ */
+lgsm_err_t lgsm_set_rat_priority_mode(struct ubus_context *ctx, func_t *resp, enum rat_priority_id mode,
+				      uint32_t modem_num);
+
+/**
  * Configure UE usage mode
  * @param[ptr]  ctx   	    Ubus ctx.
  * @param[in] 	mode	    UE usage mode to be set.
@@ -2518,6 +2553,17 @@ lgsm_err_t lgsm_set_volte_state(struct ubus_context *ctx, enum ims_state_t state
  */
 lgsm_err_t lgsm_set_m2m_state(struct ubus_context *ctx, enum m2m_state_id id, func_t *resp,
 			      uint32_t modem_num);
+
+/**
+ * Set Framed Routing state
+ * @param[ptr]  ctx   	    Ubus ctx.
+ * @param[char] resp   	    Response from modem for the executed AT command.
+ * @param[in]   id 	    	Frouting state to be set.
+ * @param[in]   modem_num   Modem identification number.
+ * @return lgsm_err_t. Return function status code.
+ */
+lgsm_err_t lgsm_set_frouting_state(struct ubus_context *ctx, bool enable, func_t *resp,
+				   uint32_t modem_num);
 
 /**
  * Set SIM initdelay
@@ -2936,10 +2982,11 @@ lgsm_err_t lgsm_set_prod_line_mode(struct ubus_context *ctx, bool enabled, func_
  * Set automatic timezone update configuration
  * @param[ptr]  ctx         Ubus ctx.
  * @param[in]   enabled	    Is authentication corresponding bit setting is enabled.
- * @param[char] resp        Response from modem for the executed AT command.
+ * @param[char] data        Structurized response from the modem.
  * @param[in]   modem_num   Modem identification number.
  */
-lgsm_err_t lgsm_set_auto_tz_update(struct ubus_context *ctx, bool enabled, func_t *resp, uint32_t modem_num);
+lgsm_err_t lgsm_set_auto_tz_update(struct ubus_context *ctx, bool enabled, lgsm_structed_info_t *data,
+				   uint32_t modem_num);
 
 /**
  * Set GNSS operation mode
@@ -2993,6 +3040,17 @@ lgsm_err_t lgsm_quectel_set_nr5g_disable_mode(struct ubus_context *ctx, func_t *
  */
 lgsm_err_t lgsm_disable_gea1_2_algo(struct ubus_context *ctx, func_t *resp, uint32_t modem_num);
 
+/**
+ * Set ipv6 ndp state
+ * @param[ptr]  ctx   	    Ubus ctx.
+ * @param[char] resp   	    Response from modem for the executed AT command.
+ * @param[in]   mode 	    ipv6 ndp state.
+ * @param[in]   modem_num   Modem identification number.
+ * @return lgsm_err_t. Return function status code.
+ */
+lgsm_err_t lgsm_set_ipv6_ndp(struct ubus_context *ctx, func_t *resp, enum ipv6_ndp_state_t state,
+			     uint32_t modem_num);
+
 /******************
 *  GET HANDLERS  *
 ******************/
@@ -3021,6 +3079,12 @@ void handle_oper_scan_rsp(struct blob_attr *info, lgsm_structed_info_t *parsed);
  * @param[ptr]   parsed    Parsed union readable information.
  */
 void handle_fw_rsp(struct blob_attr *info, lgsm_structed_info_t *parsed);
+/**
+ * Parse auto tz update response
+ * @param[ptr]   info      Blob from gsmd.
+ * @param[ptr]   parsed    Parsed union readable information.
+ */
+void handle_set_auto_tz_rsp(struct blob_attr *info, lgsm_structed_info_t *parsed);
 /**
  * Parse modem model method response
  * @param[ptr]   info      Blob from gsmd.
@@ -3313,6 +3377,13 @@ void handle_get_volte_man_state_rsp(struct blob_attr *info, lgsm_structed_info_t
 void handle_get_m2m_state_rsp(struct blob_attr *info, lgsm_structed_info_t *parsed);
 
 /**
+   * Parse Framed routing state retrival method response
+   * @param[ptr]   info      Blob from gsmd.
+   * @param[ptr]   parsed    Parsed union readable information.
+   */
+void handle_get_frouting_state_rsp(struct blob_attr *info, lgsm_structed_info_t *parsed);
+
+/**
    * Parse VoLTE ready retrival method response
    * @param[ptr]   info      Blob from gsmd.
    * @param[ptr]   parsed    Parsed union readable information.
@@ -3572,6 +3643,13 @@ void handle_get_urc_cause_support(struct blob_attr *info, lgsm_structed_info_t *
 void handle_get_dpo_mode_rsp(struct blob_attr *info, lgsm_structed_info_t *parsed);
 
 /**
+   * Parse RAT priority mode method response
+   * @param[ptr]   info      Blob from gsmd.
+   * @param[ptr]   parsed    Parsed union readable information.
+   */
+void handle_get_rat_priority_rsp(struct blob_attr *info, lgsm_structed_info_t *parsed);
+
+/**
    * Parse DISABLE 5G mode method response
    * @param[ptr]   info      Blob from gsmd.
    * @param[ptr]   parsed    Parsed union readable information.
@@ -3586,12 +3664,18 @@ void handle_get_disable_5g_mode_rsp(struct blob_attr *info, lgsm_structed_info_t
 void handle_get_gea_algo(struct blob_attr *info, lgsm_structed_info_t *parsed);
 
 /**
+   * Parse ipv6 ndp method response
+   * @param[ptr]   info      Blob from gsmd.
+   * @param[ptr]   parsed    Parsed union readable information.
+   */
+void handle_get_ipv6_ndp_rsp(struct blob_attr *info, lgsm_structed_info_t *parsed);
+
+/**
    * Parse dhcpv6 state method response
    * @param[ptr]   info      Blob from gsmd.
    * @param[ptr]   parsed    Parsed union readable information.
    */
 void handle_get_usbcfg_rsp(struct blob_attr *info, lgsm_structed_info_t *parsed);
-
 /*********************
 *  STRUCT HANDLERS  *
 *********************/
@@ -3651,7 +3735,7 @@ lgsm_err_t lgsm_get_modem_info(struct ubus_context *ctx, lgsm_t *gsm_t, uint32_t
  * @return lgsm_err_t. Return function status code.
  */
 lgsm_err_t lgsm_subscribe(struct ubus_context *ctx, struct ubus_subscriber *gsm_sub, ubus_handler_t cb,
-			  void *rem_cb, uint32_t modem_num);
+			  ubus_remove_handler_t rem_cb, uint32_t modem_num);
 /*
  * Subscribe to given modem using ubus object id
  * @param[ptr]			ctx          Ubus context.
@@ -3662,7 +3746,7 @@ lgsm_err_t lgsm_subscribe(struct ubus_context *ctx, struct ubus_subscriber *gsm_
  * @return lgsm_err_t. Return function status code.
  */
 lgsm_err_t lgsm_subscribe_obj(struct ubus_context *ctx, struct ubus_subscriber *gsm_sub, ubus_handler_t cb,
-			      void *rem_cb, uint32_t ubus_obj_id);
+			      ubus_remove_handler_t rem_cb, uint32_t ubus_obj_id);
 /*
  * Subscribe to given modem using ubus object path
  * @param[ptr]			ctx          Ubus context.
@@ -3673,7 +3757,7 @@ lgsm_err_t lgsm_subscribe_obj(struct ubus_context *ctx, struct ubus_subscriber *
  * @return lgsm_err_t. Return function status code.
  */
 lgsm_err_t lgsm_subscribe_name(struct ubus_context *ctx, struct ubus_subscriber *gsm_sub, ubus_handler_t cb,
-			       void *rem_cb, char *modem_path);
+			       ubus_remove_handler_t rem_cb, char *modem_path);
 /*
  * Execute given method and get blob info
  * @param[ptr]  ctx      Ubus context.
@@ -3749,20 +3833,6 @@ lgsm_err_t lgsm_handle_obj_methods_structed(struct ubus_context *ctx, lgsm_metho
 lgsm_err_t lgsm_set_ltesms_format(struct ubus_context *ctx, enum urc_lte_sms_format mode, func_t *resp,
 				  uint32_t modem_num);
 
-/*
- * Set modem functionality
- * @param[ptr]  ctx        Ubus context.
- * @param[in]   modem_num  Modem number.
- * @param[in]   nmea       NMEA port config value
- * @param[in]   modem      Modem port config value
- * @param[in]   adb        ADB port config value
- * @param[in]   uac        UAC port config value
- * @param[in]   resp       Status code for modem setting configuration.
- * @return lgsm_err_t. Return function status code.
- */
-lgsm_err_t lgsm_set_usbcfg(struct ubus_context *ctx, bool nmea, bool modem, bool adb, bool uac, func_t *resp,
-			   uint32_t modem_num);
-
 /**
    * Checks if 'info' blob contains error message
    * @param[ptr]   info      Blob from gsmd.
@@ -3778,6 +3848,20 @@ lgsm_err_t lgsm_is_err(struct blob_attr *info, lgsm_structed_info_t *parsed);
  * @return lgsm_err_t. Return function status code.
  */
 lgsm_err_t lgsm_parse_ubus_err(int ubus_err);
+
+/*
+ * Set modem functionality
+ * @param[ptr]  ctx        Ubus context.
+ * @param[in]   modem_num  Modem number.
+ * @param[in]   nmea       NMEA port config value
+ * @param[in]   modem      Modem port config value
+ * @param[in]   adb        ADB port config value
+ * @param[in]   uac        UAC port config value
+ * @param[in]   resp       Status code for modem setting configuration.
+ * @return lgsm_err_t. Return function status code.
+ */
+lgsm_err_t lgsm_set_usbcfg(struct ubus_context *ctx, bool nmea, bool modem, bool adb, bool uac, func_t *resp,
+			   uint32_t modem_num);
 #ifdef __cplusplus
 }
 #endif

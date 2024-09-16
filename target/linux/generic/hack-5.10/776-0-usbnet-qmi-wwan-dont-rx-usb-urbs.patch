@@ -5,7 +5,7 @@ Ideally, we could just add FLAG_MULTI_PACKET flag to qmi_wwan, but since the sub
 
 --- a/drivers/net/usb/qmi_wwan.c
 +++ b/drivers/net/usb/qmi_wwan.c
-@@ -903,7 +903,7 @@ static int qmi_wwan_rx_fixup(struct usbn
+@@ -906,7 +906,7 @@ static int qmi_wwan_rx_fixup(struct usbn
  		if (rawip)
  			return 0;
  		if (is_multicast_ether_addr(skb->data))
@@ -14,7 +14,7 @@ Ideally, we could just add FLAG_MULTI_PACKET flag to qmi_wwan, but since the sub
  		/* possibly bogus destination - rewrite just in case */
  		skb_reset_mac_header(skb);
  		goto fix_dest;
-@@ -911,13 +911,13 @@ static int qmi_wwan_rx_fixup(struct usbn
+@@ -914,13 +914,13 @@ static int qmi_wwan_rx_fixup(struct usbn
  		if (rawip)
  			return 0;
  		/* pass along other packets without modifications */
@@ -30,7 +30,7 @@ Ideally, we could just add FLAG_MULTI_PACKET flag to qmi_wwan, but since the sub
  	}
  
  	if (skb_headroom(skb) < ETH_HLEN)
-@@ -928,7 +928,9 @@ static int qmi_wwan_rx_fixup(struct usbn
+@@ -931,7 +931,9 @@ static int qmi_wwan_rx_fixup(struct usbn
  	eth_zero_addr(eth_hdr(skb)->h_source);
  fix_dest:
  	memcpy(eth_hdr(skb)->h_dest, dev->net->dev_addr, ETH_ALEN);
@@ -41,7 +41,7 @@ Ideally, we could just add FLAG_MULTI_PACKET flag to qmi_wwan, but since the sub
  }
  
  /* very simplistic detection of IPv4 or IPv6 headers */
-@@ -1264,7 +1266,7 @@ err:
+@@ -1267,7 +1269,7 @@ err:
  
  static const struct driver_info	qmi_wwan_info = {
  	.description	= "WWAN/QMI device",
@@ -50,7 +50,7 @@ Ideally, we could just add FLAG_MULTI_PACKET flag to qmi_wwan, but since the sub
  	.bind		= qmi_wwan_bind,
  	.unbind		= qmi_wwan_unbind,
  	.manage_power	= qmi_wwan_manage_power,
-@@ -1273,7 +1275,7 @@ static const struct driver_info	qmi_wwan
+@@ -1276,7 +1278,7 @@ static const struct driver_info	qmi_wwan
  
  static const struct driver_info	qmi_wwan_info_quirk_dtr = {
  	.description	= "WWAN/QMI device",
@@ -59,7 +59,7 @@ Ideally, we could just add FLAG_MULTI_PACKET flag to qmi_wwan, but since the sub
  	.bind		= qmi_wwan_bind,
  	.unbind		= qmi_wwan_unbind,
  	.manage_power	= qmi_wwan_manage_power,
-@@ -1283,7 +1285,7 @@ static const struct driver_info	qmi_wwan
+@@ -1286,7 +1288,7 @@ static const struct driver_info	qmi_wwan
  
  static const struct driver_info qmi_wwan_info_quirk_dtr_sdx55 = {
  	.description    = "WWAN/QMI device",

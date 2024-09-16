@@ -5,6 +5,8 @@ PKG_NAME:=ipq-wifi
 PKG_RELEASE:=1
 PKG_FLAGS:=nonshared
 
+PKG_LICENSE:=GPL-2.0-or-later
+
 include $(INCLUDE_DIR)/package.mk
 
 define Build/Prepare

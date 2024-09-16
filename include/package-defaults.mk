@@ -23,6 +23,7 @@ define Package/Default
   EXTRA_DEPENDS:=
   MAINTAINER:=$(PKG_MAINTAINER)
   PKG_TLT_NAME:=
+  PKG_APP_NAME:=
   PKG_ROUTER:=
   PKG_REBOOT:=
   SOURCE:=$(patsubst $(TOPDIR)/%,%,$(CURDIR))

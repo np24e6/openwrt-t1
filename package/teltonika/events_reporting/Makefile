@@ -7,7 +7,9 @@ include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=events_reporting
 
-PKG_SOURCE_VERSION:=2.3
+PKG_SOURCE_VERSION:=2.4
+
+PKG_LICENSE:=Teltonika-closed
 
 include $(INCLUDE_DIR)/package.mk
 

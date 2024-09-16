@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2023 Teltonika-Networks
+# Copyright (C) 2024 Teltonika-Networks
 #
 
 include $(TOPDIR)/rules.mk
@@ -7,6 +7,8 @@ include $(TOPDIR)/rules.mk
 PKG_NAME:=uci-default
 PKG_VERSION:=2023-04-25
 PKG_RELEASE:=1
+
+PKG_LICENSE:=BSD-3-Clause
 
 GPL_INCLUDE_SRC:=1
 

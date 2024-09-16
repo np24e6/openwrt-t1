@@ -31,20 +31,6 @@
 				gpio-export,output = <0>;
 				gpios = <&stm32_io 14 GPIO_ACTIVE_HIGH>;
 			};
-
-			gpio_out_1 {
-				gpio-export,name = "gpio23";
-				gpio-export,output = <0>;
-				gpio-export,direction_may_change;
-				gpios = <&stm32_io 23 GPIO_ACTIVE_HIGH>;
-			};
-
-			gpio_in_1 {
-				gpio-export,name = "gpio24";
-				gpio-export,input = <0>;
-				gpio-export,direction_may_change;
-				gpios = <&stm32_io 24 GPIO_ACTIVE_LOW>;
-			};
 		};
 
 		leds {

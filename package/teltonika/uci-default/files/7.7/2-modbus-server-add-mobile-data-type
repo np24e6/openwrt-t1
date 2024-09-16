@@ -1,0 +1,24 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+CONFIG="modbus_server"
+
+add_mobile_data_type() {
+	local section="$1"
+	local mobile_data_type
+
+
+	config_get mobile_data_type "$section" "md_data_type" "-1"
+	if [ "$mobile_data_type" = "-1" ]; then
+		local tcp_mobile_data_type
+		config_get tcp_mobile_data_type "modbus" "md_data_type" "0"
+
+		uci_set "$CONFIG" "$section" md_data_type "$tcp_mobile_data_type"
+	fi
+}
+
+config_load "$CONFIG"
+config_foreach add_mobile_data_type rtu_device
+uci_commit "$CONFIG"
+

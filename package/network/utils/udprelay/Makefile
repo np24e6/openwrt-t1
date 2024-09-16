@@ -20,9 +20,6 @@ define Package/udprelay
   SECTION:=net
   CATEGORY:=Network
   TITLE:=UDP packages relay
-  DEPENDS:=+vuci-app-udprelay-ui
-  PKG_TLT_NAME:=UDP Broadcast Relay
-  PKG_ROUTER:=$(TLT_PLATFORM_NAME)
 endef
 
 define Package/udprelay/description

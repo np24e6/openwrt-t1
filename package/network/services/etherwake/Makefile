@@ -7,6 +7,7 @@
 
 include $(TOPDIR)/rules.mk
 
+RCOMPR:=:
 PKG_NAME:=etherwake
 PKG_VERSION:=1.09
 PKG_RELEASE:=5
@@ -17,7 +18,7 @@ PKG_HASH:=54241c7689579dc86e29e6afbc6d60e69f97135091a1395c8a10f6d5a2daec1d
 
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-$(PKG_VERSION).orig
 
-PKG_LICENSE:=BSD-3-Clause
+PKG_LICENSE:=GPL-2.0
 
 include $(INCLUDE_DIR)/package.mk
 
@@ -25,13 +26,8 @@ define Package/etherwake
   SECTION:=net
   CATEGORY:=Network
   TITLE:=WoL client for magic packets via ethernet frames
-  DEPENDS:=+vuci-app-wol-ui
   URL:=http://ftp.debian.org/debian/pool/main/e/etherwake
   MAINTAINER:=Peter Wagner <tripolar@gmx.at>
-  ifeq (m, $(CONFIG_PACKAGE_etherwake))
-	PKG_TLT_NAME:=Wake on LAN
-  	PKG_ROUTER:=$(TLT_PLATFORM_NAME)
-  endif
 endef
 
 define Package/etherwake/description

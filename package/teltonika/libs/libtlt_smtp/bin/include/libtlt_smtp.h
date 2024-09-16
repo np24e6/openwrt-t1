@@ -20,6 +20,7 @@ struct smtp_ctx {
     char *sender;
     struct curl_slist *to;
     char *message;
+    int do_not_verify;
 
     size_t lines_read;
     CURL *curl;

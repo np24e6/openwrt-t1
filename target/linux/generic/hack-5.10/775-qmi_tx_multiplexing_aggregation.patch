@@ -1,7 +1,5 @@
-Index: linux-5.10.198/drivers/net/usb/qmi_wwan.c
-===================================================================
---- linux-5.10.198.orig/drivers/net/usb/qmi_wwan.c
-+++ linux-5.10.198/drivers/net/usb/qmi_wwan.c
+--- a/drivers/net/usb/qmi_wwan.c
++++ b/drivers/net/usb/qmi_wwan.c
 @@ -47,6 +47,15 @@
   * commands on a serial interface
   */

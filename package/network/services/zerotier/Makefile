@@ -27,12 +27,10 @@ include $(INCLUDE_DIR)/package.mk
 define Package/zerotier
   SECTION:=net
   CATEGORY:=Network
-  DEPENDS:=+libpthread +libstdcpp +kmod-tun +ip +libminiupnpc +libnatpmp +vuci-app-zerotier-ui
+  DEPENDS:=+libpthread +libstdcpp +kmod-tun +ip +libminiupnpc +libnatpmp
   TITLE:=Create flat virtual Ethernet networks of almost unlimited size
   URL:=https://www.zerotier.com
   SUBMENU:=VPN
-  PKG_ROUTER:=$(TLT_PLATFORM_NAME)
-  PKG_TLT_NAME:=ZeroTier
 endef
 
 define Package/zerotier/description

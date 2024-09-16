@@ -1,0 +1,90 @@
+--- a/src/config.c
++++ b/src/config.c
+@@ -83,6 +83,7 @@
+ 	IFACE_ATTR_NDPROXY_SLAVE,
+ 	IFACE_ATTR_PREFIX_FILTER,
+ 	IFACE_ATTR_PREFERRED_LIFETIME,
++	IFACE_ATTR_IGNORE_IPV6,
+ 	IFACE_ATTR_MAX
+ };
+ 
+@@ -132,6 +133,7 @@
+ 	[IFACE_ATTR_NDPROXY_SLAVE] = { .name = "ndproxy_slave", .type = BLOBMSG_TYPE_BOOL },
+ 	[IFACE_ATTR_PREFIX_FILTER] = { .name = "prefix_filter", .type = BLOBMSG_TYPE_STRING },
+ 	[IFACE_ATTR_PREFERRED_LIFETIME] = { .name = "preferred_lifetime", .type = BLOBMSG_TYPE_STRING },
++	[IFACE_ATTR_IGNORE_IPV6] = { .name = "ignore_ipv6", .type = BLOBMSG_TYPE_BOOL },
+ };
+ 
+ static const struct uci_blob_param_info iface_attr_info[IFACE_ATTR_MAX] = {
+@@ -192,7 +194,7 @@
+ 
+ static void set_interface_defaults(struct interface *iface)
+ {
+-	iface->ignore = true;
++	iface->ignore = false;
+ 	iface->dhcpv4 = MODE_DISABLED;
+ 	iface->dhcpv6 = MODE_DISABLED;
+ 	iface->ra = MODE_DISABLED;
+@@ -518,6 +520,9 @@
+ 
+ 	iface->inuse = true;
+ 
++	if ((c = tb[IFACE_ATTR_IGNORE_IPV6]))
++		iface->ignore = blobmsg_get_bool(c);
++
+ 	if ((c = tb[IFACE_ATTR_DYNAMICDHCP]))
+ 		iface->no_dynamic_dhcp = !blobmsg_get_bool(c);
+ 
+@@ -577,12 +582,9 @@
+ 		}
+ 	}
+ 
+-	if ((c = tb[IFACE_ATTR_RA])) {
++	if ((c = tb[IFACE_ATTR_RA]) && !iface->ignore) {
+ 		if ((mode = parse_mode(blobmsg_get_string(c))) >= 0) {
+ 			iface->ra = mode;
+-
+-			if (iface->ra != MODE_DISABLED)
+-				iface->ignore = false;
+ 		} else
+ 			syslog(LOG_ERR, "Invalid %s mode configured for interface '%s'",
+ 			       iface_attrs[IFACE_ATTR_RA].name, iface->name);
+@@ -590,34 +592,24 @@
+ 
+ 	if ((c = tb[IFACE_ATTR_DHCPV4])) {
+ 		if ((mode = parse_mode(blobmsg_get_string(c))) >= 0) {
+-			if (config.main_dhcpv4) {
++			if (config.main_dhcpv4)
+ 				iface->dhcpv4 = mode;
+-
+-				if (iface->dhcpv4 != MODE_DISABLED)
+-					iface->ignore = false;
+-			}
+ 		} else
+ 			syslog(LOG_ERR, "Invalid %s mode configured for interface %s",
+ 			       iface_attrs[IFACE_ATTR_DHCPV4].name, iface->name);
+ 	}
+ 
+-	if ((c = tb[IFACE_ATTR_DHCPV6])) {
++	if ((c = tb[IFACE_ATTR_DHCPV6]) && !iface->ignore) {
+ 		if ((mode = parse_mode(blobmsg_get_string(c))) >= 0) {
+ 			iface->dhcpv6 = mode;
+-
+-			if (iface->dhcpv6 != MODE_DISABLED)
+-				iface->ignore = false;
+ 		} else
+ 			syslog(LOG_ERR, "Invalid %s mode configured for interface '%s'",
+ 			       iface_attrs[IFACE_ATTR_DHCPV6].name, iface->name);
+ 	}
+ 
+-	if ((c = tb[IFACE_ATTR_NDP])) {
++	if ((c = tb[IFACE_ATTR_NDP]) && !iface->ignore) {
+ 		if ((mode = parse_mode(blobmsg_get_string(c))) >= 0) {
+ 			iface->ndp = mode;
+-
+-			if (iface->ndp != MODE_DISABLED)
+-				iface->ignore = false;
+ 		} else
+ 			syslog(LOG_ERR, "Invalid %s mode configured for interface '%s'",
+ 			       iface_attrs[IFACE_ATTR_NDP].name, iface->name);
+

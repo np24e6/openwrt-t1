@@ -61,7 +61,7 @@
 +
 +	for (int i = 0; i < netifd_ifaces.length; i++) {
 +		if (!strcmp(interface, netifd_ifaces.iface[i].l3_dev) &&
-+		    netifd_ifaces.iface[i].static_mobile) {
++		    (netifd_ifaces.iface[i].static_mobile || netifd_ifaces.iface[i].modem)) {
 +			goto found;
 +		}
 +	}

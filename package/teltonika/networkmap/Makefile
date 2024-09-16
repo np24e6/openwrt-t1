@@ -7,9 +7,10 @@ include $(INCLUDE_DIR)/download.mk
 PKG_RELEASE:=1
 
 PKG_NAME:=networkmap
-PKG_VERSION:=2023-11-20
+PKG_VERSION:=2024-03-06
 
-PKG_SOURCE_VERSION:=1.1
+PKG_SOURCE_VERSION:=1.2
+PKG_LICENSE:=Teltonika-closed
 
 include $(INCLUDE_DIR)/package.mk
 
@@ -17,7 +18,6 @@ define Package/networkmap
   SECTION:=net
   CATEGORY:=Network
   TITLE:=Networkmap tool
-  DEPENDS:=+arp-scan
 endef
 
 define Package/networkmap/description
@@ -27,10 +27,6 @@ endef
 
 
 define Package/networkmap/install
-	$(INSTALL_DIR) $(1)/usr/share/arp-scan
-	touch $(1)/usr/share/arp-scan/ieee-iab.txt
-	touch $(1)/usr/share/arp-scan/ieee-oui.txt
-	touch $(1)/usr/share/arp-scan/mac-vendor.txt
 	$(INSTALL_DIR) $(1)/usr/libexec/rpcd
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/files/networkmap $(1)/usr/libexec/rpcd/
 endef

@@ -1,11 +1,13 @@
 #
-# Copyright (C) 2023 Teltonika
+# Copyright (C) 2024 Teltonika-Networks
 #
 
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=fmt-usb-msd
 PKG_VERSION:=2023-01-11
+
+PKG_LICENSE:=Teltonika-closed
 
 include $(INCLUDE_DIR)/package.mk
 

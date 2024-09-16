@@ -2030,8 +2030,8 @@ void host_helper_init(void)
         MISC_ARP_SP_NOT_FOUND_SET(0, FAL_MAC_RDT_TO_CPU);
         MISC_ARP_GUARD_SET(0, S17_WAN_PORT, FAL_MAC_IP_PORT_GUARD);
 #endif
-		/* Enable packets from WAN port*/
-		NETISOLATE_SET(0, A_FALSE);
+		/* set VLAN_TRANS_TEST register bit, to block packets from WAN port has private dip */
+		NETISOLATE_SET(0, A_TRUE);
 	} else {
 		PORT_TXHDR_MODE_SET(0, 0, FAL_ALL_TYPE_FRAME_EN);
 	}
@@ -2056,13 +2056,13 @@ void host_helper_init(void)
 	register_inetaddr_notifier(&qcaswitch_ip_notifier);
 #endif // ifdef AUTO_UPDATE_PPPOE_INFO
 	/* Enable ICMP packets from WAN */
-	icmp_from_wan_acl_rule();
-	udp_from_wan_acl_rule();
+	// icmp_from_wan_acl_rule();
+	// udp_from_wan_acl_rule();
 	/* Enable ACLs to handle MLD packets */
-	upnp_ssdp_add_acl_rules();
-	ipv6_snooping_solicted_node_add_acl_rules();
-	ipv6_snooping_sextuple0_group_add_acl_rules();
-	ipv6_snooping_quintruple0_1_group_add_acl_rules();
+	// upnp_ssdp_add_acl_rules();
+	// ipv6_snooping_solicted_node_add_acl_rules();
+	// ipv6_snooping_sextuple0_group_add_acl_rules();
+	// ipv6_snooping_quintruple0_1_group_add_acl_rules();
 
 	napt_helper_hsl_init();
 	host_helper_wan_port_init();

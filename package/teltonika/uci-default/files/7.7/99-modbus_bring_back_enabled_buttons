@@ -1,0 +1,54 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+MODBUS_CLIENT="modbus_client"
+DLMS_CLIENT="dlms_client"
+OPCUA_CLIENT="opcua_client"
+
+GROUPS_ENABLED=0
+
+check_for_enabled_groups() {
+	config_get ENABLED "$1" "enabled" "0"
+
+	[ "$ENABLED" = "0" ] && return
+
+	GROUPS_ENABLED=1
+}
+
+old_firmware_routine() {
+	local cfg="$1"
+	local enabled_old="$2"
+
+	uci_set "$cfg" "main" "enabled" "$enabled_old"
+	uci_remove "$cfg" "main" "enabled_old"
+	uci_commit "$cfg"
+}
+
+check_if_enabled_exists() {
+	local cfg="$1"
+	local group_name="$2"
+
+	config_load "$cfg" || return
+
+	config_get ENABLED_OLD "main" "enabled_old" "-1"
+	[ "$ENABLED_OLD" != "-1" ] && old_firmware_routine "$cfg" "$ENABLED_OLD" && return
+
+	local ENABLED=0
+	config_get ENABLED "main" "enabled" "0"
+
+	[ "$ENABLED" = "1" ] && return
+
+	config_foreach check_for_enabled_groups "$group_name"
+	uci_set "$cfg" "main" "enabled" "$GROUPS_ENABLED"
+	uci_commit "$cfg"
+
+	GROUPS_ENABLED=0
+}
+
+check_if_enabled_exists "$MODBUS_CLIENT" "tcp_server"
+check_if_enabled_exists "$MODBUS_CLIENT" "rtu_server"
+check_if_enabled_exists "$DLMS_CLIENT" "cosem_group"
+check_if_enabled_exists "$OPCUA_CLIENT" "value_group"
+
+exit 0

@@ -1,0 +1,286 @@
+Index: net-snmp-5.9.1/agent/mibgroup/mibII/system_mib.c
+===================================================================
+--- net-snmp-5.9.1.orig/agent/mibgroup/mibII/system_mib.c
++++ net-snmp-5.9.1/agent/mibgroup/mibII/system_mib.c
+@@ -41,6 +41,24 @@
+ #include <winerror.h>
+ #endif
+ 
++#define HOSTNAME_REGEX "^((([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\\-]{0,61}[a-zA-Z0-9]))|([a-zA-Z0-9]|" \
++                       "[a-zA-Z0-9][a-zA-Z0-9\\-]{0,61}[a-zA-Z0-9])(\\.([a-zA-Z0-9]|[a-zA-Z0-9][a-" \
++                       "zA-Z0-9\\-]{0,61}[a-zA-Z0-9]))|((25[0-5]|(2[0-4]|1[0-9]|[1-9]|)[0-9])\\.\\" \
++                       "b){3}((25[0-5]|(2[0-4]|1[0-9]|[1-9]|)[0-9])\\b)|(([0-9a-fA-F]{1,4}:){7,7}[" \
++                       "0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-f" \
++                       "A-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1," \
++                       "4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1," \
++                       "4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}" \
++                       ":((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-" \
++                       "F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4" \
++                       "]|1{0,1}[0-9]){0,1}[0-9])\\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])" \
++                       "|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\\.){3," \
++                       "3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])))$"
++
++#include <uci.h>
++#include <libubus.h>
++#include <regex.h>
++
+ #include <net-snmp/net-snmp-includes.h>
+ #include <net-snmp/agent/net-snmp-agent-includes.h>
+ #include <net-snmp/agent/sysORTable.h>
+@@ -76,6 +94,11 @@ static int      sysContactSet = 0, sysLo
+ static void     windowsOSVersionString(char [], size_t);
+ #endif
+ 
++static struct ubus_context *g_ubus_ctx;
++static struct uci_context *g_uci_ctx;
++static int g_sysName_set_in_config;
++uint32_t g_ubus_id;
++
+         /*********************
+ 	 *
+ 	 *  snmpd.conf config parsing
+@@ -92,6 +115,10 @@ system_parse_config_string2(const char *
+         netsnmp_config_error("%s token too long (must be < %lu):\n\t%s",
+                              token, (unsigned long)size, cptr);
+     }
++
++    if (!strcmp("sysName", token) && strlen(cptr)) {
++        g_sysName_set_in_config = 1;
++    }
+ }
+ 
+ static void
+@@ -234,10 +261,164 @@ handle_sysUpTime(netsnmp_mib_handler *ha
+     return SNMP_ERR_NOERROR;
+ }
+ 
++static void handle_sysName_uci_get()
++{
++    struct uci_package *pkg = NULL;
++    struct uci_section *sec = NULL;
++    char *res;
++
++    if (!g_uci_ctx) {
++        return;
++    }
++
++    if (uci_load(g_uci_ctx, "system", &pkg) != UCI_OK || !pkg) {
++        goto end;
++    }
++
++    sec = uci_lookup_section(g_uci_ctx, pkg, "system");
++    if (!sec) {
++        goto end;
++    }
++
++    res = (char *)uci_lookup_option_string(g_uci_ctx, sec, "hostname");
++    if (!res) {
++        goto end;
++    }
++
++    strlcpy(sysName, res, sizeof(sysName));
++end:
++    uci_unload(g_uci_ctx, pkg);
++}
++
++static void handle_sysName_uci_set()
++{
++    struct uci_ptr ptr = {
++        .package = "system",
++        .section = "system",
++        .option = "hostname",
++        .value = sysName
++    };
++
++    if (!g_uci_ctx) {
++        return;
++    }
++
++    if (uci_lookup_ptr(g_uci_ctx, &ptr, NULL, true)) {
++        return;
++    }
++
++    if (uci_set(g_uci_ctx, &ptr)) {
++        return;
++    }
++
++    if (uci_save(g_uci_ctx, ptr.p)) {
++        return;
++    }
++
++    if (uci_commit(g_uci_ctx, &ptr.p, false)) {
++        return;
++    }
++
++    if (!g_ubus_ctx) {
++        return;
++    }
++
++    ubus_invoke(g_ubus_ctx, g_ubus_id, "reload_config", NULL, NULL, NULL, 1000);
++}
++
++static int validate_hostname(char *input)
++{
++    regex_t rx;
++    int ret;
++
++    if (!input) {
++        return 1;
++    }
++
++    if (regcomp(&rx, HOSTNAME_REGEX, REG_EXTENDED)) {
++        return 1;
++    }
++
++    ret = regexec(&rx, input, 0, NULL, 0);
++
++    regfree(&rx);
++
++    return ret;
++}
++
++static int
++handle_sysName(netsnmp_mib_handler *handler,
++                netsnmp_handler_registration *reginfo,
++                netsnmp_agent_request_info *reqinfo,
++                netsnmp_request_info *requests)
++{
++    long enabled;
++    netsnmp_request_info *request = NULL;
++
++    switch (reqinfo->mode) {
++    case MODE_GET:
++        for (request = requests; request; request = request->next) {
++            if (!g_sysName_set_in_config) {
++               handle_sysName_uci_get();
++            }
++            snmp_set_var_typed_value(request->requestvb, ASN_OCTET_STR,
++                                 (u_char *)sysName, strlen(sysName));
++        }
++        break;
++
++    case MODE_SET_RESERVE1:
++        for (request = requests; request; request = request->next) {
++            if ( request->status != 0 ) {
++                return SNMP_ERR_NOERROR;	/* Already got an error */
++            }
++            if ( request->requestvb->type != ASN_OCTET_STR ) {
++                netsnmp_set_request_error(reqinfo, request, SNMP_ERR_WRONGTYPE);
++                return SNMP_ERR_WRONGTYPE;
++            }
++        }
++        break;
++
++    case MODE_SET_COMMIT:
++        for (request = requests; request; request = request->next) {
++            if (g_sysName_set_in_config) {
++                netsnmp_set_request_error(reqinfo, request, SNMP_ERR_NOTWRITABLE);
++                return SNMP_ERR_NOTWRITABLE;
++            }
++            if (validate_hostname(request->requestvb->val.string)) {
++                netsnmp_set_request_error(reqinfo, request, SNMP_ERR_WRONGVALUE);
++                return SNMP_ERR_WRONGVALUE;
++            }
++            strlcpy(sysName, request->requestvb->val.string, sizeof(sysName));
++            handle_sysName_uci_set();
++        }
++        break;
++    }
++
++    return SNMP_ERR_NOERROR;
++}
++
+ void
+ init_system_mib(void)
+ {
++    /* Set sysName as hostname, which is provided in system config */
++    g_uci_ctx               = NULL;
++    g_ubus_ctx              = NULL;
++    g_sysName_set_in_config = 0;
+ 
++    g_uci_ctx = uci_alloc_context();
++    handle_sysName_uci_get();
++
++    g_ubus_ctx = ubus_connect(NULL);
++    if (!g_ubus_ctx) {
++        goto skip;
++    }
++
++    if (ubus_lookup_id(g_ubus_ctx, "uci", &g_ubus_id)) {
++        ubus_free(g_ubus_ctx);
++        g_ubus_ctx = NULL;
++    }
++
++skip: ;
+ #ifdef HAVE_UNAME
+     struct utsname  utsName;
+ 
+@@ -274,30 +455,6 @@ init_system_mib(void)
+ #endif
+ #endif
+ 
+-#ifdef HAVE_GETHOSTNAME
+-    gethostname(sysName, sizeof(sysName));
+-#else
+-#ifdef HAVE_UNAME
+-    strlcpy(sysName, utsName.nodename, sizeof(sysName));
+-#else
+-#if defined (HAVE_EXECV) && !defined (mingw32)
+-    if (asprintf(&extmp.command, "%s -n", UNAMEPROG) < 0)
+-        extmp.command = NULL;
+-    /*
+-     * setup defaults 
+-     */
+-    extmp.type = EXECPROC;
+-    extmp.next = NULL;
+-    exec_command(&extmp);
+-    strlcpy(sysName, extmp.output, sizeof(sysName));
+-    if (strlen(sysName) >= 1)
+-        sysName[strlen(sysName) - 1] = 0; /* chomp new line */
+-#else
+-    strcpy(sysName, "unknown");
+-#endif                          /* HAVE_EXECV */
+-#endif                          /* HAVE_UNAME */
+-#endif                          /* HAVE_GETHOSTNAME */
+-
+ #if (defined (WIN32) && defined (HAVE_WIN32_PLATFORM_SDK)) || defined (mingw32)
+     {
+       HKEY hKey;
+@@ -377,13 +534,12 @@ init_system_mib(void)
+         const oid sysName_oid[] = { 1, 3, 6, 1, 2, 1, 1, 5 };
+         static netsnmp_watcher_info sysName_winfo;
+ #ifndef NETSNMP_NO_WRITE_SUPPORT
+-        netsnmp_register_watched_scalar(
+-            netsnmp_create_update_handler_registration(
+-                "mibII/sysName", sysName_oid, OID_LENGTH(sysName_oid),
+-                HANDLER_CAN_RWRITE, &sysNameSet),
+-            netsnmp_init_watcher_info(
+-                &sysName_winfo, sysName, SYS_STRING_LEN - 1, ASN_OCTET_STR,
+-                WATCHER_MAX_SIZE | WATCHER_SIZE_STRLEN));
++        netsnmp_register_scalar(
++            netsnmp_create_handler_registration(
++                "mibII/sysName", handle_sysName,
++                sysName_oid, OID_LENGTH(sysName_oid),
++                HANDLER_CAN_RWRITE)
++        );
+ #else  /* !NETSNMP_NO_WRITE_SUPPORT */
+         netsnmp_register_watched_scalar(
+             netsnmp_create_update_handler_registration(
+@@ -458,6 +614,17 @@ init_system_mib(void)
+                            system_store, NULL);
+ }
+ 
++void shutdown_system_mib(void)
++{
++    if (g_ubus_ctx) {
++        ubus_free(g_ubus_ctx);
++    }
++
++    if (g_uci_ctx) {
++        uci_free_context(g_uci_ctx);
++    }
++}
++
+         /*********************
+ 	 *
+ 	 *  Internal implementation functions - None

@@ -7,7 +7,9 @@ include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=post_get
 
-PKG_SOURCE_VERSION:=1.3
+PKG_SOURCE_VERSION:=1.4
+
+PKG_LICENSE:=Teltonika-closed
 
 PKG_FIXUP:=autoreconf
 
@@ -78,7 +80,8 @@ MOBILE_HANDLERS:= \
 IO_HANDLERS:= \
 	io_state \
 	io_type \
-	io_value
+	io_value \
+	io_invert
 
 $(eval $(call BuildPackage,post-get))
 $(eval $(call BuildHandler,mobile,$(MOBILE_HANDLERS)))

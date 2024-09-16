@@ -10,6 +10,7 @@ include $(TOPDIR)/rules.mk
 PKG_NAME:=igmpproxy
 PKG_VERSION:=0.2.1
 PKG_RELEASE:=4
+PKG_LICENSE:=GPL-2.0+
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_SOURCE_URL:=https://github.com/pali/igmpproxy/releases/download/${PKG_VERSION}/
@@ -25,16 +26,15 @@ define Package/igmpproxy
   SECTION:=net
   CATEGORY:=Network
   SUBMENU:=Routing and Redirection
-  DEPENDS:=+USE_GLIBC:librt +vuci-app-igmp-proxy-ui
+  DEPENDS:=+USE_GLIBC:librt
   TITLE:=Multicast Routing Daemon
   URL:=http://sourceforge.net/projects/igmpproxy
-  PKG_TLT_NAME:=IGMP Proxy
-  PKG_ROUTER:=$(TLT_PLATFORM_NAME)
 endef
 
 define Package/igmpproxy/description
-	IGMPproxy is a simple dynamic Multicast Routing Daemon using
-	only IGMP signalling (Internet Group Management Protocol).
+	IGMPproxy is a simple dynamic Multicast Routing Daemon
+	which enables the ability for the router to learn multicast group membership information
+	and forward multicast packets
 endef
 
 define Package/igmpproxy/conffiles

@@ -11,6 +11,7 @@ azure_instance() {
 	config_get enabled "$1" "enabled"
 	if [ "$enabled" = "1" ]; then
 		procd_open_instance
+		procd_set_param respawn
 		procd_set_param command "$PROG" -n "$1"
 		procd_set_param file "$CONF"
 		procd_close_instance

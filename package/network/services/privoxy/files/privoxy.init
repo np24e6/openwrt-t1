@@ -3,7 +3,7 @@
 . /lib/functions.sh
 
 START=99
-STOP=99
+STOP=01
 USE_PROCD=1
 
 TMP_DIR=/var/run

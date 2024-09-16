@@ -1,3 +1,6 @@
+include $(INCLUDE_DIR)/portable.mk
+include $(INCLUDE_DIR)/os-version.mk
+
 ifdef CONFIG_USE_MKLIBS
   define mklibs
 	rm -rf $(TMP_DIR)/mklibs-progs $(TMP_DIR)/mklibs-out
@@ -60,6 +63,28 @@ ifdef CONFIG_CLEAN_IPKG
   endef
 endif
 
+define generate_banner
+	(\
+		max_line_len="$$(echo $(TLT_VERSION) | wc -c)"; \
+		max_line_len="$$((max_line_len + 18))"; \
+		label="$$(echo "Teltonika $(TLT_PLATFORM_NAME) series $$(date +'%Y')")"; \
+		label_len="$$(echo $$label | wc -c)"; \
+		pad="$$(((max_line_len - label_len) / 2))"; \
+		blen="$$(cat $(INCLUDE_DIR)/banner.logo | awk '{ print length }' | sort -n | tail -1)"; \
+		bpad="$$(((max_line_len - blen) / 2))"; \
+		perl -pe "\$$_=\" \"x$${bpad} .\$$_" $(INCLUDE_DIR)/banner.logo > $(1)/etc/banner; \
+		printf "%$${max_line_len}s\n" |tr " " "-" >> $(1)/etc/banner; \
+		printf "%$${pad}s $${label}\n" >> $(1)/etc/banner; \
+		printf "%$${max_line_len}s\n" |tr " " "-" >> $(1)/etc/banner; \
+		printf "%3sDevice:%5s{DEVICE_NAME}\n" >> $(1)/etc/banner; \
+		printf "%3sKernel:%5s{KERNEL_VERSION}\n" >> $(1)/etc/banner; \
+		printf "%3sFirmware:%3s$(TLT_VERSION)\n" >> $(1)/etc/banner; \
+		printf "%3sBuild:%6s$$(git rev-parse --short HEAD)\n" >> $(1)/etc/banner; \
+		printf "%3sBuild date:%1s$$(date +'%Y-%m-%d %H:%M:%S' -d @$$(cat $(1)/etc/firmware-date))\n" >> $(1)/etc/banner; \
+		printf "%$${max_line_len}s\n" |tr " " "-" >> $(1)/etc/banner; \
+	)
+endef
+
 define prepare_rootfs
 	$(if $(2),@if [ -d '$(2)' ]; then \
 		$(call file_copy,$(2)/.,$(1)); \
@@ -97,5 +122,6 @@ define prepare_rootfs
 		$(1)/var/lock/*.lock
 	$(call clean_ipkg,$(1))
 	$(call mklibs,$(1))
+	$(if $(CONFIG_GENERATE_PROMPT_HEADER),$(call generate_banner,$(1)))
 	$(if $(SOURCE_DATE_EPOCH),find $(1)/ -mindepth 1 -execdir touch -hcd "@$(SOURCE_DATE_EPOCH)" "{}" +)
 endef

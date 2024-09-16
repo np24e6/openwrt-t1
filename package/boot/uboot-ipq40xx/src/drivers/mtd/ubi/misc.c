@@ -20,6 +20,7 @@
 
 /* Here we keep miscellaneous functions which are used all over the UBI code */
 
+#include <nand.h>
 #include <ubi_uboot.h>
 #include "ubi.h"
 
@@ -99,7 +100,10 @@ int ubi_check_volume(struct ubi_device *ubi, int vol_id)
  */
 void ubi_calculate_reserved(struct ubi_device *ubi)
 {
-	ubi->beb_rsvd_level = ubi->good_peb_count/100;
+	struct mtd_info *mtd = &nand_info[CONFIG_IPQ_SPI_NAND_INFO_IDX];
+
+	/* 20 reserve blocks for each 1024 blocks - bad block count */
+	ubi->beb_rsvd_level = mtd->size / mtd->erasesize / 1024 * MTD_UBI_BEB_LIMIT - ubi->bad_peb_count;
 	ubi->beb_rsvd_level *= CONFIG_MTD_UBI_BEB_RESERVE;
 	if (ubi->beb_rsvd_level < MIN_RESEVED_PEBS)
 		ubi->beb_rsvd_level = MIN_RESEVED_PEBS;

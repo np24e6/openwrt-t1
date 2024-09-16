@@ -60,7 +60,7 @@ PKG_BUILD_FLAGS:=lto
 PKG_INSTALL:=1
 
 PKG_BUILD_DEPENDS:=frr/host
-HOST_BUILD_DEPENDS:=python3/host
+HOST_BUILD_DEPENDS:=python3/host elfutils/host
 
 include $(INCLUDE_DIR)/package.mk
 include $(INCLUDE_DIR)/host-build.mk
@@ -211,48 +211,10 @@ define BuildDaemon
 
 	ifeq ($(1),bgpd)
 		DEPENDS+=+kmod-tcpmd5sig
-		DEPENDS+=+vuci-app-dynamic-routes-bgp-ui
-	endif
-	ifeq ($(1),eigrpd)
-		DEPENDS+=+vuci-app-dynamic-routes-eigrp-ui
-	endif
-	ifeq ($(1),ospfd)
-		DEPENDS+=+vuci-app-dynamic-routes-ospf-ui
-	endif
-	ifeq ($(1),ripd)
-		DEPENDS+=+vuci-app-dynamic-routes-rip-ui
-	endif
-	ifeq ($(1),nhrp)
-		DEPENDS+=+vuci-app-dynamic-routes-nhrp-ui
 	endif
 
 #	if [ "$(1)" == "bfdd" ]; then \
 #	export HAVE_BFDD == 1 ; fi
-
-		ifeq (m, $(CONFIG_PACKAGE_frr-$(1)))
-			ifeq (bgpd, $(1))
-				PKG_TLT_NAME:= BGP daemon
-			endif
-			ifeq (eigrpd, $(1))
-				PKG_TLT_NAME:= EIGRP daemon
-			endif
-			ifeq (ospfd, $(1))
-				PKG_TLT_NAME:= OSPF daemon
-			endif
-			ifeq (ripd, $(1))
-				PKG_TLT_NAME:= RIP daemon
-			endif
-			ifeq (ldpd, $(1))
-				PKG_TLT_NAME:= MPLS daemon
-			endif
-			ifeq (staticd, $(1))
-				PKG_TLT_NAME:= STATIC daemon
-			endif
-			ifeq (nhrp, $(1))
-				PKG_TLT_NAME:= NHRP daemon
-			endif
-			PKG_ROUTER:=$(TLT_PLATFORM_NAME)
-		endif
     endef
 
     define Package/frr-$(1)/install
@@ -316,9 +278,11 @@ define Package/frr/install
 	$(INSTALL_DIR) $(1)/etc/init.d
 	$(INSTALL_BIN) ./files/frr.init $(1)/etc/init.d/frr
 	$(INSTALL_DIR) $(1)/etc/uci-defaults/7.5
+	$(INSTALL_DIR) $(1)/etc/uci-defaults/7.7
 	$(CP) ./files/defaults/97_frr_indexing $(1)/etc/uci-defaults/7.5/97_frr_indexing
 	$(CP) ./files/defaults/98_modify-frr.sh $(1)/etc/uci-defaults/7.5/98_modify-frr.sh
 	$(CP) ./files/defaults/99_migrate-frr.sh $(1)/etc/uci-defaults/7.5/99_migrate-frr.sh
+	$(CP) ./files/defaults/7.7/99-migrate-main_instance.sh $(1)/etc/uci-defaults/7.7/99-migrate-main_instance.sh
 endef
 
 define Package/frr-watchfrr/install

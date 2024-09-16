@@ -19,6 +19,8 @@ PKG_SOURCE_URL:=http://mirror.ox.ac.uk/pub/OpenBSD/LibreSSL \
 	http://ftp.jaist.ac.jp/pub/OpenBSD/LibreSSL \
 	https://ftp.openbsd.org/pub/OpenBSD/LibreSSL
 
+PKG_LICENSE:=BSD-4-Clause
+
 HOST_BUILD_PARALLEL:=1
 
 include $(INCLUDE_DIR)/host-build.mk

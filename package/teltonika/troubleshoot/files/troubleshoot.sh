@@ -162,14 +162,22 @@ system_hook() {
 }
 
 switch_hook() {
-	local ethernet
+	local ethernet dsa
 	local log_file="${PACK_DIR}switch.log"
 
 	ethernet="$(jsonfilter -i /etc/board.json -e '@.hwinfo.ethernet')"
-	[ "$ethernet" = "true" ] && [ -n "$(which swconfig)" ] || return
+	[ "$ethernet" = "true" ] || return
 
-	troubleshoot_init_log "Switch configuration" "$log_file"
-	troubleshoot_add_log_ext "swconfig" "dev switch0 show" "$log_file"
+	dsa="$(jsonfilter -i /etc/board.json -e '@.hwinfo.dsa')"
+	if [ "$dsa" = "true" ]; then
+		troubleshoot_init_log "VLANS" "$log_file"
+		troubleshoot_add_log_ext "bridge" "vlan" "$log_file"
+		troubleshoot_init_log "FDB" "$log_file"
+		troubleshoot_add_log_ext "bridge" "fdb" "$log_file"
+	else
+		troubleshoot_init_log "Switch configuration" "$log_file"
+		troubleshoot_add_log_ext "swconfig" "dev switch0 show" "$log_file"
+	fi
 }
 
 wifi_hook() {
@@ -185,9 +193,10 @@ wifi_hook() {
 
 	[ -z "$wifaces" ] && return
 
-	troubleshoot_init_log "WIFI clients" "$log_file"
+	troubleshoot_init_log "WiFi clients" "$log_file"
 	for devname in ${wifaces}; do
-		troubleshoot_add_log "$(iw dev "$devname" station dump 2>/dev/null | grep Station)" "$log_file"
+		troubleshoot_add_log "Interface ${devname}" "$log_file"
+		troubleshoot_add_log "$(iwinfo "$devname" assoclist 2>/dev/null)" "$log_file"
 	done
 
 }

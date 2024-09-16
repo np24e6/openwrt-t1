@@ -1,14 +1,9 @@
-#
-# Copyright (C) 2006-2011 OpenWrt.org
-#
-# This is free software, licensed under the GNU General Public License v2.
-# See /LICENSE for more information.
-#
-
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=qssdk-shell
 PKG_RELEASE:=1
+
+PKG_LICENSE:=Custom-Permissive-License
 
 include $(INCLUDE_DIR)/package.mk
 

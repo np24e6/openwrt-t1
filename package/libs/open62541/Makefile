@@ -7,6 +7,8 @@ PKG_SOURCE_VERSION:=v1.3.4
 PKG_MIRROR_HASH:=463ae8ff6b91d52a5ee33cfa36a381f3
 CMAKE_INSTALL:=1
 
+PKG_LICENSE:=MPL-2.0 CC0-1.0
+
 include $(INCLUDE_DIR)/package.mk
 include $(INCLUDE_DIR)/cmake.mk
 

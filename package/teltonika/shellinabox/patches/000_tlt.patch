@@ -66,7 +66,7 @@ diff --recursive --unified --new-file --no-dereference orig/.gitignore src/.giti
 -stamp-h1
 diff --recursive --unified --new-file --no-dereference orig/.gitlab-ci.yml src/.gitlab-ci.yml
 --- orig/.gitlab-ci.yml	1970-01-01 00:00:00.000000000 +0000
-+++ src/.gitlab-ci.yml	2023-10-04 10:40:51.000000000 +0000
++++ src/.gitlab-ci.yml	2024-02-26 13:24:42.000000000 +0000
 @@ -0,0 +1,20 @@
 +include:
 +  - project: teltonika/ci-templates
@@ -91,7 +91,7 @@ diff --recursive --unified --new-file --no-dereference orig/.gitlab-ci.yml src/.
 \ No newline at end of file
 diff --recursive --unified --new-file --no-dereference orig/cli.conf src/cli.conf
 --- orig/cli.conf	1970-01-01 00:00:00.000000000 +0000
-+++ src/cli.conf	2023-10-04 10:40:51.000000000 +0000
++++ src/cli.conf	2024-02-26 13:24:42.000000000 +0000
 @@ -0,0 +1,6 @@
 +config status 'status'
 +	option enable '1'
@@ -101,7 +101,7 @@ diff --recursive --unified --new-file --no-dereference orig/cli.conf src/cli.con
 +config cli
 diff --recursive --unified --new-file --no-dereference orig/config.h src/config.h
 --- orig/config.h	1970-01-01 00:00:00.000000000 +0000
-+++ src/config.h	2023-10-04 10:40:51.000000000 +0000
++++ src/config.h	2024-02-26 13:24:42.000000000 +0000
 @@ -0,0 +1,189 @@
 +/* config.h.  Generated from config.h.in by configure.  */
 +/* config.h.in.  Generated from configure.ac by autoheader.  */
@@ -294,7 +294,7 @@ diff --recursive --unified --new-file --no-dereference orig/config.h src/config.
 +/* #undef const */
 diff --recursive --unified --new-file --no-dereference orig/configure.ac src/configure.ac
 --- orig/configure.ac	2016-11-09 19:40:33.000000000 +0000
-+++ src/configure.ac	2023-10-04 10:40:51.000000000 +0000
++++ src/configure.ac	2024-02-26 13:24:42.000000000 +0000
 @@ -34,6 +34,9 @@
  AC_CHECK_HEADERS([libutil.h pthread.h pty.h strings.h syslog.h sys/prctl.h \
                    sys/uio.h util.h])
@@ -307,7 +307,7 @@ diff --recursive --unified --new-file --no-dereference orig/configure.ac src/con
                 [AC_CHECK_LIB(util, login_tty,
 diff --recursive --unified --new-file --no-dereference orig/libhttp/httpconnection.c src/libhttp/httpconnection.c
 --- orig/libhttp/httpconnection.c	2016-11-09 19:40:33.000000000 +0000
-+++ src/libhttp/httpconnection.c	2023-10-04 10:40:51.000000000 +0000
++++ src/libhttp/httpconnection.c	2024-02-26 13:24:42.000000000 +0000
 @@ -288,33 +288,38 @@
  }
  
@@ -375,7 +375,7 @@ diff --recursive --unified --new-file --no-dereference orig/libhttp/httpconnecti
        }
 diff --recursive --unified --new-file --no-dereference orig/libhttp/server.c src/libhttp/server.c
 --- orig/libhttp/server.c	2016-11-09 19:40:33.000000000 +0000
-+++ src/libhttp/server.c	2023-10-04 10:40:51.000000000 +0000
++++ src/libhttp/server.c	2024-02-26 13:24:42.000000000 +0000
 @@ -171,7 +171,7 @@
                                                   "content-length");
    if (!contentLength ||
@@ -434,7 +434,7 @@ diff --recursive --unified --new-file --no-dereference orig/libhttp/server.c src
    check(server->pollFds         = malloc(sizeof(struct pollfd)));
 diff --recursive --unified --new-file --no-dereference orig/libhttp/ssl.c src/libhttp/ssl.c
 --- orig/libhttp/ssl.c	2016-11-09 19:40:33.000000000 +0000
-+++ src/libhttp/ssl.c	2023-10-04 10:40:51.000000000 +0000
++++ src/libhttp/ssl.c	2024-02-26 13:24:42.000000000 +0000
 @@ -208,7 +208,7 @@
    // The feature is currently disabled.
    const char* path_libcrypto = NULL; // getenv ("SHELLINABOX_LIBCRYPTO_SO");
@@ -471,7 +471,7 @@ diff --recursive --unified --new-file --no-dereference orig/libhttp/ssl.c src/li
  
 diff --recursive --unified --new-file --no-dereference orig/libhttp/url.c src/libhttp/url.c
 --- orig/libhttp/url.c	2016-11-09 19:40:33.000000000 +0000
-+++ src/libhttp/url.c	2023-10-04 10:40:51.000000000 +0000
++++ src/libhttp/url.c	2024-02-26 13:24:42.000000000 +0000
 @@ -313,6 +313,19 @@
              }
            }
@@ -501,7 +501,7 @@ diff --recursive --unified --new-file --no-dereference orig/m4/.gitignore src/m4
 -!.gitignore
 diff --recursive --unified --new-file --no-dereference orig/shellinabox/cgi_root.html src/shellinabox/cgi_root.html
 --- orig/shellinabox/cgi_root.html	2016-11-09 19:40:33.000000000 +0000
-+++ src/shellinabox/cgi_root.html	2023-10-04 10:40:51.000000000 +0000
++++ src/shellinabox/cgi_root.html	2024-02-26 13:24:42.000000000 +0000
 @@ -49,7 +49,7 @@
      http://shellinabox.com
      -->
@@ -540,7 +540,7 @@ diff --recursive --unified --new-file --no-dereference orig/shellinabox/cgi_root
    </head>
 diff --recursive --unified --new-file --no-dereference orig/shellinabox/launcher.c src/shellinabox/launcher.c
 --- orig/shellinabox/launcher.c	2016-11-09 19:40:33.000000000 +0000
-+++ src/shellinabox/launcher.c	2023-10-04 10:40:51.000000000 +0000
++++ src/shellinabox/launcher.c	2024-02-26 13:24:42.000000000 +0000
 @@ -86,10 +86,6 @@
  #include <util.h>
  #endif
@@ -599,7 +599,7 @@ diff --recursive --unified --new-file --no-dereference orig/shellinabox/launcher
      }
 diff --recursive --unified --new-file --no-dereference orig/shellinabox/root_page.html src/shellinabox/root_page.html
 --- orig/shellinabox/root_page.html	2016-11-09 19:40:33.000000000 +0000
-+++ src/shellinabox/root_page.html	2023-10-04 10:40:51.000000000 +0000
++++ src/shellinabox/root_page.html	2024-02-26 13:24:42.000000000 +0000
 @@ -110,6 +110,22 @@
        }
  
@@ -625,7 +625,7 @@ diff --recursive --unified --new-file --no-dereference orig/shellinabox/root_pag
    </head>
 diff --recursive --unified --new-file --no-dereference orig/shellinabox/service.c src/shellinabox/service.c
 --- orig/shellinabox/service.c	2016-11-09 19:40:33.000000000 +0000
-+++ src/shellinabox/service.c	2023-10-04 10:40:51.000000000 +0000
++++ src/shellinabox/service.c	2024-02-26 13:24:42.000000000 +0000
 @@ -253,9 +253,10 @@
    free(desc);
  }
@@ -648,7 +648,7 @@ diff --recursive --unified --new-file --no-dereference orig/shellinabox/service.
  
 diff --recursive --unified --new-file --no-dereference orig/shellinabox/service.h src/shellinabox/service.h
 --- orig/shellinabox/service.h	2016-11-09 19:40:33.000000000 +0000
-+++ src/shellinabox/service.h	2023-10-04 10:40:51.000000000 +0000
++++ src/shellinabox/service.h	2024-02-26 13:24:42.000000000 +0000
 @@ -61,13 +61,14 @@
    const char *group;
    const char *cwd;
@@ -667,7 +667,7 @@ diff --recursive --unified --new-file --no-dereference orig/shellinabox/service.
  void destroyServiceHashEntry(void *arg, char *key, char *value);
 diff --recursive --unified --new-file --no-dereference orig/shellinabox/shell_in_a_box.jspp src/shellinabox/shell_in_a_box.jspp
 --- orig/shellinabox/shell_in_a_box.jspp	2016-11-09 19:40:33.000000000 +0000
-+++ src/shellinabox/shell_in_a_box.jspp	2023-10-04 10:40:51.000000000 +0000
++++ src/shellinabox/shell_in_a_box.jspp	2024-02-26 13:24:42.000000000 +0000
 @@ -92,7 +92,7 @@
  function ShellInABox(url, container) {
    if (url == undefined) {
@@ -715,7 +715,7 @@ diff --recursive --unified --new-file --no-dereference orig/shellinabox/shell_in
                             'application/x-www-form-urlencoded; charset=utf-8');
 diff --recursive --unified --new-file --no-dereference orig/shellinabox/shellinaboxd.c src/shellinabox/shellinaboxd.c
 --- orig/shellinabox/shellinaboxd.c	2016-11-09 19:40:33.000000000 +0000
-+++ src/shellinabox/shellinaboxd.c	2023-10-04 10:40:51.000000000 +0000
++++ src/shellinabox/shellinaboxd.c	2024-02-26 13:24:42.000000000 +0000
 @@ -65,6 +65,7 @@
  #include <sys/un.h>
  #include <time.h>
@@ -849,9 +849,108 @@ diff --recursive --unified --new-file --no-dereference orig/shellinabox/shellina
            unlink(pidfile);
          }
        }
+diff --recursive --unified --new-file --no-dereference orig/shellinabox/vt100.jspp src/shellinabox/vt100.jspp
+--- orig/shellinabox/vt100.jspp	2016-11-09 19:40:33.000000000 +0000
++++ src/shellinabox/vt100.jspp	2024-02-26 13:24:42.000000000 +0000
+@@ -98,6 +98,9 @@
+ #define MOUSE_UP       1
+ #define MOUSE_CLICK    2
+ 
++//  check if browser is firefox
++const isFirefox = navigator.userAgent.includes('Firefox')
++
+ function VT100(container) {
+   if (typeof linkifyURLs == 'undefined' || linkifyURLs <= 0) {
+     this.urlRE            = null;
+@@ -916,8 +919,8 @@
+                        '<div class="hidden">' +
+                          '<div id="usercss"></div>' +
+                          '<pre><div><span id="space"></span></div></pre>' +
+-                         '<input type="text" id="input" autocorrect="off" autocapitalize="off" />' +
+-                         '<input type="text" id="cliphelper" />' +
++                         '<input type="text" id="input" autocorrect="off" autocapitalize="off" autocomplete="off" spellcheck="false" />' +
++                         '<input type="text" id="cliphelper" tabindex="-1" />' +
+                          (typeof suppressAllAudio != 'undefined' &&
+                           suppressAllAudio ? "" :
+                          embed + '<bgsound id="beep_bgsound" loop=1 />') +
+@@ -2685,6 +2688,11 @@
+ };
+ 
+ VT100.prototype.handleKey = function(event) {
++  // for some reason mobile firefox has bug with 'Backspace' button where 'Backspace' button
++  // is registered as 'Process' (keycode = 229) for n number of times where n is equal times of symbols typed
++  // for example typing '12345' (5 characters) and pressing 'Backspace' registers as `Process` for 5 times and only then registers as "Backspace"
++  // for example typing 'a b c d e' (9 characters (5 letters 4 spaces)) and pressing 'Backspace' registers as `Process` for 9 times and only then registers as "Backspace"
++  if (event.keyCode === 229 && isFirefox) event.keyCode = 8
+   // this.vt100('H: c=' + event.charCode + ', k=' + event.keyCode +
+   //            (event.shiftKey || event.ctrlKey || event.altKey ||
+   //             event.metaKey ? ', ' +
+@@ -2714,7 +2722,7 @@
+   // By this point, "ch" is either defined and contains the character code, or
+   // it is undefined and "key" defines the code of a function key
+   if (ch != undefined) {
+-    this.scrollable.scrollTop         = this.numScrollbackLines *
++        this.scrollable.scrollTop         = this.numScrollbackLines *
+                                         this.cursorHeight + 1;
+   } else {
+     if ((event.altKey || event.metaKey) && !event.shiftKey && !event.ctrlKey) {
+@@ -2819,7 +2827,7 @@
+       }
+       this.scrollable.scrollTop       = this.numScrollbackLines *
+                                         this.cursorHeight + 1;
+-    }
++        }
+   }
+ 
+   // "ch" now contains the sequence of keycodes to send. But we might still
+@@ -2978,7 +2986,7 @@
+ };
+ 
+ VT100.prototype.keyDown = function(event) {
+-  // this.vt100('D: c=' + event.charCode + ', k=' + event.keyCode +
++    // this.vt100('D: c=' + event.charCode + ', k=' + event.keyCode +
+   //            (event.shiftKey || event.ctrlKey || event.altKey ||
+   //             event.metaKey ? ', ' +
+   //             (event.shiftKey ? 'S' : '') + (event.ctrlKey ? 'C' : '') +
+@@ -4299,7 +4307,7 @@
+ };
+ 
+ VT100.prototype.renderString = function(s, showCursor) {
+-  if (this.printing) {
++    if (this.printing) {
+     this.sendToPrinter(s);
+     if (showCursor) {
+       this.showCursor();
+@@ -4326,7 +4334,7 @@
+ };
+ 
+ VT100.prototype.vt100 = function(s) {
+-  this.cursorNeedsShowing = this.hideCursor();
++    this.cursorNeedsShowing = this.hideCursor();
+   this.respondString      = '';
+   var lineBuf             = '';
+   for (var i = 0; i < s.length; i++) {
+@@ -4370,7 +4378,7 @@
+         this.utfCount     = 0;
+       }
+     }
+-    var isNormalCharacter =
++        var isNormalCharacter =
+       (ch >= 32 && ch <= 127 || ch >= 160 ||
+        this.utfEnabled && ch >= 128 ||
+        !(this.dispCtrl ? this.ctrlAlways : this.ctrlAction)[ch & 0x1F]) &&
+@@ -4424,7 +4432,7 @@
+   } else if (this.cursorNeedsShowing) {
+     this.showCursor();
+   }
+-  return this.respondString;
++    return this.respondString;
+ };
+ 
+ VT100.prototype.Latin1Map = [
 diff --recursive --unified --new-file --no-dereference orig/shellinabox.init src/shellinabox.init
 --- orig/shellinabox.init	1970-01-01 00:00:00.000000000 +0000
-+++ src/shellinabox.init	2023-10-04 10:40:51.000000000 +0000
++++ src/shellinabox.init	2024-02-26 13:24:42.000000000 +0000
 @@ -0,0 +1,46 @@
 +#!/bin/sh /etc/rc.common
 +# Copyright (C) 2018 Teltonika
@@ -901,7 +1000,7 @@ diff --recursive --unified --new-file --no-dereference orig/shellinabox.init src
 +}
 diff --recursive --unified --new-file --no-dereference orig/shellinabox.sh src/shellinabox.sh
 --- orig/shellinabox.sh	1970-01-01 00:00:00.000000000 +0000
-+++ src/shellinabox.sh	2023-10-04 10:40:51.000000000 +0000
++++ src/shellinabox.sh	2024-02-26 13:24:42.000000000 +0000
 @@ -0,0 +1,55 @@
 +#!/bin/sh
 +title=""

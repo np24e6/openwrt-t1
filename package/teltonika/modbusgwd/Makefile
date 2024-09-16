@@ -2,9 +2,10 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=modbusgwd
-PKG_VERSION:=2024-02-06
+PKG_VERSION:=2024-04-25
 
-PKG_SOURCE_VERSION:=7.6.5
+PKG_SOURCE_VERSION:=7.7.1
+PKG_LICENSE:=Teltonika-closed
 
 include $(INCLUDE_DIR)/package.mk
 
@@ -12,11 +13,11 @@ define Package/modbusgwd
 	SECTION:=net
 	CATEGORY:=Network
 	TITLE:=Modbus RTU to TCP gateway by Teltonika
-	DEPENDS:=+kmod-usb-serial +libuci +libtlt_uci
+	DEPENDS:=+kmod-usb-serial +libuci +libtlt_uci +libtlt_termios
 endef
 
 define Package/modbusgwd/description
-	Modbus RTU to TCP gateway by Teltonika
+	MODBUS RTU to TCP gateway designed to receive MODBUS TCP message, convert to MODBUS RTU and send it to MODBUS RTU device.
 endef
 
 define Package/modbusgwd/conffiles

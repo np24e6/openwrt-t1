@@ -5,7 +5,7 @@ APP=/usr/sbin/mosquitto
 CONFIG=/tmp/mosquitto.conf
 PSK_FILE=/tmp/mosquitto.psk
 START=99
-STOP=99
+STOP=01
 
 handle_port() {
 	echo "listener $1" >>$CONFIG

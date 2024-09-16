@@ -27,7 +27,7 @@ define Package/classpath
   CATEGORY:=Libraries
   TITLE:=GNU Classpath
   URL:=http://www.gnu.org/software/classpath/
-  DEPENDS:=+alsa-lib +libgmp +libmagic
+  DEPENDS:=+libgmp +libmagic
 endef
 
 define Package/classpath/Description
@@ -60,6 +60,7 @@ CONFIGURE_ARGS += \
 	--disable-gconf-peer \
 	--disable-gjdoc \
 	--disable-examples \
+	--disable-alsa \
 	--with-antlr-jar=$(DL_DIR)/antlr-3.4-complete.jar
 
 define Package/classpath/install

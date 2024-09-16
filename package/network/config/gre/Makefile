@@ -41,6 +41,9 @@ endef
 define Package/gre/install
 	$(INSTALL_DIR) $(1)/lib/netifd/proto
 	$(INSTALL_BIN) ./files/gre.sh $(1)/lib/netifd/proto/gre.sh
+	$(LN) /lib/netifd/proto/gre.sh $(1)/lib/netifd/proto/gretap.sh
+	$(LN) /lib/netifd/proto/gre.sh $(1)/lib/netifd/proto/grev6.sh
+	$(LN) /lib/netifd/proto/gre.sh $(1)/lib/netifd/proto/grev6tap.sh
 endef
 
 $(eval $(call BuildPackage,gre))

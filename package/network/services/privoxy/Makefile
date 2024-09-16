@@ -128,20 +128,14 @@ define Package/privoxy/preinst
 endef
 
 define Package/privoxy/install
-	if [ -f $(PKG_INSTALL_DIR)/etc/privoxy/trust ]; then \
-		mv -f $(PKG_INSTALL_DIR)/etc/privoxy/trust $(PKG_INSTALL_DIR)/etc/privoxy/user.trust; \
-	fi
-	if [ -f $(PKG_INSTALL_DIR)/etc/privoxy/config ]; then \
-		rm -f $(PKG_INSTALL_DIR)/etc/privoxy/config; \
-	fi
-
 	$(INSTALL_DIR) \
 		$(1)/usr/sbin\
+		$(1)/etc/privoxy\
 		$(1)/etc/privoxy/templates
 	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/privoxy $(1)/usr/sbin/
 	find ./files/templates -maxdepth 1 -type f \
 		-exec $(INSTALL_DATA) -t $(1)/etc/privoxy/templates {} \;
-	find $(PKG_INSTALL_DIR)/etc/privoxy -maxdepth 1 -type f \
+	find ./files/rules -maxdepth 1 -type f \
 		-exec install -m0664 -t $(1)/etc/privoxy {} \;
 
 	$(INSTALL_DIR) \

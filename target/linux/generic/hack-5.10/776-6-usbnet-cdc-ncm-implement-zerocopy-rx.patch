@@ -1,0 +1,67 @@
+Implement zero-copy rx optimization for CDC NCM driver.
+
+While this driver does support GRO now, it should be turned off by default,
+as without RX csum offloading GRO has to validate packet csums in CPU,
+which more than negates the performace improvements of GRO.
+
+--- a/drivers/net/usb/cdc_ncm.c
++++ b/drivers/net/usb/cdc_ncm.c
+@@ -1711,6 +1711,7 @@ int cdc_ncm_rx_fixup(struct usbnet *dev,
+ 	unsigned int len;
+ 	int nframes;
+ 	int x;
++	int hdr_len;
+ 	unsigned int offset;
+ 	union {
+ 		struct usb_cdc_ncm_ndp16 *ndp16;
+@@ -1794,12 +1795,15 @@ next_ndp:
+ 			break;
+ 
+ 		} else {
+-			/* create a fresh copy to reduce truesize */
+-			skb = netdev_alloc_skb_ip_align(dev->net,  len);
+-			if (!skb)
+-				goto error;
+-			skb_put_data(skb, skb_in->data + offset, len);
++			/* Optimize for most common case:
++			 * MAC header + IPv4 header + TCP header with timestamp option (+ 2 byte padding for it) */
++			// FIXME: find a propper way to detect header len
++			hdr_len = 12 + 20 + 32;
++
++			skb = usbnet_clone_zerocopy(dev->net, skb_in, offset, len, hdr_len, NET_IP_ALIGN, 64);
++
+ 			usbnet_skb_return(dev, skb);
++
+ 			payload += len;	/* count payload bytes in this NTB */
+ 		}
+ 
+@@ -1908,7 +1912,8 @@ static void cdc_ncm_status(struct usbnet
+ static const struct driver_info cdc_ncm_info = {
+ 	.description = "CDC NCM",
+ 	.flags = FLAG_POINTTOPOINT | FLAG_NO_SETINT | FLAG_MULTI_PACKET
+-			| FLAG_LINK_INTR | FLAG_ETHER,
++			| FLAG_LINK_INTR | FLAG_ETHER | FLAG_PAGE_FRAG
++			| FLAG_NAPI_RX,
+ 	.bind = cdc_ncm_bind,
+ 	.unbind = cdc_ncm_unbind,
+ 	.manage_power = usbnet_manage_power,
+@@ -1922,7 +1927,8 @@ static const struct driver_info cdc_ncm_
+ static const struct driver_info wwan_info = {
+ 	.description = "Mobile Broadband Network Device",
+ 	.flags = FLAG_POINTTOPOINT | FLAG_NO_SETINT | FLAG_MULTI_PACKET
+-			| FLAG_LINK_INTR | FLAG_WWAN,
++			| FLAG_LINK_INTR | FLAG_WWAN | FLAG_PAGE_FRAG
++			| FLAG_NAPI_RX,
+ 	.bind = cdc_ncm_bind,
+ 	.unbind = cdc_ncm_unbind,
+ 	.manage_power = usbnet_manage_power,
+@@ -1936,7 +1942,8 @@ static const struct driver_info wwan_inf
+ static const struct driver_info wwan_noarp_info = {
+ 	.description = "Mobile Broadband Network Device (NO ARP)",
+ 	.flags = FLAG_POINTTOPOINT | FLAG_NO_SETINT | FLAG_MULTI_PACKET
+-			| FLAG_LINK_INTR | FLAG_WWAN | FLAG_NOARP,
++			| FLAG_LINK_INTR | FLAG_WWAN | FLAG_NOARP
++			| FLAG_PAGE_FRAG | FLAG_NAPI_RX,
+ 	.bind = cdc_ncm_bind,
+ 	.unbind = cdc_ncm_unbind,
+ 	.manage_power = usbnet_manage_power,

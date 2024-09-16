@@ -1,7 +1,5 @@
-Index: linux-5.10.199/drivers/net/usb/qmi_wwan.c
-===================================================================
---- linux-5.10.199.orig/drivers/net/usb/qmi_wwan.c
-+++ linux-5.10.199/drivers/net/usb/qmi_wwan.c
+--- a/drivers/net/usb/qmi_wwan.c
++++ b/drivers/net/usb/qmi_wwan.c
 @@ -120,6 +120,8 @@ struct rmnet_map_v5_csum_header {
  	__be16 reserved;
  } __aligned(1);

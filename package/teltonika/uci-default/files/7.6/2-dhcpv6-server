@@ -1,0 +1,20 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+update_dhcpv6()  {
+	local section="$1"
+	local dhcpv6 ndp ra
+
+	config_get dhcpv6 "$dhcp" dhcpv6 ""
+	config_get ra "$dhcp" ra ""
+	config_get ndp "$dhcp" ndp ""
+
+	if [ -n "$dhcpv6" ] || [ -n "$ra" ] || [ -n "$ndp" ]; then
+		uci_set "dhcp" "$section" "ignore_ipv6" "1"
+	fi
+}
+
+config_load dhcp
+config_foreach update_dhcpv6 dhcp
+uci_commit "dhcp"

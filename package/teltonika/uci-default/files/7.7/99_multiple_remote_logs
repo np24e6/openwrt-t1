@@ -1,0 +1,23 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+uci -q set "system.default=remote_logger"
+ip=$(uci_get system system log_ip)
+port=$(uci_get system system log_port)
+proto=$(uci_get system system log_proto)
+hostname=$(uci_get system system log_hostname)
+
+uci_set "system" "default" "log_ip" "$ip"
+uci_set "system" "default" "log_port" "$port"
+uci_set "system" "default" "log_proto" "$proto"
+uci_set "system" "default" "log_hostname" "$hostname"
+
+uci_set "system" "system" "log_ip"
+uci_set "system" "system" "log_port"
+uci_set "system" "system" "log_proto"
+uci_set "system" "system" "log_hostname"
+
+uci commit system
+
+exit 0

@@ -3,7 +3,7 @@
 APP=/usr/sbin/mqtt_pub
 USE_PROCD=1
 START=99
-STOP=99
+STOP=01
 
 setup_config() {
 	config_load mqtt_pub

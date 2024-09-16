@@ -109,9 +109,10 @@ proto_wwan_setup() {
 				devicename=$a
 			}
 		done
+
 		if [ "$vendor" = "" ] && [ "$product" = "" ]; then
-			product_name=$(mnf_info -n | cut -b 1-4)
-			if [ "$product_name" = "TRB5" ]; then
+			qmap_type=$(jsonfilter -i /etc/board.json -e @.epinfo.qmap_type)
+			if [ -n "$qmap_type" ]; then
 				driver="trb_qmapv5"
 				ctl_device="/dev/cdc-wdm0"
 			fi

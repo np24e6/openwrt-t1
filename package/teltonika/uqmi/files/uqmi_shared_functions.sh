@@ -8,13 +8,15 @@ first_uqmi_call()
 	local cmd="$1"
 
 	local count="0"
-	local max_try="3"
+	local max_try="15"
 	local timeout="2"
 	local ret
+	logger -t "netifd" "$cmd"
 
 	while true; do
 		ret=$($cmd)
-		if [ "$ret" = "\"Failed to connect to service\"" ]; then
+		if [ "$ret" = "" ] || [ "$ret" = "\"Failed to connect to service\"" ] || \
+                [ "$ret" = "\"Request canceled\"" ] || [ "$ret" = "\"Unknown error\"" ] ; then
 			count=$((count+1))
 			sleep $timeout
 		else

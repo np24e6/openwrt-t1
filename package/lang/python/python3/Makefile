@@ -134,10 +134,6 @@ $(call Package/python3/Default)
   DEPENDS:=+python3-light $(foreach package,$(PYTHON3_PACKAGES_DEPENDS),+$(package))
 endef
 
-define Package/python3/teltonika_rut9xx
-  PKG_ROUTER:=RUT955
-endef
-
 define Package/python3/teltonika_rut9m
   PKG_ROUTER:=RUT956 RUT906
 endef

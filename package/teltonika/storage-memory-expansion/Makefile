@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2021 Teltonika
+# Copyright (C) 2024 Teltonika-Networks
 #
 
 include $(TOPDIR)/rules.mk
@@ -8,7 +8,7 @@ PKG_NAME:=storage-memory-expansion
 PKG_VERSION:=2023-07-25
 PKG_RELEASE:=1
 
-PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-$(PKG_VERSION)
+PKG_LICENSE:=Teltonika-closed
 
 include $(INCLUDE_DIR)/package.mk
 

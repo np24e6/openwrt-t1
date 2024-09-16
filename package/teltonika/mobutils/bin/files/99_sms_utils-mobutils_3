@@ -59,6 +59,14 @@
 		uci_set "sms_utils" "$1" "message" "$message"
 		uci_commit "sms_utils"
 
+		# temporary workaround, entire script will be re-written with 7.8
+		local name=$(mnf_info -n | cut -c -6)
+		[ "$name" = "TRB501" ] || [ "$name" = "TRB160" ] && {
+			message="Configurable Input/Output (3) - %g0; Configurable Input/Output (4) - %g1; Analog Input () - %g2"
+			uci_set "sms_utils" "$1" "message" "$message"
+			uci_commit "sms_utils"
+		}
+
 		# update config file in default profile template
 		local profiles="/etc/profiles"
 		local config="/etc/config/sms_utils"

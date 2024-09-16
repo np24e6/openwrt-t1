@@ -1,0 +1,15 @@
+{
+	"desc": "Telit FN990A",
+	"type": "gobinet",
+	"control": 5,
+	"boudrate": 115200,
+	"stop_bits": 8,
+	"gps": 1,
+	"ep_iface": 2,
+	"dl_max_size": 16384,
+	"dl_max_datagrams": 32,
+	"ul_max_size": 8192,
+	"ul_max_datagrams": 11,
+	"power_off_ms": 800,
+	"reset_ms": 500
+}

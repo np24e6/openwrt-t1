@@ -5,21 +5,48 @@ START=98
 
 . /usr/share/libubox/jshn.sh
 
-send_event() {
+send_reboot_event() {
+	local reboot_file="/log/reboot"
+	if [ -f "$reboot_file" ]; then
+		rm -f "$reboot_file"
+	else
+		ubus call log write_ext "{
+			\"event\": \"Device startup after unexpected shutdown\",
+			\"sender\": \"Startup\",
+			\"table\": 1,
+			\"write_db\": 1,
+		}"
+	fi
+}
+
+send_startup_event() {
 	ubus call log write_ext '{"event":"Device startup completed","sender":"Startup","table":1,"priority":5,"write_db":1}'
 }
 
 wait_for_events_reporting() {
 	# wait for events_reporting to initialize and only then send the event
-	ubus -t 60 listen events_reporting | while read line ; do
+	local fifo="/tmp/events_reporting_fifo.$$"
+	mkfifo "$fifo" || exit 0
+
+	ubus -t 60 listen events_reporting > "$fifo" &
+	local ubus_pid=$!
+
+	trap 'rm -f "$fifo"; kill "$ubus_pid" >/dev/null 2>&1' EXIT
+
+	while IFS= read -r line; do
 		local event=""
 		json_init
 		json_load "$line" && json_select events_reporting && json_get_var event event
 		if [[ "$event" == "initialized" ]]; then
-			send_event
-			return 0
+			send_reboot_event
+			send_startup_event
+			exit 0
 		fi
-	done
+	done < "$fifo"
+
+	# in case events reporting is not initialized still add reboot event
+	send_reboot_event
+	exit 0
 }
 
 boot() {

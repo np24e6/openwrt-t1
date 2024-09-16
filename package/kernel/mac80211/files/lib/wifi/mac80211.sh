@@ -214,6 +214,16 @@ convert_qcawifi_iface_opts() {
 	}
 }
 
+convert_ralink_dev_opts() {
+	config_get old_type "$1" type
+	[ -n "$old_type" ] && [ "$old_type" = "ralink" ] || return
+
+	uci set wireless."$1".type="mac80211"
+	uci set wireless."$1".path="platform/10300000.wmac"
+
+	uci commit wireless
+}
+
 rename_iface_id_options() {
 	local id device
 	config_get uci_wifi_id "$1" wifi_id
@@ -257,6 +267,12 @@ parse_qcawifi_config() {
 	convert_qcawifi_section
 	uci set wireless.radio1.path="platform/soc/a800000.wifi"
 	uci set wireless.radio0.path="platform/soc/a000000.wifi"
+
+	config_load wireless
+}
+
+parse_ralink_config() {
+	config_foreach convert_ralink_dev_opts wifi-device
 
 	config_load wireless
 }
@@ -326,6 +342,7 @@ detect_mac80211() {
 	local wps
 	local cust_mac
 	local ant_gain
+	local chanlist
 
 	config_load wireless
 	while :; do
@@ -338,6 +355,8 @@ detect_mac80211() {
 	[ "$old_qca_devidx" -gt 0 ] && {
 		parse_qcawifi_config
 	}
+
+	parse_ralink_config
 
 	for _dev in /sys/class/ieee80211/*; do
 		[ -e "$_dev" ] || continue
@@ -414,6 +433,10 @@ detect_mac80211() {
 			fi
 		fi
 
+		[ "$mode_band" = "5g"  ] && {
+			chanlist="set wireless.radio${devidx}.channels='36-165'"
+		}
+
 		[ -z "$cust_mac" ] && cust_mac=${router_mac_end}
 
 		IFS='' read -r -d '' wifi_auth_lines <<EOF
@@ -436,6 +459,7 @@ EOF
 			${ht_capab}
 			set wireless.radio${devidx}.country=US
 			${ant_gain}
+			${chanlist}
 			#set wireless.radio${devidx}.disabled=1
 
 			set wireless.default_radio${devidx}=wifi-iface

@@ -24,13 +24,9 @@ define Package/qos-scripts
   SECTION:=utils
   CATEGORY:=Base system
   DEPENDS:=+tc +kmod-sched-core +kmod-sched-connmark +kmod-ifb +iptables \
-	  +iptables-mod-ipopt +iptables-mod-conntrack-extra +vuci-app-qos-ui
+	  +iptables-mod-ipopt +iptables-mod-conntrack-extra
   TITLE:=QoS scripts
   PKGARCH:=all
-  ifeq (m, $(CONFIG_PACKAGE_qos-scripts))
-    PKG_TLT_NAME:=QoS
-    PKG_ROUTER:=$(TLT_PLATFORM_NAME)
-  endif
 endef
 
 define Package/qos-scripts/description

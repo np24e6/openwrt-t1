@@ -7,6 +7,11 @@ add_index() {
 	[ "${1:0:3}" != "cfg" ] && return
 
 	index=$((index + 1))
+
+	while uci_get "multi_wifi" "$index" >/dev/null; do
+		index=$((index + 1))
+	done
+
 	uci_rename "multi_wifi" "$1" "$index"
 }
 

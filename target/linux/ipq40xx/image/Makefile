@@ -36,6 +36,7 @@ define Device/teltonika_rutx
 	FILESYSTEMS := squashfs
 	DEVICE_FEATURES := usb-port gps serial modbus io wifi bt dualsim \
 			port-mirror ntrip hw-offload mobile
+	GPL_PREFIX := GPL
 	# Default common packages for RUTX series
 	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	# Essential must-have:

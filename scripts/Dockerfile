@@ -1,9 +1,23 @@
-FROM ubuntu:focal
+FROM ubuntu:focal-20230308
 
+# Set environment variables
+ENV DEBIAN_FRONTEND noninteractive
+ENV LC_ALL C.UTF-8
 ENV NODE_MAJOR 18
+ENV TZ Etc/UTC
 
-RUN apt-get update && DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC \
-	apt-get install -y \
+# Set startup command
+CMD ["/bin/bash"]
+
+# Install dependencies for C unit testing
+RUN apt update && apt install -y \
+	gcovr \
+	ruby \
+	&& gem install ceedling \
+	&& rm -rf /var/lib/apt/lists/*
+
+# Install build dependencies
+RUN apt update && apt upgrade -y \
 	binutils \
 	binutils-gold \
 	bison \
@@ -45,12 +59,13 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC \
 	ocaml-nox \
 	patch \
 	pkg-config \
+	psmisc \
+	python-is-python3 \
 	python3 \
 	python3-dev \
 	python3-distutils \
 	python3-yaml \
 	rsync \
-	ruby \
 	sharutils \
 	subversion \
 	swig \
@@ -60,12 +75,9 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC \
 	vim-common \
 	wget \
 	zip \
-	zlib1g-dev
+	zlib1g-dev \
+	&& rm -rf /var/lib/apt/lists/*
 
-# install NodeJS v14
-RUN mkdir -p /etc/apt/keyrings && \
-	curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg && \
-	/bin/echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_$NODE_MAJOR.x nodistro main" | tee /etc/apt/sources.list.d/nodesource.list && \
-	apt-get update && apt-get install -y nodejs
-
-CMD ["/bin/bash"]
+RUN curl -L -o- https://deb.nodesource.com/setup_"$NODE_MAJOR".x | bash - \
+	&& apt update && apt install -y nodejs \
+	&& rm -rf /var/lib/apt/lists/*

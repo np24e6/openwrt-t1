@@ -1,0 +1,27 @@
+Index: hostapd-2023-09-08-e5ccbfc6/src/ap/beacon.c
+===================================================================
+--- hostapd-2023-09-08-e5ccbfc6.orig/src/ap/beacon.c	2024-04-04 09:55:05.188075497 +0300
++++ hostapd-2023-09-08-e5ccbfc6/src/ap/beacon.c	2024-04-04 10:17:37.007884979 +0300
+@@ -1309,7 +1309,7 @@
+ 				    csa_offs_len, 0);
+ 
+ 	if (ret < 0)
+-		wpa_printf(MSG_INFO, "handle_probe_req: send failed");
++		wpa_printf(MSG_DEBUG, "handle_probe_req: send failed");
+ 
+ 	os_free(resp);
+ 
+Index: hostapd-2023-09-08-e5ccbfc6/wpa_supplicant/scan.c
+===================================================================
+--- hostapd-2023-09-08-e5ccbfc6.orig/wpa_supplicant/scan.c	2024-04-04 10:21:44.318356417 +0300
++++ hostapd-2023-09-08-e5ccbfc6/wpa_supplicant/scan.c	2024-04-04 10:22:27.222080139 +0300
+@@ -1852,7 +1852,8 @@
+ 	os_free(params.filter_ssids);
+ 	os_free(params.mac_addr);
+ 	if (ret) {
+-		wpa_msg(wpa_s, MSG_WARNING, "Failed to initiate sched scan");
++		/* Some of the driver implementations do not support scheduled scans */
++		wpa_msg(wpa_s, MSG_DEBUG, "Failed to initiate sched scan");
+ 		if (prev_state != wpa_s->wpa_state)
+ 			wpa_supplicant_set_state(wpa_s, prev_state);
+ 		return ret;

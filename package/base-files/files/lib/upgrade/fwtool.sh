@@ -41,7 +41,7 @@ fwtool_check_signature() {
 
 	[ $# -gt 1 ] && return 1
 
-	[ ! -x /usr/bin/ucert ] && {
+	[ ! -x /usr/bin/fwcert ] && {
 		fwtool_msg "Signature processing error" "1"
 		return 1
 	}
@@ -54,15 +54,9 @@ fwtool_check_signature() {
 	local ver="$(fwtool_get_fw_version "$1")"
 	local major="$(echo $ver | awk -F . '{print $2 }')"
 	local minor="$(echo $ver | awk -F . '{print $3 }')"
-	local bsha512=""
-
-	# append usign broken sha512 block size for versions 02.01 or lower
-	[ "$major" -le 2 ] 2>/dev/null && [ "$minor" -le 1 ] 2>/dev/null && {
-		bsha512="-b"
-	}
 
 	fwtool -q -T -s /dev/null "$1" | \
-		ucert ${bsha512} -V -m - -c "/tmp/sysupgrade.ucert" -P /etc/proprietary_keys 2>/dev/null
+		fwcert -m - -x "/tmp/sysupgrade.ucert" -P /etc/proprietary_keys &>/dev/null
 	ret="$?"
 
 	[ "$ret" -eq 0 ] && return 0
@@ -219,21 +213,7 @@ fwtool_check_image() {
 
 	[ -z "$fw_hotfix" ] && fw_hotfix="0"
 
-	if [ "$device_name" = "RUT9" ]; then
-		[ -n "$vb" ] && [ "$fw_major" -lt "07" ] && {
-			fwtool_msg "Firmware is not compatible with current bootloader version" "13"
-			return 1
-		}
-	elif [ "$device_name" = "RUT2" ]; then
-		[ -n "$vb" ] && [ "$fw_major" -lt "07" ] && {
-			fwtool_msg "Firmware is not compatible with current bootloader version" "13"
-			return 1
-		}
-		[ -n "$vb" ] && [ "$fw_major" -eq "07" ] && [ "$fw_minor" -lt "01" ] && {
-			fwtool_msg "Firmware is not compatible with current bootloader version" "13"
-			return 1
-		}
-	elif [ "$device_name" = "TCR1" ]; then
+	if [ "$device_name" = "TCR1" ]; then
 		[ "$fw_major" -eq 7 ] && [ "$fw_minor" -eq 2 ] && [ "$fw_hotfix" -lt 4 ] && {
 			fwtool_msg "Firmware have new password scheme and can not be downgraded" "11"
 			return 1
@@ -283,14 +263,12 @@ fwtool_check_image() {
 
 fwtool_check_backup() {
 	local backup_dir="$1"
-	local size
+	local size=7
 
 	[ -n "$backup_dir" ] || return 1
 
 	local this_device_code=$(mnf_info --name)
 	local device_code_in_the_new_config=$(uci -q -c "${backup_dir}/etc/config" get system.system.device_code)
-
-	[ "${this_device_code:0:4}" = "RUT2" ] && size=8 || size=7
 
 	if [ "${#this_device_code}" -ne 12 ] || [ "${#device_code_in_the_new_config}" -ne 12 ] ||
 			[ "${this_device_code:0:$size}" != "${device_code_in_the_new_config:0:$size}" ]; then
@@ -342,7 +320,7 @@ fwtool_check_upgrade_type() {
 
 	# downgrade on unknown branches
 	case "$fw_branch" in
-		F*|R*|H*|GPL*|DEV*)
+		F*|R*|H*|GPL*|SDK*|DEV*)
 			;;
 		*)
 			return 1
@@ -383,7 +361,7 @@ fwtool_check_upgrade_type() {
 
 	# if we have vcert enabled, then patch version downgrade is prohibited
 	fwtool_get_vcert_state >&2
-	[ "$?" = "1" ] || return 0
+	[ "$?" -eq 1 ] || return 0
 
 	local current_patch="$(echo "$current_ver" | awk -F . '{ print $4 }')"
 	local patch="$(echo "$ver" | awk -F . '{print $4 }')"
@@ -395,15 +373,8 @@ fwtool_check_upgrade_type() {
 }
 
 fwtool_get_vcert_state() {
-	. /usr/share/libubox/jshn.sh
-
-	json_load_file "/etc/board.json"
-	json_select hwinfo &&
-	json_get_var vcert vcert
-
-	[ -n "$vcert" ] || return 0
-
-	return $vcert
+	[ "$(jsonfilter -q -i /etc/board.json \
+		-e '@.hwinfo.vcert')" = "true" ] && return 1 || return 0
 }
 
 fwtool_check_downgrade_ability() {

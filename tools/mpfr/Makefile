@@ -14,6 +14,8 @@ PKG_SOURCE_URL:=@GNU/mpfr http://www.mpfr.org/mpfr-$(PKG_VERSION)
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.xz
 PKG_HASH:=0c98a3f1732ff6ca4ea690552079da9c597872d30e96ec28414ee23c95558a7f
 
+PKG_LICENSE:=GPL-3.0-or-later LGPL-3.0-or-later
+
 HOST_BUILD_PARALLEL:=1
 HOST_FIXUP:=autoreconf
 

@@ -13,6 +13,8 @@ PKG_SOURCE:=squashfskit-v$(PKG_VERSION).tar.xz
 PKG_SOURCE_URL:=https://github.com/squashfskit/squashfskit/releases/download/v$(PKG_VERSION)/
 PKG_HASH:=5761aaa3aedc4f7112b708367d891c9abdc1ffea972e3fe47923ddba23984d95
 
+PKG_LICENSE:=GPL-2.0
+
 HOST_BUILD_DIR:=$(BUILD_DIR_HOST)/squashfskit-v$(PKG_VERSION)
 
 include $(INCLUDE_DIR)/host-build.mk

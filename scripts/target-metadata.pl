@@ -45,6 +45,7 @@ sub target_config_features(@) {
 		/^baseband$/ and $ret .= "\tselect BASEBAND_SUPPORT\n";
 		/^pppmobile$/ and $ret .= "\tselect PPP_MOBILE_SUPPORT\n";
 		/^bpoffload$/ and $ret .= "\tselect BYPASS_OFFLOAD_FEATURE\n";
+		/^qrtrpipes$/ and $ret .= "\tselect HAVE_QRTR_PIPE_ENDPOINTS\n";
 		/^verified_boot$/ and $ret .= "\tselect VERIFIED_BOOT_SUPPORT\n";
 		/^rootfs-part$/ and $ret .= "\tselect USES_ROOTFS_PART\n";
 		/^boot-part$/ and $ret .= "\tselect USES_BOOT_PART\n";
@@ -56,6 +57,7 @@ sub target_config_features(@) {
 		/^serial$/ and $ret .= "\tselect SERIAL_SUPPORT\n";
 		/^modbus$/ and $ret .= "\tselect HAS_MODBUS\n";
 		/^io$/ and $ret .= "\tselect HAS_IO\n";
+		/^power-control$/ and $ret .= "\tselect HAS_POWER_CONTROL\n";
 		/^single-port$/ and $ret .= "\tselect HAS_SINGLE_ETH_PORT\n";
 		/^wifi$/ and $ret .= "\tselect WIFI_SUPPORT\n";
 		/^guest-wifi$/ and $ret .= "\tselect WIFI_GUEST_NETWORK_SUPPORT\n";
@@ -83,7 +85,8 @@ sub target_config_features(@) {
 		/^ledman-lite$/ and $ret .= "\tselect LEDMAN_LITE\n";
 		/^sw-offload$/ and $ret .= "\tselect SW_OFFLOAD\n";
 		/^hw-offload$/ and $ret .= "\tselect HW_OFFLOAD\n";
-		/^tlt-failsafe-boot$/ and $ret .= "\tselect TLT_FAILSAFE_BOOT\n"
+		/^tlt-failsafe-boot$/ and $ret .= "\tselect TLT_FAILSAFE_BOOT\n";
+		/^modem-reset-quirk$/ and $ret .= "\tselect MODEM_RESET_QUIRK\n"
 	}
 	return $ret;
 }
@@ -215,7 +218,7 @@ EOF
 	print <<EOF;
 choice
 	prompt "Target System"
-	default TARGET_ath79
+	default TARGET_ipq40xx
 	reset if !DEVEL
 
 EOF
@@ -425,6 +428,19 @@ EOF
 		my $profiles = $target->{profiles};
 		foreach my $profile (@$profiles) {
 			print "\tdefault \"$profile->{id}\" if TARGET_$target->{conf}_$profile->{id}\n";
+		}
+	}
+
+	print <<EOF;
+
+config TARGET_GPL_PREFIX
+	string
+EOF
+	foreach my $target (@target) {
+		my $profiles = $target->{profiles};
+		foreach my $profile (@$profiles) {
+			next unless $profile->{gpl_prefix};
+			print "\tdefault \"$profile->{gpl_prefix}\" if TARGET_$target->{conf}_$profile->{id}\n";
 		}
 	}
 

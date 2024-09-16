@@ -1,4 +1,5 @@
 #!/bin/sh
+[ -f "/etc/config/stunnel" ] || exit 0
 
 . /lib/functions.sh
 

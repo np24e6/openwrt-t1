@@ -1,8 +1,6 @@
-Index: ubox-2020-10-25-9ef88681/log/logd.c
-===================================================================
---- ubox-2020-10-25-9ef88681.orig/log/logd.c
-+++ ubox-2020-10-25-9ef88681/log/logd.c
-@@ -315,8 +315,72 @@ write_log(struct ubus_context *ctx, stru
+--- a/log/logd.c
++++ b/log/logd.c
+@@ -361,8 +361,72 @@ write_log(struct ubus_context *ctx, stru
  	return 0;
  }
  
@@ -75,7 +73,7 @@ Index: ubox-2020-10-25-9ef88681/log/logd.c
  	{ .name = "write", .handler = write_log, .policy = &write_policy, .n_policy = 1 },
  };
  
-@@ -343,6 +407,28 @@ ubus_notify_log(struct log_head *l)
+@@ -389,6 +453,28 @@ ubus_notify_log(struct log_head *l)
  	blobmsg_add_u32(&b, "id", l->id);
  	blobmsg_add_u32(&b, "priority", l->priority);
  	blobmsg_add_u32(&b, "source", l->source);

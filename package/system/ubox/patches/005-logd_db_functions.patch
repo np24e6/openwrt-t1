@@ -1,8 +1,6 @@
-Index: ubox-2020-10-25-9ef88681/log/logd.c
-===================================================================
---- ubox-2020-10-25-9ef88681.orig/log/logd.c
-+++ ubox-2020-10-25-9ef88681/log/logd.c
-@@ -25,8 +27,15 @@
+--- a/log/logd.c
++++ b/log/logd.c
+@@ -25,8 +25,15 @@
  #include <libubox/list.h>
  #include <libubox/ustream.h>
  #include <libubus.h>
@@ -18,7 +16,7 @@ Index: ubox-2020-10-25-9ef88681/log/logd.c
  
  int debug = 0;
  static struct blob_buf b;
-@@ -40,12 +49,38 @@ enum {
+@@ -40,12 +47,38 @@ enum {
  	__READ_MAX
  };
  
@@ -57,7 +55,7 @@ Index: ubox-2020-10-25-9ef88681/log/logd.c
  static const struct blobmsg_policy write_policy =
  	{ .name = "event", .type = BLOBMSG_TYPE_STRING };
  
-@@ -160,6 +195,101 @@ read_log(struct ubus_context *ctx, struc
+@@ -160,6 +193,147 @@ read_log(struct ubus_context *ctx, struc
  	return 0;
  }
  
@@ -127,12 +125,53 @@ Index: ubox-2020-10-25-9ef88681/log/logd.c
 +	return 0;
 +}
 +
++static char* find_table(char *name) {
++	sqlite3 *con = NULL;
++	sqlite3_stmt *res;
++	const char *tail;
++	int error = 0;
++
++	if (name == NULL || name[0] == '\0')
++		return NULL;
++
++	if (sqlite3_open(DB, &con)) {
++		fprintf(stderr, "Can not open database\n");
++		return NULL;
++	}
++	sqlite3_db_config(con, SQLITE_CONFIG_SERIALIZED);
++
++	const char *query = "SELECT name FROM sqlite_master WHERE type='table' AND UPPER(name)=UPPER(?) AND name NOT LIKE 'sqlite_%'";
++	error = sqlite3_prepare_v2(con, query, -1, &res, &tail);
++	if (error != SQLITE_OK) {
++		fprintf(stderr, "sqlite3 query error: %s\n", sqlite3_errmsg(con));
++		sqlite3_close(con);
++		return NULL;
++	}
++
++	error = sqlite3_bind_text(res, 1, name, -1, SQLITE_STATIC);
++	if (error != SQLITE_OK) {
++		fprintf(stderr, "sqlite3 bind error: %s\n", sqlite3_errmsg(con));
++		sqlite3_finalize(res);
++		sqlite3_close(con);
++		return NULL;
++	}
++
++	if (sqlite3_step(res) == SQLITE_ROW) {
++		char *table_name = strdup((const char *)sqlite3_column_text(res, 0));
++		sqlite3_finalize(res);
++		sqlite3_close(con);
++		return table_name;
++	}
++
++	sqlite3_close(con);
++	return NULL;
++}
++
 +static int read_db(struct ubus_context *ctx, struct ubus_object *obj,
 +		   struct ubus_request_data *req, const char *method,
 +		   struct blob_attr *msg)
 +{
 +	struct blob_attr *tb[READ_DB_MAX] = {0};
-+	char *table_name;
 +	char full_query[QUERY_SIZE];
 +	int ret = 0;
 +
@@ -141,15 +180,20 @@ Index: ubox-2020-10-25-9ef88681/log/logd.c
 +	if (!tb[READ_DB_TABLE])
 +		return UBUS_STATUS_INVALID_ARGUMENT;
 +
-+	table_name = blobmsg_data(tb[READ_DB_TABLE]);
-+
-+	snprintf(full_query, sizeof(full_query), "select * from %s", table_name);
-+
-+	if ((ret = parse_query(full_query, table_name, ctx, req)) < 0) {
-+		fprintf(stderr, "Failed to parse given query\n");
++	char *table_name = find_table(blobmsg_data(tb[READ_DB_TABLE]));
++	if (table_name == NULL) {
++		fprintf(stderr, "Invalid table name provided\n");
 +		return UBUS_STATUS_UNKNOWN_ERROR;
 +	}
 +
++	snprintf(full_query, sizeof(full_query), "select * from %s", table_name);
++	if ((ret = parse_query(full_query, table_name, ctx, req)) < 0) {
++		fprintf(stderr, "Failed to parse given query\n");
++		free(table_name);
++		return UBUS_STATUS_UNKNOWN_ERROR;
++	}
++
++	free(table_name);
 +	if (ret > 0){
 +		return UBUS_STATUS_NO_DATA;
 +	}

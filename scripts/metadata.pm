@@ -155,6 +155,7 @@ sub parse_target_metadata($) {
 		/^Target-Profile-InitialSupportVersion:\s*(\S+)\s*$/ and $profile->{initial_support_version} = $1;
 		/^Target-Profile-DefaultLogPartition:\s*(\S+)\s*$/ and $profile->{mtd_log_partition} = $1;
 		/^Target-Profile-MultiProfileName:\s*(\S+)\s*$/ and $profile->{multi_profile_name} = $1;
+		/^Target-Profile-GPLPrefix:\s*(.+)\s*$/ and $profile->{gpl_prefix} = $1;
 		/^Target-Profile-SupportedDevices:\s*(.+)\s*$/ and $profile->{supported_devices} = [ split(/\s+/, $1) ];
 		/^Target-Profile-BootName:\s*(.*)\s*$/ and $profile->{boot_name} = $1;
 		/^Target-Profile-Priority:\s*(\d+)\s*$/ and do {

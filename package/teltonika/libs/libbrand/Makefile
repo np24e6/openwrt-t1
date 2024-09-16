@@ -4,15 +4,17 @@
 
 include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
+include $(INCLUDE_DIR)/os-version.mk
 
 PKG_NAME:=libbrand
-PKG_VERSION:=2020-01-06
+PKG_VERSION:=2024-03-07
 PKG_RELEASE:=1
 
 PKG_SOURCE_VERSION:=1.1
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_SOURCE_VERSION)-$(PKG_VERSION)
 PKG_SOURCE:=$(PKG_SOURCE_SUBDIR).tar.gz
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_SOURCE_SUBDIR)
+PKG_LICENSE:=Teltonika-closed
 
 include $(INCLUDE_DIR)/package.mk
 

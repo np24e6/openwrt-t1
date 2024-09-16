@@ -1,6 +1,7 @@
 #!/bin/sh
 
 . /lib/functions.sh
+. /lib/functions/network.sh
 
 mtu_set() {
 	local wan_interface
@@ -28,25 +29,45 @@ mtu_set() {
 config_load network
 mtu_set
 
-[ -f /tmp/wireguard/default-status ] || exit 0
+for file in /tmp/wireguard/default-status*; do
+	[ -f "$file" ] || continue
+	DEFAULT_STATUS="${file}"
+	# rm "${DEFAULT_STATUS}"
+	default="$(ip route show default | grep -w "$DEVICE" )"
+	[ -n "$default" ] || exit 0
 
-default="$(ip route show default | grep -w "$DEVICE" )"
+	config="$(cat "$DEFAULT_STATUS" | sed '2q;d')"
+	peer_config="$(cat "$DEFAULT_STATUS" | sed '1q;d')"
 
-[ -n "$default" ] || exit 0
+	[ "${default##*via }" != "$default" ] && gw=$(echo "${default##*via }" | awk '{print $1}')
+	iface="$(echo "$INTERFACE" | sed 's/_4//')"
 
-config="$(cat /tmp/wireguard/default-status | sed '2q;d')"
-peer_config="$(cat /tmp/wireguard/default-status | sed '1q;d')"
-[ "${default##*via }" != "$default" ] && gw=$(echo "${default##*via }" | awk '{print $1}')
-iface="$(echo "$INTERFACE" | sed 's/_4//')"
+	[ "$iface" = "$config" ] && exit 0
 
-[ "$iface" = "$config" ] && exit 0
+	for p in $peer_config; do
+		config_get endpoint_host "$p" endpoint_host
+		config_get tunlink "$p" tunlink
+		config_get metric "$iface" metric
 
-config_get peer "$peer_config" endpoint_host
-config_get metric "$iface" metric
-
-[ "$ACTION" = "ifup" ] && {
-	for ip in $(resolveip -4 "$peer");do
-		ip route add "$ip" ${gw:+via "$gw"} dev "$DEVICE" metric "$metric"
-		echo "ip route del "$ip" dev "$DEVICE" metric $metric" >> "/tmp/wireguard/default-status"
+		if [ "$ACTION" = "ifup" ]; then
+			for host in $endpoint_host; do
+				for ip in $(resolveip -4 "$host");do
+					if [ -n "$tunlink" ] && [ "$tunlink" != "any" ]; then
+						network_get_device tunlink_dev $tunlink
+						[ "$tunlink_dev" = "wwan0" ] && { network_get_device tunlink_dev ${tunlink}_4 || network_get_device tunlink_dev ${tunlink}_6; }
+						tunlink_gw="$(ip route show default dev $tunlink_dev | awk -F"via " '{print $2}' | sed 's/\s.*$//')"
+						if ip route add "$ip" ${tunlink_gw:+via "$tunlink_gw"} dev "$tunlink_dev" metric "1"; then
+							route_del="ip route del "$ip" dev "$tunlink_dev" metric 1"
+							grep "$route_del" "$DEFAULT_STATUS" || echo "$route_del" >> "$DEFAULT_STATUS"
+						fi
+						continue
+					fi
+					if ip route add "$ip" ${gw:+via "$gw"} dev "$DEVICE" metric "$metric"; then
+						route_del="ip route del "$ip" dev "$DEVICE" metric $metric"
+						grep "$route_del" "$DEFAULT_STATUS" || echo "$route_del" >> "$DEFAULT_STATUS"
+					fi
+				done
+			done
+		fi
 	done
-}
+done

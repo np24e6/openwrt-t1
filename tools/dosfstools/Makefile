@@ -16,6 +16,8 @@ PKG_SOURCE_URL:=https://github.com/dosfstools/dosfstools/releases/download/v$(PK
 		http://fossies.org/linux/misc
 PKG_HASH:=e6b2aca70ccc3fe3687365009dd94a2e18e82b688ed4e260e04b7412471cc173
 
+PKG_LICENSE:=GPL-3.0-or-later
+
 HOST_FIXUP:=autoreconf
 
 include $(INCLUDE_DIR)/host-build.mk

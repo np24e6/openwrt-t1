@@ -26,11 +26,7 @@ endif
 
 ifeq ($(strip $(CONFIG_EXTERNAL_KERNEL_TREE)),"")
     define Kernel/Prepare/Default
-	$(LINUX_CAT) $(DL_DIR)/$(LINUX_SOURCE) | $(TAR) -C $(KERNEL_BUILD_DIR) $(TAR_OPTIONS) || { \
-		rm $(DL_DIR)/$(LINUX_SOURCE); \
-		$(MAKE) download; \
-		$(LINUX_CAT) $(DL_DIR)/$(LINUX_SOURCE) | $(TAR) -C $(KERNEL_BUILD_DIR) $(TAR_OPTIONS); \
-	}
+	$(LINUX_CAT) $(DL_DIR)/$(LINUX_SOURCE) | $(TAR) -C $(KERNEL_BUILD_DIR) $(TAR_OPTIONS)
 	$(Kernel/Patch)
 	$(if $(QUILT),touch $(LINUX_DIR)/.quilt_used)
     endef

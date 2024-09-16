@@ -7,17 +7,25 @@ set_state() {
 	config_get disable ${label} disable
 
 	[ "${disable}" -eq 1 ] && \
-		/sbin/mctl -s -m "${label}" -c || \
-		/sbin/mctl -p -m "${label}" -c
+		/sbin/mctl -s -c -d -m "${label}" || \
+		/sbin/mctl -p -c -d -m "${label}"
 }
 
 do_power_modem() {
-	[ -f /etc/board.json ] || return
+	local bjson_sym=0
 
-	[ -z "$(uci -q get system.modem.disable)" ] && /sbin/mctl -p -a -c || {
+	[ -f /etc/board.json ] || {
+		# First time after firstboot /etc/board.json will not be generated. Soo.. we fake it
+		ln -s /tmp/board.json /etc/board.json
+		bjson_sym=1
+	}
+
+	[ -z "$(uci -q get system.modem.disable)" ] && /sbin/mctl -p -c -d -a || {
 		config_load system
 		config_foreach set_state mctl
 	}
+
+	[ "$bjson_sym" -eq 1 ] && rm /etc/board.json
 }
 
 boot_hook_add preinit_main do_power_modem

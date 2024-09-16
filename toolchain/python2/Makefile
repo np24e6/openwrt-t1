@@ -6,6 +6,8 @@ PKG_VERSION:=2.7.18
 PKG_SOURCE_URL:=https://www.python.org/ftp/python/${PKG_VERSION}
 PKG_HASH:=b62c0e7937551d0cc02b8fd5cb0f544f9405bafc9a54d3808ed4594812edef43
 
+PKG_LICENSE:=Python/2.0
+
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.xz
 
 include $(INCLUDE_DIR)/toolchain-build.mk

@@ -41,7 +41,7 @@ define Package/libnetsnmp
 $(call Package/net-snmp/Default)
   SECTION:=libs
   CATEGORY:=Libraries
-  DEPENDS:=+libnl-tiny +libpci +libpcre +libopenssl
+  DEPENDS:=+libnl-tiny +libpci +libpcre +libopenssl +libuci +libubus
   TITLE:=Open source SNMP implementation (libraries)
 endef
 
@@ -212,7 +212,8 @@ CONFIGURE_ARGS += \
 	 $(call autoconf_bool,CONFIG_IPV6,ipv6) \
 	--disable-perl-cc-checks \
 	--disable-embedded-perl \
-	--without-perl-modules
+	--without-perl-modules \
+	--with-libs="-luci -lubus"
 
 CONFIGURE_VARS += \
 	ac_cv_header_netlink_netlink_h=yes \

@@ -1,0 +1,46 @@
+#!/bin/ash
+
+config_file="/etc/config/wireless"
+
+if [ ! -f "$config_file" ]; then
+	exit 0
+fi
+
+config_corrupted="$(uci show wireless >/dev/null 2>&1; echo $?)"
+if [ "$config_corrupted" = "0" ]; then
+	exit 0
+fi
+
+generate_unique_name() {
+	local new_name="1"
+	local config_file="$1"
+	local temp_file="$2"
+
+	while grep -q "^config [^ ]* '$new_name'" "$config_file" "$temp_file"; do
+		new_name=$((new_name + 1))
+	done
+
+	echo "$new_name"
+}
+
+temp_file=$(mktemp)
+
+sed 's/\r$//' "$config_file" | while IFS= read -r line; do
+	if echo "$line" | grep -q "^config "; then
+		config_type=$(echo "$line" | awk '{print $2}')
+		config_name=$(echo "$line" | awk -F"'" '{print $2}')
+
+		count=$(grep -c "^config [^ ]* '$config_name'" "$config_file")
+		if [ "$count" -gt 1 ]; then
+			new_name=$(generate_unique_name "$config_file" "$temp_file")
+
+			if [ "$config_name" != "$new_name" ]; then
+				line=$(echo "$line" | sed "s/'$config_name'/'$new_name'/")
+			fi
+		fi
+	fi
+
+	echo "$line" >> "$temp_file"
+done
+
+mv "$temp_file" "$config_file"

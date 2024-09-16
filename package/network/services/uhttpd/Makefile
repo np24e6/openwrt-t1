@@ -96,6 +96,9 @@ define Package/uhttpd/install
 	$(VERSION_SED_SCRIPT) $(1)/etc/config/uhttpd
 	$(INSTALL_DIR) $(1)/usr/sbin
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/uhttpd $(1)/usr/sbin/uhttpd
+
+	$(INSTALL_DIR) $(1)/usr/share/uhttpd
+	$(INSTALL_BIN) ./files/91-trigger-vuci-routes-reload.hotplug $(1)/usr/share/uhttpd/91-trigger-vuci-routes-reload.hotplug
 endef
 
 define Package/uhttpd-mod-lua/install

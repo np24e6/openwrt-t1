@@ -395,55 +395,53 @@ board_name() {
 }
 
 check_compatibility() {
-	old_version="$1"
-	dir="$2"
+	local old_major="$1"
+	local old_minor="$2"
+	local dir="$3"
+	local version="${dir##*/}"
+	local uci_major="${version%%.*}"
+	local uci_minor="${version#*.}"
 
-	old_major=$(echo "$old_version" | awk -F . '{ print $2 }')
-	old_minor=$(echo "$old_version" | awk -F . '{ print $3 }')
+	# ignore non-numeric directory names
+	case "$uci_minor" in
+		''|*[!0-9]*) uci_minor="" ;;
+		*) ;;
+	esac
 
-	version=${dir##*/}
-	uci_major=$(echo "$version" | awk -F . '{ print $1 }')
-	uci_minor=$(echo "$version" | awk -F . '{ print $2 }')
+	[ "$version" = "$uci_minor" ] && uci_minor=""
 
-	[ "$uci_major" -eq "$uci_major" ] && [ "$uci_minor" -eq "$uci_minor" ] && {
-		[ "$uci_major" -lt "$old_major" ] && return 1
-		[ "$uci_major" -eq "$old_major" ] && [ "$uci_minor" -lt "$old_minor" ] && return 1
-	}
+	[ -n "$uci_major" ] && [ -n "$uci_minor" ] || return 0
+	[ "$uci_major" -lt "$old_major" ] && return 1
+	[ "$uci_major" -eq "$old_major" ] && [ "$uci_minor" -lt "$old_minor" ] && return 1
 
 	return 0
 }
 
 apply_defaults() {
-	dir="$1"
+	local dir="$1"
 
-	for file in ${dir}/* ; do
-		( . "./$file" ) && rm -f "$file"
-	done
-}
+	for file in $(ls -v "$dir"); do
+		[ -d "${dir}/${file}" ] && continue
 
-move_files() {
-	from="$1"
-	to="$2"
-
-	for file in ${from}/* ; do
-		[ -f "$file" ] && mv "$file" "$to"
+		echo "uci-defaults: - executing ${dir}/${file} -"
+		( . "${dir}/${file}" ) && rm -f "${dir}/${file}"
 	done
 }
 
 uci_apply_defaults() {
-	. /lib/functions/system.sh
+	echo "uci-defaults: - init -"
 
-	config_load system
-	config_get old_version "system" device_fw_version
-	new_version=$(cat "/etc/version")
-	top_dir="/etc/uci-defaults"
+	local old_version="$(uci -q get system.system.device_fw_version)"
+	local new_version="$(cat /etc/version)"
+	local top_dir="/etc/uci-defaults"
 
 	[ -z "$old_version" ] && old_version="$new_version"
-	[ -n "$new_version" ] && uci_set system "system" device_fw_version "$new_version"
+	[ "$old_version" = "$new_version" ] || \
+		uci set system.system.device_fw_version="$new_version"
 	[ -z "$(ls -A /etc/uci-defaults/)" ] && return
 
-	old_major=$(echo "$old_version" | awk -F . '{ print $2 }')
-	old_minor=$(echo "$old_version" | awk -F . '{ print $3 }')
+	local old_major=$(echo "$old_version" | awk -F . '{ print $2 }')
+	local old_minor=$(echo "$old_version" | awk -F . '{ print $3 }')
 
 	# do not execute legacy scripts when coming from 7.x
 	[ "$old_major" -ge 7 ] && rm -rf ${top_dir}/001_rut*
@@ -455,8 +453,10 @@ uci_apply_defaults() {
 	[ "$old_major" -eq 7 ] && [ "$old_minor" -ge 4 ] && rm -rf ${top_dir}/old
 
 	mkdir -p "/tmp/.uci"
+
 	for dir in $(ls -v $top_dir); do
-		check_compatibility "$old_version" "$dir" || continue
+		[ -d "${top_dir}/$dir" ] || continue
+		check_compatibility "$old_major" "$old_minor" "$dir" || continue
 		apply_defaults "${top_dir}/$dir"
 	done
 

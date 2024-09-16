@@ -513,11 +513,15 @@ define KernelPackage/scsi-core
   TITLE:=SCSI device support
   KCONFIG:= \
 	CONFIG_SCSI \
+	CONFIG_SCSI_COMMON \
 	CONFIG_BLK_DEV_SD
   FILES:= \
 	$(LINUX_DIR)/drivers/scsi/scsi_mod.ko \
 	$(LINUX_DIR)/drivers/scsi/sd_mod.ko
-  AUTOLOAD:=$(call AutoLoad,40,scsi_mod sd_mod,1)
+ifneq ($(wildcard $(LINUX_DIR)/drivers/scsi/scsi_common.ko),)
+  FILES+=$(LINUX_DIR)/drivers/scsi/scsi_common.ko
+endif
+  AUTOLOAD:=$(call AutoLoad,40,scsi_mod scsi_common sd_mod,1)
 endef
 
 $(eval $(call KernelPackage,scsi-core))

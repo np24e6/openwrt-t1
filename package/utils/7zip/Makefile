@@ -1,7 +1,3 @@
-#
-# Copyright (C) 2022 Teltonika
-#
-
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=7zip
@@ -14,6 +10,8 @@ PKG_SOURCE_URL:=https://www.7-zip.org/a
 PKG_HASH:=40969f601e86aff49aaa0ba0df5ce6fd397cf7e2683a84b591b0081e461ef675
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-$(PKG_VERSION).$(PKG_RELEASE)
 
+PKG_LICENSE:=LGPL-2.1-or-later
+
 include $(INCLUDE_DIR)/package.mk
 
 UNPACK_CMD=unxz --stdout $(DL_DIR)/$(PKG_SOURCE) | tar -C $(PKG_BUILD_DIR) -x
@@ -24,7 +22,7 @@ define Package/7zip
 	TITLE:=7-Zip archiver (Teltonika version)
 	URL:=http://http://www.7-zip.org
 	DEPENDS:=+libstdcpp
-	PKG_TLT_NAME:=7z Format Archiver
+	PKG_TLT_NAME:=7-zip
 	PKG_ROUTER:=$(TLT_PLATFORM_NAME)
 endef
 

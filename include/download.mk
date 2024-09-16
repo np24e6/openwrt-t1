@@ -149,7 +149,7 @@ endef
 
 define DownloadMethod/default
 	$(SCRIPT_DIR)/download.pl "$(DL_DIR)" \
-		"$(if $(findstring $(TLT_GIT),$(PKG_SOURCE_URL)),skip-mirrors)" "$(FILE)" "$(HASH)" "$(URL_FILE)" $(foreach url,$(URL),"$(url)") "$(PKG_UPSTREAM_URL)" \
+		"$(if $(findstring $(TLT_GIT),$(PKG_SOURCE_URL)),skip-mirrors)" "$(FILE)" "$(HASH)" "$(URL_FILE)" $(foreach url,$(URL),"$(url)") $(foreach url,$(PKG_UPSTREAM_URL),"$(url)") \
 	$(if $(filter check,$(1)), \
 		$(call check_hash,$(FILE),$(HASH),$(2)$(call hash_var,$(MD5SUM))) \
 		$(call check_md5,$(MD5SUM),$(2)MD5SUM,$(2)HASH) \

@@ -3,17 +3,13 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=pam-tacacs
-PKG_VERSION:=2023-11-09
-PKG_RELEASE:=2
+PKG_VERSION:=2024-03-07
 
 PKG_SOURCE_VERSION:=1.1
-PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_SOURCE_VERSION)-$(PKG_VERSION)
-PKG_SOURCE:=$(PKG_SOURCE_SUBDIR).tar.gz
-PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_SOURCE_SUBDIR)
-
-PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
+PKG_LICENSE:=GPL-2.0-or-later
 
 PKG_FIXUP:=autoreconf
+GPL_INCLUDE_SRC:=1
 
 include $(INCLUDE_DIR)/package.mk
 
@@ -37,7 +33,6 @@ define Build/InstallDev
 	$(CP) $(PKG_BUILD_DIR)/libtac/include/libtac.h $(1)/usr/include
 	$(CP) $(PKG_BUILD_DIR)/.libs/libtac.so* $(1)/usr/lib/
 endef
-
 
 define Package/pam-tacacs/install
 	$(INSTALL_DIR) $(1)/usr/lib/security/

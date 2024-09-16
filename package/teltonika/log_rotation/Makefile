@@ -6,10 +6,11 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=log_rotation
-PKG_VERSION:=2023-11-10
+PKG_VERSION:=2024-03-07
 PKG_RELEASE:=1
 
-PKG_SOURCE_VERSION:=1.3
+PKG_SOURCE_VERSION:=1.4
+PKG_LICENSE:=Teltonika-closed
 
 include $(INCLUDE_DIR)/package.mk
 

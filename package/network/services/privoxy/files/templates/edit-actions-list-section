@@ -47,7 +47,6 @@
 # edit-actions page is ~300k.  Before it was optimized, it was ~550k.
 #
 #############################################################################
-
 <tr><td class="container"><a name="l@s@"></a>
 <table border="0" width="100%" cellspacing="2" cellpadding="3" class="framed">
 <tr class="actions"><td class="header"><a href="@user-manual@@actions-help-prefix@ACTIONS">Actions</a>:</td></tr>

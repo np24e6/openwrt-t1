@@ -1,0 +1,73 @@
+Index: libdlms-fa855d2e/development/src/gxsetmalloc.c
+===================================================================
+--- libdlms-fa855d2e.orig/development/src/gxsetmalloc.c
++++ libdlms-fa855d2e/development/src/gxsetmalloc.c
+@@ -1681,6 +1681,11 @@ int cosem_setAssociationShortName(
+         DLMS_OBJECT_TYPE class_id;
+         gxObject* obj;
+         oa_empty(&object->objectList);
++
++       if (value->Arr == NULL) {
++               return DLMS_ERROR_CODE_INVALID_PARAMETER;
++       }
++
+         if ((ret = oa_capacity(&object->objectList, value->Arr->size)) == 0)
+         {
+             for (pos = 0; pos != value->Arr->size; ++pos)
+@@ -2123,6 +2128,11 @@ int cosem_setGprsSetup(gxGPRSSetup* obje
+     if (index == 2)
+     {
+         bb_clear(&object->apn);
++
++       if (value->strVal == NULL) {
++               return DLMS_ERROR_CODE_INVALID_PARAMETER;
++       }
++
+         if (value->vt == DLMS_DATA_TYPE_STRING)
+         {
+             bb_set(&object->apn, (unsigned char*)value->strVal->data, value->strVal->size);
+@@ -2534,6 +2544,10 @@ int cosem_setIP4Setup(dlmsSettings* sett
+     gxip4SetupIpOption* ipItem = NULL;
+     if (index == 2)
+     {
++       if (value->byteArr == NULL) {
++               return DLMS_ERROR_CODE_INVALID_PARAMETER;
++       }
++
+ #ifndef DLMS_IGNORE_OBJECT_POINTERS
+         if ((ret = oa_findByLN(&settings->objects, DLMS_OBJECT_TYPE_NONE, value->byteArr->data, &object->dataLinkLayer)) != 0)
+         {
+@@ -2652,6 +2666,9 @@ int cosem_setIP6Setup(dlmsSettings* sett
+     gxNeighborDiscoverySetup* it;
+     if (index == 2)
+     {
++       if (value->byteArr == NULL) {
++               return DLMS_ERROR_CODE_INVALID_PARAMETER;
++       }
+ #ifndef DLMS_IGNORE_OBJECT_POINTERS
+         if ((ret = oa_findByLN(&settings->objects, DLMS_OBJECT_TYPE_NONE, value->byteArr->data, &object->dataLinkLayer)) != 0)
+         {
+@@ -4033,7 +4050,7 @@ int cosem_setScriptTable(dlmsSettings* s
+         uint16_t type;
+ #endif //DLMS_IGNORE_OBJECT_POINTERS
+         dlmsVARIANT* tmp, * tmp2, * tmp3;
+-        if (value->Arr->size != 0)
++        if (value->Arr != NULL && value->Arr->size != 0)
+         {
+             script = NULL;
+             ret = va_getByIndex(value->Arr, 0, &tmp);
+Index: libdlms-fa855d2e/development/src/variant.c
+===================================================================
+--- libdlms-fa855d2e.orig/development/src/variant.c
++++ libdlms-fa855d2e/development/src/variant.c
+@@ -1393,6 +1393,9 @@ void va_attach2(
+ //Get item from variant array by index.
+ int va_getByIndex(variantArray* arr, int index, dlmsVARIANT_PTR* item)
+ {
++       if (arr == NULL) {
++               return DLMS_ERROR_CODE_INVALID_PARAMETER;
++       }
+     if (index >= arr->size)
+     {
+         return DLMS_ERROR_CODE_OUTOFMEMORY;
+

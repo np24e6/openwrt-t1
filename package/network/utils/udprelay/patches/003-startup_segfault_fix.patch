@@ -1,0 +1,34 @@
+--- a/main.c
++++ b/main.c
+@@ -60,19 +60,19 @@ static struct {
+ 	int ifindex, raw_socket;
+ } ifs[MAXIFS];
+ 
+-/* Where we forge our packets */
+-static u_char gram[4096] = {
+-	0x45,	0x00,	0x00,	0x26,
+-	0x12,	0x34,	0x00,	0x00,
+-	0xFF,	0x11,	0,	0,
+-	0,	0,	0,	0,
+-	0,	0,	0,	0,
+-	0,	0,	0,	0,
+-	0x00,	0x12,	0x00,	0x00,
+-	'1','2','3','4','5','6','7','8','9','0'
+-};
+-
+ int main(int argc, char **argv) {
++
++	/* Where we forge our packets */
++	u_char gram[4096] = {
++		0x45,	0x00,	0x00,	0x26,
++		0x12,	0x34,	0x00,	0x00,
++		0xFF,	0x11,	0,	0,
++		0,	0,	0,	0,
++		0,	0,	0,	0,
++		0,	0,	0,	0,
++		0x00,	0x12,	0x00,	0x00,
++		'1','2','3','4','5','6','7','8','9','0'
++	};
+ 	/* Debugging, forking, other settings */
+ 	int debug, forking;
+ 

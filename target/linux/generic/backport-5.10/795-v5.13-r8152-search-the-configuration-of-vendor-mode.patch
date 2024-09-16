@@ -65,7 +65,7 @@ Signed-off-by: David S. Miller <davem@davemloft.net>
  static int rtl8152_pre_reset(struct usb_interface *intf)
  {
  	struct r8152 *tp = usb_get_intfdata(intf);
-@@ -9351,10 +9384,8 @@ static int rtl8152_probe(struct usb_inte
+@@ -9352,10 +9385,8 @@ static int rtl8152_probe(struct usb_inte
  	if (version == RTL_VER_UNKNOWN)
  		return -ENODEV;
  

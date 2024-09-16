@@ -13,8 +13,6 @@ ifeq ($(SDK),1)
 else
   REVISION:=$(shell $(TOPDIR)/scripts/getver.sh)
   SOURCE_DATE_EPOCH:=$(shell $(TOPDIR)/scripts/get_source_date_epoch.sh)
-  TLT_VERSION:=$(shell $(TOPDIR)/scripts/get_tlt_version.sh)
-  TLT_VERSION_FILE:=$(shell $(TOPDIR)/scripts/get_tlt_version.sh --file)
 endif
 
 export REVISION
@@ -25,8 +23,6 @@ export MAKE_JOBSERVER=$(filter --jobserver%,$(MAKEFLAGS))
 export GNU_HOST_NAME:=$(shell $(TOPDIR)/scripts/config.guess)
 export HOST_OS:=$(shell uname)
 export HOST_ARCH:=$(shell uname -m)
-export TLT_VERSION
-export TLT_VERSION_FILE
 
 ifeq ($(HOST_OS),Darwin)
   ifneq ($(filter /Applications/Xcode.app/% /Library/Developer/%,$(MAKE)),)

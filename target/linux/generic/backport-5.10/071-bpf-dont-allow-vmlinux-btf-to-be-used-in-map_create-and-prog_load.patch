@@ -1,6 +1,6 @@
 --- a/kernel/bpf/syscall.c
 +++ b/kernel/bpf/syscall.c
-@@ -871,6 +871,11 @@ static int map_create(union bpf_attr *at
+@@ -896,6 +896,11 @@ static int map_create(union bpf_attr *at
  			if (err)
  				goto free_map;
  		}
@@ -14,7 +14,7 @@
  		map->btf_value_type_id = attr->btf_value_type_id;
 --- a/kernel/bpf/verifier.c
 +++ b/kernel/bpf/verifier.c
-@@ -9192,6 +9192,11 @@ static int check_btf_info(struct bpf_ver
+@@ -9191,6 +9191,11 @@ static int check_btf_info(struct bpf_ver
  	btf = btf_get_by_fd(attr->prog_btf_fd);
  	if (IS_ERR(btf))
  		return PTR_ERR(btf);
@@ -60,7 +60,7 @@
  	return !t || btf_type_nosize(t);
 --- a/include/uapi/linux/bpf.h
 +++ b/include/uapi/linux/bpf.h
-@@ -4421,6 +4421,7 @@ struct bpf_btf_info {
+@@ -4424,6 +4424,7 @@ struct bpf_btf_info {
  	__aligned_u64 btf;
  	__u32 btf_size;
  	__u32 id;

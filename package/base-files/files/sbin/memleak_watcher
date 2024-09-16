@@ -1,0 +1,158 @@
+#!/usr/bin/env lua
+
+local io = require "io"
+local os = require "os"
+
+-- data: [
+-- 	<pid>: {
+-- 		name: "<process name with all arguments>"
+-- 		memory_usage: [
+-- 			oldest,
+-- 			newer,
+-- 			even newer,
+-- 			...
+--			newest
+-- 		]
+-- 	},
+-- 	...
+-- ]
+
+local function syslog(message)
+	os.execute("logger -t '" .. arg[0] .. "' '" .. message .. "'")
+end
+local function err(message)
+	io.stderr:write("Error: " .. message .. "\n")
+end
+local function help()
+	err("Usage: " ..
+		arg[0] ..
+		" [-h|-l]\n\t-h\tPrint help and exit\n\t-l\tPrint results and errors to syslog")
+end
+
+local extension = ".log"
+local data_directory = "/tmp/ps_data/"
+local result_directory = "/memleaks/"
+local output_path = data_directory .. tostring(os.time()) .. extension
+local log = print
+local log_err = err
+if arg[1] == "-h" then
+	help()
+	os.exit(0)
+elseif arg[1] == "-l" then
+	log = syslog
+	log_err = syslog
+end
+
+local function write_to_file(out_f, content, file_mode)
+	local out = io.open(out_f, file_mode or "w")
+	if not out then
+		log_err("Failed to write data to " .. out_f)
+		return
+	end
+	out:write(content)
+	out:close()
+end
+
+local function gather_data(out_f)
+	local fd = io.popen("ps")
+	if not fd then
+		log_err("Failed to get ps data")
+		return
+	end
+	write_to_file(out_f, fd:read("*a"))
+	fd:close()
+end
+
+local function parse_ps_line(line)
+	local elements = {}
+	for col in line:gmatch("[^ ]+") do
+		table.insert(elements, col)
+	end
+
+	return tonumber(elements[1]), {
+		memory_usage = tonumber(elements[3]),
+		name = table.concat(elements, " ", 5)
+	}
+end
+
+local function parse_ps_file(filename, processes)
+	local fd = io.open(filename, "r")
+	if not fd then
+		log_err("Failed to read " .. filename)
+		return nil
+	end
+
+	for line in fd:lines() do
+		local pid, process = parse_ps_line(line)
+		-- must nest because of no 'continue' in lua
+		if pid then
+			if not processes[pid] or processes[pid].name ~= process.name then
+				processes[pid] = {
+					name = process.name,
+					memory_usage = {}
+				}
+			end
+			table.insert(processes[pid].memory_usage, process.memory_usage)
+		end
+	end
+	fd:close()
+
+	return processes
+end
+
+local function parse_data(data_dir)
+	local fd = io.popen("ls -1rat " .. data_dir .. "/*" .. extension)
+	if not fd then
+		log_err("Failed to list files in " .. data_dir)
+		return nil
+	end
+
+	local data = {}
+
+	for file in fd:lines() do
+		data = parse_ps_file(file, data)
+	end
+	fd:close()
+
+	return data
+end
+
+local function determine_memleak(pid, process, results_f)
+	local increased_at = {}
+	local mem_max = process.memory_usage[1]
+	local history_count = #process.memory_usage
+	for i = 2, history_count do
+		if process.memory_usage[i] > mem_max then
+			table.insert(increased_at, i)
+			mem_max = process.memory_usage[i]
+		end
+	end
+
+	local increase_count = #increased_at
+	-- allow maximum used memory to increase no more than 2 times
+	if increase_count > 2 then
+		log("Maximum RAM increased " ..
+			tostring(increase_count) ..
+			" times from " ..
+			process.memory_usage[1] ..
+			" to a maximum of " .. tostring(mem_max) .. " for process " .. process.name)
+		write_to_file(results_f .. tostring(pid),
+			tostring(os.date("%Y-%m-%d %X")) ..
+			" | " .. tostring(increase_count) .. " RAM usage increases for " .. process.name .. "\n", "a")
+	end
+end
+
+os.execute("mkdir -p " .. data_directory)
+os.execute("mkdir -p " .. result_directory)
+
+gather_data(output_path)
+
+local processes = parse_data(data_directory)
+if not processes then
+	log_err("Failed to parse ps data")
+	os.exit(1)
+end
+
+for pid, process in pairs(processes) do
+	determine_memleak(pid, process, result_directory)
+end

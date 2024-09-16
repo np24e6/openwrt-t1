@@ -24,7 +24,7 @@ define Package/lua-pop3
 	SECTION:=lang
 	CATEGORY:=Languages
 	TITLE:=LUA POP3 LIB
-	DEPENDS:=+luasocket +lua-md5 +luabitop +luasec
+	DEPENDS:=+luasocket +lua-md5 +luasec
 endef
 
 define Build/Compile

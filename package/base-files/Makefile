@@ -99,29 +99,6 @@ ifdef CONFIG_INSTALL_LOCAL_KEY
   endef
 endif
 
-define Package/base-files/generate-banner
-	(\
-		max_line_len="$$$$($(TOPDIR)/scripts/get_tlt_version.sh | wc -c)"; \
-		max_line_len="$$$$((max_line_len + 18))"; \
-		label="$$$$(echo "Teltonika $(TLT_PLATFORM_NAME) series $$$$(date +'%Y')")"; \
-		label_len="$$$$(echo $$$$label | wc -c)"; \
-		pad="$$$$(((max_line_len - label_len) / 2))"; \
-		blen="$$$$(cat ./files/etc/banner.logo | awk '{ print length }' | sort -n | tail -1)"; \
-		bpad="$$$$(((max_line_len - blen) / 2))"; \
-		perl -pe "\$$$$_=\" \"x$$$${bpad} .\$$$$_" ./files/etc/banner.logo > $(1)/etc/banner; \
-		printf "%$$$${max_line_len}s\n" |tr " " "-" >> $(1)/etc/banner; \
-		printf "%$$$${pad}s $$$${label}\n" >> $(1)/etc/banner; \
-		printf "%$$$${max_line_len}s\n" |tr " " "-" >> $(1)/etc/banner; \
-		printf "%3sDevice:%5s{DEVICE_NAME}\n" >> $(1)/etc/banner; \
-		printf "%3sKernel:%5s%%%%KERNEL%%%%\n" >> $(1)/etc/banner; \
-		printf "%3sFirmware:%3s%%%%FIRMWARE%%%%\n" >> $(1)/etc/banner; \
-		printf "%3sBuild:%6s%%%%BUILD_REV%%%%\n" >> $(1)/etc/banner; \
-		printf "%3sBuild date:%1s%%%%BUILT%%%%\n" >> $(1)/etc/banner; \
-		printf "%$$$${max_line_len}s\n" |tr " " "-" >> $(1)/etc/banner; \
-		$(RM) $(1)/etc/banner.logo; \
-	)
-endef
-
 define Package/base-files/install
 	$(CP) ./files/* $(1)/
 	$(Package/base-files/install-local-key)
@@ -138,10 +115,7 @@ define Package/base-files/install
 		fi; \
 	)
 
-	$(Package/base-files/generate-banner)
-
 	$(VERSION_SED_SCRIPT) \
-		$(1)/etc/banner \
 		$(1)/etc/openwrt_version \
 		$(1)/usr/lib/os-release
 
@@ -206,18 +180,6 @@ define Package/base-files/install
 		$(1)/bin/config_generate \
 		$(1)/etc/init.d/system
 
-	# set year in banner
-	$(SED) "s#%%YEAR%%#$$$$(date +'%Y')#g" $(1)/etc/banner
-
-	# set kernel version in banner
-	$(SED) "s#%%KERNEL%%#$(LINUX_VERSION)#g" $(1)/etc/banner
-
-	# set firmware in banner
-	$(SED) "s#%%FIRMWARE%%#$$$$($(TOPDIR)/scripts/get_tlt_version.sh)#g" $(1)/etc/banner
-
-	# set build-rev in banner
-	$(SED) "s#%%BUILD_REV%%#$$$$(git rev-parse --short HEAD)#g" $(1)/etc/banner
-
 	# set lan ip
 	$(SED) "s#%%LAN_IP%%#$(CONFIG_DEVICE_DEFAULT_IP)#g" $(1)/bin/config_generate \
 		$(1)/etc/board.d/1-board_json
@@ -225,15 +187,16 @@ define Package/base-files/install
 	# add compile time timestamp
 	date +%s > $(1)/etc/firmware-date
 
-	# set build date in banner
-	$(SED) "s#%%BUILT%%#$$$$(date +'%Y-%m-%d %H:%M:%S' -d @$$$$(cat $(1)/etc/firmware-date))#g" $(1)/etc/banner
-
 	# remove rfkill script if not supported
 	$(if $(CONFIG_RFKILL_SUPPORT),,\
 		$(RM) $(1)/etc/rc.button/rfkill)
 
 	$(if $(CONFIG_MOBILE_SUPPORT),,\
 		$(RM) $(1)/bin/board_modem)
+
+#		--prod flag
+	$(if $(CONFIG_VUCI_COMPILE_LUA),\
+		$(RM) $(1)/sbin/memleak_watcher $(1)/etc/init.d/memleak_watcher)
 
 	if [ ! $(CONFIG_MOBILE_SUPPORT) ] || [ $(CONFIG_BASEBAND_SUPPORT) ]; then \
 		$(RM) $(1)/lib/preinit/82_modem_power; \

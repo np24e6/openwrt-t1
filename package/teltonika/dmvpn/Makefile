@@ -8,6 +8,7 @@ include $(INCLUDE_DIR)/download.mk
 PKG_NAME:=DMVPN
 PKG_VERSION:=2021-02-11
 PKG_RELEASE:=1
+PKG_LICENSE:=Teltonika-closed
 
 include $(INCLUDE_DIR)/package.mk
 
@@ -18,12 +19,8 @@ define Package/dmvpn
 	TITLE:=Dynamic multipoint VPN using NHRP GRE and IPsec
 	DEPENDS:=+kmod-gre +IPV6:kmod-gre6 +resolveip +libpthread +ip \
 		+kmod-crypto-authenc +kmod-ipsec +kmod-ipsec4 +IPV6:kmod-ipsec6 \
-		+kmod-ipt-ipsec +iptables-mod-ipsec +frr +frr-libfrr +libcares \
-		+frr-zebra +vuci-app-dmvpn-ui +frr-nhrp +vuci-app-dynamic-routes-nhrp-ui +iptables-mod-hashlimit
-	ifeq (m, $(CONFIG_PACKAGE_dmvpn))
-		PKG_TLT_NAME:=DMVPN
-		PKG_ROUTER:=$(TLT_PLATFORM_NAME)
-	endif
+		+kmod-ipt-ipsec +iptables-mod-ipsec \
+		+frr-nhrp +iptables-mod-hashlimit
 endef
 
 define Package/dmvpn/description

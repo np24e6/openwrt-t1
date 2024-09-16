@@ -1,16 +1,8 @@
---- a/iwinfo_nl80211.c
-+++ b/iwinfo_nl80211.c
-@@ -367,8 +367,7 @@ static struct nl80211_msg_conveyor * nl8
- 		phyidx = atoi(&ifname[3]);
- 	else if (!strncmp(ifname, "radio", 5))
- 		phyidx = nl80211_phy_idx_from_uci(ifname);
--
--	if (!strncmp(ifname, "mon.", 4))
-+	else if (!strncmp(ifname, "mon.", 4))
- 		ifidx = if_nametoindex(&ifname[4]);
- 	else
- 		ifidx = if_nametoindex(ifname);
-@@ -381,9 +380,9 @@ static struct nl80211_msg_conveyor * nl8
+Index: libiwinfo-2023-05-17-c9f5c3f7/iwinfo_nl80211.c
+===================================================================
+--- libiwinfo-2023-05-17-c9f5c3f7.orig/iwinfo_nl80211.c
++++ libiwinfo-2023-05-17-c9f5c3f7/iwinfo_nl80211.c
+@@ -470,9 +470,9 @@ static struct nl80211_msg_conveyor * nl8
  	if (!cv)
  		return NULL;
  

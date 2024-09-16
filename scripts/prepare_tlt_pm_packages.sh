@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
 
 unpack=false
+IGNORE_NOT_FOUND=false
 declare -A dirs
 
-usage="Usage: $0 [-u SIGN_FILE_LIST | -p] [-h] PACKAGES TOPDIR ARCH KMOD_IPK_PATH\n\nActions:\n\t-u\tUnpack and prepare\n\t-p\tPack\n"
-while getopts "u:ph" opt; do
+usage="Usage: $0 [-u SIGN_FILE_LIST | -p] [-i] [-h] PACKAGES TOPDIR ARCH KMOD_IPK_PATH\n\nActions:\n\t-u\tUnpack and prepare\n\t-p\tPack\n\nOptions:\n\t-i\tIgnore packages that were not found\n"
+#shellcheck disable=2059
+while getopts "u:pih" opt; do
 	case $opt in
 	u)
 		SIGN_FILE_LIST=$OPTARG
@@ -16,7 +18,8 @@ while getopts "u:ph" opt; do
 		error_str_fmt="Encountered %d error(s) while packaging %s"
 		trap 'rm -fr "${dirs[tmp_pm]}"' EXIT
 		;;
-	h | \?) printf '%s' "$usage" >&2 && exit ;;
+	i) IGNORE_NOT_FOUND=true ;;
+	h | \?) printf "$usage" >&2 && exit ;;
 	esac
 done
 
@@ -54,6 +57,9 @@ $unpack && {
 		err 'SIGN_FILE_LIST is required when unpacking'
 		exit 1
 	}
+	# Always use absolute path
+	[[ "$SIGN_FILE_LIST" = /* ]] || SIGN_FILE_LIST=$top_dir/$SIGN_FILE_LIST
+	mkdir -p "$(dirname "$SIGN_FILE_LIST")"
 	echo -n '' >"$SIGN_FILE_LIST"
 }
 
@@ -79,7 +85,7 @@ prepare_control_f() {
 
 	tar -xf "$ipk_name" --get "./control.tar.gz" --to-stdout |
 		tar -xzf - --get "./control" --to-stdout |
-		grep -E 'Firmware|tlt_name|Router|Package|Version|pkg_reboot|pkg_network_restart' >"$main_f" &&
+		grep -E 'Firmware|tlt_name|Router|Package|Version|pkg_reboot|pkg_network_restart|AppName' >"$main_f" &&
 		tar -uf "${dirs[zipped_packages]}/$pm_name.tar" -C "${dirs[tmp_pm]}/$package_name" "./main"
 
 	rm -r "${dirs[tmp_pm]:?}/$package_name"
@@ -195,7 +201,7 @@ find_dep_fullname() {
 	fi
 
 	# If package exists but is not selected, only print a warning
-	if check_config "$d" "n"; then
+	if $IGNORE_NOT_FOUND || check_config "$d" "n"; then
 		err "%-33s: Warning: package is not compiled (=n), skipping" "$d"
 		return 0
 	else
@@ -259,7 +265,7 @@ process_package() {
 	[[ -n $out ]] && exec &>"$out"
 
 	case "$p" in
-	hs_theme* | vuci-i18n-*) source_dir="vuci_dep" ;;
+	hs_theme* | vuci-*) source_dir="vuci_dep" ;;
 	iptables-*) source_dir="kmod_dep" ;;
 	*) source_dir="base_dep" ;;
 	esac

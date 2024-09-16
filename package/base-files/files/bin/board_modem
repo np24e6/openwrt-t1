@@ -16,11 +16,12 @@ CFG=/etc/board.json
 add_modem_features() {
 	local revision bands modem_func_id multi_apn operator_scan dhcp_filter dynamic_mtu ipv6 volte
 	revision="$(jsonfilter -s "$modem_info_from_unhandler" -qe '$.cache.firmware')"
+	modem_func_id="$(jsonfilter -s "$default_modem_func" -e '@.id')"
 
 	# Loads modem info
 	json_set_namespace support old_cb
 	json_load "$modem_info_from_unhandler"
-	json_get_vars modem_func_id multi_apn operator_scan dhcp_filter dynamic_mtu ipv6 volte csd
+	json_get_vars multi_apn operator_scan dhcp_filter dynamic_mtu ipv6 volte csd wwan_gnss_conflict framed_routing
 	json_get_values bands band_list
 	json_set_namespace "$old_cb"
 
@@ -34,6 +35,8 @@ add_modem_features() {
 	json_add_boolean ipv6 "$ipv6"
 	json_add_boolean volte "$volte"
 	json_add_boolean csd "$csd"
+	json_add_boolean wwan_gnss_conflict "$wwan_gnss_conflict"
+	json_add_boolean framed_routing "$framed_routing"
 
 	# Adds supported band array
 	json_is_a band_list array || {
@@ -96,6 +99,7 @@ setup_modem() {
 
 id_from_unhandler="$1"
 modem_info_from_unhandler="$2"
+default_modem_func="$3"
 
 lock /var/run/board_modem.lock
 

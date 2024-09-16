@@ -1,0 +1,13 @@
+Index: pam-tacacs-2023-11-08/Makefile.am
+===================================================================
+--- pam-tacacs-2023-11-08.orig/Makefile.am
++++ pam-tacacs-2023-11-08/Makefile.am
+@@ -8,7 +8,7 @@
+ 
+ ACLOCAL_AMFLAGS = -I config
+ AUTOMAKE_OPTIONS = subdir-objects
+-AM_CFLAGS = -Wall -Wextra -Werror
++AM_CFLAGS = -Wall -Wextra
+ 
+ if TACC
+ bin_PROGRAMS = tacc

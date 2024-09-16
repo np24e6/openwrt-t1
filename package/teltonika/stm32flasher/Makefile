@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2023 Teltonika-Networks
+# Copyright (C) 2024 Teltonika-Networks
 #
 
 include $(TOPDIR)/rules.mk
@@ -7,6 +7,8 @@ include $(TOPDIR)/rules.mk
 PKG_NAME:=stm32flasher
 
 PKG_SOURCE_VERSION:=2.7
+
+PKG_LICENSE:=Teltonika-closed
 
 include $(INCLUDE_DIR)/package.mk
 

@@ -56,11 +56,14 @@ typedef enum {
 	EVT_FILE_UPLOAD, /*!< File upload event */
 	EVT_EMM, /*!< EMM reject cause event */
 	EVT_ESM, /*!< ESM reject cause event */
+	EVT_5GMM, /*!< 5GMM reject cause event */
 
 	EVT_QNETDEVCTL, /*!< QNETDEVCTL status event */
 
 	EVT_OPERATOR, /*!< Operator change event */
 	EVT_SIM_CHANGE, /*!< SIM change event */
+
+	EVT_ACT, /*!< Network access technology event */
 
 	__EVT_MAX,
 } evt_type_t;
@@ -156,6 +159,22 @@ enum net_mode_id {
 	NET_MODE_LTE_NR5G, /*!< 4G LTE and 5G NR mode */
 
 	__NET_MODE_MAX,
+};
+
+/**
+ * Enumeration of rat priority modes
+ */
+enum rat_priority_id {
+	RAT_PRIORITY_MODE_UNKNOWN, /*!< Unknown network mode */
+	RAT_PRIORITY_MODE_AUTO, /*!< Automatically select mode */
+	RAT_PRIORITY_MODE_LTE_NR5G_WCDMA, /*!< 4G LTE, 5G NR and 3G mode*/
+	RAT_PRIORITY_MODE_LTE_WCDMA_NR5G, /*!< 4G LTE, 3G and 5G NR mode */
+	RAT_PRIORITY_MODE_NR5G_LTE_WCDMA, /*!< 5G NR, 4G LTE and 3G mode */
+	RAT_PRIORITY_MODE_NR5G_WCDMA_LTE, /*!< 5G NR, 3G and 4G LTE mode */
+	RAT_PRIORITY_MODE_WCDMA_LTE_NR5G, /*!< 3G, 4G LTE and 5G NR mode*/
+	RAT_PRIORITY_MODE_WCDMA_NR5G_LTE, /*!< 3G, 5G NR and 4G LTE mode */
+
+	__RAT_PRIORITY_MODE_MAX,
 };
 
 /**
@@ -657,6 +676,17 @@ enum volte_state_t {
 };
 
 /**
+ * Enumeration of ipv6 ndp states
+ */
+enum ipv6_ndp_state_t {
+	IPV6_NDP_STATE_UNKNOWN, /*<! Unknown NDP state value*/
+	IPV6_NDP_STATE_ENABLED, /*<! Enabled NDP state value(0)*/
+	IPV6_NDP_STATE_DISABLED, /*<! Disabled NDP state value(1)*/
+
+	__IPV6_NDP_STATE_MAX,
+};
+
+/**
  * Enumeration of PDP types
  */
 enum apn_auth_t {
@@ -939,6 +969,7 @@ enum storage_type_id {
 	STORAGE_UFS, /*<! UFS storage type */
 	STORAGE_RAM, /*<! RAM storage type */
 	STORAGE_SD, /*<! SD storage type */
+	STORAGE_UPDATE, /*<! UPDATE storage */
 
 	__STORAGE_MAX,
 };
@@ -1134,6 +1165,17 @@ enum disable_nr5g_mode_id {
 };
 
 /**
+ * Enumeration of Framed Routing values
+ */
+enum frouting_state_id {
+	FROUTING_STATE_UNKNOWN, /*<! Unknown value */
+	FROUTING_STATE_DISABLED, /*<! Disable */
+	FROUTING_STATE_ENABLED, /*<! Enable */
+
+	__FROUTING_MAX,
+};
+
+/**
  * Enumeration of EMM causes
  */
 enum emm_cause_id {
@@ -1225,6 +1267,58 @@ enum esm_cause_id {
 };
 
 /**
+ * Enumeration of 5GMM causes
+ */
+enum mm5g_cause_id {
+	MM5G_CAUSE_ILLEGAL_UE,
+	MM5G_CAUSE_PEI_NOT_ACCEPTED,
+	MM5G_CAUSE_ILLEGAL_ME,
+	MM5G_CAUSE_5GGS_SERVICES_NOT_ALLOWED,
+	MM5G_CAUSE_UE_ID_CANT_BE_DERRIVED,
+	MM5G_CAUSE_IMPLICITLY_DETACHED,
+	MM5G_CAUSE_PLMN_NOT_ALLOWED,
+	MM5G_CAUSE_TRACKING_AREA_NOT_ALLOWED,
+	MM5G_CAUSE_ROAMING_NOT_ALLOWED,
+	MM5G_CAUSE_NO_SUITABLE_CELLS,
+	MM5G_CAUSE_MAC_FAIL,
+	MM5G_CAUSE_SYNCH_FAIL,
+	MM5G_CAUSE_CONGESTION,
+	MM5G_CAUSE_UE_SECURITY_MISMATCH,
+	MM5G_CAUSE_SECURITY_MODE_REJECTED,
+	MM5G_CAUSE_NON_5G_AUTH_UNACCEPTABLE,
+	MM5G_CAUSE_N1_MODE_NOT_ALLOWED,
+	MM5G_CAUSE_RESTRICTED_SERVICE_AREA,
+	MM5G_CAUSE_REDIRECTION_TO_EPC_REQUIRED,
+	MM5G_CAUSE_LADN_NOT_AVAILABLE,
+	MM5G_CAUSE_NO_NETWORK_SLICES_AVAILABLE,
+	MM5G_CAUSE_MAXIMUM_NR_PDU_REACHED,
+	MM5G_CAUSE_INSUFFICIENT_SLICE_DNN,
+	MM5G_CAUSE_INSUFFICIENT_SLICE,
+	MM5G_CAUSE_NGKSI_ALREADY_IN_USE,
+	MM5G_CAUSE_NON_3GPP_ACCESS_5GCN_NOT_ALLOWED,
+	MM5G_CAUSE_SERVING_NETWORK_NOT_AUTH,
+	MM5G_CAUSE_TEMPORARILY_NOT_AUTH,
+	MM5G_CAUSE_PERMANETLY_NOT_AUTH,
+	MM5G_CAUSE_NOT_AUTH_FOR_CAG,
+	MM5G_CAUSE_WIRELINE_ACCESS_NOT_ALLOWED,
+	MM5G_CAUSE_PLMN_NOT_ALLOWED_AT_UE_LOCATION,
+	MM5G_CAUSE_UAS_NOT_ALLOWED,
+	MM5G_CAUSE_PAYLOAD_NOT_FORWARD,
+	MM5G_CAUSE_DNN_UNSUPPORTED,
+	MM5G_CAUSE_INSUFFICIENT_USER_RESOURCES,
+	MM5G_CAUSE_SEMANTICALLY_INCORRECT_MESSAGE,
+	MM5G_CAUSE_INVALID_MANDATORY_INFO,
+	MM5G_CAUSE_MESSAGE_TYPE_NOT_SUPPORTED,
+	MM5G_CAUSE_MESSAGE_TYPE_NOT_COMPATIBLE,
+	MM5G_CAUSE_INFORMATION_ELEMENT_NOT_SUPPORTED,
+	MM5G_CAUSE_CONDITIONAL_IE_ERROR,
+	MM5G_CAUSE_MESSAGE_NOT_COMPATIBLE_WITH_PROTOCOL,
+	MM5G_CAUSE_PROTOCOL_ERROR,
+
+	__MM5G_CAUSE_MAX,
+};
+
+/**
  * Convert modem action status value to string.
  * @param[in]	status	Action status value.
  * @return const char *. String of readable status value.
@@ -1253,6 +1347,13 @@ const char *pin_state_str(enum pin_state_id state);
 const char *net_mode_str(enum net_mode_id mode);
 
 /**
+ * Convert rat priority mode state value to string.
+ * @param[in]	mode	Rat priority mode enumeration value.
+ * @return const char *. String of readable network mode state.
+ */
+const char *rat_priority_str(enum rat_priority_id mode);
+
+/**
  * Convert network mode state value to passing value string.
  * @param[in]	mode	Network mode enumeration value.
  * @return const char *. String of network mode state.
@@ -1260,11 +1361,25 @@ const char *net_mode_str(enum net_mode_id mode);
 const char *net_mode_arg_str(enum net_mode_id id);
 
 /**
+ * Convert rat priority mode state value to passing value string.
+ * @param[in]	mode	Rat priority mode enumeration value.
+ * @return const char *. String of network mode state.
+ */
+const char *rat_priority_arg_str(enum rat_priority_id id);
+
+/**
  * Convert network mode argument string to enumeration value.
  * @param[in]	*arg	network mode string.
  * @return enum net_mode_id. Enumeration value of network mode.
  */
 enum net_mode_id net_mode_arg_enum(const char *arg);
+
+/**
+ * Convert rat priority mode argument string to enumeration value.
+ * @param[in]	*arg	network mode string.
+ * @return enum rat_priority_id. Enumeration value of network mode.
+ */
+enum rat_priority_id rat_priority_arg_enum(const char *arg);
 
 /**
  * Convert SMS message format type value to string.
@@ -1374,6 +1489,20 @@ enum m2m_state_id m2m_arg_enum(const char *arg);
  * @return const char *. String of readable M2M state value.
  */
 const char *m2m_state_arg_str(enum m2m_state_id id);
+
+/**
+ * Convert Framed Routing value string argument to enumeration value.
+ * @param[in]	*arg	Framed Routing string argument value.
+ * @return enum frouting_state_id. Enumeration value of Framed Routing string
+*/
+enum frouting_state_id frouting_arg_enum(const char *arg);
+
+/**
+ * Convert Framed Routing state enumeration value to string.
+ * @param[in]	id	Framed Routing enumeration value.
+ * @return const char *. String of readable Framed Routing state value.
+ */
+const char *frouting_state_arg_str(enum frouting_state_id id);
 
 /**
  * Convert Error message format enumeration value to string.
@@ -2238,6 +2367,13 @@ const char *gnss_operation_mode_str(enum gnss_operation_mode_id mode);
 const char *emm_cause_str(enum emm_cause_id emm_cause);
 
 /**
+ * Convert 5GMM error cause enum to string.
+ * @param[in]   cause   5GMM cause enumeration value.
+ * @return const char *.    String of 5GMM error cause value.
+ */
+const char *mm5g_cause_str(enum mm5g_cause_id cause);
+
+/**
  * Convert qnetdevctl status enum to string.
  * @param[in]   emm_cause   EMM cause enumeration value.
  * @return const char *.    String of qnetdevctl status.
@@ -2279,4 +2415,17 @@ enum disable_nr5g_mode_id disable_nr5g_mode_enum(const char *arg);
  */
 const char *disable_nr5g_mode_str(enum disable_nr5g_mode_id mode);
 
+/**
+ * Convert ipv6 NDP state string to ipv6 NDP state enum.
+ * @param[in]	*arg	ipv6 NDP state string argument value.
+ * @return enum volte_state_t. Enumeration of ipv6 NDP state value.
+ */
+enum ipv6_ndp_state_t ipv6_ndp_state_enum(const char *arg);
+
+/**
+ * Convert ipv6 ndp state enum to string.
+ * @param[in]   id      ipv6 ndp state enumeration value.
+ * @return const char *. String of ipv6 ndp state value.
+ */
+const char *ipv6_ndp_state_str(enum ipv6_ndp_state_t state);
 #endif // GSM_MODEM_API

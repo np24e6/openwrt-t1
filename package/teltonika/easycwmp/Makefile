@@ -6,10 +6,10 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=easycwmp
-PKG_VERSION:=2023-12-06
+PKG_VERSION:=2024-03-05
 PKG_RELEASE:=1
 
-PKG_SOURCE_VERSION:=1.6
+PKG_SOURCE_VERSION:=1.7
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_SOURCE_VERSION)-$(PKG_VERSION)
 PKG_SOURCE:=$(PKG_SOURCE_SUBDIR).tar.gz
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_SOURCE_SUBDIR)
@@ -34,13 +34,12 @@ define Package/easycwmp
   SECTION:=utils
   CATEGORY:=Utilities
   TITLE:=CWMP client (using libcurl)
-  DEPENDS:=+libubus +libuci +libubox +libmicroxml +libjson-c +libcurl +curl +vuci-app-tr069-ui
-  PKG_TLT_NAME:=TR-069
-  PKG_ROUTER:=$(TLT_PLATFORM_NAME)
+  DEPENDS:=+libubus +libuci +libubox +libmicroxml +libjson-c +libcurl +curl
 endef
 
 define Package/easycwmp/description
- An open source implementation of the client CWMP (TR-069) protocol
+ TR-069 is an open source implementation of the client CWMP (TR-069)
+ protocol for data transfer to Auto Configuration Server (ACS).
 endef
 
 define Package/easycwmp/config

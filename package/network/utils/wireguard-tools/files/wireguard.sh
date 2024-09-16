@@ -23,6 +23,7 @@ proto_wireguard_init_config() {
 	proto_config_add_int "listen_port"
 	proto_config_add_int "mtu"
 	proto_config_add_string "fwmark"
+	proto_config_add_string "tunlink"
 	available=1
 	no_proto_task=1
 }
@@ -38,6 +39,7 @@ proto_wireguard_setup_peer() {
 	local endpoint_port
 	local persistent_keepalive
 	local table
+	local tunlink
 
 	config_get public_key "${peer_config}" "public_key"
 	config_get preshared_key "${peer_config}" "preshared_key"
@@ -47,6 +49,7 @@ proto_wireguard_setup_peer() {
 	config_get endpoint_port "${peer_config}" "endpoint_port"
 	config_get persistent_keepalive "${peer_config}" "persistent_keepalive"
 	config_get table "${peer_config}" "table"
+	config_get tunlink "${peer_config}" "tunlink"
 
 	if [ -z "$public_key" ]; then
 		echo "Skipping peer config $peer_config because public key is not defined."
@@ -60,10 +63,10 @@ proto_wireguard_setup_peer() {
 	fi
 	for allowed_ip in $allowed_ips; do
 		echo "AllowedIPs=${allowed_ip}" >> "${wg_cfg}"
-		if [ "${route_allowed_ips}" -ne 0 ]
+		if [ "${route_allowed_ips}" != 0 ] || [ "$tunlink" != "any" ]
 		then
 			DEFAULT_ROUTE=1
-			echo "$peer_config" > "$DEFAULT_STATUS"
+			echo -n "$peer_config " >> "$DEFAULT_STATUS"
 		fi
 	done
 	if [ "${endpoint_host}" ]; then
@@ -125,12 +128,14 @@ proto_wireguard_setup_peer() {
 
 proto_wireguard_setup() {
 	local config="$1"
+	local DEFAULT_STATUS="/tmp/wireguard/default-status_${config}"
 	local wg_dir="/tmp/wireguard"
 	local wg_cfg="${wg_dir}/${config}"
 
 	local private_key
 	local listen_port
 	local mtu wan_interface external_mtu
+	local iter=0
 
 	config_load network
 	config_get private_key "${config}" "private_key"
@@ -140,7 +145,6 @@ proto_wireguard_setup() {
 	config_get fwmark "${config}" "fwmark"
 	config_get ip6prefix "${config}" "ip6prefix"
 	config_get nohostroute "${config}" "nohostroute"
-	config_get tunlink "${config}" "tunlink"
 
 	ip link del dev "${config}" 2>/dev/null
 	ip link add dev "${config}" type wireguard
@@ -209,22 +213,33 @@ proto_wireguard_setup() {
 
 	# endpoint dependency
 	if [ "${nohostroute}" != "1" ] && [ "$DEFAULT_ROUTE" -eq 1 ]; then
+		echo "" >> "$DEFAULT_STATUS"
 		wg show "${config}" endpoints | \
 		sed -E 's/\[?([0-9.:a-f]+)\]?:([0-9]+)/\1 \2/' | \
 		while IFS=$'\t ' read -r key address port; do
 			[ -n "${port}" ] || continue
+			iter=$(($iter + 1))
 			echo "$config" >> "$DEFAULT_STATUS"
-	
-			peer_config="$(cat "$DEFAULT_STATUS" | sed '1q;d')"
+			peer_config="$(cat "$DEFAULT_STATUS" | sed '1q;d' | awk -v col="$iter" '{print $col}')"
 			config_get peer "$peer_config" endpoint_host
+			config_get tunlink "$peer_config" tunlink
 			defaults="$(ip route show default | grep -v tata | awk -F"dev " '{print $2}' | sed 's/\s.*$//')"
-
 			for dev in ${defaults}; do
 				metric="$(ip route show default dev $dev | awk -F"metric " '{print $2}' | sed 's/\s.*$//')"
 				gw="$(ip route show default dev $dev | awk -F"via " '{print $2}' | sed 's/\s.*$//')"
-				for ip in $(resolveip -4 "$peer");do
-					ip route add "$ip" ${gw:+via "$gw"} dev "$dev" metric "$metric"
-					echo "ip route del "$ip" dev "$dev" metric $metric" >> "$DEFAULT_STATUS"
+				for ip in $(resolveip -4 "$peer"); do
+					if [ -n "$tunlink" ] && [ "$tunlink" != "any" ]; then
+						network_get_device tunlink_dev $tunlink
+						[ "$tunlink_dev" = "wwan0" ] && { network_get_device tunlink_dev ${tunlink}_4 || network_get_device tunlink_dev ${tunlink}_6; }
+						tunlink_gw="$(ip route show default dev $tunlink_dev | awk -F"via " '{print $2}' | sed 's/\s.*$//')"
+						if ip route add "$ip" ${tunlink_gw:+via "$tunlink_gw"} dev "$tunlink_dev" metric "1" &>/dev/null; then
+							echo "ip route del "$ip" dev "$tunlink_dev" metric 1" >> "$DEFAULT_STATUS"
+						fi
+						continue
+					fi
+					if ip route add "$ip" ${gw:+via "$gw"} dev "$dev" metric "$metric"; then
+						echo "ip route del "$ip" dev "$dev" metric $metric" >> "$DEFAULT_STATUS"
+					fi
 				done
 			done
 		done
@@ -241,12 +256,17 @@ count_sections(){
 
 proto_wireguard_teardown() {
 	local config="$1" count=0
+	local DEFAULT_STATUS="${DEFAULT_STATUS}_$config"
 	config_load network
 	config_foreach count_sections interface
 	[ "$count" = 0 ] && rm /etc/hotplug.d/iface/18-wireguard &>/dev/null
 	ip link del dev "${config}" >/dev/null 2>&1	
-	if [ -e "$DEFAULT_STATUS" ] && grep -qw "$config" "$DEFAULT_STATUS" ;then
-		eval "$(tail -n +3 "$DEFAULT_STATUS")"
+	if [ -e "$DEFAULT_STATUS" ]; then
+		while read -r line; do
+			if echo "$line" | grep -q "ip route del"; then
+				eval "$line"
+			fi
+		done < "$DEFAULT_STATUS"
 		rm "$DEFAULT_STATUS" >/dev/null 2>&1
 	fi
 }

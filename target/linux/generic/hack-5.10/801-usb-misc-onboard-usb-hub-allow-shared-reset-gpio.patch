@@ -1,0 +1,21 @@
+usb: misc: onboard_usb_hub: allow shared reset GPIO
+
+Add GPIOD_FLAGS_BIT_NONEXCLUSIVE flags when getting the reset GPIO so that both platform
+devices can bind successfully.
+As the onboard_usb_hub hub driver essentially requires duplicating the dt node
+for USB3 hubs, this also means duplicating the reset GPIO. For whatever reason this
+configuration works just fine on mainline?
+
+Index: linux-5.10.206/drivers/usb/misc/onboard_usb_hub.c
+===================================================================
+--- linux-5.10.206.orig/drivers/usb/misc/onboard_usb_hub.c
++++ linux-5.10.206/drivers/usb/misc/onboard_usb_hub.c
+@@ -267,7 +267,7 @@ static int onboard_hub_probe(struct plat
+ 	}
+ 
+ 	hub->reset_gpio = devm_gpiod_get_optional(dev, "reset",
+-						  GPIOD_OUT_HIGH);
++						  GPIOD_OUT_HIGH | GPIOD_FLAGS_BIT_NONEXCLUSIVE);
+ 	if (IS_ERR(hub->reset_gpio))
+ 		return dev_err_probe(dev, PTR_ERR(hub->reset_gpio), "failed to get reset GPIO\n");
+ 

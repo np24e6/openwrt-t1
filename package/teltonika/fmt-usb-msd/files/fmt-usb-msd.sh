@@ -227,7 +227,7 @@ devices() {
 			bd=${bd%$d*}${bd#*$d}
 			break
 		done
-		add_unmountable "DEVICE=\"${line/:*/}\" ${line/*: /}" || bd="$bd$d"
+		add_unmountable "DEVICE=\"${line/:*/}\" ${line/*: /}" || bd="$d"
 	done
 	for d in $bd; do
 		[ "$(cat "/sys/block/$d/size")" = '0' ] && continue

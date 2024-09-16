@@ -1,11 +1,11 @@
 diff --recursive --unified --new-file --no-dereference orig/.gitignore src/.gitignore
 --- orig/.gitignore	1970-01-01 00:00:00.000000000 +0000
-+++ src/.gitignore	2024-01-24 12:01:58.000000000 +0000
++++ src/.gitignore	2024-04-02 10:13:53.000000000 +0000
 @@ -0,0 +1 @@
 +.vscode/
 diff --recursive --unified --new-file --no-dereference orig/.gitlab-ci.yml src/.gitlab-ci.yml
 --- orig/.gitlab-ci.yml	1970-01-01 00:00:00.000000000 +0000
-+++ src/.gitlab-ci.yml	2024-01-24 12:01:58.000000000 +0000
++++ src/.gitlab-ci.yml	2024-04-02 10:13:53.000000000 +0000
 @@ -0,0 +1,20 @@
 +include:
 +  - project: teltonika/ci-templates
@@ -30,15 +30,15 @@ diff --recursive --unified --new-file --no-dereference orig/.gitlab-ci.yml src/.
 \ No newline at end of file
 diff --recursive --unified --new-file --no-dereference orig/.gitmodules src/.gitmodules
 --- orig/.gitmodules	1970-01-01 00:00:00.000000000 +0000
-+++ src/.gitmodules	2024-01-24 12:01:58.000000000 +0000
++++ src/.gitmodules	2024-04-02 10:13:53.000000000 +0000
 @@ -0,0 +1,3 @@
 +[submodule "test/support"]
 +	path = test/support
 +	url = git@git.teltonika.lt:teltonika/packages/unit_test_stubs.git
 diff --recursive --unified --new-file --no-dereference orig/Makefile src/Makefile
 --- orig/Makefile	1970-01-01 00:00:00.000000000 +0000
-+++ src/Makefile	2024-01-24 12:01:58.000000000 +0000
-@@ -0,0 +1,21 @@
++++ src/Makefile	2024-04-02 10:13:53.000000000 +0000
+@@ -0,0 +1,46 @@
 +TARGET = dlms_client
 +
 +SRCDIR := ./src
@@ -47,22 +47,47 @@ diff --recursive --unified --new-file --no-dereference orig/Makefile src/Makefil
 +
 +OBJS = $(SOURCES:.c=.o)
 +
-+CFLAGS += -D_GNU_SOURCE -DCONFIG_MACHINE_$(TLT_PLATFORM_NAME)
++INC = include/
++
++CFLAGS += -D_GNU_SOURCE -DCONFIG_MACHINE_$(TLT_PLATFORM_NAME) -I$(INC)
 +CFLAGS += -Wall -Wextra -Werror -pedantic -fno-common -ffunction-sections -fdata-sections -Wundef
 +
-+LDFLAGS += -lubus -lubox -lsqlite3 -ltlt_uci -luci -lgurux_dlms_c -ltlt_logger -lpthread
++LDFLAGS += -lubus -lubox -lsqlite3 -ltlt_uci -ltlt_termios -luci -lgurux_dlms_c -ltlt_logger -lpthread -lblobmsg_json
 +RM = rm -f
 +
-+all: $(TARGET)
++TARGET_RPC = dlms_client.so
++
++SOURCE_RPC = $(wildcard $(SRCDIR)/rpc/*c)
++
++SOURCES_RPC = $(SOURCE_RPC) $(SRCDIR)/utils.c
++
++OBJECT_RPC = $(SOURCE_RPC:.c=.o) $(SRCDIR)/rpc/utils.o \
++	$(SRCDIR)/rpc/communication.o \
++	$(SRCDIR)/rpc/cosem_group.o \
++	$(SRCDIR)/rpc/attribute_converter.o \
++	$(SRCDIR)/rpc/config.o
++
++LDFLAGS_RPC = -lubus -lubox  -lgurux_dlms_c -ltlt_logger -ltlt_uci -luci -lblobmsg_json -ltlt_termios
++
++all: $(TARGET) $(TARGET_RPC)
 +
 +$(TARGET): $(OBJS)
 +	$(CC) -o $@ $^ $(LDFLAGS)
++
++src/rpc/%.o: src/rpc/%.c
++	$(CC) -fPIC -c -o $@ $< $(CFLAGS)
++
++$(SRCDIR)/rpc/%.o: src/%.c
++	$(CC) -fPIC -c -o $@ $< $(CFLAGS)
++
++$(TARGET_RPC): $(OBJECT_RPC)
++	$(CC) -shared -fPIC -o $@ $^ $(LDFLAGS_RPC)
 +
 +clean:
 +	$(RM) $(OBJS) $(TARGET)
 diff --recursive --unified --new-file --no-dereference orig/README.md src/README.md
 --- orig/README.md	1970-01-01 00:00:00.000000000 +0000
-+++ src/README.md	2024-01-24 12:01:58.000000000 +0000
++++ src/README.md	2024-04-02 10:13:53.000000000 +0000
 @@ -0,0 +1,378 @@
 +# DLMS Master
 +
@@ -705,14 +730,15 @@ diff --recursive --unified --new-file --no-dereference orig/VS/GuruxDLMSClientEx
 \ No newline at end of file
 diff --recursive --unified --new-file --no-dereference orig/files/dlms_client.conf src/files/dlms_client.conf
 --- orig/files/dlms_client.conf	1970-01-01 00:00:00.000000000 +0000
-+++ src/files/dlms_client.conf	2024-01-24 12:01:58.000000000 +0000
-@@ -0,0 +1,2 @@
++++ src/files/dlms_client.conf	2024-04-02 10:13:53.000000000 +0000
+@@ -0,0 +1,3 @@
 +config main 'main'
-+	option enabled '0'
++	option enabled '1'
++	option debug '0'
 diff --recursive --unified --new-file --no-dereference orig/files/dlms_client.init src/files/dlms_client.init
 --- orig/files/dlms_client.init	1970-01-01 00:00:00.000000000 +0000
-+++ src/files/dlms_client.init	2024-01-24 12:01:58.000000000 +0000
-@@ -0,0 +1,42 @@
++++ src/files/dlms_client.init	2024-04-02 10:13:53.000000000 +0000
+@@ -0,0 +1,30 @@
 +#!/bin/sh /etc/rc.common
 +
 +APP=/usr/sbin/dlms_client
@@ -722,32 +748,20 @@ diff --recursive --unified --new-file --no-dereference orig/files/dlms_client.in
 +START=99
 +STOP=99
 +
-+GROUPS_ENABLED=0
-+
-+check_for_enabled_groups() {
-+	config_get ENABLED "$1" "enabled" "0"
-+
-+	[ "$ENABLED" = "0" ] && return
-+
-+	GROUPS_ENABLED=1
-+}
-+
 +start_service() {
 +	config_load $CONFIG
 +
-+	config_get enabled "main" "enabled" "0"
-+	config_foreach check_for_enabled_groups cosem_group
-+
-+	[ "$GROUPS_ENABLED" = "0" ] && [ "$enabled" = "0" ] && return
++	config_get ENABLED "main" "enabled" "0"
++	[ "$ENABLED" = "0" ] && return
 +
 +	procd_open_instance
 +	procd_set_param command "$APP"
-+	procd_set_param respawn ${respawn_threshold:-0} ${respawn_timeout:-60} ${respawn_retry:-0}
++	procd_set_param respawn "${respawn_threshold:-0}" "${respawn_timeout:-60}" "${respawn_retry:-0}"
 +	procd_close_instance
 +}
 +
 +reload_service() {
-+	procd_set_param file /etc/config/modbus_client
++	procd_set_param file /etc/config/dlms_client
 +	stop
 +	start
 +}
@@ -1029,6 +1043,181 @@ diff --recursive --unified --new-file --no-dereference orig/include/getopt.h src
 -#endif
 -
 -#endif
+diff --recursive --unified --new-file --no-dereference orig/include/master.h src/include/master.h
+--- orig/include/master.h	1970-01-01 00:00:00.000000000 +0000
++++ src/include/master.h	2024-04-02 10:13:53.000000000 +0000
+@@ -0,0 +1,171 @@
++#pragma once
++
++#ifdef TEST
++#include "stub_external.h"
++#else
++#define PRIVATE static
++#define PUBLIC
++#define MAIN main
++#define TEST_BREAK
++#endif
++
++#include <libubox/uloop.h>
++#include <libubox/utils.h>
++#include <tlt_logger.h>
++#include <libubus.h>
++#include <sqlite3.h>
++#include <pthread.h>
++#include <libtlt_termios.h>
++#include <unistd.h>
++#include <libtlt_uci.h>
++
++//!< DLMS headers
++#include <converters.h>
++#include <gxignore.h>
++#include <cosem.h>
++#include <client.h>
++
++#define UTL_SAFE_STR(x) ((x) ? (x) : "")
++#define UTL_STR(x) UTL_STR2(x)
++#define UTL_STR2(x) #x
++
++#define MAX_CONNECTIONS_COUNT	   30
++#define MAX_PHYSICAL_DEVICES_COUNT 30 // overall
++#define MAX_COSEM_OBJECTS_COUNT	   20 // each group
++#define MAX_COSEM_GROUPS_COUNT	   10
++
++#define CFG_NAME "dlms_client"
++
++typedef struct {
++	int enabled;
++	int id;
++	char *name;
++	enum { TCP, SERIAL } type;
++	union {
++		struct {
++			char *host;
++			int port;
++			bool persistent;
++		} tcp;
++		struct libtlt_termios_settings s;
++	} parameters;
++	int socket;
++	unsigned long wait_time;
++	gxByteBuffer data;
++	pthread_mutex_t *mutex;
++} connection;
++
++typedef struct {
++	int enabled;
++	int id;
++	char *name;
++	char *invocation_counter;
++	connection *connection;
++	dlmsSettings settings;
++} physical_device;
++
++typedef struct {
++	int enabled;
++	int id;
++	char *name;
++	uint32_t entries;
++	gxObject *object;
++	physical_device **devices;
++	size_t device_count;
++} cosem_object;
++
++typedef struct {
++	int enabled;
++	int id;
++	char *name;
++	uint32_t interval;
++	size_t cosem_object_count;
++	cosem_object **cosem_objects;
++} cosem_group;
++
++typedef struct {
++	size_t physical_dev_count;
++	size_t cosem_group_count;
++	physical_device **physical_devices;
++	cosem_group **cosem_groups;
++	sqlite3 *db;
++	sqlite3_stmt *stmt_insert;
++	pthread_mutex_t *mutex_rs232;
++	pthread_mutex_t *mutex_rs485;
++	pthread_mutex_t *mutex_usb;
++
++	//!< these only needed for free at the end:
++	size_t connection_count;
++	size_t cosem_object_count;
++	connection **connections;
++	cosem_object **cosem_objects;
++} master;
++
++typedef struct {
++	char **values;
++	int count;
++} object_attributes;
++
++extern master *g_master;
++extern log_level_type g_debug_level;
++
++// config.c
++//////////////////////////////////////////////////////////////////////////////////////////
++
++PUBLIC master *cfg_get_master(int ignore);
++PUBLIC void cfg_free_master(master *m);
++
++// master.c
++//////////////////////////////////////////////////////////////////////////////////////////
++
++PUBLIC int mstr_create_db(master *m);
++PUBLIC int mstr_initialize_cosem_groups(master *m);
++PUBLIC void mstr_write_group_data_to_db(cosem_group *group, char *data);
++PUBLIC void mstr_db_free(master *m);
++
++// attribute_converter.c
++//////////////////////////////////////////////////////////////////////////////////////////
++
++PUBLIC void attr_init(object_attributes *attributes, gxObject *object);
++PUBLIC void attr_free(object_attributes *attributes);
++PUBLIC char *attr_to_json(object_attributes *attributes);
++PUBLIC int attr_to_string(gxObject *object, object_attributes *attributes, int use_ln_ref);
++
++// cosem_group.c
++//////////////////////////////////////////////////////////////////////////////////////////
++
++PUBLIC char *cg_read_group_codes(cosem_group *group, int *rc);
++PUBLIC int cg_make_connection(physical_device *dev);
++PUBLIC void cg_shutdown_connection(physical_device *dev);
++
++// utils.c
++//////////////////////////////////////////////////////////////////////////////////////////
++
++PUBLIC int utl_parse_args(int argc, char **argv, log_level_type *debug_lvl);
++PUBLIC void utl_append_to_str(char **destination, const char *source);
++PUBLIC void utl_append_obj_name(char **data, char *name);
++PUBLIC void utl_append_if_needed(char **data, int index, int value, char *str);
++PUBLIC void utl_add_error_message(char **data, char *device_name, const int err_num, const char *format, ...);
++PUBLIC void utl_smart_sleep(time_t *t0, time_t *tn, unsigned p);
++PUBLIC void utl_lock_mutex_if_required(physical_device *d);
++PUBLIC void utl_unlock_mutex_if_required(physical_device *d);
++PUBLIC int utl_validate_cosem_id(const int cosem_id);
++PUBLIC int utl_get_server_address_from_serial_number(int logical_server_address, long sn);
++__attribute__((unused)) PUBLIC void utl_debug_master(master *m);
++PUBLIC int utl_is_logical_name(const char *name);
++
++// communication.c
++//////////////////////////////////////////////////////////////////////////////////////////
++
++PUBLIC bool com_is_persistent(connection *c);
++PUBLIC int com_open_connection(physical_device *dev);
++PUBLIC void com_close(connection *c, dlmsSettings *s);
++PUBLIC void com_close_socket(connection *c);
++PUBLIC int com_update_invocation_counter(connection *c, dlmsSettings *s, const char *invocationCounter);
++PUBLIC int com_initialize_connection(connection *c, dlmsSettings *s);
++PUBLIC void com_release_connection(connection *c, dlmsSettings *s);
++PUBLIC int com_read(connection *c, dlmsSettings *s, gxObject *object, unsigned char attributeOrdinal);
++PUBLIC int com_getKeepAlive(connection *c, dlmsSettings *s);
++PUBLIC int com_readRowsByEntry(connection *c, dlmsSettings *s, gxProfileGeneric *obj, uint32_t index, uint32_t count);
++PUBLIC int com_get_association_view(connection *c, dlmsSettings *s);
++
 diff --recursive --unified --new-file --no-dereference orig/makefile src/makefile
 --- orig/makefile	2023-11-10 10:15:18.000000000 +0000
 +++ src/makefile	1970-01-01 00:00:00.000000000 +0000
@@ -1078,7 +1267,7 @@ diff --recursive --unified --new-file --no-dereference orig/makefile src/makefil
 \ No newline at end of file
 diff --recursive --unified --new-file --no-dereference orig/project.yml src/project.yml
 --- orig/project.yml	1970-01-01 00:00:00.000000000 +0000
-+++ src/project.yml	2024-01-24 12:01:58.000000000 +0000
++++ src/project.yml	2024-04-02 10:13:53.000000000 +0000
 @@ -0,0 +1,150 @@
 +---
 +# This sample demonstrates running a collection of unit tests.
@@ -1232,7 +1421,7 @@ diff --recursive --unified --new-file --no-dereference orig/project.yml src/proj
 +    :html_title: "REPORT"
 diff --recursive --unified --new-file --no-dereference orig/src/attribute_converter.c src/src/attribute_converter.c
 --- orig/src/attribute_converter.c	1970-01-01 00:00:00.000000000 +0000
-+++ src/src/attribute_converter.c	2024-01-24 12:01:58.000000000 +0000
++++ src/src/attribute_converter.c	2024-04-02 10:13:53.000000000 +0000
 @@ -0,0 +1,2634 @@
 +#include "master.h"
 +
@@ -2482,7 +2671,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/attribute_conver
 +#ifndef DLMS_IGNORE_REGISTER_MONITOR
 +PUBLIC int attr_registerMonitorToString(gxRegisterMonitor *object, object_attributes *attributes, int use_ln_ref)
 +{
-+	int ret;
++	int ret = 0;
 +	uint16_t pos;
 +	dlmsVARIANT *tmp;
 +	gxByteBuffer ba;
@@ -3870,8 +4059,8 @@ diff --recursive --unified --new-file --no-dereference orig/src/attribute_conver
 +}
 diff --recursive --unified --new-file --no-dereference orig/src/communication.c src/src/communication.c
 --- orig/src/communication.c	2023-11-10 10:15:18.000000000 +0000
-+++ src/src/communication.c	2024-01-24 12:01:58.000000000 +0000
-@@ -1,1179 +1,951 @@
++++ src/src/communication.c	2024-04-02 10:13:53.000000000 +0000
+@@ -1,1179 +1,912 @@
 -//
 -// --------------------------------------------------------------------------
 -//  Gurux Ltd
@@ -3910,6 +4099,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/communication.c 
 -#include <termios.h>
  #include <sys/ioctl.h>
 -#include <sys/stat.h>
++#include <sys/param.h>
  #include <fcntl.h>
 -#endif
 -
@@ -4932,10 +5122,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/communication.c 
 -        //Allocate 50 bytes more because some meters count this wrong and send few bytes too many.
 -        con_initializeBuffers(connection, 50 + connection->settings.maxPduSize);
 -    }
-+#include <sys/stat.h>
-+#include <termios.h>
-+#include <poll.h>
- 
+-
 -    // Get challenge Is HLS authentication is used.
 -    if (connection->settings.authentication > DLMS_AUTHENTICATION_LOW)
 -    {
@@ -4952,8 +5139,9 @@ diff --recursive --unified --new-file --no-dereference orig/src/communication.c 
 -    }
 -    return DLMS_ERROR_CODE_OK;
 -}
-+#define IO_TIMEOUT	    3 // timeout in seconds for reading/writing
-+#define RECEIVE_BUFFER_SIZE 200
++#include <sys/stat.h>
++#include <termios.h>
++#include <poll.h>
  
 -//Report error on output;
 -void com_reportError(const char* description,
@@ -4963,11 +5151,16 @@ diff --recursive --unified --new-file --no-dereference orig/src/communication.c 
 -    char ln[25];
 -    hlp_getLogicalNameToString(object->logicalName, ln);
 -    printf("%s %s %s:%d %s\r\n", description, obj_typeToString2(object->objectType), ln, attributeOrdinal, hlp_getErrorMessage(ret));
++#define IO_TIMEOUT	    3 // timeout in seconds for reading/writing
++#define RECEIVE_BUFFER_SIZE 200
++#define MODE_E_INIT_MESSAGE "/?!\r\n"
++
 +PRIVATE int com_open_tcp_connection(connection *c);
 +PRIVATE uint8_t com_is_IPv6_address(const char *pAddress);
 +PRIVATE int com_check_if_connected_to_server(int fd);
 +PRIVATE int com_open_serial_connection(physical_device *dev);
 +PRIVATE int com_initialize_serial_settings(connection *c);
++PRIVATE int com_initialize_mode_e(connection *c);
 +
 +PRIVATE int com_read_data_block(connection *c, dlmsSettings *s, message *m, gxReplyData *reply);
 +PRIVATE int read_dlms_packet(connection *c, dlmsSettings *s, gxByteBuffer *data, gxReplyData *reply);
@@ -4982,19 +5175,10 @@ diff --recursive --unified --new-file --no-dereference orig/src/communication.c 
 +PRIVATE void com_handle_init_buffers(connection *c, dlmsSettings *s);
 +PRIVATE void com_initialize_buffers(connection *c, int size);
 +
-+struct baudrate {
-+	int bps;
-+	uint32_t baud;
-+};
-+
-+PRIVATE struct baudrate baudrates[] = {
-+	{ 300, B300 },	       { 600, B600 },	      { 1200, B1200 },	     { 1800, B1800 },
-+	{ 2400, B2400 },       { 4800, B4800 },	      { 9600, B9600 },	     { 19200, B19200 },
-+	{ 38400, B38400 },     { 57600, B57600 },     { 115200, B115200 },   { 230400, B230400 },
-+	{ 460800, B460800 },   { 500000, B500000 },   { 576000, B576000 },   { 921600, B921600 },
-+	{ 1000000, B1000000 }, { 1152000, B1152000 }, { 1500000, B1500000 }, { 2000000, B2000000 },
-+	{ 2500000, B2500000 }, { 3000000, B3000000 }, { 3500000, B3500000 }, { 4000000, B4000000 },
-+};
++PUBLIC bool com_is_persistent(connection *c)
++{
++	return c->type == TCP && c->parameters.tcp.persistent;
++}
 +
 +PUBLIC int com_open_connection(physical_device *dev)
 +{
@@ -5099,6 +5283,62 @@ diff --recursive --unified --new-file --no-dereference orig/src/communication.c 
 +	return 1;
 +}
 +
++PRIVATE int com_open_serial_connection(physical_device *dev)
++{
++	struct libtlt_termios_settings *s = &dev->connection->parameters.s;
++	int ret = 1;
++
++	s->fd = open(s->device, O_RDWR | O_NOCTTY | O_NONBLOCK);
++	if (s->fd == -1) {
++		log(L_DEBUG, "Failed to open serial port: %s\n", s->device);
++		return DLMS_ERROR_TYPE_COMMUNICATION_ERROR;
++	}
++
++	if (!isatty(s->fd)) {
++		log(L_DEBUG, "'%s' is not a serial port\n", s->device);
++		return DLMS_ERROR_TYPE_COMMUNICATION_ERROR;
++	}
++
++	dev->connection->socket = s->fd;
++
++	if (lockf(dev->connection->socket, F_LOCK, 0)) {
++		log(L_ERROR, "Failed to lock %s file! Reason: %s\n",
++		    s->device, strerror(errno));
++		return DLMS_ERROR_TYPE_COMMUNICATION_ERROR;
++	}
++
++	ret = (dev->settings.interfaceType != DLMS_INTERFACE_TYPE_HDLC_WITH_MODE_E) ?
++			    com_initialize_serial_settings(dev->connection) :
++			    com_initialize_mode_e(dev->connection);
++
++
++	return ret;
++}
++
++PRIVATE int com_initialize_serial_settings(connection *c)
++{
++	struct libtlt_termios_settings *s = &c->parameters.s;
++	int ret = 1;
++
++	if (ltermios_set_settings(s)) {
++		log(L_ERROR, "ltermios_set_settings error: %s\n", s->error);
++		goto err;
++	}
++
++	tcgetattr(s->fd, &s->termios);
++
++	s->termios.c_cc[VTIME] = 5;
++
++	if (tcsetattr(s->fd, TCSANOW, &s->termios) != 0) {
++		log(L_ERROR, "Failed to set STTY settings");
++		goto err;
++	}
++
++	ret = 0;
++err:
++	return ret;
++}
++
 +PRIVATE int com_initialize_mode_e(connection *c)
 +{
 +	struct termios options = { 0 };
@@ -5107,13 +5347,6 @@ diff --recursive --unified --new-file --no-dereference orig/src/communication.c 
 +	bb_clear(&c->data);
 +	bb_init(&c->data);
 +	bb_capacity(&c->data, 500);
-+
-+	for (size_t i = 0; i < ARRAY_SIZE(baudrates); i++) {
-+		if (c->parameters.serial.baudrate == baudrates[i].bps) {
-+			baudrate = baudrates[i].baud;
-+			break;
-+		}
-+	}
 +
 +	options.c_cflag |= PARENB;
 +	options.c_cflag &= ~PARODD;
@@ -5133,9 +5366,8 @@ diff --recursive --unified --new-file --no-dereference orig/src/communication.c 
 +		return DLMS_ERROR_CODE_INVALID_PARAMETER;
 +	}
 +
-+	char buff[16] = "/?!\r\n";
-+	int len = strlen(buff);
-+	if (write(c->socket, buff, len) != len) {
++	int len = strlen(MODE_E_INIT_MESSAGE);
++	if (write(c->socket, MODE_E_INIT_MESSAGE, len) != len) {
 +		log(L_ERROR, "Failed to write initialisation message");
 +		return DLMS_ERROR_CODE_SEND_FAILED;
 +	}
@@ -5184,13 +5416,8 @@ diff --recursive --unified --new-file --no-dereference orig/src/communication.c 
 +	}
 +
 +err:
-+	buff[0] = 0x06;     // ACK
-+	buff[1] = '2'; 	    // "2" HDLC protocol procedure (Mode E)
-+	buff[2] = (char)ch; // baud rate
-+	buff[3] = '2';      // binary mode
-+	buff[4] = 0x0D;
-+	buff[5] = 0x0A;
 +	len = 6;
++	char buff[16] = { 0x06, '2', (char)ch, '2', 0x0D, 0x0A };
 +
 +	if (write(c->socket, buff, 6) != len) {
 +		log(L_ERROR, "Failed to write acknowledgment message");
@@ -5208,112 +5435,6 @@ diff --recursive --unified --new-file --no-dereference orig/src/communication.c 
 +	}
 +
 +	return 0;
-+}
-+
-+PRIVATE int com_open_serial_connection(physical_device *dev)
-+{
-+	char *device = dev->connection->parameters.serial.device;
-+	dev->connection->socket = open(device, O_RDWR | O_NOCTTY | O_NONBLOCK);
-+	if (dev->connection->socket == -1) {
-+		log(L_DEBUG, "Failed to open serial port: %s\n", device);
-+		return DLMS_ERROR_TYPE_COMMUNICATION_ERROR;
-+	}
-+
-+	if (!isatty(dev->connection->socket)) {
-+		log(L_DEBUG, "'%s' is not a serial port\n", device);
-+		return DLMS_ERROR_TYPE_COMMUNICATION_ERROR;
-+	}
-+
-+	return (dev->settings.interfaceType != DLMS_INTERFACE_TYPE_HDLC_WITH_MODE_E) ?
-+		       com_initialize_serial_settings(dev->connection) :
-+		       com_initialize_mode_e(dev->connection);
-+}
-+
-+PRIVATE int com_initialize_serial_settings(connection *c)
-+{
-+	int ret		       = 1;
-+	struct termios options = { 0 };
-+	int baudrate	       = 0;
-+	int databits	       = 0;
-+
-+	for (size_t i = 0; i < ARRAY_SIZE(baudrates); i++) {
-+		if (c->parameters.serial.baudrate == baudrates[i].bps) {
-+			baudrate = baudrates[i].baud;
-+			break;
-+		}
-+	}
-+
-+	switch (c->parameters.serial.databits) {
-+	case 5:
-+		databits = CS5;
-+		break;
-+	case 6:
-+		databits = CS6;
-+		break;
-+	case 7:
-+		databits = CS7;
-+		break;
-+	case 8:
-+		databits = CS8;
-+		break;
-+	default:
-+		log(L_ERROR, "Invalid databits\n");
-+		goto err;
-+	}
-+
-+	char p = *c->parameters.serial.parity;
-+	switch (p) {
-+	case 'n':
-+		options.c_cflag &= ~PARENB;
-+		break;
-+	case 'o':
-+		options.c_cflag |= (PARENB | PARODD);
-+		break;
-+	case 'e':
-+		options.c_cflag |= PARENB;
-+		options.c_cflag &= ~PARODD;
-+		break;
-+	case 'm':
-+		options.c_cflag |= (PARENB | CMSPAR | PARODD);
-+		break;
-+	case 's':
-+		options.c_cflag |= (PARENB | CMSPAR);
-+		options.c_cflag &= ~PARODD;
-+		break;
-+	default:
-+		log(L_ERROR, "Invalid parity\n");
-+		goto err;
-+	}
-+
-+	if (c->parameters.serial.stopbits == 1) {
-+		options.c_cflag &= ~CSTOPB;
-+	} else {
-+		options.c_cflag |= CSTOPB;
-+	}
-+
-+	options.c_cflag = databits | CREAD | CLOCAL;
-+
-+	cfsetospeed(&options, baudrate);
-+	cfsetispeed(&options, baudrate);
-+
-+	if (!strncmp("rts/cts", c->parameters.serial.flow_control, strlen("rts/cts"))) {
-+		options.c_cflag |= CRTSCTS;
-+	} else if (!strncmp("xon/xoff", c->parameters.serial.flow_control, strlen("xon/xoff"))) {
-+		options.c_iflag |= (IXON | IXOFF);
-+	}
-+
-+	// How long we are waiting reply charachter from serial port.
-+	options.c_cc[VMIN]  = 1;
-+	options.c_cc[VTIME] = 5;
-+
-+	if (tcsetattr(c->socket, TCSANOW, &options) != 0) {
-+		log(L_ERROR, "Failed to set STTY settings");
-+		goto err;
-+	}
-+
-+	ret = 0;
-+err:
-+	return ret;
 +}
 +
 +PRIVATE int send_data(connection *c, gxByteBuffer *data)
@@ -5387,6 +5508,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/communication.c 
 +	int lastReadIndex	 = 0;
 +	unsigned short bytesRead = 0;
 +	unsigned short readTime	 = 0;
++
 +	do {
 +		//Get bytes available.
 +		ret = ioctl(c->socket, FIONREAD, &cnt);
@@ -5435,6 +5557,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/communication.c 
 +			lastReadIndex = pos;
 +		}
 +	} while (eopFound == 0);
++
 +	return DLMS_ERROR_CODE_OK;
 +}
 +
@@ -5658,6 +5781,35 @@ diff --recursive --unified --new-file --no-dereference orig/src/communication.c 
 +	return ret;
 +}
 +
++PUBLIC void com_release_connection(connection *c, dlmsSettings *s)
++{
++	int ret = DLMS_ERROR_CODE_OK;
++
++	log(L_INFO, "Releasing connection ('%d') ('%s')", c->id, UTL_SAFE_STR(c->name));
++
++	gxReplyData reply = { 0 };
++	message msg	  = { 0 };
++	reply_init(&reply);
++	mes_init(&msg);
++
++	ret = cl_releaseRequest(s, &msg);
++	if (ret != DLMS_ERROR_CODE_OK) {
++		//Show error but continue close.
++		log(L_DEBUG, "Release failed: %s", hlp_getErrorMessage(ret));
++		goto err;
++	}
++
++	ret = com_read_data_block(c, s, &msg, &reply);
++	if (ret != DLMS_ERROR_CODE_OK) {
++		log(L_ERROR, "Failed to read data block: %s", hlp_getErrorMessage(ret));
++		goto err;
++	}
++
++err:
++	reply_clear(&reply);
++	mes_clear(&msg);
++}
++
 +PUBLIC int com_read(connection *c, dlmsSettings *s, gxObject *object, unsigned char attributeOrdinal)
 +{
 +	int ret		  = DLMS_ERROR_CODE_OK;
@@ -5696,16 +5848,12 @@ diff --recursive --unified --new-file --no-dereference orig/src/communication.c 
 +	log(L_INFO, "Closing connection ('%d') ('%s')", c->id, UTL_SAFE_STR(c->name));
 +
 +	if (!s->server) {
++		com_release_connection(c, s); // Ignore error, continue to close
++
 +		gxReplyData reply = { 0 };
 +		message msg	  = { 0 };
 +		reply_init(&reply);
 +		mes_init(&msg);
-+		if (cl_releaseRequest(s, &msg) != 0 || com_read_data_block(c, s, &msg, &reply) != 0) {
-+			//Show error but continue close.
-+			log(L_DEBUG, "Release failed");
-+		}
-+		reply_clear(&reply);
-+		mes_clear(&msg);
 +
 +		if (cl_disconnectRequest(s, &msg) != 0 || com_read_data_block(c, s, &msg, &reply) != 0) {
 +			//Show error but continue close.
@@ -5745,7 +5893,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/communication.c 
 +	return ret;
 +}
 +
-+PUBLIC int com_readRowsByEntry(connection *c, dlmsSettings *s, gxProfileGeneric *obj, int index, int count)
++PUBLIC int com_readRowsByEntry(connection *c, dlmsSettings *s, gxProfileGeneric *obj, uint32_t index, uint32_t count)
 +{
 +	int ret		  = DLMS_ERROR_CODE_OK;
 +	message data	  = { 0 };
@@ -5847,12 +5995,10 @@ diff --recursive --unified --new-file --no-dereference orig/src/communication.c 
 +
 +PRIVATE void com_handle_init_buffers(connection *c, dlmsSettings *s)
 +{
-+	if (s->maxPduSize == 0xFFFF) {
-+		com_initialize_buffers(c, s->maxPduSize);
-+	} else {
-+		//!< Allocate 50 bytes more because some meters count this wrong and send few bytes too many.
-+		com_initialize_buffers(c, 50 + s->maxPduSize);
-+	}
++	//!< Allocate 50 bytes more because some meters count this wrong and send few bytes too many.
++	int max_pdu_size = s->maxPduSize + 50;
++	int capped_max_pdu_size = MIN(max_pdu_size, 0xFFFF);
++	com_initialize_buffers(c, capped_max_pdu_size);
 +}
 +
 +PRIVATE void com_initialize_buffers(connection *c, int size)
@@ -5867,6 +6013,11 @@ diff --recursive --unified --new-file --no-dereference orig/src/communication.c 
 +PUBLIC void com_close_socket(connection *c)
 +{
 +	if (c->socket != -1) {
++		if (c->type == SERIAL && lockf(c->socket, F_ULOCK, 0)) {
++			log(L_ERROR, "Failed to unlock %s file! Reason: %s\n", c->parameters.s.device,
++			    strerror(errno));
++		}
++
 +		close(c->socket);
 +		c->socket = -1;
 +	}
@@ -5977,7 +6128,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/communication.c 
          uint16_t pos, count;
          if ((ret = cl_parseObjectCount(&reply.data, &count)) != 0)
          {
-@@ -1183,721 +955,60 @@
+@@ -1183,721 +916,60 @@
          for (pos = 0; pos != count; ++pos)
          {
              memset(&obj, 0, sizeof(gxObject));
@@ -6749,18 +6900,15 @@ diff --recursive --unified --new-file --no-dereference orig/src/communication.c 
 \ No newline at end of file
 diff --recursive --unified --new-file --no-dereference orig/src/config.c src/src/config.c
 --- orig/src/config.c	1970-01-01 00:00:00.000000000 +0000
-+++ src/src/config.c	2024-01-24 12:01:58.000000000 +0000
-@@ -0,0 +1,1168 @@
++++ src/src/config.c	2024-04-02 10:13:53.000000000 +0000
+@@ -0,0 +1,1176 @@
 +#include "master.h"
-+
-+#include <libtlt_uci.h>
 +
 +// TODO: check all reallocs
 +// TODO: check all strdups
 +// TODO: make terminal settings validator
 +// TODO: validate auth keys.
 +
-+#define CFG_NAME "dlms_client"
 +#define SEPARATOR log(L_INFO, "----------------------------");
 +
 +typedef struct connection_params_cfg {
@@ -6772,15 +6920,9 @@ diff --recursive --unified --new-file --no-dereference orig/src/config.c src/src
 +		struct {
 +			char *host;
 +			int port;
++			int persistent;
 +		} tcp;
-+		struct {
-+			char *device;
-+			int baudrate;
-+			char *parity;
-+			int databits;
-+			int stopbits;
-+			char *flow_control;
-+		} serial;
++		struct libtlt_termios_settings s;
 +	} parameters;
 +	int wait_time;
 +} connection_params_cfg;
@@ -6789,7 +6931,8 @@ diff --recursive --unified --new-file --no-dereference orig/src/config.c src/src
 +	int id;
 +	char *name;
 +	int enabled;
-+	int server_address;
++	long server_address;
++	long server_address_type;
 +	int logical_server_address;
 +	int client_address;
 +	int access_security;
@@ -6853,6 +6996,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/config.c src/src
 +
 +PRIVATE int cfg_init_mutexes(master *m);
 +PRIVATE int cfg_init_mutex(pthread_mutex_t **mutex);
++PRIVATE pthread_mutex_t **cfg_find_serial_mutex(master *m, const char *device);
 +
 +PRIVATE void cfg_free_dlms_cfg(dlms_cfg *dlms);
 +PRIVATE void cfg_free_connection_cfg(connection_params_cfg *conn);
@@ -6865,10 +7009,15 @@ diff --recursive --unified --new-file --no-dereference orig/src/config.c src/src
 +PRIVATE void cfg_free_cosem_object(cosem_object *o);
 +PRIVATE void cfg_free_cosem_group(cosem_group *g);
 +
-+PUBLIC master *cfg_get_master()
++// fast workaround for 7.7, will remove this with 7.8
++static int ignore_enabled = 0;
++
++PUBLIC master *cfg_get_master(int ignore)
 +{
 +	dlms_cfg *cfg = NULL;
 +	master *m     = NULL;
++
++	ignore_enabled = ignore;
 +
 +	cfg = cfg_read_dlms_cfg();
 +	if (!cfg) {
@@ -7002,6 +7151,11 @@ diff --recursive --unified --new-file --no-dereference orig/src/config.c src/src
 +		}
 +	}
 +
++	if (!cfg->cosem_group_cfg_count) {
++		log(L_ERROR, "Failed to find any COSEM group sections");
++		goto err;
++	}
++
 +	uci_free_context(uci);
 +	return cfg;
 +err:
@@ -7036,10 +7190,14 @@ diff --recursive --unified --new-file --no-dereference orig/src/config.c src/src
 +		goto err;
 +	}
 +
-+	connection_params->enabled = ucix_get_option_int(uci, CFG_NAME, section_id, "enabled", 0);
-+	if (!connection_params->enabled) {
-+		log(L_ERROR, "Connection object ('%d') is disabled", connection_params->id);
-+		goto err;
++	if (ignore_enabled) {
++		connection_params->enabled = 1;
++	} else {
++		connection_params->enabled = ucix_get_option_int(uci, CFG_NAME, section_id, "enabled", 0);
++		if (!connection_params->enabled) {
++			log(L_ERROR, "Connection object ('%d') is disabled", connection_params->id);
++			goto err;
++		}
 +	}
 +
 +	connection_params->name = ucix_get_option_cfg(uci, CFG_NAME, section_id, "name");
@@ -7069,48 +7227,17 @@ diff --recursive --unified --new-file --no-dereference orig/src/config.c src/src
 +			log(L_ERROR, "Option 'port' cannot be empty [1;65535]");
 +			goto err;
 +		}
++
++		int persistent = ucix_get_option_int(uci, CFG_NAME, section_id, "persistent", 0);
++		if (persistent < 0 || persistent > 1) {
++			log(L_ERROR, "Option 'persistent' (%d) is outside range [0;1]", persistent);
++			goto err;
++		}
++		connection_params->parameters.tcp.persistent = persistent;
 +	} else if (connection_params->type == SERIAL_CFG) {
-+		connection_params->parameters.serial.device =
-+			ucix_get_option_cfg(uci, CFG_NAME, section_id, "device");
-+		if (!connection_params->parameters.serial.device) {
-+			log(L_ERROR, "Option 'device' cannot be empty");
-+			goto err;
-+		}
-+
-+		connection_params->parameters.serial.baudrate =
-+			ucix_get_option_int(uci, CFG_NAME, section_id, "baudrate", 0);
-+		if (!connection_params->parameters.serial.baudrate) {
-+			log(L_ERROR, "Option 'baudrate' cannot be empty");
-+			goto err;
-+		}
-+
-+		connection_params->parameters.serial.databits =
-+			ucix_get_option_int(uci, CFG_NAME, section_id, "databits", 0);
-+		if (connection_params->parameters.serial.databits < 5 ||
-+		    connection_params->parameters.serial.databits > 8) {
-+			log(L_ERROR, "Option 'databits' cannot be empty");
-+			goto err;
-+		}
-+
-+		connection_params->parameters.serial.stopbits =
-+			ucix_get_option_int(uci, CFG_NAME, section_id, "stopbits", 0);
-+		if (connection_params->parameters.serial.stopbits < 1 ||
-+		    connection_params->parameters.serial.stopbits > 2) {
-+			log(L_ERROR, "Option 'stopbits' cannot be empty");
-+			goto err;
-+		}
-+
-+		connection_params->parameters.serial.parity =
-+			ucix_get_option_cfg(uci, CFG_NAME, section_id, "parity");
-+		if (!connection_params->parameters.serial.parity) {
-+			log(L_ERROR, "Option 'parity' cannot be empty");
-+			goto err;
-+		}
-+
-+		connection_params->parameters.serial.flow_control =
-+			ucix_get_option_cfg(uci, CFG_NAME, section_id, "flowcontrol");
-+		if (!connection_params->parameters.serial.flow_control) {
-+			log(L_ERROR, "Option 'flowcontrol' cannot be empty");
++	struct libtlt_termios_settings *s = &connection_params->parameters.s;
++		if (ltermios_read_settings(s, uci, CFG_NAME, section_id)) {
++			log(L_ERROR, "ltermios_read_settings error: %s\n", s->error);
 +			goto err;
 +		}
 +	}
@@ -7151,33 +7278,41 @@ diff --recursive --unified --new-file --no-dereference orig/src/config.c src/src
 +		goto err;
 +	}
 +
-+	dev->enabled = ucix_get_option_int(uci, CFG_NAME, section_id, "enabled", 0);
++	if (ignore_enabled) {
++		dev->enabled = 1;
++	} else {
++		dev->enabled = ucix_get_option_int(uci, CFG_NAME, section_id, "enabled", 0);
++		if (!dev->enabled) {
++			log(L_ERROR, "physical_device is disabled");
++			goto err;
++		}
++	}
++
 +	dev->name = ucix_get_option_cfg(uci, CFG_NAME, section_id, "name");
 +	if (!dev->name) {
 +		log(L_ERROR, "Option 'name' cannot be empty");
 +		goto err;
 +	}
 +
-+	dev->server_address = ucix_get_option_int(uci, CFG_NAME, section_id, "server_addr", 0);
++	dev->server_address = ucix_get_option_int(uci, CFG_NAME, section_id, "server_addr", -1);
 +	if (dev->server_address < 0) {
 +		log(L_ERROR, "Option 'server_addr' cannot be < 0");
 +		goto err;
 +	}
 +
-+	dev->logical_server_address = ucix_get_option_int(uci, CFG_NAME, section_id, "log_server_addr", 0);
++	dev->server_address_type = ucix_get_option_int(uci, CFG_NAME, section_id, "server_addr_type", 0);
++	dev->logical_server_address = ucix_get_option_int(uci, CFG_NAME, section_id, "log_server_addr", -1);
 +	if (dev->logical_server_address < 0) {
 +		log(L_ERROR, "Option 'server_addr' cannot be < 0");
 +		goto err;
 +	}
 +
-+	dev->client_address = ucix_get_option_int(uci, CFG_NAME, section_id, "client_addr", 0);
++	dev->client_address = ucix_get_option_int(uci, CFG_NAME, section_id, "client_addr", -1);
 +	if (dev->client_address < 0) {
 +		log(L_ERROR, "Option 'client_addr' cannot be < 0");
 +		goto err;
 +	}
 +
-+	// TODO: this won't be visible for now;
-+	// by default use logical name referencing
 +	dev->logical_name_ref = ucix_get_option_int(uci, CFG_NAME, section_id, "use_ln_ref", 1);
 +	if (dev->logical_name_ref < 0 || dev->logical_name_ref > 1) {
 +		log(L_ERROR, "Option 'logical_name_ref' (%d) is outside range [0;1]", dev->logical_name_ref);
@@ -7190,44 +7325,53 @@ diff --recursive --unified --new-file --no-dereference orig/src/config.c src/src
 +		goto err;
 +	}
 +
-+	dev->access_security = ucix_get_option_int(uci, CFG_NAME, section_id, "access_security", 0);
-+	if (!dev->access_security) {
-+		log(L_NOTICE, "Option 'access_security'is NONE");
++	dev->interface_type = ucix_get_option_int(uci, CFG_NAME, section_id, "interface", -1);
++	if (dev->interface_type == -1) {
++		log(L_NOTICE, "Option 'interface_type' is empty");
++		goto err;
 +	}
 +
-+	dev->interface_type = ucix_get_option_int(uci, CFG_NAME, section_id, "interface", 0);
-+	if (!dev->interface_type) {
-+		log(L_NOTICE, "Option 'interface_type' is HDLC");
++	dev->access_security = ucix_get_option_int(uci, CFG_NAME, section_id, "access_security", -1);
++	if (dev->access_security == -1) {
++		log(L_NOTICE, "Option 'access_security'is empty");
++		goto err;
 +	}
 +
-+	dev->password = ucix_get_option_cfg(uci, CFG_NAME, section_id, "password");
-+	if (!dev->password) {
-+		log(L_NOTICE, "Option 'password' is empty");
++	if (dev->access_security > DLMS_AUTHENTICATION_NONE && dev->access_security < DLMS_AUTHENTICATION_HIGH_GMAC) {
++		dev->password = ucix_get_option_cfg(uci, CFG_NAME, section_id, "password");
++		if (!dev->password) {
++			log(L_NOTICE, "Option 'password' invalid");
++			goto err;
++		}
 +	}
 +
-+	dev->transport_security = ucix_get_option_int(uci, CFG_NAME, section_id, "transport_security", 0);
-+	if (!dev->transport_security) {
++	dev->transport_security = ucix_get_option_int(uci, CFG_NAME, section_id, "transport_security", -1);
++	if (dev->transport_security == -1) {
 +		log(L_NOTICE, "Option 'transport_security' is NONE");
++		goto err;
 +	}
 +
-+	dev->authentication_key = ucix_get_option_cfg(uci, CFG_NAME, section_id, "authentication_key");
-+	if (!dev->authentication_key) {
-+		log(L_NOTICE, "Option 'authentication_key' is empty or value is invalid");
-+	}
++	if (dev->transport_security > 0) {
++		dev->authentication_key = ucix_get_option_cfg(uci, CFG_NAME, section_id, "authentication_key");
++		if (!dev->authentication_key) {
++			log(L_NOTICE, "Option 'authentication_key' is empty or value is invalid");
++		}
 +
-+	dev->block_cipher_key = ucix_get_option_cfg(uci, CFG_NAME, section_id, "block_cipher_key");
-+	if (!dev->block_cipher_key) {
-+		log(L_NOTICE, "Option 'block_cipher_key' is empty or value is invalid");
-+	}
++		dev->block_cipher_key = ucix_get_option_cfg(uci, CFG_NAME, section_id, "block_cipher_key");
++		if (!dev->block_cipher_key) {
++			log(L_NOTICE, "Option 'block_cipher_key' is empty or value is invalid");
++		}
 +
-+	dev->dedicated_key = ucix_get_option_cfg(uci, CFG_NAME, section_id, "dedicated_key");
-+	if (!dev->dedicated_key) {
-+		log(L_NOTICE, "Option 'dedicated_key' is empty or value is invalid");
-+	}
++		dev->dedicated_key = ucix_get_option_cfg(uci, CFG_NAME, section_id, "dedicated_key");
++		if (!dev->dedicated_key) {
++			log(L_NOTICE, "Option 'dedicated_key' is empty or value is invalid");
++		}
 +
-+	dev->invocation_counter = ucix_get_option_cfg(uci, CFG_NAME, section_id, "invocation_counter");
-+	if (!dev->invocation_counter) {
-+		log(L_NOTICE, "Option 'invocation_counter' is empty");
++		dev->invocation_counter = ucix_get_option_cfg(uci, CFG_NAME, section_id, "invocation_counter");
++		if (!dev->invocation_counter) {
++			log(L_NOTICE, "Option 'invocation_counter' is invalid");
++			goto err;
++		}
 +	}
 +
 +	log(L_NOTICE, "Physical device ('%s', '%s') is successfully added", section_id, UTL_SAFE_STR(dev->name));
@@ -7342,10 +7486,14 @@ diff --recursive --unified --new-file --no-dereference orig/src/config.c src/src
 +		goto err;
 +	}
 +
-+	cosem_group->enabled = ucix_get_option_int(uci, CFG_NAME, section_id, "enabled", 0);
-+	if (!cosem_group->enabled) {
-+		log(L_ERROR, "COSEM group ('%d') is disabled", cosem_group->id);
-+		goto err;
++	if (ignore_enabled) {
++		cosem_group->enabled = 1;
++	} else {
++		cosem_group->enabled = ucix_get_option_int(uci, CFG_NAME, section_id, "enabled", 0);
++		if (!cosem_group->enabled) {
++			log(L_ERROR, "COSEM group ('%d') is disabled", cosem_group->id);
++			goto err;
++		}
 +	}
 +
 +	cosem_group->name = ucix_get_option_cfg(uci, CFG_NAME, section_id, "name");
@@ -7354,7 +7502,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/config.c src/src
 +		goto err;
 +	}
 +
-+	cosem_group->interval = ucix_get_option_int(uci, CFG_NAME, section_id, "interval", 1);
++	cosem_group->interval = ucix_get_option_int(uci, CFG_NAME, section_id, "interval", 60);
 +	if (cosem_group->interval < 1) {
 +		log(L_ERROR, "Option 'interval' (%ld) can not be < 1", cosem_group->interval);
 +		goto err;
@@ -7452,15 +7600,11 @@ diff --recursive --unified --new-file --no-dereference orig/src/config.c src/src
 +	conn->name    = strdup(cfg->name);
 +
 +	if (cfg->type == TCP_CFG) {
++		conn->parameters.tcp.persistent = cfg->parameters.tcp.persistent != 0;
 +		conn->parameters.tcp.host = strdup(cfg->parameters.tcp.host);
 +		conn->parameters.tcp.port = cfg->parameters.tcp.port;
 +	} else if (cfg->type == SERIAL_CFG) {
-+		conn->parameters.serial.device	     = strdup(cfg->parameters.serial.device);
-+		conn->parameters.serial.baudrate     = cfg->parameters.serial.baudrate;
-+		conn->parameters.serial.parity	     = strdup(cfg->parameters.serial.parity);
-+		conn->parameters.serial.flow_control = strdup(cfg->parameters.serial.flow_control);
-+		conn->parameters.serial.databits     = cfg->parameters.serial.databits;
-+		conn->parameters.serial.stopbits     = cfg->parameters.serial.stopbits;
++		memcpy(&conn->parameters.s, &cfg->parameters.s, sizeof(struct libtlt_termios_settings));
 +	} else {
 +		log(L_ERROR, "Connection ('%d', '%s') has invalid connection type", conn->id, UTL_SAFE_STR(conn->name));
 +		goto err;
@@ -7530,7 +7674,12 @@ diff --recursive --unified --new-file --no-dereference orig/src/config.c src/src
 +		goto err;
 +	}
 +
-+	cfg->server_address = cl_getServerAddress(cfg->logical_server_address, cfg->server_address, 0);
++	if (cfg->server_address_type == 0) {
++		cfg->server_address = cl_getServerAddress(cfg->logical_server_address, cfg->server_address, 0);
++	} else {
++		cfg->server_address = utl_get_server_address_from_serial_number(cfg->logical_server_address, cfg->server_address);
++	}
++
 +	cl_init(&dev->settings, cfg->logical_name_ref, cfg->client_address, cfg->server_address,
 +		cfg->access_security, cfg->password, cfg->interface_type);
 +
@@ -7707,7 +7856,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/config.c src/src
 +		if (c->type == TCP) {
 +			mutex_target = &c->mutex;
 +		} else {
-+			mutex_target = (strstr(c->parameters.serial.device, "rs485")) ? &m->mutex_rs485 : &m->mutex_rs232;
++			mutex_target = cfg_find_serial_mutex(m, c->parameters.s.device);
 +		}
 +
 +		if (cfg_init_mutex(mutex_target)) {
@@ -7739,6 +7888,17 @@ diff --recursive --unified --new-file --no-dereference orig/src/config.c src/src
 +	}
 +
 +	return 0;
++}
++
++PRIVATE pthread_mutex_t **cfg_find_serial_mutex(master *m, const char *device)
++{
++	if (strstr(device, "rs232")) {
++		return &m->mutex_rs232;
++	} else if (strstr(device, "rs485")) {
++		return &m->mutex_rs485;
++	} else {
++		return &m->mutex_usb;
++	}
 +}
 +
 +PRIVATE void cfg_free_dlms_cfg(dlms_cfg *dlms)
@@ -7780,10 +7940,6 @@ diff --recursive --unified --new-file --no-dereference orig/src/config.c src/src
 +
 +	if (c->type == TCP_CFG) {
 +		free(c->parameters.tcp.host);
-+	} else if (c->type == SERIAL_CFG) {
-+		free(c->parameters.serial.device);
-+		free(c->parameters.serial.parity);
-+		free(c->parameters.serial.flow_control);
 +	}
 +
 +	free(c);
@@ -7832,26 +7988,31 @@ diff --recursive --unified --new-file --no-dereference orig/src/config.c src/src
 +		return;
 +	}
 +
-+	for (size_t i = 0; i < m->connection_count; i++) {
-+		cfg_free_connection(m->connections[i]);
-+	}
-+
 +	for (size_t i = 0; i < m->physical_dev_count; i++) {
 +		cfg_free_physical_device(m->physical_devices[i]);
++	}
++
++	for (size_t i = 0; i < m->connection_count; i++) {
++		cfg_free_connection(m->connections[i]);
 +	}
 +
 +	for (size_t i = 0; i < m->cosem_object_count; i++) {
 +		cfg_free_cosem_object(m->cosem_objects[i]);
 +	}
-+	
++
 +	for (size_t i = 0; i < m->cosem_group_count; i++) {
 +		cfg_free_cosem_group(m->cosem_groups[i]);
 +	}
 +
-+	pthread_mutex_destroy(m->mutex_rs232);
-+	free(m->mutex_rs232);
-+	pthread_mutex_destroy(m->mutex_rs485);
-+	free(m->mutex_rs485);
++	if (m->mutex_rs232) {
++		pthread_mutex_destroy(m->mutex_rs232);
++		free(m->mutex_rs232);
++	}
++
++	if (m->mutex_rs485) {
++		pthread_mutex_destroy(m->mutex_rs485);
++		free(m->mutex_rs485);
++	}
 +
 +	free(m->connections);
 +	free(m->physical_devices);
@@ -7873,10 +8034,6 @@ diff --recursive --unified --new-file --no-dereference orig/src/config.c src/src
 +		free(c->parameters.tcp.host);
 +		pthread_mutex_destroy(c->mutex);
 +		free(c->mutex);
-+	} else {
-+		free(c->parameters.serial.device);
-+		free(c->parameters.serial.parity);
-+		free(c->parameters.serial.flow_control);
 +	}
 +
 +	free(c);
@@ -7887,6 +8044,8 @@ diff --recursive --unified --new-file --no-dereference orig/src/config.c src/src
 +	if (!d) {
 +		return;
 +	}
++
++	com_close(d->connection, &d->settings);
 +
 +	cip_clear(&d->settings.cipher);
 +	cl_clear(&d->settings);
@@ -8010,8 +8169,8 @@ diff --recursive --unified --new-file --no-dereference orig/src/connection.c src
 -}
 diff --recursive --unified --new-file --no-dereference orig/src/cosem_group.c src/src/cosem_group.c
 --- orig/src/cosem_group.c	1970-01-01 00:00:00.000000000 +0000
-+++ src/src/cosem_group.c	2024-01-24 12:01:58.000000000 +0000
-@@ -0,0 +1,210 @@
++++ src/src/cosem_group.c	2024-04-02 10:13:53.000000000 +0000
+@@ -0,0 +1,237 @@
 +#include "master.h"
 +
 +#define BUFFER_ATTRIBUTE_INDEX 2
@@ -8019,6 +8178,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/cosem_group.c sr
 +PRIVATE int cg_read_cosem_object(cosem_object *cosem_object, physical_device *dev);
 +PRIVATE int cg_format_group_data(char **data, object_attributes *attr, char *device_name);
 +PRIVATE int cg_read_profile_generic_data(cosem_object *obj, gxProfileGeneric *pg, physical_device *dev);
++PRIVATE void cg_clear_routine(object_attributes *a, dlmsSettings *s, gxObject *o);
 +
 +PUBLIC char *cg_read_group_codes(cosem_group *group, int *rc)
 +{
@@ -8038,52 +8198,54 @@ diff --recursive --unified --new-file --no-dereference orig/src/cosem_group.c sr
 +			object_attributes attrs = { 0 };
 +			int err			= 0;
 +
-+			utl_lock_mutex_if_required(dev);
-+
 +			err = !dev->enabled;
 +			if (err) {
-+				utl_add_error_message(&data, dev->name, "Physical device is disabled", err);
++				utl_add_error_message(&data, dev->name, err, "Physical device is disabled");
 +				log(L_WARNING, "Physical device ('%d') is disabled!", dev->id);
-+				goto loopend_without_close;
++				goto loopend;
 +			}
++
++			utl_lock_mutex_if_required(dev);
 +
 +			err = cg_make_connection(dev);
 +			if (err != DLMS_ERROR_CODE_OK) {
-+				utl_add_error_message(&data, dev->name, "Failed to make connection with device", err);
++				utl_add_error_message(&data, dev->name, err, "Failed to make connection with device: %s", hlp_getErrorMessage(err));
 +				log(L_ERROR, "Failed to make connection with device ('%d', '%s')", dev->id, dev->name);
-+				goto loopend_without_close;
++				utl_unlock_mutex_if_required(dev);
++				goto loopend;
 +			}
 +
 +			err = cg_read_cosem_object(cosem_object, dev);
 +			if (err != DLMS_ERROR_CODE_OK) {
-+				utl_add_error_message(&data, dev->name, hlp_getErrorMessage(err), err);
-+				log(L_ERROR, "Failed to read COSEM object");
++				utl_add_error_message(&data, dev->name, err, "Failed to read COSEM object: %s", hlp_getErrorMessage(err));
++				log(L_ERROR, "Failed to read COSEM object: %s", hlp_getErrorMessage(err));
++				cg_shutdown_connection(dev);
++				utl_unlock_mutex_if_required(dev);
 +				goto loopend;
 +			}
++
++			cg_shutdown_connection(dev);
++			utl_unlock_mutex_if_required(dev);
 +
 +			attr_init(&attrs, cosem_object->object);
 +			err = attr_to_string(cosem_object->object, &attrs, dev->settings.useLogicalNameReferencing);
 +			if (err != DLMS_ERROR_CODE_OK) {
-+				utl_add_error_message(&data, dev->name, "Failed to get COSEM object attributes", err);
++				utl_add_error_message(&data, dev->name, err, "Failed to get COSEM object attributes");
 +				log(L_ERROR, "Failed to get COSEM object attributes");
 +				goto loopend;
 +			}
 +
 +			err = cg_format_group_data(&data, &attrs, dev->name);
 +			if (err != DLMS_ERROR_CODE_OK) {
-+				utl_add_error_message(&data, dev->name, "Failed to format read attributes", err);
++				utl_add_error_message(&data, dev->name, err, "Failed to format read attributes");
 +				log(L_ERROR, "Failed to format read attributes\n");
 +				goto loopend;
 +			}
 +
 +			*rc = 0;
 +		loopend:
-+			com_close(dev->connection, &dev->settings);
-+		loopend_without_close:
-+			utl_unlock_mutex_if_required(dev);
 +			utl_append_if_needed(&data, j, cosem_object->device_count - 1, ",");
-+			attr_free(&attrs);
-+			oa_clear(&dev->settings.releasedObjects, 1);
++			cg_clear_routine(&attrs, &dev->settings, cosem_object->object);
 +		}
 +		utl_append_to_str(&data, "}");
 +		utl_append_if_needed(&data, i, group->cosem_object_count - 1, ",");
@@ -8102,16 +8264,19 @@ diff --recursive --unified --new-file --no-dereference orig/src/cosem_group.c sr
 +		return 1;
 +	}
 +
-+	if (dev->connection->socket != -1) {
++	bool is_socket_open = (dev->connection->socket != -1);
++	if (is_socket_open && !com_is_persistent(dev->connection)) {
 +		log(L_INFO, "Already connected: %d", dev->connection->socket);
 +		return ret;
 +	}
 +
-+	ret = com_open_connection(dev);
-+	if (ret != DLMS_ERROR_CODE_OK) {
-+		log(L_ERROR, "Failed to open connection ('%d', '%s')", dev->connection->id, dev->connection->name);
-+		com_close_socket(dev->connection);
-+		return ret;
++	if (!is_socket_open) {
++		ret = com_open_connection(dev);
++		if (ret != DLMS_ERROR_CODE_OK) {
++			log(L_ERROR, "Failed to open connection ('%d', '%s')", dev->connection->id, dev->connection->name);
++			com_close_socket(dev->connection);
++			return ret;
++		}
 +	}
 +
 +	ret = com_update_invocation_counter(dev->connection, &dev->settings, dev->invocation_counter);
@@ -8130,6 +8295,15 @@ diff --recursive --unified --new-file --no-dereference orig/src/cosem_group.c sr
 +err:
 +	com_close(dev->connection, &dev->settings);
 +	return ret;
++}
++
++PUBLIC void cg_shutdown_connection(physical_device *dev)
++{
++	if (com_is_persistent(dev->connection)) {
++		com_release_connection(dev->connection, &dev->settings);
++	} else {
++		com_close(dev->connection, &dev->settings);
++	}
 +}
 +
 +PRIVATE int cg_read_cosem_object(cosem_object *cosem_object, physical_device *dev)
@@ -8169,6 +8343,9 @@ diff --recursive --unified --new-file --no-dereference orig/src/cosem_group.c sr
 +		}
 +
 +		ret = com_read(dev->connection, &dev->settings, object, ch);
++		if (ret == DLMS_ERROR_CODE_UNAVAILABLE_OBJECT) {
++			continue;
++		}
 +		if (ret != DLMS_ERROR_CODE_OK) {
 +			log(L_ERROR, "Failed to read object attribute, index: %d", ch);
 +
@@ -8200,10 +8377,12 @@ diff --recursive --unified --new-file --no-dereference orig/src/cosem_group.c sr
 +
 +PRIVATE int cg_read_profile_generic_data(cosem_object *obj, gxProfileGeneric *pg, physical_device *dev)
 +{
-+	log(L_INFO, "Reading profile generic rows, total entries: %ld", pg->profileEntries);
-+	int calc = pg->profileEntries - obj->entries;
++	log(L_INFO, "Reading profile generic rows");
++	uint32_t entries = (obj->entries > pg->entriesInUse) ? pg->entriesInUse : obj->entries;
++	uint32_t index 	 = pg->entriesInUse - entries;
++	log(L_INFO, "Reading index: %ld, Entries in use: %ld", index, entries);
 +
-+	return com_readRowsByEntry(dev->connection, &dev->settings, pg, calc, obj->entries + 1);
++	return com_readRowsByEntry(dev->connection, &dev->settings, pg, index, obj->entries);
 +}
 +
 +PRIVATE int cg_format_group_data(char **data, object_attributes *attr, char *device_name)
@@ -8221,6 +8400,13 @@ diff --recursive --unified --new-file --no-dereference orig/src/cosem_group.c sr
 +	free(json);
 +
 +	return 0;
++}
++
++PRIVATE void cg_clear_routine(object_attributes *a, dlmsSettings *s, gxObject *o)
++{
++	attr_free(a);
++	oa_clear(&s->releasedObjects, 1);
++	obj_clear(o);
 +}
 diff --recursive --unified --new-file --no-dereference orig/src/getopt.c src/src/getopt.c
 --- orig/src/getopt.c	2023-11-10 10:15:18.000000000 +0000
@@ -8279,8 +8465,8 @@ diff --recursive --unified --new-file --no-dereference orig/src/getopt.c src/src
 -}
 diff --recursive --unified --new-file --no-dereference orig/src/main.c src/src/main.c
 --- orig/src/main.c	2023-11-10 10:15:18.000000000 +0000
-+++ src/src/main.c	2024-01-24 12:01:58.000000000 +0000
-@@ -1,785 +1,59 @@
++++ src/src/main.c	2024-04-02 10:13:53.000000000 +0000
+@@ -1,785 +1,42 @@
 -//
 -// --------------------------------------------------------------------------
 -//  Gurux Ltd
@@ -8313,16 +8499,20 @@ diff --recursive --unified --new-file --no-dereference orig/src/main.c src/src/m
 -#include <unistd.h>
 -#include <strings.h>
 -#endif
--
++#include "master.h"
+ 
 -#include "../include/communication.h"
 -#include "../../development/include/gxserializer.h"
--
++master *g_master = NULL;
++log_level_type g_debug_level = L_EMERG;
+ 
 -//Client don't need this.
 -unsigned char svr_isTarget(
 -    dlmsSettings* settings,
 -    unsigned long serverAddress,
 -    unsigned long clientAddress)
--{
++int MAIN(int argc, char **argv)
+ {
 -    return 0;
 -}
 -
@@ -8350,8 +8540,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/main.c src/src/m
 -{
 -    return DLMS_METHOD_ACCESS_MODE_ACCESS;
 -}
-+#include "master.h"
- 
+-
 -/**
 -* Updates clock and reads it.
 -*/
@@ -8385,15 +8574,13 @@ diff --recursive --unified --new-file --no-dereference orig/src/main.c src/src/m
 -    ret = time_print(NULL, &clock.time);
 -    return ret;
 -}
-+master *g_master = NULL;
-+log_level_type g_debug_level = L_EMERG;
++	int rc = EXIT_FAILURE;
  
 -/**
 -* Calls disconnect method.
 -*/
 -int disconnect(connection* connection)
-+int MAIN(int argc, char **argv)
- {
+-{
 -    int ret;
 -    gxDisconnectControl dc;
 -    unsigned char ln[] = { 0,0,96,3,10,255 };
@@ -8403,9 +8590,40 @@ diff --recursive --unified --new-file --no-dereference orig/src/main.c src/src/m
 -    GX_INT8(param) = 0;
 -    ret = com_method(connection, &dc.base, 1, &param);
 -    return ret;
--}
-+	int rc = EXIT_FAILURE;
- 
++	if (utl_parse_args(argc, argv, &g_debug_level)) {
++		fprintf(stderr, "Failed to parse arguments\n");
++		goto err;
++	}
++
++	logger_init(g_debug_level, L_TYPE_STDOUT, "dlms_client");
++
++	g_master = cfg_get_master(0);
++	if (!g_master) {
++		log(L_ERROR, "Failed to read configuration.\n");
++		goto err;
++	}
++
++	// utl_debug_master(g_master);
++
++	if (mstr_create_db(g_master)) {
++		log(L_ERROR, "Failed to create database\n");
++		goto err_free_master;
++	}
++
++	if (mstr_initialize_cosem_groups(g_master)) {
++		log(L_ERROR, "Failed to initialize COSEM groups");
++		goto err_free_db;
++	}
++
++	rc = 0;
++err_free_db:
++	mstr_db_free(g_master);
++err_free_master:
++	cfg_free_master(g_master);
++err:
++	return rc;
+ }
+-
 -/**
 -* Update firmware of the meter.
 -*
@@ -8521,56 +8739,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/main.c src/src/m
 -    bb_clear(&bb);
 -    var_clear(&param);
 -    return ret;
-+	if (utl_parse_args(argc, argv, &g_debug_level)) {
-+		fprintf(stderr, "Failed to parse arguments\n");
-+		return rc;
-+	}
-+
-+	logger_init(g_debug_level, L_TYPE_STDOUT, "dlms_client");
-+
-+	if (init_ubus_test_functions()) {
-+		log(L_ERROR, "Failed to initiate UBUS");
-+		return rc;
-+	}
-+
-+	if (uloop_init()) {
-+		log(L_ERROR, "Failed to initiate uloop");
-+		goto err_free_ubus;
-+	}
-+
-+	g_master = cfg_get_master();
-+	if (!g_master) {
-+		log(L_ERROR, "Failed to read configuration. Only UBUS will be initiated\n");
-+		goto uloop;
-+	}
-+
-+	// utl_debug_master(g_master);
-+
-+	if (mstr_create_db(g_master)) {
-+		log(L_ERROR, "Failed to create database\n");
-+		goto err_free_master;
-+	}
-+
-+	if (mstr_initialize_cosem_groups(g_master)) {
-+		log(L_ERROR, "Failed to initialize COSEM groups");
-+		goto err_free_db;
-+	}
-+
-+uloop:
-+	if (uloop_run()) {
-+		log(L_ERROR, "uloop_run returned an error");
-+		goto err_free_db;
-+	}
-+
-+	rc = 0;
-+err_free_db:
-+	mstr_db_free(g_master);
-+err_free_master:
-+	cfg_free_master(g_master);
-+err_free_ubus:
-+	ubus_exit();
-+	return rc;
- }
+-}
 -
 -
 -/*Read DLMS meter using TCP/IP connection.*/
@@ -9122,8 +9291,8 @@ diff --recursive --unified --new-file --no-dereference orig/src/main.c src/src/m
 -
 diff --recursive --unified --new-file --no-dereference orig/src/master.c src/src/master.c
 --- orig/src/master.c	1970-01-01 00:00:00.000000000 +0000
-+++ src/src/master.c	2024-01-24 12:01:58.000000000 +0000
-@@ -0,0 +1,161 @@
++++ src/src/master.c	2024-04-02 10:13:53.000000000 +0000
+@@ -0,0 +1,169 @@
 +#include "master.h"
 +
 +#define SQL_TABLE	  "dlms_data"
@@ -9207,6 +9376,14 @@ diff --recursive --unified --new-file --no-dereference orig/src/master.c src/src
 +		}
 +	}
 +
++	for (size_t i = 0; i < m->cosem_group_count; i++) {
++		if (pthread_join(threads[i], NULL)) {
++			log(L_ERROR, "Failed to wait for COSEM group thread: %s",
++			    UTL_SAFE_STR(m->cosem_groups[i]->name));
++			return 1;
++		}
++	}
++
 +	return 0;
 +}
 +
@@ -9285,206 +9462,41 @@ diff --recursive --unified --new-file --no-dereference orig/src/master.c src/src
 +	sqlite3_finalize(m->stmt_insert);
 +	sqlite3_close_v2(m->db);
 +}
-diff --recursive --unified --new-file --no-dereference orig/src/master.h src/src/master.h
---- orig/src/master.h	1970-01-01 00:00:00.000000000 +0000
-+++ src/src/master.h	2024-01-24 12:01:58.000000000 +0000
-@@ -0,0 +1,172 @@
-+#pragma once
-+
-+#ifdef TEST
-+#include "stub_external.h"
-+#else
-+#define PRIVATE static
-+#define PUBLIC
-+#define MAIN main
-+#define TEST_BREAK
-+#endif
-+
-+#include <libubox/uloop.h>
-+#include <libubox/utils.h>
-+#include <tlt_logger.h>
-+#include <libubus.h>
-+#include <sqlite3.h>
-+#include <pthread.h>
-+
-+//!< DLMS headers
-+#include <converters.h>
-+#include <gxignore.h>
-+#include <cosem.h>
-+#include <client.h>
-+
-+#define UTL_SAFE_STR(x) ((x) ? (x) : "")
-+#define UTL_STR(x) UTL_STR2(x)
-+#define UTL_STR2(x) #x
-+
-+#define MAX_CONNECTIONS_COUNT	   10
-+#define MAX_PHYSICAL_DEVICES_COUNT 30 // overall
-+#define MAX_COSEM_OBJECTS_COUNT	   20 // each group
-+#define MAX_COSEM_GROUPS_COUNT	   10
-+
-+typedef struct {
-+	int enabled;
-+	int id;
-+	char *name;
-+	enum { TCP, SERIAL } type;
-+	union {
-+		struct {
-+			char *host;
-+			int port;
-+		} tcp;
-+		struct {
-+			char *device;
-+			int baudrate;
-+			char *parity;
-+			int databits;
-+			int stopbits;
-+			char *flow_control;
-+		} serial;
-+	} parameters;
-+	int socket;
-+	unsigned long wait_time;
-+	gxByteBuffer data;
-+	pthread_mutex_t *mutex;
-+} connection;
-+
-+typedef struct {
-+	int enabled;
-+	int id;
-+	char *name;
-+	char *invocation_counter;
-+	connection *connection;
-+	dlmsSettings settings;
-+} physical_device;
-+
-+typedef struct {
-+	int enabled;
-+	int id;
-+	char *name;
-+	int entries;
-+	gxObject *object;
-+	physical_device **devices;
-+	size_t device_count;
-+} cosem_object;
-+
-+typedef struct {
-+	int enabled;
-+	int id;
-+	char *name;
-+	uint32_t interval;
-+	size_t cosem_object_count;
-+	cosem_object **cosem_objects;
-+} cosem_group;
-+
-+typedef struct {
-+	size_t physical_dev_count;
-+	size_t cosem_group_count;
-+	physical_device **physical_devices;
-+	cosem_group **cosem_groups;
-+	sqlite3 *db;
-+	sqlite3_stmt *stmt_insert;
-+	pthread_mutex_t *mutex_rs232;
-+	pthread_mutex_t *mutex_rs485;
-+
-+	//!< these only needed for free at the end:
-+	size_t connection_count;
-+	size_t cosem_object_count;
-+	connection **connections;
-+	cosem_object **cosem_objects;
-+} master;
-+
-+typedef struct {
-+	char **values;
-+	int count;
-+} object_attributes;
-+
-+extern master *g_master;
-+extern log_level_type g_debug_level;
-+
-+// config.c
-+//////////////////////////////////////////////////////////////////////////////////////////
-+
-+PUBLIC master *cfg_get_master();
-+PUBLIC void cfg_free_master(master *m);
-+
-+// master.c
-+//////////////////////////////////////////////////////////////////////////////////////////
-+
-+PUBLIC int mstr_create_db(master *m);
-+PUBLIC int mstr_initialize_cosem_groups(master *m);
-+PUBLIC void mstr_write_group_data_to_db(cosem_group *group, char *data);
-+PUBLIC void mstr_db_free(master *m);
-+
-+// attribute_converter.c
-+//////////////////////////////////////////////////////////////////////////////////////////
-+
-+PUBLIC void attr_init(object_attributes *attributes, gxObject *object);
-+PUBLIC void attr_free(object_attributes *attributes);
-+PUBLIC char *attr_to_json(object_attributes *attributes);
-+PUBLIC int attr_to_string(gxObject *object, object_attributes *attributes, int use_ln_ref);
-+
-+// cosem_group.c
-+//////////////////////////////////////////////////////////////////////////////////////////
-+
-+PUBLIC char *cg_read_group_codes(cosem_group *group, int *rc);
-+PUBLIC int cg_make_connection(physical_device *dev);
-+
-+// utils.c
-+//////////////////////////////////////////////////////////////////////////////////////////
-+
-+PUBLIC int utl_parse_args(int argc, char **argv, log_level_type *debug_lvl);
-+PUBLIC void utl_append_to_str(char **destination, const char *source);
-+PUBLIC void utl_append_obj_name(char **data, char *name);
-+PUBLIC void utl_append_if_needed(char **data, int index, int value, char *str);
-+PUBLIC void utl_add_error_message(char **data, char *device_name, const char *err_msg, const int err_num);
-+PUBLIC void utl_smart_sleep(time_t *t0, time_t *tn, unsigned p);
-+PUBLIC void utl_lock_mutex_if_required(physical_device *d);
-+PUBLIC void utl_unlock_mutex_if_required(physical_device *d);
-+PUBLIC int utl_validate_cosem_id(const int cosem_id);
-+__attribute__((unused)) PUBLIC void utl_debug_master(master *m);
-+PUBLIC int utl_is_logical_name(const char *name);
-+
-+// ubus.c
-+//////////////////////////////////////////////////////////////////////////////////////////
-+
-+PUBLIC int init_ubus_test_functions();
-+PUBLIC void ubus_exit();
-+
-+// communication.c
-+//////////////////////////////////////////////////////////////////////////////////////////
-+
-+PUBLIC int com_open_connection(physical_device *dev);
-+PUBLIC void com_close(connection *c, dlmsSettings *s);
-+PUBLIC void com_close_socket(connection *c);
-+PUBLIC int com_update_invocation_counter(connection *c, dlmsSettings *s, const char *invocationCounter);
-+PUBLIC int com_initialize_connection(connection *c, dlmsSettings *s);
-+PUBLIC int com_read(connection *c, dlmsSettings *s, gxObject *object, unsigned char attributeOrdinal);
-+PUBLIC int com_getKeepAlive(connection *c, dlmsSettings *s);
-+PUBLIC int com_readRowsByEntry(connection *c, dlmsSettings *s, gxProfileGeneric *obj, int index, int count);
-+PUBLIC int com_get_association_view(connection *c, dlmsSettings *s);
-diff --recursive --unified --new-file --no-dereference orig/src/ubus.c src/src/ubus.c
---- orig/src/ubus.c	1970-01-01 00:00:00.000000000 +0000
-+++ src/src/ubus.c	2024-01-24 12:01:58.000000000 +0000
-@@ -0,0 +1,590 @@
+diff --recursive --unified --new-file --no-dereference orig/src/rpc/ubus.c src/src/rpc/ubus.c
+--- orig/src/rpc/ubus.c	1970-01-01 00:00:00.000000000 +0000
++++ src/src/rpc/ubus.c	2024-04-02 10:13:53.000000000 +0000
+@@ -0,0 +1,687 @@
 +#include "master.h"
++
++#include <rpcd/plugin.h>
++#include <libubox/blobmsg_json.h>
 +
 +#define __UNUSED   __attribute__((unused))
 +#define KEY_SIZE   32
 +#define TITLE_SIZE 16
 +
++// Oh hell no
++master *g_master = NULL;
++log_level_type g_debug_level = L_DEBUG;
++
 +PRIVATE int reply(struct ubus_context *ctx, struct ubus_request_data *req, const int err_code, const char *y);
++// remove pretty with API versioning (probably 7.9 or even later)
++PRIVATE int reply_pretty(struct ubus_context *ctx, struct ubus_request_data *req, const int err_code, const char *y);
 +PRIVATE int device_cb(struct ubus_context *ctx, __UNUSED struct ubus_object *obj,
 +		      struct ubus_request_data *req, __UNUSED const char *method, struct blob_attr *msg);
-+PRIVATE int device_cb_args(physical_device *d, struct blob_attr *msg);
-+PRIVATE int read_security_settings(struct blob_attr **tb, physical_device *d);
++PRIVATE int device_cb_args(physical_device *d, struct blob_attr *msg, char *result);
++PRIVATE int read_security_settings(struct blob_attr **tb, physical_device *d, char *result);
 +PRIVATE int validate_key(const char *key, size_t len);
 +PRIVATE void find_corresponding_mutex(connection *c);
++PRIVATE pthread_mutex_t *find_serial_mutex(const char *device);
 +PRIVATE int tcp_connection_match(connection *g_c, connection *c);
 +PRIVATE void free_device(physical_device *d);
 +PRIVATE int cosem_group_cb(struct ubus_context *ctx, __UNUSED struct ubus_object *obj,
 +			   struct ubus_request_data *req, __UNUSED const char *method, struct blob_attr *msg);
-+PRIVATE int cosem_group_args(cosem_group *d, struct blob_attr *msg);
++PRIVATE int cosem_group_args(cosem_group *g, struct blob_attr *msg, int *pretty);
 +PRIVATE cosem_object *parse_cosem_object(struct blob_attr *b);
 +PRIVATE void free_cosem_group(cosem_group *g);
++PRIVATE void add_result(char *result, const char *format, ...);
 +
 +enum {
 +	TEST_DEVICE_OPT_TYPE,
@@ -9496,6 +9508,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/ubus.c src/src/u
 +	TEST_DEVICE_OPT_SERIAL_STOPBITS,
 +	TEST_DEVICE_OPT_SERIAL_PARITY,
 +	TEST_DEVICE_OPT_SERIAL_FLOWCONTROL,
++	TEST_DEVICE_OPT_SERVER_ADDR_TYPE,
 +	TEST_DEVICE_OPT_SERVER_ADDR,
 +	TEST_DEVICE_OPT_LOG_SERVER_ADDR,
 +	TEST_DEVICE_OPT_CLIENT_ADDR,
@@ -9522,6 +9535,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/ubus.c src/src/u
 +	[TEST_DEVICE_OPT_SERIAL_STOPBITS]    = { .name = "serial_stopbits", .type = BLOBMSG_TYPE_INT32 },
 +	[TEST_DEVICE_OPT_SERIAL_PARITY]	     = { .name = "serial_parity", .type = BLOBMSG_TYPE_STRING },
 +	[TEST_DEVICE_OPT_SERIAL_FLOWCONTROL] = { .name = "serial_flowcontrol", .type = BLOBMSG_TYPE_STRING },
++	[TEST_DEVICE_OPT_SERVER_ADDR_TYPE]   = { .name = "server_addr_type", .type = BLOBMSG_TYPE_INT32 },
 +	[TEST_DEVICE_OPT_SERVER_ADDR]	     = { .name = "server_addr", .type = BLOBMSG_TYPE_INT32 },
 +	[TEST_DEVICE_OPT_LOG_SERVER_ADDR]    = { .name = "logical_server_addr", .type = BLOBMSG_TYPE_INT32 },
 +	[TEST_DEVICE_OPT_CLIENT_ADDR]	     = { .name = "client_addr", .type = BLOBMSG_TYPE_INT32 },
@@ -9560,11 +9574,13 @@ diff --recursive --unified --new-file --no-dereference orig/src/ubus.c src/src/u
 +
 +enum {
 +	TEST_COSEM_GROUP_OPT_OBJECTS,
++	TEST_COSEM_GROUP_OPT_PRETTY,
 +	TEST_COSEM_GROUP_OPT_COUNT
 +};
 +
 +PRIVATE struct blobmsg_policy cosem_group_policy[] = {
 +	[TEST_COSEM_GROUP_OPT_OBJECTS] = { .name = "objects", .type = BLOBMSG_TYPE_ARRAY },
++	[TEST_COSEM_GROUP_OPT_PRETTY] = { .name = "pretty", .type = BLOBMSG_TYPE_INT32 }
 +};
 +
 +PRIVATE const struct ubus_method ubus_methods[] = {
@@ -9581,23 +9597,18 @@ diff --recursive --unified --new-file --no-dereference orig/src/ubus.c src/src/u
 +	.n_methods = ARRAY_SIZE(ubus_methods),
 +};
 +
-+PRIVATE struct ubus_context *ubus = NULL;
-+
-+PUBLIC int init_ubus_test_functions()
++PRIVATE int rpc_init_dlms_test_functions(const struct rpc_daemon_ops *o, struct ubus_context *ctx)
 +{
-+	ubus = ubus_connect(NULL);
-+	if (!ubus) {
-+		log(L_ERROR, "Failed to connect to UBUS\n");
-+		return 1;
++	(void)o;
++
++	struct uci_context *uci = uci_alloc_context();
++	if (!uci) {
++		return -1;
 +	}
 +
-+	if (ubus_add_object(ubus, &ubus_obj)) {
-+		log(L_ERROR, "Failed to add UBUS object\n");
-+		return 1;
-+	}
-+
-+	ubus_add_uloop(ubus);
-+	return 0;
++	g_debug_level = ucix_get_option_int(uci, CFG_NAME, "main", "debug", 1);
++	logger_init(g_debug_level, L_TYPE_STDOUT, "dlms_client_rpc");
++	return ubus_add_object(ctx, &ubus_obj);
 +}
 +
 +PRIVATE int reply(struct ubus_context *ctx, struct ubus_request_data *req, const int err_code, const char *y)
@@ -9631,19 +9642,55 @@ diff --recursive --unified --new-file --no-dereference orig/src/ubus.c src/src/u
 +	return rc;
 +}
 +
++PRIVATE int reply_pretty(struct ubus_context *ctx, struct ubus_request_data *req, const int err_code, const char *y)
++{
++	int rc		  = 1;
++	struct blob_buf b = { 0 };
++
++	(void)err_code;
++
++	if (blob_buf_init(&b, 0)) {
++		log(L_WARNING, "Failed to initiate blob buffer\n");
++		goto end;
++	}
++
++	if (blobmsg_add_u32(&b, "error", err_code)) {
++		log(L_WARNING, "Failed to add integer to blob message\n");
++		goto end;
++	}
++
++	struct blob_attr *resultAttr = blobmsg_open_table(&b, "result");
++
++	if (!blobmsg_add_json_from_string(&b, y)) {
++		log(L_WARNING, "Failed to blobmsg_add_json_from_string blob buffer\n");
++		goto end;
++	}
++
++	blobmsg_close_table(&b, resultAttr);
++
++	if (ubus_send_reply(ctx, req, b.head)) {
++		log(L_WARNING, "Failed to send UBUS reply\n");
++		goto end;
++	}
++
++	rc = 0;
++end:
++	blob_buf_free(&b);
++	return rc;
++}
++
 +PRIVATE int device_cb(struct ubus_context *ctx, __UNUSED struct ubus_object *obj,
 +		      struct ubus_request_data *req, __UNUSED const char *method, struct blob_attr *msg)
 +{
 +	int rc		    = DLMS_ERROR_CODE_OK;
-+	const char *result  = "OK";
++	char result[512] = "OK";
 +	physical_device dev = {
 +		.connection = (connection[]){ { .socket = -1, .name = "UBUS TEST" } },
 +		.settings   = { 0 },
 +	};
 +
-+	rc = device_cb_args(&dev, msg);
++	rc = device_cb_args(&dev, msg, result);
 +	if (rc != DLMS_ERROR_CODE_OK) {
-+		result = "Failed to parse device parameters.";
 +		goto end;
 +	}
 +
@@ -9651,7 +9698,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/ubus.c src/src/u
 +
 +	rc = cg_make_connection(&dev);
 +	if (rc != DLMS_ERROR_CODE_OK) {
-+		result = "Failed to make connection with device.";
++		add_result(result, "Failed to make connection with device: %s", hlp_getErrorMessage(rc));
 +		goto end;
 +	}
 +
@@ -9663,81 +9710,93 @@ diff --recursive --unified --new-file --no-dereference orig/src/ubus.c src/src/u
 +	return rc;
 +}
 +
-+PRIVATE int device_cb_args(physical_device *d, struct blob_attr *msg)
++PRIVATE int device_cb_args(physical_device *d, struct blob_attr *msg, char *result)
 +{
 +	int rc = DLMS_ERROR_CODE_OTHER_REASON;
 +	struct blob_attr *tb[TEST_DEVICE_OPT_COUNT] = { 0 };
 +
 +	if (!msg) {
-+		log(L_WARNING, "UBUS message is null\n");
++		add_result(result, "UBUS message is null");
 +		goto end;
 +	}
 +
 +	if (blobmsg_parse(device_policy, TEST_DEVICE_OPT_COUNT, tb, blob_data(msg), blob_len(msg))) {
-+		log(L_WARNING, "Failed to parse device policy\n");
++		add_result(result, "Failed to parse device policy");
 +		goto end;
 +	}
 +
 +	if (!tb[TEST_DEVICE_OPT_TYPE]) {
-+		log(L_WARNING, "Option 'type' is not specified. It should be 0 (TCP) or 1 (SERIAL)\n");
++		add_result(result, "Option 'type' is not specified. It should be 0 (TCP) or 1 (SERIAL)");
 +		goto end;
 +	}
 +	d->connection->type = blobmsg_get_u32(tb[TEST_DEVICE_OPT_TYPE]);
 +
 +	if (d->connection->type == TCP) {
 +		if (!tb[TEST_DEVICE_OPT_TCP_ADDRESS] || !tb[TEST_DEVICE_OPT_TCP_PORT]) {
-+			log(L_WARNING, "'address' or 'port' options can't be empty\n");
++			add_result(result, "'address' or 'port' options can't be empty");
 +			goto end;
 +		}
 +	} else if (d->connection->type == SERIAL) {
 +		if (!tb[TEST_DEVICE_OPT_SERIAL_DEVICE] || !tb[TEST_DEVICE_OPT_SERIAL_BAUDRATE] ||
 +		    !tb[TEST_DEVICE_OPT_SERIAL_DATABITS] || !tb[TEST_DEVICE_OPT_SERIAL_STOPBITS] ||
 +		    !tb[TEST_DEVICE_OPT_SERIAL_PARITY] || !tb[TEST_DEVICE_OPT_SERIAL_FLOWCONTROL]) {
-+			log(L_WARNING, "Serial settings are missing\n");
++			add_result(result, "Serial settings are missing");
 +			goto end;
 +		}
 +	} else {
-+		log(L_WARNING, "Option 'type' is invalid. It should be 0 (TCP) or 1 (SERIAL)\n");
++		add_result(result, "Option 'type' is invalid. It should be 0 (TCP) or 1 (SERIAL)");
 +		goto end;
 +	}
 +
 +	if (d->connection->type == TCP) {
 +		int port = blobmsg_get_u32(tb[TEST_DEVICE_OPT_TCP_PORT]);
 +		if (port < 1 || port > 65535) {
-+			log(L_WARNING, "Option 'port' (%d) is outside range [1;65535]\n", port);
++			add_result(result, "Option 'port' (%d) is outside range [1;65535]", port);
 +			goto end;
 +		}
 +		d->connection->parameters.tcp.port = port;
 +		d->connection->parameters.tcp.host = blobmsg_get_string(tb[TEST_DEVICE_OPT_TCP_ADDRESS]);
 +	} else {
-+		d->connection->parameters.serial.device =
-+			blobmsg_get_string(tb[TEST_DEVICE_OPT_SERIAL_DEVICE]);
-+		d->connection->parameters.serial.baudrate =
-+			blobmsg_get_u32(tb[TEST_DEVICE_OPT_SERIAL_BAUDRATE]);
-+		d->connection->parameters.serial.parity =
-+			blobmsg_get_string(tb[TEST_DEVICE_OPT_SERIAL_PARITY]);
-+		d->connection->parameters.serial.databits =
-+			blobmsg_get_u32(tb[TEST_DEVICE_OPT_SERIAL_DATABITS]);
-+		d->connection->parameters.serial.stopbits =
-+			blobmsg_get_u32(tb[TEST_DEVICE_OPT_SERIAL_STOPBITS]);
-+		d->connection->parameters.serial.flow_control =
-+			blobmsg_get_string(tb[TEST_DEVICE_OPT_SERIAL_FLOWCONTROL]);
++		struct libtlt_termios_settings *s = &d->connection->parameters.s;
++
++		s->bps = blobmsg_get_u32(tb[TEST_DEVICE_OPT_SERIAL_BAUDRATE]);
++		s->data_bits = blobmsg_get_u32(tb[TEST_DEVICE_OPT_SERIAL_DATABITS]);
++		s->stop_bits = blobmsg_get_u32(tb[TEST_DEVICE_OPT_SERIAL_STOPBITS]);
++		char *device = blobmsg_get_string(tb[TEST_DEVICE_OPT_SERIAL_DEVICE]);
++		char *parity = blobmsg_get_string(tb[TEST_DEVICE_OPT_SERIAL_PARITY]);
++		char *flow_control = blobmsg_get_string(tb[TEST_DEVICE_OPT_SERIAL_FLOWCONTROL]);
++
++		strlcpy(s->device, device, sizeof(s->device));
++		strlcpy(s->parity, parity, sizeof(s->parity));
++		strlcpy(s->flow_control, flow_control, sizeof(s->flow_control));
 +	}
 +
 +	if (!tb[TEST_DEVICE_OPT_SERVER_ADDR]) {
-+		log(L_WARNING, "Option 'server_addr' is empty\n");
++		add_result(result, "Option 'server_addr' is empty");
++		goto end;
++	}
++
++	if (!tb[TEST_DEVICE_OPT_SERVER_ADDR_TYPE]) {
++		log(L_WARNING, "Option 'server_addr_type' is empty\n");
 +		goto end;
 +	}
 +
 +	if (!tb[TEST_DEVICE_OPT_LOG_SERVER_ADDR]) {
-+		log(L_WARNING, "Option 'logical_server_addr' is empty\n");
++		add_result(result, "Option 'logical_server_addr' is empty");
 +		goto end;
 +	}
-+	int server_address = cl_getServerAddress(blobmsg_get_u32(tb[TEST_DEVICE_OPT_LOG_SERVER_ADDR]),
-+					     blobmsg_get_u32(tb[TEST_DEVICE_OPT_SERVER_ADDR]), 0);
++
++	int addr_type		= blobmsg_get_u32(tb[TEST_DEVICE_OPT_SERVER_ADDR_TYPE]);
++	int server_address	= blobmsg_get_u32(tb[TEST_DEVICE_OPT_SERVER_ADDR]);
++	int logical_server_addr = blobmsg_get_u32(tb[TEST_DEVICE_OPT_LOG_SERVER_ADDR]);
++	if (addr_type == 0) {
++		server_address = cl_getServerAddress(logical_server_addr, server_address, 0);
++	} else {
++		server_address = utl_get_server_address_from_serial_number(logical_server_addr, server_address);
++	}
 +
 +	if (!tb[TEST_DEVICE_OPT_CLIENT_ADDR]) {
-+		log(L_WARNING, "Option 'client_addr' is empty\n");
++		add_result(result, "Option 'client_addr' is empty");
 +		goto end;
 +	}
 +	int client_address = blobmsg_get_u32(tb[TEST_DEVICE_OPT_CLIENT_ADDR]);
@@ -9765,7 +9824,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/ubus.c src/src/u
 +	cl_init(&d->settings, use_logical_name_referencing, client_address, server_address, access_security,
 +		password, interface_type);
 +
-+	if (read_security_settings(tb, d)) {
++	if (read_security_settings(tb, d, result)) {
 +		log(L_WARNING, "Failed to read security settings\n");
 +		goto end;
 +	}
@@ -9780,7 +9839,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/ubus.c src/src/u
 +	return rc;
 +}
 +
-+PRIVATE int read_security_settings(struct blob_attr **tb, physical_device *d)
++PRIVATE int read_security_settings(struct blob_attr **tb, physical_device *d, char *result)
 +{
 +	int rc = 1;
 +
@@ -9795,7 +9854,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/ubus.c src/src/u
 +	if (tb[TEST_DEVICE_OPT_SYSTEM_TITLE]) {
 +		const char *system_title = blobmsg_get_string(tb[TEST_DEVICE_OPT_SYSTEM_TITLE]);
 +		if (validate_key(system_title, TITLE_SIZE)) {
-+			log(L_ERROR, "system title size must be 16 bytes");
++			add_result(result, "system title size must be %d bytes", TITLE_SIZE);
 +			goto end;
 +		}
 +
@@ -9807,7 +9866,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/ubus.c src/src/u
 +	if (tb[TEST_DEVICE_OPT_AUTHENTICATION_KEY]) {
 +		const char *authentication_key = blobmsg_get_string(tb[TEST_DEVICE_OPT_AUTHENTICATION_KEY]);
 +		if (validate_key(authentication_key, KEY_SIZE)) {
-+			log(L_ERROR, "Authentication key size must be 32 bytes");
++			add_result(result, "Authentication key size must be %d bytes", KEY_SIZE);
 +			goto end;
 +		}
 +
@@ -9818,7 +9877,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/ubus.c src/src/u
 +	if (tb[TEST_DEVICE_OPT_BLOCK_CIPHER_KEY]) {
 +		const char *block_cipher_key = blobmsg_get_string(tb[TEST_DEVICE_OPT_BLOCK_CIPHER_KEY]);
 +		if (validate_key(block_cipher_key, KEY_SIZE)) {
-+			log(L_ERROR, "Block cipher key size must be 32 bytes");
++			add_result(result, "Block cipher key size must be %d bytes", KEY_SIZE);
 +			goto end;
 +		}
 +
@@ -9829,7 +9888,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/ubus.c src/src/u
 +	if (tb[TEST_DEVICE_OPT_DEDICATED_KEY]) {
 +		const char *dedicated_key = blobmsg_get_string(tb[TEST_DEVICE_OPT_DEDICATED_KEY]);
 +		if (validate_key(dedicated_key, KEY_SIZE)) {
-+			log(L_ERROR, "Dedicated key size must be 32 bytes");
++			add_result(result, "Dedicated key size must be %d bytes", KEY_SIZE);
 +			goto end;
 +		}
 +
@@ -9859,9 +9918,20 @@ diff --recursive --unified --new-file --no-dereference orig/src/ubus.c src/src/u
 +				break;
 +			}
 +		} else if (c->type == SERIAL) {
-+			c->mutex = (strstr(c->parameters.serial.device, "rs485")) ? g_master->mutex_rs485 : g_master->mutex_rs232;
++			c->mutex = find_serial_mutex(c->parameters.s.device);
 +			break;
 +		}
++	}
++}
++
++PRIVATE pthread_mutex_t *find_serial_mutex(const char *device)
++{
++	if (strstr(device, "232")) {
++		return g_master->mutex_rs232;
++	} else if (strstr(device, "rs485")) {
++		return g_master->mutex_rs485;
++	} else {
++		return g_master->mutex_usb;
 +	}
 +}
 +
@@ -9885,8 +9955,15 @@ diff --recursive --unified --new-file --no-dereference orig/src/ubus.c src/src/u
 +	char *result	    = NULL;
 +	const char *err_msg = NULL;
 +	cosem_group g	    = { 0 };
++	int pretty 	    = 0;
 +
-+	rc = cosem_group_args(&g, msg);
++	g_master = cfg_get_master(1); // TODO: sharing needed, this will be heavy on every test request...
++	if (!g_master) {
++		log(L_ERROR, "Failed to read configuration.\n");
++		goto end;
++	}
++
++	rc = cosem_group_args(&g, msg, &pretty);
 +	if (rc != DLMS_ERROR_CODE_OK) {
 +		err_msg = "Failed to parse COSEM group parameters.";
 +		goto end;
@@ -9894,14 +9971,17 @@ diff --recursive --unified --new-file --no-dereference orig/src/ubus.c src/src/u
 +
 +	result = cg_read_group_codes(&g, &rc);
 +	log(L_INFO, "Payload: %s", UTL_SAFE_STR(result));
-+end:
-+	rc = reply(ctx, req, rc, err_msg ? err_msg : result);
++end: ;
++	int (*respond)(struct ubus_context *ctx, struct ubus_request_data *req, const int err_code, const char *y) = pretty ? reply_pretty : reply;
++	rc = respond(ctx, req, rc, err_msg ? err_msg : result);
 +	free_cosem_group(&g);
 +	free(result);
++	cfg_free_master(g_master);
++	g_master = NULL;
 +	return rc;
 +}
 +
-+PRIVATE int cosem_group_args(cosem_group *g, struct blob_attr *msg)
++PRIVATE int cosem_group_args(cosem_group *g, struct blob_attr *msg, int *pretty)
 +{
 +	int rc = 1;
 +	struct blob_attr *tb[TEST_COSEM_GROUP_OPT_COUNT];
@@ -9918,7 +9998,12 @@ diff --recursive --unified --new-file --no-dereference orig/src/ubus.c src/src/u
 +
 +	if (!tb[TEST_COSEM_GROUP_OPT_OBJECTS]) {
 +		log(L_ERROR, "Option 'objects' is missing\n");
-+		goto end;		
++		goto end;
++	}
++
++	if (!tb[TEST_COSEM_GROUP_OPT_PRETTY]) {
++		log(L_ERROR, "Option 'pretty' is missing\n");
++		goto end;
 +	}
 +
 +	if (blobmsg_check_array(tb[TEST_COSEM_GROUP_OPT_OBJECTS], BLOBMSG_TYPE_TABLE) <= 0) {
@@ -9944,6 +10029,8 @@ diff --recursive --unified --new-file --no-dereference orig/src/ubus.c src/src/u
 +		goto end;
 +	}
 +	#endif
++
++	*pretty = blobmsg_get_u32(tb[TEST_COSEM_GROUP_OPT_PRETTY]);
 +
 +	rc = 0;
 +end:
@@ -10051,15 +10138,28 @@ diff --recursive --unified --new-file --no-dereference orig/src/ubus.c src/src/u
 +	free(g->cosem_objects);
 +}
 +
-+PUBLIC void ubus_exit()
++struct rpc_plugin rpc_plugin = {
++	.init = rpc_init_dlms_test_functions
++};
++
++PRIVATE void add_result(char *result, const char *format, ...)
 +{
-+	ubus_free(ubus);
++	va_list args;
++	va_start(args, format);
++
++	vsnprintf(result, 512, format, args);
++
++	log(L_WARNING, "%s", result);
++
++	va_end(args);
 +}
 diff --recursive --unified --new-file --no-dereference orig/src/utils.c src/src/utils.c
 --- orig/src/utils.c	1970-01-01 00:00:00.000000000 +0000
-+++ src/src/utils.c	2024-01-24 12:01:58.000000000 +0000
-@@ -0,0 +1,175 @@
++++ src/src/utils.c	2024-04-02 10:13:53.000000000 +0000
+@@ -0,0 +1,192 @@
 +#include "master.h"
++
++#define SERIAL_NUMBER_TO_ADDRESS(sn) (int)(sn % 10000 + 1000)
 +
 +PUBLIC int utl_parse_args(int argc, char **argv, log_level_type *debug_lvl)
 +{
@@ -10122,12 +10222,18 @@ diff --recursive --unified --new-file --no-dereference orig/src/utils.c src/src/
 +	}
 +}
 +
-+PUBLIC void utl_add_error_message(char **data, char *device_name, const char *err_msg, const int err_num)
++PUBLIC void utl_add_error_message(char **data, char *device_name, const int err_num, const char *format, ...)
 +{
-+	char str[256] = { 0 };
++	char result[512] = { 0 };
++	char str[1028] 	 = { 0 };
++
++	va_list args;
++	va_start(args, format);
++	vsnprintf(result, 512, format, args);
++	va_end(args);
 +
 +	utl_append_obj_name(data, device_name);
-+	snprintf(str, sizeof(str), "{\"error\": %d, \"result\": \"%s\"}", err_num, err_msg);
++	snprintf(str, sizeof(str), "{\"error\": %d, \"result\": \"%s\"}", err_num, result);
 +	utl_append_to_str(data, str);
 +}
 +
@@ -10168,6 +10274,15 @@ diff --recursive --unified --new-file --no-dereference orig/src/utils.c src/src/
 +	return (cosem_id > 0 || cosem_id < 72);
 +}
 +
++int utl_get_server_address_from_serial_number(int logical_server_address, long sn)
++{
++	if (logical_server_address > 0) {
++		return (logical_server_address << 14) | SERIAL_NUMBER_TO_ADDRESS(sn);
++	} else {
++		return SERIAL_NUMBER_TO_ADDRESS(sn);
++	}
++}
++
 +__attribute__((unused)) PUBLIC void utl_debug_master(master *m)
 +{
 +	if (!m) {
@@ -10178,7 +10293,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/utils.c src/src/
 +	printf("\n\n********* PHYSICAL DEVICES *********\n");
 +	for (size_t i = 0; i < m->physical_dev_count; i++) {
 +		physical_device *p = m->physical_devices[i];
-+		printf("\t---------------- device %d ----------------\n", i);
++		printf("\t---------------- device %zu ----------------\n", i);
 +		printf("\tid:\t\t\t%d\n", p->id);
 +		printf("\tname:\t\t\t%s\n", UTL_SAFE_STR(p->name));
 +		printf("\tinvocation counter:\t%s\n", UTL_SAFE_STR(p->invocation_counter));
@@ -10189,12 +10304,12 @@ diff --recursive --unified --new-file --no-dereference orig/src/utils.c src/src/
 +				printf("\thost:\t\t\t%s\n", UTL_SAFE_STR(p->connection->parameters.tcp.host));
 +				printf("\tport:\t\t\t%d\n", p->connection->parameters.tcp.port);
 +			} else {
-+				printf("\tdevice:\t\t\t%s\n", UTL_SAFE_STR(p->connection->parameters.serial.device));
-+				printf("\tparity:\t\t\t%s\n", UTL_SAFE_STR(p->connection->parameters.serial.parity));
-+				printf("\tbaudrate:\t\t%d\n", p->connection->parameters.serial.baudrate);
-+				printf("\tdatabits:\t\t%d\n", p->connection->parameters.serial.databits);
-+				printf("\tstopbits:\t\t%d\n", p->connection->parameters.serial.stopbits);
-+				printf("\tflow control:\t\t%s\n", p->connection->parameters.serial.flow_control);
++				printf("\tdevice:\t\t\t%s\n", UTL_SAFE_STR(p->connection->parameters.s.device));
++				printf("\tbaudrate:\t\t%d\n", p->connection->parameters.s.bps);
++				printf("\tdata_bits:\t\t%d\n", p->connection->parameters.s.data_bits);
++				printf("\tstop_bits:\t\t%d\n", p->connection->parameters.s.stop_bits);
++				printf("\tparity:\t\t\t%s\n", UTL_SAFE_STR(p->connection->parameters.s.parity));
++				printf("\tflow control:\t\t%s\n", p->connection->parameters.s.flow_control);
 +			}
 +		}
 +	}
@@ -10202,21 +10317,21 @@ diff --recursive --unified --new-file --no-dereference orig/src/utils.c src/src/
 +	printf("\n\n********* COSEM GROUPS *********\n");
 +	for (size_t i = 0; i < m->cosem_group_count; i++) {
 +		cosem_group *c = m->cosem_groups[i];
-+		printf("\t---------------- group %d ----------------\n", i);
++		printf("\t---------------- group %zu ----------------\n", i);
 +		printf("\tid:\t\t\t%d\n", c->id);
 +		printf("\tname:\t\t\t%s\n", UTL_SAFE_STR(c->name));
 +		printf("\tinterval:\t\t%ld\n", c->interval);
-+		printf("\tCOSEM object count:\t%d\n", c->cosem_object_count);
++		printf("\tCOSEM object count:\t%zu\n", c->cosem_object_count);
 +		printf("********* COSEM GROUP OBJECTS *********\n");
 +		for (size_t j = 0; j < c->cosem_object_count; j++) {
 +			cosem_object *o = c->cosem_objects[j];
-+			printf("\t---------------- object %d ----------------\n", j);
++			printf("\t---------------- object %zu ----------------\n", j);
 +			printf("\tname:\t\t%s\n", UTL_SAFE_STR(o->name));
 +			printf("\tid:\t\t%d\n", o->id);
 +			if (o->object) {
 +				printf("\tobject type:\t%s\n", obj_typeToString2(o->object->objectType));
 +				if (o->object->objectType == DLMS_OBJECT_TYPE_PROFILE_GENERIC) {
-+					printf("\tentries:\t%d\n", o->entries);
++					printf("\tentries:\t%ld\n", o->entries);
 +				}
 +			}
 +			printf("\tdevices:\t");
@@ -10236,12 +10351,12 @@ diff --recursive --unified --new-file --no-dereference orig/src/utils.c src/src/
 +}
 diff --recursive --unified --new-file --no-dereference orig/test/include/config.h src/test/include/config.h
 --- orig/test/include/config.h	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/include/config.h	2024-01-24 12:01:58.000000000 +0000
++++ src/test/include/config.h	2024-04-02 10:13:53.000000000 +0000
 @@ -0,0 +1 @@
 +#include "master.h"
 diff --recursive --unified --new-file --no-dereference orig/test/include/config_info.h src/test/include/config_info.h
 --- orig/test/include/config_info.h	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/include/config_info.h	2024-01-24 12:01:58.000000000 +0000
++++ src/test/include/config_info.h	2024-04-02 10:13:53.000000000 +0000
 @@ -0,0 +1,71 @@
 +#include "master.h"
 +
@@ -10316,7 +10431,7 @@ diff --recursive --unified --new-file --no-dereference orig/test/include/config_
 +} dlms_cfg;
 diff --recursive --unified --new-file --no-dereference orig/test/include/cosem_group.h src/test/include/cosem_group.h
 --- orig/test/include/cosem_group.h	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/include/cosem_group.h	2024-01-24 12:01:58.000000000 +0000
++++ src/test/include/cosem_group.h	2024-04-02 10:13:53.000000000 +0000
 @@ -0,0 +1,6 @@
 +#include "master.h"
 +
@@ -10326,12 +10441,12 @@ diff --recursive --unified --new-file --no-dereference orig/test/include/cosem_g
 +PRIVATE int cg_format_group_data(char **data, object_attributes *attr, char *device_name);
 diff --recursive --unified --new-file --no-dereference orig/test/include/main.h src/test/include/main.h
 --- orig/test/include/main.h	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/include/main.h	2024-01-24 12:01:58.000000000 +0000
++++ src/test/include/main.h	2024-04-02 10:13:53.000000000 +0000
 @@ -0,0 +1 @@
 +#include "master.h"
 diff --recursive --unified --new-file --no-dereference orig/test/include/stub_config.h src/test/include/stub_config.h
 --- orig/test/include/stub_config.h	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/include/stub_config.h	2024-01-24 12:01:58.000000000 +0000
++++ src/test/include/stub_config.h	2024-04-02 10:13:53.000000000 +0000
 @@ -0,0 +1,15 @@
 +#include "config_info.h"
 +
@@ -10350,7 +10465,7 @@ diff --recursive --unified --new-file --no-dereference orig/test/include/stub_co
 +PRIVATE void cfg_free_dlms_cfg(dlms_cfg *dlms);
 diff --recursive --unified --new-file --no-dereference orig/test/include/stub_config_2.h src/test/include/stub_config_2.h
 --- orig/test/include/stub_config_2.h	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/include/stub_config_2.h	2024-01-24 12:01:58.000000000 +0000
++++ src/test/include/stub_config_2.h	2024-04-02 10:13:53.000000000 +0000
 @@ -0,0 +1,19 @@
 +#include "config_info.h"
 +
@@ -10373,7 +10488,7 @@ diff --recursive --unified --new-file --no-dereference orig/test/include/stub_co
 +PRIVATE void cfg_free_master(master *m);
 diff --recursive --unified --new-file --no-dereference orig/test/include/stub_config_free.h src/test/include/stub_config_free.h
 --- orig/test/include/stub_config_free.h	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/include/stub_config_free.h	2024-01-24 12:01:58.000000000 +0000
++++ src/test/include/stub_config_free.h	2024-04-02 10:13:53.000000000 +0000
 @@ -0,0 +1,11 @@
 +#include "config_info.h"
 +
@@ -10388,12 +10503,12 @@ diff --recursive --unified --new-file --no-dereference orig/test/include/stub_co
 +PRIVATE void cfg_free_physical_device(physical_device *d);
 diff --recursive --unified --new-file --no-dereference orig/test/include/stub_config_free_2.h src/test/include/stub_config_free_2.h
 --- orig/test/include/stub_config_free_2.h	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/include/stub_config_free_2.h	2024-01-24 12:01:58.000000000 +0000
++++ src/test/include/stub_config_free_2.h	2024-04-02 10:13:53.000000000 +0000
 @@ -0,0 +1 @@
 +#include "config_info.h"
 diff --recursive --unified --new-file --no-dereference orig/test/include/stub_cosem_group.h src/test/include/stub_cosem_group.h
 --- orig/test/include/stub_cosem_group.h	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/include/stub_cosem_group.h	2024-01-24 12:01:58.000000000 +0000
++++ src/test/include/stub_cosem_group.h	2024-04-02 10:13:53.000000000 +0000
 @@ -0,0 +1,24 @@
 +#include "master.h"
 +
@@ -10421,7 +10536,7 @@ diff --recursive --unified --new-file --no-dereference orig/test/include/stub_co
 +PUBLIC void utl_add_error_message(char **data, char *device_name, const char *err_msg, const int err_num);
 diff --recursive --unified --new-file --no-dereference orig/test/include/stub_cosem_group_2.h src/test/include/stub_cosem_group_2.h
 --- orig/test/include/stub_cosem_group_2.h	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/include/stub_cosem_group_2.h	2024-01-24 12:01:58.000000000 +0000
++++ src/test/include/stub_cosem_group_2.h	2024-04-02 10:13:53.000000000 +0000
 @@ -0,0 +1,14 @@
 +#include "master.h"
 +
@@ -10439,7 +10554,7 @@ diff --recursive --unified --new-file --no-dereference orig/test/include/stub_co
 +char *attr_to_json(object_attributes *attributes);
 diff --recursive --unified --new-file --no-dereference orig/test/include/stub_cosem_group_3.h src/test/include/stub_cosem_group_3.h
 --- orig/test/include/stub_cosem_group_3.h	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/include/stub_cosem_group_3.h	2024-01-24 12:01:58.000000000 +0000
++++ src/test/include/stub_cosem_group_3.h	2024-04-02 10:13:53.000000000 +0000
 @@ -0,0 +1,19 @@
 +#include "master.h"
 +
@@ -10462,7 +10577,7 @@ diff --recursive --unified --new-file --no-dereference orig/test/include/stub_co
 +PUBLIC int com_close(connection *c, dlmsSettings *s);
 diff --recursive --unified --new-file --no-dereference orig/test/include/stub_external.h src/test/include/stub_external.h
 --- orig/test/include/stub_external.h	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/include/stub_external.h	2024-01-24 12:01:58.000000000 +0000
++++ src/test/include/stub_external.h	2024-04-02 10:13:53.000000000 +0000
 @@ -0,0 +1,102 @@
 +#ifndef __STUB_EXTERNAL_H__  // pragma once generates warnings for this one for some reason
 +#define __STUB_EXTERNAL_H__  // so using traditional include guard instead
@@ -10568,7 +10683,7 @@ diff --recursive --unified --new-file --no-dereference orig/test/include/stub_ex
 +#endif
 diff --recursive --unified --new-file --no-dereference orig/test/include/stub_main.h src/test/include/stub_main.h
 --- orig/test/include/stub_main.h	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/include/stub_main.h	2024-01-24 12:01:58.000000000 +0000
++++ src/test/include/stub_main.h	2024-04-02 10:13:53.000000000 +0000
 @@ -0,0 +1,13 @@
 +#include "master.h"
 +
@@ -10585,7 +10700,7 @@ diff --recursive --unified --new-file --no-dereference orig/test/include/stub_ma
 +PUBLIC int utl_parse_args(int argc, char **argv, log_level_type *debug_lvl);
 diff --recursive --unified --new-file --no-dereference orig/test/include/stub_master_2.h src/test/include/stub_master_2.h
 --- orig/test/include/stub_master_2.h	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/include/stub_master_2.h	2024-01-24 12:01:58.000000000 +0000
++++ src/test/include/stub_master_2.h	2024-04-02 10:13:53.000000000 +0000
 @@ -0,0 +1,5 @@
 +#include "master.h"
 +
@@ -10594,14 +10709,14 @@ diff --recursive --unified --new-file --no-dereference orig/test/include/stub_ma
 +PUBLIC void mstr_write_group_data_to_db(cosem_group *group, char *data);
 diff --recursive --unified --new-file --no-dereference orig/test/include/stub_ubus.h src/test/include/stub_ubus.h
 --- orig/test/include/stub_ubus.h	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/include/stub_ubus.h	2024-01-24 12:01:58.000000000 +0000
++++ src/test/include/stub_ubus.h	2024-04-02 10:13:53.000000000 +0000
 @@ -0,0 +1,3 @@
 +#include "master.h"
 +
 +PRIVATE int validate_key(const char *key, size_t len);
 diff --recursive --unified --new-file --no-dereference orig/test/include/stub_ubus_2.h src/test/include/stub_ubus_2.h
 --- orig/test/include/stub_ubus_2.h	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/include/stub_ubus_2.h	2024-01-24 12:01:58.000000000 +0000
++++ src/test/include/stub_ubus_2.h	2024-04-02 10:13:53.000000000 +0000
 @@ -0,0 +1,15 @@
 +#include "master.h"
 +
@@ -10620,7 +10735,7 @@ diff --recursive --unified --new-file --no-dereference orig/test/include/stub_ub
 +PUBLIC void utl_unlock_mutex_if_required(physical_device *d);
 diff --recursive --unified --new-file --no-dereference orig/test/include/stub_ubus_3.h src/test/include/stub_ubus_3.h
 --- orig/test/include/stub_ubus_3.h	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/include/stub_ubus_3.h	2024-01-24 12:01:58.000000000 +0000
++++ src/test/include/stub_ubus_3.h	2024-04-02 10:13:53.000000000 +0000
 @@ -0,0 +1,5 @@
 +#include "master.h"
 +
@@ -10629,21 +10744,21 @@ diff --recursive --unified --new-file --no-dereference orig/test/include/stub_ub
 +PRIVATE cosem_object *parse_cosem_object(struct blob_attr *b);
 diff --recursive --unified --new-file --no-dereference orig/test/include/stub_utils.h src/test/include/stub_utils.h
 --- orig/test/include/stub_utils.h	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/include/stub_utils.h	2024-01-24 12:01:58.000000000 +0000
++++ src/test/include/stub_utils.h	2024-04-02 10:13:53.000000000 +0000
 @@ -0,0 +1,3 @@
 +#include "master.h"
 +
 +PUBLIC void utl_add_error_message(char **data, char *device_name, const char *err_msg, const int err_num);
 diff --recursive --unified --new-file --no-dereference orig/test/include/stub_utils_2.h src/test/include/stub_utils_2.h
 --- orig/test/include/stub_utils_2.h	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/include/stub_utils_2.h	2024-01-24 12:01:58.000000000 +0000
++++ src/test/include/stub_utils_2.h	2024-04-02 10:13:53.000000000 +0000
 @@ -0,0 +1,3 @@
 +#include "master.h"
 +
 +PUBLIC void utl_append_to_str(char **source, const char *values);
 diff --recursive --unified --new-file --no-dereference orig/test/include/stub_utils_3.h src/test/include/stub_utils_3.h
 --- orig/test/include/stub_utils_3.h	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/include/stub_utils_3.h	2024-01-24 12:01:58.000000000 +0000
++++ src/test/include/stub_utils_3.h	2024-04-02 10:13:53.000000000 +0000
 @@ -0,0 +1,4 @@
 +#include "master.h"
 +
@@ -10651,29 +10766,29 @@ diff --recursive --unified --new-file --no-dereference orig/test/include/stub_ut
 +PUBLIC void utl_append_obj_name(char **data, char *name);
 diff --recursive --unified --new-file --no-dereference orig/test/include/ubus.h src/test/include/ubus.h
 --- orig/test/include/ubus.h	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/include/ubus.h	2024-01-24 12:01:58.000000000 +0000
++++ src/test/include/ubus.h	2024-04-02 10:13:53.000000000 +0000
 @@ -0,0 +1 @@
 +#include "master.h"
 diff --recursive --unified --new-file --no-dereference orig/test/include/utils.h src/test/include/utils.h
 --- orig/test/include/utils.h	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/include/utils.h	2024-01-24 12:01:58.000000000 +0000
++++ src/test/include/utils.h	2024-04-02 10:13:53.000000000 +0000
 @@ -0,0 +1 @@
 +#include "master.h"
 diff --recursive --unified --new-file --no-dereference orig/test/support/.git src/test/support/.git
 --- orig/test/support/.git	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/support/.git	2024-01-24 12:01:58.000000000 +0000
++++ src/test/support/.git	2024-04-02 10:13:53.000000000 +0000
 @@ -0,0 +1 @@
 +gitdir: ../../.git/modules/test/support
 diff --recursive --unified --new-file --no-dereference orig/test/support/README.md src/test/support/README.md
 --- orig/test/support/README.md	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/support/README.md	2024-01-24 12:01:58.000000000 +0000
++++ src/test/support/README.md	2024-04-02 10:13:53.000000000 +0000
 @@ -0,0 +1,3 @@
 +# Stubs
 +
 +Stub headers that enable inline function mocking with Cmock.
 diff --recursive --unified --new-file --no-dereference orig/test/support/stub_blob.h src/test/support/stub_blob.h
 --- orig/test/support/stub_blob.h	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/support/stub_blob.h	2024-01-24 12:01:58.000000000 +0000
++++ src/test/support/stub_blob.h	2024-04-02 10:13:53.000000000 +0000
 @@ -0,0 +1,25 @@
 +#ifndef STUB_BLOB_H
 +#define STUB_BLOB_H
@@ -10702,7 +10817,7 @@ diff --recursive --unified --new-file --no-dereference orig/test/support/stub_bl
 +#endif // STUB_BLOB_H
 diff --recursive --unified --new-file --no-dereference orig/test/support/stub_blobmsg.h src/test/support/stub_blobmsg.h
 --- orig/test/support/stub_blobmsg.h	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/support/stub_blobmsg.h	2024-01-24 12:01:58.000000000 +0000
++++ src/test/support/stub_blobmsg.h	2024-04-02 10:13:53.000000000 +0000
 @@ -0,0 +1,41 @@
 +#ifndef STUB_BLOBMSG_H
 +#define STUB_BLOBMSG_H
@@ -10747,7 +10862,7 @@ diff --recursive --unified --new-file --no-dereference orig/test/support/stub_bl
 +#endif // STUB_BLOBMSG_H
 diff --recursive --unified --new-file --no-dereference orig/test/support/stub_libubus.h src/test/support/stub_libubus.h
 --- orig/test/support/stub_libubus.h	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/support/stub_libubus.h	2024-01-24 12:01:58.000000000 +0000
++++ src/test/support/stub_libubus.h	2024-04-02 10:13:53.000000000 +0000
 @@ -0,0 +1,47 @@
 +#ifndef STUB_LIBUBUS_H
 +#define STUB_LIBUBUS_H
@@ -10798,7 +10913,7 @@ diff --recursive --unified --new-file --no-dereference orig/test/support/stub_li
 +#endif // STUB_LIBUBUS_H
 diff --recursive --unified --new-file --no-dereference orig/test/support/stub_pthread.h src/test/support/stub_pthread.h
 --- orig/test/support/stub_pthread.h	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/support/stub_pthread.h	2024-01-24 12:01:58.000000000 +0000
++++ src/test/support/stub_pthread.h	2024-04-02 10:13:53.000000000 +0000
 @@ -0,0 +1,22 @@
 +#ifndef STUB_PTHREAD_H
 +#define STUB_PTHREAD_H
@@ -10824,7 +10939,7 @@ diff --recursive --unified --new-file --no-dereference orig/test/support/stub_pt
 +#endif
 diff --recursive --unified --new-file --no-dereference orig/test/support/stub_sqlite3.h src/test/support/stub_sqlite3.h
 --- orig/test/support/stub_sqlite3.h	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/support/stub_sqlite3.h	2024-01-24 12:01:58.000000000 +0000
++++ src/test/support/stub_sqlite3.h	2024-04-02 10:13:53.000000000 +0000
 @@ -0,0 +1,69 @@
 +#ifndef STUB_SQLITE3_H
 +#define STUB_SQLITE3_H
@@ -10897,7 +11012,7 @@ diff --recursive --unified --new-file --no-dereference orig/test/support/stub_sq
 +#endif
 diff --recursive --unified --new-file --no-dereference orig/test/support/stub_stat.h src/test/support/stub_stat.h
 --- orig/test/support/stub_stat.h	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/support/stub_stat.h	2024-01-24 12:01:58.000000000 +0000
++++ src/test/support/stub_stat.h	2024-04-02 10:13:53.000000000 +0000
 @@ -0,0 +1,16 @@
 +#ifndef STUB_STAT_H
 +#define STUB_STAT_H
@@ -10917,7 +11032,7 @@ diff --recursive --unified --new-file --no-dereference orig/test/support/stub_st
 +#endif // STUB_STAT_H
 diff --recursive --unified --new-file --no-dereference orig/test/support/stub_stdio.h src/test/support/stub_stdio.h
 --- orig/test/support/stub_stdio.h	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/support/stub_stdio.h	2024-01-24 12:01:58.000000000 +0000
++++ src/test/support/stub_stdio.h	2024-04-02 10:13:53.000000000 +0000
 @@ -0,0 +1,25 @@
 +#ifndef STUB_STDIO_H
 +#define STUB_STDIO_H
@@ -10946,7 +11061,7 @@ diff --recursive --unified --new-file --no-dereference orig/test/support/stub_st
 +#endif // STUB_STDIO_H
 diff --recursive --unified --new-file --no-dereference orig/test/support/stub_sysinfo.h src/test/support/stub_sysinfo.h
 --- orig/test/support/stub_sysinfo.h	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/support/stub_sysinfo.h	2024-01-24 12:01:58.000000000 +0000
++++ src/test/support/stub_sysinfo.h	2024-04-02 10:13:53.000000000 +0000
 @@ -0,0 +1,22 @@
 +#ifndef STUB_SYSINFO_H
 +#define STUB_SYSINFO_H
@@ -10972,7 +11087,7 @@ diff --recursive --unified --new-file --no-dereference orig/test/support/stub_sy
 +#endif
 diff --recursive --unified --new-file --no-dereference orig/test/support/stub_uci.h src/test/support/stub_uci.h
 --- orig/test/support/stub_uci.h	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/support/stub_uci.h	2024-01-24 12:01:58.000000000 +0000
++++ src/test/support/stub_uci.h	2024-04-02 10:13:53.000000000 +0000
 @@ -0,0 +1,43 @@
 +#ifndef STUB_UCI_H
 +#define STUB_UCI_H
@@ -11019,7 +11134,7 @@ diff --recursive --unified --new-file --no-dereference orig/test/support/stub_uc
 +#endif // STUB_UCI_H
 diff --recursive --unified --new-file --no-dereference orig/test/support/stub_uloop.h src/test/support/stub_uloop.h
 --- orig/test/support/stub_uloop.h	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/support/stub_uloop.h	2024-01-24 12:01:58.000000000 +0000
++++ src/test/support/stub_uloop.h	2024-04-02 10:13:53.000000000 +0000
 @@ -0,0 +1,25 @@
 +#ifndef STUB_ULOOP_H
 +#define STUB_ULOOP_H
@@ -11048,7 +11163,7 @@ diff --recursive --unified --new-file --no-dereference orig/test/support/stub_ul
 +#endif // STUB_ULOOP_H
 diff --recursive --unified --new-file --no-dereference orig/test/test_config.c src/test/test_config.c
 --- orig/test/test_config.c	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/test_config.c	2024-01-24 12:01:58.000000000 +0000
++++ src/test/test_config.c	2024-04-02 10:13:53.000000000 +0000
 @@ -0,0 +1,802 @@
 +#ifndef TEST
 +#define TEST
@@ -11854,7 +11969,7 @@ diff --recursive --unified --new-file --no-dereference orig/test/test_config.c s
 +#endif
 diff --recursive --unified --new-file --no-dereference orig/test/test_config_2.c src/test/test_config_2.c
 --- orig/test/test_config_2.c	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/test_config_2.c	2024-01-24 12:01:58.000000000 +0000
++++ src/test/test_config_2.c	2024-04-02 10:13:53.000000000 +0000
 @@ -0,0 +1,1266 @@
 +#ifndef TEST
 +#define TEST
@@ -13124,7 +13239,7 @@ diff --recursive --unified --new-file --no-dereference orig/test/test_config_2.c
 +#endif
 diff --recursive --unified --new-file --no-dereference orig/test/test_config_free.c src/test/test_config_free.c
 --- orig/test/test_config_free.c	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/test_config_free.c	2024-01-24 12:01:58.000000000 +0000
++++ src/test/test_config_free.c	2024-04-02 10:13:53.000000000 +0000
 @@ -0,0 +1,132 @@
 +#ifndef TEST
 +#define TEST
@@ -13260,7 +13375,7 @@ diff --recursive --unified --new-file --no-dereference orig/test/test_config_fre
 +#endif
 diff --recursive --unified --new-file --no-dereference orig/test/test_config_free_2.c src/test/test_config_free_2.c
 --- orig/test/test_config_free_2.c	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/test_config_free_2.c	2024-01-24 12:01:58.000000000 +0000
++++ src/test/test_config_free_2.c	2024-04-02 10:13:53.000000000 +0000
 @@ -0,0 +1,201 @@
 +#ifndef TEST
 +#define TEST
@@ -13465,7 +13580,7 @@ diff --recursive --unified --new-file --no-dereference orig/test/test_config_fre
 +#endif
 diff --recursive --unified --new-file --no-dereference orig/test/test_cosem_group.c src/test/test_cosem_group.c
 --- orig/test/test_cosem_group.c	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/test_cosem_group.c	2024-01-24 12:01:58.000000000 +0000
++++ src/test/test_cosem_group.c	2024-04-02 10:13:53.000000000 +0000
 @@ -0,0 +1,111 @@
 +#ifndef TEST
 +#define TEST
@@ -13580,7 +13695,7 @@ diff --recursive --unified --new-file --no-dereference orig/test/test_cosem_grou
 +#endif
 diff --recursive --unified --new-file --no-dereference orig/test/test_cosem_group_2.c src/test/test_cosem_group_2.c
 --- orig/test/test_cosem_group_2.c	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/test_cosem_group_2.c	2024-01-24 12:01:58.000000000 +0000
++++ src/test/test_cosem_group_2.c	2024-04-02 10:13:53.000000000 +0000
 @@ -0,0 +1,368 @@
 +#ifndef TEST
 +#define TEST
@@ -13952,7 +14067,7 @@ diff --recursive --unified --new-file --no-dereference orig/test/test_cosem_grou
 +#endif
 diff --recursive --unified --new-file --no-dereference orig/test/test_cosem_group_3.c src/test/test_cosem_group_3.c
 --- orig/test/test_cosem_group_3.c	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/test_cosem_group_3.c	2024-01-24 12:01:58.000000000 +0000
++++ src/test/test_cosem_group_3.c	2024-04-02 10:13:53.000000000 +0000
 @@ -0,0 +1,402 @@
 +#ifndef TEST
 +#define TEST
@@ -14359,7 +14474,7 @@ diff --recursive --unified --new-file --no-dereference orig/test/test_cosem_grou
 \ No newline at end of file
 diff --recursive --unified --new-file --no-dereference orig/test/test_main.c src/test/test_main.c
 --- orig/test/test_main.c	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/test_main.c	2024-01-24 12:01:58.000000000 +0000
++++ src/test/test_main.c	2024-04-02 10:13:53.000000000 +0000
 @@ -0,0 +1,158 @@
 +#ifndef TEST
 +#define TEST
@@ -14521,7 +14636,7 @@ diff --recursive --unified --new-file --no-dereference orig/test/test_main.c src
 +#endif
 diff --recursive --unified --new-file --no-dereference orig/test/test_master.c src/test/test_master.c
 --- orig/test/test_master.c	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/test_master.c	2024-01-24 12:01:58.000000000 +0000
++++ src/test/test_master.c	2024-04-02 10:13:53.000000000 +0000
 @@ -0,0 +1,427 @@
 +#ifndef TEST
 +#define TEST
@@ -14952,7 +15067,7 @@ diff --recursive --unified --new-file --no-dereference orig/test/test_master.c s
 +#endif
 diff --recursive --unified --new-file --no-dereference orig/test/test_master_2.c src/test/test_master_2.c
 --- orig/test/test_master_2.c	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/test_master_2.c	2024-01-24 12:01:58.000000000 +0000
++++ src/test/test_master_2.c	2024-04-02 10:13:53.000000000 +0000
 @@ -0,0 +1,87 @@
 +#ifndef TEST
 +#define TEST
@@ -15043,7 +15158,7 @@ diff --recursive --unified --new-file --no-dereference orig/test/test_master_2.c
 +#endif
 diff --recursive --unified --new-file --no-dereference orig/test/test_ubus.c src/test/test_ubus.c
 --- orig/test/test_ubus.c	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/test_ubus.c	2024-01-24 12:01:58.000000000 +0000
++++ src/test/test_ubus.c	2024-04-02 10:13:53.000000000 +0000
 @@ -0,0 +1,517 @@
 +#ifndef TEST
 +#define TEST
@@ -15564,7 +15679,7 @@ diff --recursive --unified --new-file --no-dereference orig/test/test_ubus.c src
 +#endif
 diff --recursive --unified --new-file --no-dereference orig/test/test_ubus_2.c src/test/test_ubus_2.c
 --- orig/test/test_ubus_2.c	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/test_ubus_2.c	2024-01-24 12:01:58.000000000 +0000
++++ src/test/test_ubus_2.c	2024-04-02 10:13:53.000000000 +0000
 @@ -0,0 +1,371 @@
 +#ifndef TEST
 +#define TEST
@@ -15939,7 +16054,7 @@ diff --recursive --unified --new-file --no-dereference orig/test/test_ubus_2.c s
 +#endif
 diff --recursive --unified --new-file --no-dereference orig/test/test_ubus_3.c src/test/test_ubus_3.c
 --- orig/test/test_ubus_3.c	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/test_ubus_3.c	2024-01-24 12:01:58.000000000 +0000
++++ src/test/test_ubus_3.c	2024-04-02 10:13:53.000000000 +0000
 @@ -0,0 +1,543 @@
 +#ifndef TEST
 +#define TEST
@@ -16486,7 +16601,7 @@ diff --recursive --unified --new-file --no-dereference orig/test/test_ubus_3.c s
 +#endif
 diff --recursive --unified --new-file --no-dereference orig/test/test_utils.c src/test/test_utils.c
 --- orig/test/test_utils.c	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/test_utils.c	2024-01-24 12:01:58.000000000 +0000
++++ src/test/test_utils.c	2024-04-02 10:13:53.000000000 +0000
 @@ -0,0 +1,207 @@
 +#ifndef TEST
 +#define TEST
@@ -16697,7 +16812,7 @@ diff --recursive --unified --new-file --no-dereference orig/test/test_utils.c sr
 +#endif
 diff --recursive --unified --new-file --no-dereference orig/test/test_utils_2.c src/test/test_utils_2.c
 --- orig/test/test_utils_2.c	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/test_utils_2.c	2024-01-24 12:01:58.000000000 +0000
++++ src/test/test_utils_2.c	2024-04-02 10:13:53.000000000 +0000
 @@ -0,0 +1,291 @@
 +#ifndef TEST
 +#define TEST
@@ -16992,7 +17107,7 @@ diff --recursive --unified --new-file --no-dereference orig/test/test_utils_2.c 
 +#endif
 diff --recursive --unified --new-file --no-dereference orig/test/test_utils_3.c src/test/test_utils_3.c
 --- orig/test/test_utils_3.c	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/test_utils_3.c	2024-01-24 12:01:58.000000000 +0000
++++ src/test/test_utils_3.c	2024-04-02 10:13:53.000000000 +0000
 @@ -0,0 +1,40 @@
 +
 +#ifndef TEST

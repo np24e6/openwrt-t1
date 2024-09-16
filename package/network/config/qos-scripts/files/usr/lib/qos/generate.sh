@@ -1,4 +1,5 @@
 #!/bin/sh
+. /usr/share/libubox/jshn.sh
 [ -e /lib/functions.sh ] && . /lib/functions.sh || . ./functions.sh
 [ -x /sbin/modprobe ] && {
 	insmod="modprobe"
@@ -206,17 +207,50 @@ config_cb() {
 	esac
 }
 
+get_mobile_device() {
+
+	local ifname="$1"
+	local device=""
+
+	local out="$(ubus call "network.interface.${ifname}_4" status 2> /dev/null)"
+
+	[ -z "$out" ] && out="$(ubus call "network.interface.${ifname}_6" status 2> /dev/null)"
+
+	[ -z "$out" ] && return 1
+
+	json_load "$out"
+
+	json_get_var device device
+
+	[ -z "$device" ] && return 1
+
+	echo "$device"
+
+	return 0
+
+}
+
 qos_parse_config() {
 	config_get TYPE "$1" TYPE
 	case "$TYPE" in
 		interface)
 			config_get_bool enabled "$1" enabled 1
 			[ 1 -eq "$enabled" ] && {
+
+				config_get "is_mobile" "$1" "is_mobile" "0"
+				[ "$is_mobile" = "1" ] && {
+					device="$(get_mobile_device "$1")" || return 1
+					config_set "$1" device "$device"
+				}
+
 				config_get classgroup "$1" classgroup
 				config_set "$1" ifbdev "$C"
 				C=$(($C+1))
 				append INTERFACES "$1"
 				config_set "$classgroup" enabled 1
+
+				[ "$is_mobile" = "1" ] && return 0
+
 				config_get device "$1" device
 				[ -z "$device" ] && {
 					device="$(find_ifname $1)"

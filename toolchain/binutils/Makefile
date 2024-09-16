@@ -13,6 +13,8 @@ BIN_VERSION:=$(PKG_VERSION)
 PKG_SOURCE_URL:=@GNU/binutils/
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.xz
 
+PKG_LICENSE:=GPL-3.0
+
 TAR_OPTIONS += --exclude='*.rej'
 
 ifeq ($(PKG_VERSION),2.32)

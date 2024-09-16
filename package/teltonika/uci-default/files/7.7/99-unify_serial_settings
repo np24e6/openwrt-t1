@@ -1,0 +1,40 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+DNP3_CONFIG="dnp3_client"
+
+rename_serial_opts() {
+	local section="$1"
+
+	config_get baudrate "$section" "baud_rate" "0"
+	if [ "$baudrate" != "0" ]; then
+		uci_set "$DNP3_CONFIG" "$section" baudrate "$baudrate"
+		uci_remove "$DNP3_CONFIG" "$section" "baud_rate"
+	fi
+
+	config_get databits "$section" "data_bits" "0"
+	if [ "$databits" != "0" ]; then
+		uci_set "$DNP3_CONFIG" "$section" databits "$databits"
+		uci_remove "$DNP3_CONFIG" "$section" "data_bits"
+	fi
+
+	config_get stopbits "$section" "stop_bits" "0"
+	if [ "$stopbits" != "0" ]; then
+		uci_set "$DNP3_CONFIG" "$section" stopbits "$stopbits"
+		uci_remove "$DNP3_CONFIG" "$section" "stop_bits"
+	fi
+
+	config_get flowcontrol "$section" "flow_control" "0"
+	if [ "$flowcontrol" != "0" ]; then
+		uci_set "$DNP3_CONFIG" "$section" flowcontrol "$flowcontrol"
+		uci_remove "$DNP3_CONFIG" "$section" "flow_control"
+	fi
+}
+
+config_load "$DNP3_CONFIG"
+config_foreach rename_serial_opts serial_client
+uci_commit "$DNP3_CONFIG"
+
+exit 0
+

@@ -6,17 +6,11 @@ USE_PROCD=1
 DHCPV6_ENABLED=0
 
 check_dhcpv6() {
-	local dhcp ignore dhcpv6 ndp ra
+	local ignore_ipv6
 	dhcp="$1"
 
-	config_get_bool ignore "$dhcp" ignore "0"
-	[ "$ignore" -eq 1 ] && return
-
-	config_get dhcpv6 "$dhcp" dhcpv6 ""
-	config_get ra "$dhcp" ra ""
-	config_get ndp "$dhcp" ndp ""
-
-	[ -z "$dhcpv6" ] && [ -z "$ra" ] && [ -z "$ndp" ] && return
+	config_get_bool ignore_ipv6 "$dhcp" ignore_ipv6 "0"
+	[ "$ignore_ipv6" -eq 1 ] && return
 
 	DHCPV6_ENABLED=1
 	break
@@ -35,6 +29,7 @@ start_service() {
 }
 
 reload_service() {
+	rc_procd start_service
 	procd_send_signal odhcpd
 }
 

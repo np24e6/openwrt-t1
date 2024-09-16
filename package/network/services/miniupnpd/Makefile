@@ -8,12 +8,12 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=miniupnpd
-PKG_VERSION:=2.2.1
-PKG_RELEASE:=3
+PKG_VERSION:=2.3.4
+PKG_RELEASE:=1
 
 PKG_SOURCE_URL:=https://miniupnp.tuxfamily.org/files
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
-PKG_HASH:=f158dc73b718ca72da69e25ef23c57c3a10a0d7e7d1b4b9b57d5690823040ec2
+PKG_HASH:=e7303348fc8ac427de7f04f0eeb757d49dcc8367311ee2582552c38f5d6da08a
 
 PKG_MAINTAINER:=
 PKG_LICENSE:=BSD-3-Clause
@@ -30,14 +30,10 @@ include $(INCLUDE_DIR)/version.mk
 define Package/miniupnpd
   SECTION:=net
   CATEGORY:=Network
-  DEPENDS:=+iptables +libip4tc +IPV6:libip6tc +IPV6:ip6tables +libuuid +libcap-ng +vuci-app-upnp-ui
+  DEPENDS:=+iptables +libip4tc +IPV6:libip6tc +IPV6:ip6tables +libuuid +libcap-ng
   TITLE:=Lightweight UPnP IGD, NAT-PMP & PCP daemon
   SUBMENU:=Firewall
   URL:=https://miniupnp.tuxfamily.org/
-  ifeq (m, $(CONFIG_PACKAGE_miniupnpd))
-    PKG_TLT_NAME:=UPNP
-    PKG_ROUTER:=$(TLT_PLATFORM_NAME)
-  endif
 endef
 
 define Package/miniupnpd/description

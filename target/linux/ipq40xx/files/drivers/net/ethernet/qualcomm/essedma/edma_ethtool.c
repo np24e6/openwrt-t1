@@ -306,6 +306,20 @@ static void edma_get_ringparam(struct net_device *netdev,
 	ring->rx_max_pending = edma_cinfo->rx_ring_count;
 }
 
+#define EDMA_REG_LEN 0xc28
+
+static int edma_get_regs_len(struct net_device *netdev) {
+	return EDMA_REG_LEN;
+}
+
+extern void edma_write_reg_dump(void *buf);
+
+static void edma_get_regs(struct net_device *netdev, struct ethtool_regs *regs, void *ptr) {
+	memset(ptr, 0xff, EDMA_REG_LEN);
+	regs->version = 0;
+	edma_write_reg_dump(ptr);
+}
+
 /* Ethtool operations
  */
 static const struct ethtool_ops edma_ethtool_ops = {
@@ -327,6 +341,8 @@ static const struct ethtool_ops edma_ethtool_ops = {
 	.get_priv_flags = edma_get_priv_flags,
 	.set_priv_flags = edma_set_priv_flags,
 	.get_ringparam = edma_get_ringparam,
+	.get_regs_len = edma_get_regs_len,
+	.get_regs = edma_get_regs,
 };
 
 /* edma_set_ethtool_ops

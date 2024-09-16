@@ -46,45 +46,6 @@ handle_retry() {
 	fi
 }
 
-check_pdp_context() {
-	local pdp="$1"
-	local modem_id="$2"
-	local mdm_ubus_obj list cid found
-
-	mdm_ubus_obj="$(find_mdm_ubus_obj "$modem_id")"
-	[ -z "$mdm_ubus_obj" ] && echo "gsm.modem object not found" && return 1
-	found=0
-
-	json_load "$(ubus call "$mdm_ubus_obj" get_pdp_ctx_list)"
-	json_get_keys list list
-	json_select list
-
-	[ -z "$list" ] && echo "PDP list empty" && return
-
-	for ctx in $list; do
-		json_select "$ctx"
-		json_get_vars cid
-		[ "$cid" = "$pdp" ] && {
-			found=1
-			break
-		}
-		json_select ..
-	done
-
-	[ $found -eq 0 ] && {
-		echo "Creating context with PDP: $pdp"
-		ubus call "$mdm_ubus_obj" set_pdp_ctx "{\"cid\":${pdp},\"type\":\"ip\",\"apn\":\"\",\"addr\":\"\",\
-		\"dt_comp\":\"off\",\"hdr_comp\":\"off\",\"ipv4_alloc\":\"nas\",\"req_tp\":\"generic\"}" >/dev/null 2>/dev/null
-
-		ubus call "$mdm_ubus_obj" set_func "{\"func\":\"rf\",\"reset\":false}" >/dev/null 2>/dev/null
-
-		sleep 2
-
-		ubus call "$mdm_ubus_obj" set_func "{\"func\":\"full\",\"reset\":false}" >/dev/null 2>/dev/null
-	}
-	return 0
-}
-
 gsm_soft_reset() {
 	local modem_id="$1"
 	local mdm_ubus_obj
@@ -109,7 +70,7 @@ kill_uqmi_processes() {
 gsm_hard_reset() {
 	local modem_id="$1"
 	echo "Calling \"mctl --reboot -i $modem_id\""
-	ubus call mctl reboot "{\"id\":\"$modem_id\"}"
+	mctl --reboot -i "$modem_id"
 }
 
 qmi_error_handle() {
@@ -157,6 +118,13 @@ qmi_error_handle() {
 
 	echo "$error" | grep -qi "Failed to connect to service" && {
 		logger -t "mobile.sh" "Device not responding, restarting module"
+		gsm_hard_reset "$modem_id"
+		kill_uqmi_processes "$device"
+		return 1
+	}
+
+	echo "$error" | grep -qi "Request canceled" && {
+		logger -t "mobile.sh" "Device returns bad packages, restarting module"
 		gsm_hard_reset "$modem_id"
 		kill_uqmi_processes "$device"
 		return 1
@@ -257,6 +225,11 @@ setup_bridge_v4() {
 	model="$(gsmctl --model ${modem_num:+-O "$modem_num"})"
 	[ "${model:0:4}" = "UC20" ] || [ "${model:0:6}" = "RG500U" ] && ip neighbor add proxy "$bridge_ipaddr" dev "$dev" 2>/dev/null
 
+	[ -n "$mac" ] && {
+		ip neigh flush dev br-lan
+		ip neigh add "$bridge_ipaddr" dev br-lan lladdr "$mac"
+	}
+
 	iptables -A postrouting_rule -m comment --comment "Bridge mode" -o "$dev" -j ACCEPT -tnat
 
 	config_load network
@@ -289,7 +262,13 @@ setup_bridge_v4() {
 	echo "method:$method bridge_ipaddr:$bridge_ipaddr" > "/var/run/${interface}_braddr"
 
 	/etc/init.d/dnsmasq reload
-	swconfig dev 'switch0' set soft_reset 5 &
+
+	if is_device_dsa ; then
+		restart_dsa_interfaces
+	else
+		swconfig dev 'switch0' set soft_reset 5 &
+	fi
+
 }
 
 setup_static_v4() {
@@ -489,4 +468,24 @@ get_modem_type() {
 		return
 	done
 	echo "external"
+}
+
+is_device_dsa(){
+	[ "$(jsonfilter -i /etc/board.json -e '@.hwinfo.dsa')" = "true" ]
+}
+
+restart_dsa_interfaces(){
+	restart_dsa_interfaces_cb() {
+		local ifname
+		config_get ifname "$1" "ifname"
+		[ ${ifname:0:3} = "lan"  ] && {
+			ethtool -r "$ifname"
+		}
+	}
+	config_load network
+	config_foreach restart_dsa_interfaces_cb port
+}
+
+get_braddr_var() {
+	grep -o "$1:[^ ]*" "/var/run/${2}_braddr" 2>/dev/null | cut -d':' -f2
 }

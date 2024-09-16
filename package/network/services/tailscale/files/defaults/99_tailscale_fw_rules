@@ -2,12 +2,12 @@
 
 . /lib/functions.sh
 
-[ "$(uci -q get tailscale.settings.enabled)" = "1" ] || exit
+[ "$(uci -q get tailscale.settings.enabled)" = "1" ] || exit 0
 
 check_zone() {
     local name
     config_get name "$1" "name" ""
-    [ "$name" = "tailscale" ] && exit
+    [ "$name" = "tailscale" ] && exit 0
 }
 
 add_zone() {

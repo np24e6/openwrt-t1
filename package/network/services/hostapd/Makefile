@@ -87,8 +87,8 @@ endif
 CORE_DEPENDS = +ucode +libubus +libucode +ucode-mod-fs +ucode-mod-nl80211 +ucode-mod-rtnl +ucode-mod-ubus +ucode-mod-uloop +libblobmsg-json
 
 DRIVER_MAKEOPTS= \
-	CONFIG_ACS=$(or $(CONFIG_PACKAGE_kmod-cfg80211),$(CONFIG_PACKAGE_kmod-cfg80211_54)) \
-	CONFIG_DRIVER_NL80211=$(or $(CONFIG_PACKAGE_kmod-cfg80211),$(CONFIG_PACKAGE_kmod-cfg80211_54)) \
+	CONFIG_ACS=$(or $(CONFIG_PACKAGE_kmod-cfg80211),$(CONFIG_PACKAGE_kmod-cfg80211_54),$(CONFIG_PACKAGE_kmod-cfg80211_515)) \
+	CONFIG_DRIVER_NL80211=$(or $(CONFIG_PACKAGE_kmod-cfg80211),$(CONFIG_PACKAGE_kmod-cfg80211_54),$(CONFIG_PACKAGE_kmod-cfg80211_515)) \
 	CONFIG_IEEE80211N=$(HOSTAPD_IEEE80211N) \
 	CONFIG_IEEE80211AC=$(HOSTAPD_IEEE80211AC) \
 	CONFIG_IEEE80211AX=$(HOSTAPD_IEEE80211AX) \
@@ -420,7 +420,7 @@ TARGET_CPPFLAGS := \
 
 TARGET_LDFLAGS += -lubox -lubus -llog -lblobmsg_json -lucode
 
-ifneq ($(or $(CONFIG_PACKAGE_kmod-cfg80211),$(CONFIG_PACKAGE_kmod-cfg80211_54)),)
+ifneq ($(or $(CONFIG_PACKAGE_kmod-cfg80211),$(CONFIG_PACKAGE_kmod-cfg80211_54),$(CONFIG_PACKAGE_kmod-cfg80211_515)),)
   TARGET_LDFLAGS += -lm -lnl-tiny
 endif
 

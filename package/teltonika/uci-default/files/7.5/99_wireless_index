@@ -8,6 +8,11 @@ index_iface() {
 	[ "${1:0:3}" != "cfg" ] && return
 
 	index=$((index + 1))
+
+	while uci_get "wireless" "$index" >/dev/null; do
+		index=$((index + 1))
+	done
+
 	uci_rename "wireless" "$1" "$index"
 }
 

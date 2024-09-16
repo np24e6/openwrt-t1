@@ -16,7 +16,6 @@
 #                your option) any later version.
 #
 ##############################################################################
-
 <tr class="bg1" align="left" valign="top">
   <td class="en1" align="center" valign="middle"><input type="radio" name="filter_r@index@" value="Y" @this-filter-y@></td>
   <td class="dis1" align="center" valign="middle"><input type="radio" name="filter_r@index@" value="N" @this-filter-n@></td>

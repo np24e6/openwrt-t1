@@ -41,6 +41,7 @@ do {									\
 #define CONFIG_MTD_UBI_WL_THRESHOLD	4096
 #define CONFIG_MTD_UBI_BEB_RESERVE	1
 #define UBI_IO_DEBUG			0
+#define MTD_UBI_BEB_LIMIT 20 /* Maximum expected bad eraseblock count per 1024 eraseblocks */
 
 /* debug options (Linux: drivers/mtd/ubi/Kconfig.debug) */
 #undef CONFIG_MTD_UBI_DEBUG

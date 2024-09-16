@@ -213,9 +213,6 @@ bgp_parse_config() {
 
 	config_foreach bgp_parse_route_maps bgp_route_maps
 	config_foreach bgp_parse_instance bgp_instance
-	config_foreach bgp_parse_peer bgp_peer
-	config_foreach bgp_parse_vrf bgp_vrf
-	config_foreach bgp_parse_access_list bgp_access_list
 
 	echo -ne "$prefix_list" >> "$CONFIG_FILE_BGP"
 	prefix_list=""
@@ -241,21 +238,26 @@ bgp_parse_instance() {
 	config_get redistribute         "$section" redistribute
 	config_get id                   "$section" id
 	config_get ebgp_requires_policy "$section" ebgp_requires_policy "1"
+	config_get vrf                  "$section" vrf "default"
 
-	xappend      "$CONFIG_FILE_BGP" "router bgp" "$as"
+	xappend      "$CONFIG_FILE_BGP" "router bgp" "$as" "vrf" "$vrf"
 	xappend      "$CONFIG_FILE_BGP" "address-family ipv4 unicast"
 	xappend      "$CONFIG_FILE_BGP" "bgp router-id" "$id"
 	xappend_bool "$CONFIG_FILE_BGP" "$ebgp_requires_policy" "bgp ebgp-requires-policy"
 	xappend_bool "$CONFIG_FILE_BGP" "$deterministic_med" "bgp deterministic-med"
 	xappend_list "$CONFIG_FILE_BGP" "network" "$network"
 	xappend_list "$CONFIG_FILE_BGP" "redistribute" "$redistribute"
+
+	config_foreach bgp_parse_peer bgp_peer "$section"
+	config_foreach bgp_parse_vrf bgp_vrf
+	config_foreach bgp_parse_access_list bgp_access_list
 }
 
 bgp_parse_peer() {
 	local section="$1"
+	local main_inst="$2"
 	local enabled
-#	local instance
-#	local main_as
+	local instance
 	local as
 	local default_originate
 	local ipaddr
@@ -269,13 +271,11 @@ bgp_parse_peer() {
 	local timer_holdtime
 	local timer_connect
 
-	config_get enabled "$section" enabled "0"
+	config_get enabled  "$section" enabled "0"
+	config_get instance "$section" instance
 
-	[ "$enabled" = "0" ] && return 1
+	[ "$enabled" = "0" ] || [ "$instance" != "$main_inst" ] && return 1
 
-	# for multi instance bgp
-	# config_get instance             "$section"      instance
-	# config_get main_as              "main_instance" as
 	config_get as                     "$section"      as
 	config_get default_originate      "$section"      default_originate
 	config_get ipaddr                 "$section"      ipaddr
@@ -337,7 +337,6 @@ bgp_parse_peer_group() {
 
 	[ -z "$group_ipaddr" ] && [ "$group_as" != "$as" ] && return 1
 
-#	config_get instance               "$section" instance
 	config_get next_hop_self          "$section" next_hop_self
 	config_get next_hop_self_all      "$section" next_hop_self_all
 	config_get soft_rec_inbound       "$section" soft_rec_inbound

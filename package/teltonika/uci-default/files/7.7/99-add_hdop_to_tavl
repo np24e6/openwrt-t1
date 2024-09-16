@@ -1,0 +1,27 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+CONFIG=avl
+tavl_rule_sec="tavl_rule"
+
+check_if_hdop_exists() {
+	local section=$1
+
+	config_get NAME $section name ""
+
+	[ "$NAME" = "HDOP" ] && exit 0
+}
+
+config_load $CONFIG || exit 0
+config_foreach check_if_hdop_exists "$tavl_rule_sec"
+
+sec=$(uci add "$CONFIG" "$tavl_rule_sec")
+
+uci_set "$CONFIG" "$sec" "type" "GPS"
+uci_set "$CONFIG" "$sec" "name" "HDOP"
+uci_set "$CONFIG" "$sec" "enabled" "0"
+
+uci commit
+
+exit 0

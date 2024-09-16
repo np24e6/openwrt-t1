@@ -1,13 +1,13 @@
-Index: libiwinfo-2022-08-19-0dad3e66/iwinfo_nl80211.c
+Index: libiwinfo-2023-05-17-c9f5c3f7/iwinfo_nl80211.c
 ===================================================================
---- libiwinfo-2022-08-19-0dad3e66.orig/iwinfo_nl80211.c	2023-10-20 09:23:54.859589251 +0300
-+++ libiwinfo-2022-08-19-0dad3e66/iwinfo_nl80211.c	2023-10-20 09:25:58.366762966 +0300
-@@ -741,7 +741,7 @@
- 					         "/sys/class/net/%s/ifindex", e->d_name);
+--- libiwinfo-2023-05-17-c9f5c3f7.orig/iwinfo_nl80211.c
++++ libiwinfo-2023-05-17-c9f5c3f7/iwinfo_nl80211.c
+@@ -845,7 +845,7 @@ static char * nl80211_phy2ifname(const c
+ 			clmode = nl80211_readint(buffer);
  
- 					if ((cifidx = nl80211_readint(buffer)) >= 0 &&
--					    ((ifidx < 0) || (cifidx < ifidx)))
-+					    ((ifidx < 0) || (cifidx > ifidx)))
- 					{
- 						ifidx = cifidx;
- 						strncpy(nif, e->d_name, sizeof(nif) - 1);
+ 			/* prefer non-supplicant-based devices */
+-			if ((ifidx < 0) || (cifidx < ifidx) || ((lmode == 1) && (clmode != 1)))
++			if ((ifidx < 0) || (cifidx > ifidx) || ((lmode == 1) && (clmode != 1)))
+ 			{
+ 				ifidx = cifidx;
+ 				lmode = clmode;

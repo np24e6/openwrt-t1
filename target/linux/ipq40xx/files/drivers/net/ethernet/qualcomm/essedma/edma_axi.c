@@ -101,6 +101,83 @@ static void ess_read_reg(struct edma_common_info *edma, u16 reg_addr,
 		((unsigned long)edma->ess_hw_addr + reg_addr));
 }
 
+void edma_write_reg_dump(void *buf) {
+	u32 reg_ranges[][2] = {
+		/* register definition */
+		{ 0x0, 0xc },
+		{ 0x100, 0x104 },
+		/* Interrupt Status Register */
+		/* Interrupt Mask Register */
+		{ 0x200, 0x200 },
+		{ 0x208, 0x208 },
+		{ 0x210, 0x218 },
+		/* Edma receive consumer index */
+		{ 0x220, 0x23c },
+		/* Edma transmit consumer index */
+		{ 0x240, 0x27c },
+		/* IRQ Moderator Initial Timer Register */
+		/* Interrupt Control Register */
+		{ 0x280, 0x284 },
+		/* RX Interrupt Mask Register */
+		{ 0x300, 0x31c },
+		/* TX Interrupt mask register */
+		{ 0x340, 0x37c },
+		/* Load Ptr Register
+		* Software sets this bit after the initialization of the head and tail
+		*/
+		/* TXQ Control Register */
+		/* WRR Control Register */
+		{ 0x400, 0x418 },
+		/* Tx Descriptor Control Register */
+		{ 0x41c, 0x41c },
+		/* Transmit descriptor base address */
+		{ 0x420, 0x45c },
+		/* TPD Index Register */
+		{ 0x460, 0x49c },
+		/* TX Virtual Queue Mapping Control Register */
+		{ 0x4a0, 0x4ac },
+		/* Tx Queue Packet Statistic Register */
+		/* Tx Queue Byte Statistic Register */
+		{ 0x700, 0x77c },
+		/* Load Balance Based Ring Offset Register */
+		/* Load Balance Priority Mapping Register */
+		{ 0x800, 0x810 },
+		/* RSS Priority Mapping Register */
+		{ 0x820, 0x820 },
+		/* RSS Indirection Register */
+		{ 0x840, 0x87c },
+		/* Default RSS Ring Register */
+		/* RSS Hash Function Type Register */
+		{ 0x890, 0x894 },
+		{ 0x8c0, 0x8c4 },
+		/* RFD Base Address Register */
+		{ 0x950, 0x96c },
+		/* RFD Index Register */
+		{ 0x9b0, 0x9c4 },
+		/* Rx Descriptor Control Register */
+		/* RXQ Control Register */
+		/* AXI Burst Size Config */
+		{ 0xa10, 0xa1c },
+		/* Rx Queue Byte Statistic Register */
+		{ 0xa30, 0xa4c },
+		/* Rx Queue Packet Statistic Register */
+		{ 0xa50, 0xa6c },
+		/* WoL Pattern Length Register */
+		/* WoL Control Register */
+		{ 0xc00, 0xc08 },
+		/* MAC Control Register */
+		{ 0xc20, 0xc24 },
+	};
+
+	for (int range = 0; range < ARRAY_SIZE(reg_ranges); range++) {
+		for (int reg = reg_ranges[range][0]; reg <= reg_ranges[range][1]; reg += 4) {
+			u32 val;
+			edma_read_reg(reg, &val);
+			*(u32*)(&buf[reg]) = val;
+		}
+	}
+}
+
 static int ess_reset(struct edma_common_info *edma)
 {
 	struct device_node *switch_node = NULL;

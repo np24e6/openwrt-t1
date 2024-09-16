@@ -24,13 +24,12 @@ case $script_type in
 			json_add_string "ip_remote" "$ifconfig_remote"
 			json_add_string "ipv6_remote" "$ifconfig_ipv6_remote"
 		}
-		json_add_string "time" "$daemon_start_time"
+		json_add_string "time" "$(awk '{print $1}' /proc/uptime)"
 		json_dump > "$STATUS_FILE"
 		;;
 	down)
 		[ "$TYPE" = "client" ] && rm /tmp/dnsmasq.d/$dev.dns 2> /dev/null
 		rm "$STATUS_FILE" 2> /dev/null
-		rm /var/run/openvpn."$INSTANCE".status 2> /dev/null
 		;;
 esac
 [ "$TYPE" = "client" ] && /etc/init.d/dnsmasq reload &

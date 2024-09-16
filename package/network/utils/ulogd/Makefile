@@ -98,13 +98,15 @@ endef
 
 define Package/tlt-ulogd
   $(call Package/ulogd/Default)
-  DEPENDS:=+ulogd +ulogd-mod-extra +ulogd-mod-nflog +vuci-app-ulog-ui
+  DEPENDS:=+ulogd +ulogd-mod-extra +ulogd-mod-nflog
   TITLE:=Netfilter userspace logging daemon
   MENU:=1
-  ifeq (m, $(CONFIG_PACKAGE_tlt-ulogd))
-    PKG_TLT_NAME:=Traffic Logging
-    PKG_ROUTER:=$(TLT_PLATFORM_NAME)
-  endif
+endef
+
+define Package/tlt-ulogd/description
+  Traffic logger is a service that provides the possibility
+  to set up periodic transfers of the selected traffic log
+  to the FTP server.
 endef
 
 CONFIGURE_ARGS += \

@@ -1,0 +1,11 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+# The check protects against migration to the same version firmware
+if [ -z "$(uci_get gps.modman)" ]
+then
+	uci_add gps section modman
+	uci_set gps modman enabled 0
+	uci_commit gps
+fi

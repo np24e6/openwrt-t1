@@ -160,7 +160,7 @@ STAGING_DIR_ROOT:=$(STAGING_DIR)/root-$(BOARD)
 STAGING_DIR_IMAGE:=$(STAGING_DIR)/image
 BUILD_LOG_DIR:=$(if $(call qstrip,$(CONFIG_BUILD_LOG_DIR)),$(call qstrip,$(CONFIG_BUILD_LOG_DIR)),$(TOPDIR)/logs)
 PKG_INFO_DIR := $(STAGING_DIR)/pkginfo
-GPL_NAME:=rutos-$(BOARD)-$(shell echo $(CONFIG_TLT_VERSIONING_PREFIX) | tr A-Z a-z)-gpl
+GPL_NAME:=rutos-$(BOARD)-$(shell echo $(CONFIG_TLT_VERSIONING_PREFIX) | tr A-Z a-z)-sdk
 GPL_BUILD_DIR:=$(BUILD_DIR)/$(GPL_NAME)
 GENINFO_FILE:=$(BIN_DIR)/rutos-$(CONFIG_TARGET_BOARD)-package-geninfo.csv
 
@@ -347,6 +347,8 @@ else
     PATCHELF="$(STAGING_DIR_HOST)/bin/patchelf" \
     $(SCRIPT_DIR)/rstrip.sh
 endif
+
+RCOMPR=COMPRESSOR=upx COMPRESS_OPTIONS=--ultra-brute $(SCRIPT_DIR)/compress.sh
 
 ifeq ($(CONFIG_IPV6),y)
   DISABLE_IPV6:=

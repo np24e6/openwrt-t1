@@ -1,0 +1,36 @@
+--- a/iwinfo_nl80211.c
++++ b/iwinfo_nl80211.c
+@@ -432,7 +432,7 @@ out:
+ static bool nl80211_is_ifname(const char *name)
+ {
+ 	struct stat st;
+-	char buffer[PATH_MAX];
++	char buffer[PATH_MAX] = { 0 };
+ 
+ 	snprintf(buffer, sizeof(buffer), "/sys/class/net/%s", name);
+ 	return !lstat(buffer, &st);
+@@ -441,7 +441,7 @@ static bool nl80211_is_ifname(const char
+ static struct nl80211_msg_conveyor * nl80211_msg(const char *ifname,
+                                                  int cmd, int flags)
+ {
+-	unsigned int ifidx = 0;
++	int ifidx = -1;
+ 	int phyidx = -1;
+ 	struct nl80211_msg_conveyor *cv;
+ 
+@@ -451,12 +451,11 @@ static struct nl80211_msg_conveyor * nl8
+ 	if (nl80211_init() < 0)
+ 		return NULL;
+ 
+-	if (!strncmp(ifname, "mon.", 4))
++	if (!strncmp(ifname, "mon.", 4)) {
+ 		ifidx = if_nametoindex(&ifname[4]);
+-	else if (nl80211_is_ifname(ifname))
++	} else if (nl80211_is_ifname(ifname)) {
+ 		ifidx = if_nametoindex(ifname);
+-	else
+-	{
++	} else {
+ 		phyidx = nl80211_phy_idx_from_phy(ifname);
+ 		if (phyidx < 0)
+ 			phyidx = nl80211_phy_idx_from_uci(ifname);

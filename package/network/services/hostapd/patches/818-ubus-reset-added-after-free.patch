@@ -1,0 +1,10 @@
+--- a/src/ap/ubus.c
++++ b/src/ap/ubus.c
+@@ -1755,6 +1755,7 @@ void hostapd_ubus_free_bss(struct hostap
+ 	if (obj->id) {
+ 		ubus_remove_object(ctx, obj);
+ 		hostapd_ubus_ref_dec();
++		hapd->ubus_added = 0;
+ 	}
+ 
+ 	free(name);

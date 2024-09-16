@@ -2,6 +2,10 @@
 #include <dt-bindings/gpio/gpio.h>
 #include "platform_name.dtsi"
 
+#define BLOCK_4PIN "1"
+#define BLOCK_10PIN "2"
+#define BLOCK_16PIN "3"
+
 / {
 	compatible = "teltonika,rutx", "qcom,ap-dk01.1-c2", "qcom,ipq4019";
 
@@ -199,6 +203,25 @@
 		sim_count {
 			default =  "4";
 			log;
+		};
+	};
+
+	ioman: ioman {
+		layout@0{
+			io@0 { // 4pin #3
+				label = "din1";
+				block_type = BLOCK_4PIN;
+				block_pin = "3";
+				gpio_in = "GPIO_IN_1";
+				io_param = "g0";
+			};
+			io@1 { // 4pin #4
+				label = "dout1";
+				block_type = BLOCK_4PIN;
+				block_pin = "4";
+				gpio_out = "GPIO_OUT_1";
+				io_param = "g1";
+			};
 		};
 	};
 };

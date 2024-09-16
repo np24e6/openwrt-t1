@@ -19,8 +19,7 @@ validate_log_section() {
 		'log_proto:or("tcp", "udp"):udp' \
 		'log_trailer_null:bool:0' \
 		'log_prefix:string' \
-		'log_hostname:bool:0' \
-		'hostname:string'
+		'log_hostname:bool:0'
 }
 
 validate_log_daemon() {
@@ -79,7 +78,7 @@ start_service_remote() {
 	"udp") procd_append_param command -u ;;
 	"tcp") [ "${log_trailer_null}" -eq 1 ] && procd_append_param command -0 ;;
 	esac
-	[ "${log_hostname}" -eq 1 ] && procd_append_param command -h "${hostname}"
+	[ "${log_hostname}" -eq 1 ] && procd_append_param command -h "$(uci_get system system hostname)"
 	[ -z "${log_prefix}" ] || procd_append_param command -P "${log_prefix}"
 	procd_close_instance
 }
@@ -103,6 +102,6 @@ start_service() {
 	config_load system
 	config_foreach validate_log_daemon system start_service_daemon
 	config_foreach validate_log_section system start_service_file
-	config_foreach validate_log_section system start_service_remote
+	config_foreach validate_log_section remote_logger start_service_remote
 	config_foreach start_service_db system
 }

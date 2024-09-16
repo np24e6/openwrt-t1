@@ -34,7 +34,7 @@ TTY_PORT=""
 MODEM_N=""
 MODEM_USB_ID=""
 JUST_LIST="0"
-USER_PATH="0"
+USER_PATH=0
 VERSION=""
 NEED_MODEM_RESTART="0"
 NEED_SERVICE_RESTART="0"
@@ -80,7 +80,7 @@ graceful_exit() {
     # If we don't need to restart we just exit here
     [ "$NEED_MODEM_RESTART" = "0" ] && exit 0
     # Skip validation was used, we are done here
-    [ "$SKIP_VALIDATION" = "0" ] && exit 0
+    [ "$SKIP_VALIDATION" = "1" ] && exit 0
 
     # Wait for modem to turn ON, if it doesn't restart it
     # Most modems will power by themselves
@@ -124,6 +124,69 @@ stop_services() {
     /etc/init.d/modem_trackd stop
     /etc/init.d/ledman stop
     NEED_SERVICE_RESTART="1"
+}
+
+verify_firmware_file() {
+    # check if file exists
+    [ ! -f $FW_PATH ] && {
+        echo "Firmware path does not point to a file. Exiting..."
+        echo "If firmware path is manually defined make sure it points to a valid file"
+        graceful_exit
+    }
+}
+
+verify_firmware_folder() {
+    # Check if folder exists
+    [ ! -d $FW_PATH ] && {
+        echo "Current path does not point to a directory. Exiting..."
+        echo "If firmware path is manually defined make sure it points to a valid directory"
+        graceful_exit
+    }
+
+    # Check if directory is non empty
+    [ -z "$(ls -A $FW_PATH)" ] && {
+        echo "[ERROR] Firmware directory is empty. Exiting..."
+        graceful_exit
+    }
+}
+
+# used for verifying firmware selection with user selected path (-p option)
+verify_user_fw_path() {
+    [ $USER_PATH -eq 0 ] && return
+
+    # Verify that user selected firmware is correct if required
+    if [ "$DEVICE" = "QuectelUNISOC" ]; then
+        # If FW_PATH is a directory add update.pac so it points to file
+        [ -d $FW_PATH ] && {
+            FW_PATH="$FW_PATH""update.pac"
+        }
+        verify_firmware_file
+    elif [ "$DEVICE" = "QuectelASR" ] || [ "$DEVICE" = "MeiglinkASR" ]; then
+        verify_firmware_file
+    else
+        verify_firmware_folder
+    fi
+}
+
+# Used for verifying fw selection with default path (-v option)
+verify_auto_fw_path() {
+    [ $USER_PATH -eq 1 ] && return
+    # Verify that user selected firmware is correct if required
+    if [ "$DEVICE" = "QuectelUNISOC" ]; then
+        # If FW_PATH is a directory add update.pac so it points to file
+        if [ -d $FW_PATH ]; then
+            OLD_FW_PATH="$FW_PATH"
+            FW_PATH="$FW_PATH""update.pac"
+            verify_firmware_file
+            FW_PATH="$OLD_FW_PATH"
+        else
+            verify_firmware_file
+        fi
+    elif [ "$DEVICE" = "QuectelASR" ] || [ "$DEVICE" = "MeiglinkASR" ]; then
+        verify_firmware_file
+    else
+        verify_firmware_folder
+    fi
 }
 
 ##############################################################################
@@ -478,14 +541,14 @@ check_blocked() {
 
 common_validation() {
     if [ "$VERSION" = "" ] &&
-    [ "$USER_PATH" = "0" ]; then
+    [ $USER_PATH -eq 0 ]; then
         echo "[ERROR] Modem version and firmware path not specified. Please use either ""-p"" or ""-v""."
         helpFunction
         graceful_exit
     fi
 
     if [ "$VERSION" != "" ] &&
-    [ "$USER_PATH" != "0" ]; then
+    [ $USER_PATH -ne 0 ]; then
         echo "[ERROR] Modem version and firmware path are both specified. Please use either ""-p"" or ""-v""."
         helpFunction
         graceful_exit
@@ -527,6 +590,8 @@ common_validation() {
             graceful_exit
         fi
     fi
+
+    verify_user_fw_path
 
     if [ "$SKIP_VALIDATION" = "0" ] &&
     [ "$VERSION" != "" ]; then
@@ -611,12 +676,8 @@ generic_prep() {
     fi
 
     #go into edl/disable mobile connection.
-    if [ $LEGACY_MODE = "0" ]; then
-        if [ "$DEVICE" = "Quectel" ]; then
-            $FLASHER_PATH qfirehose -x ${MODEM_USB_ID:+-s /sys/bus/usb/devices/"$MODEM_USB_ID"}
-        elif [ "$DEVICE" = "Meiglink" ]; then
-            $FLASHER_PATH -x ${MODEM_USB_ID:+-s /sys/bus/usb/devices/"$MODEM_USB_ID"}
-        fi
+    if [ $LEGACY_MODE = "0" ] && [ "$DEVICE" = "Quectel" ]; then
+        $FLASHER_PATH qfirehose -x ${MODEM_USB_ID:+-s /sys/bus/usb/devices/"$MODEM_USB_ID"}
     else
         gsmctl ${MODEM_N:+-N "$MODEM_N"} -A "AT+CFUN=0"
     fi
@@ -626,29 +687,22 @@ generic_prep() {
     sleep 10
 
     #check if connection is working
-    if [ "$USER_PATH" = "0" ]; then
-        validate_connection
-    fi
+    [ $USER_PATH -eq 0 ] && validate_connection
 
-    if [ $USER_PATH = "0" ]; then
+    [ $USER_PATH -eq 0 ] && {
         setup_ssh
         mount_sshfs
-    fi
+    }
     debug "[INFO] Checking firmware path"
 
-    if [ -z "$(ls -A $FW_PATH)" ]; then
-        echo "[ERROR] firmware directory is empty. Mount failed? Exiting..."
-        graceful_exit
-    fi
+    verify_auto_fw_path
 
     #some firmware sanity checks
     if [ "$DEVICE" = "Quectel" ] &&
     [ $LEGACY_MODE = "0" ] &&
     [ -z "$(ls -A $FW_PATH/update/firehose/)" ]; then
         echo "[ERROR] No firehose folder found. Either the firmware is not right or you must use legacy mode (-l option)"
-        if [ "$USER_PATH" = "0" ]; then
-            umount "$FW_PATH"
-        fi
+       [ $USER_PATH -eq 0 ] &&  umount "$FW_PATH"
         helpFunction
         graceful_exit
     fi
@@ -676,15 +730,18 @@ generic_flash() {
             fi
         fi
     fi
+
     if [ "$DEVICE" = "QuectelUNISOC" ]; then
-        "$FLASHER_PATH" -f "$FW_PATH/update.pac"
+        if [ -d $FW_PATH ]; then
+            "$FLASHER_PATH" -f "$FW_PATH""update.pac"
+        else
+            "$FLASHER_PATH" -f "$FW_PATH"
+        fi
     fi
 
     sleep 10
 
-    if [ "$USER_PATH" = "0" ]; then
-        umount "$FW_PATH"
-    fi
+    [ $USER_PATH -eq 0 ] &&  umount "$FW_PATH"
 }
 
 generic_start() {
@@ -702,10 +759,10 @@ generic_start() {
 ### TRB modem specific flashing functions
 
 trb_validation() {
-    if [ "$USER_PATH" = "1" ]; then
+    [ $USER_PATH -eq 1 ] && {
         echo "Please use modem_upgrade directly."
         graceful_exit
-    fi
+    }
 }
 
 trb_prep() {
@@ -782,7 +839,7 @@ ASR_prep() {
         backupnvr
     fi
 
-    if [ "$USER_PATH" = "0" ]; then
+    if [ $USER_PATH -eq 0 ]; then
         UPDATE_BIN="/tmp/modem_update.bin"
         echo "[INFO] Downloading firmware"
 
@@ -899,7 +956,7 @@ while [ -n "$1" ]; do
         ;;
 		-p) shift
 			if [ "$1" != "" ]; then
-                USER_PATH="1"
+                USER_PATH=1
                 FW_PATH="$1"
             else
                 echo "[ERROR] path not specified."

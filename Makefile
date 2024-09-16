@@ -18,7 +18,7 @@ $(if $(findstring $(space),$(TOPDIR)),$(error ERROR: The path to the OpenWrt dir
 
 world:
 
-DISTRO_PKG_CONFIG:=$(shell which -a pkg-config | grep -E '\/usr' | head -n 1)
+DISTRO_PKG_CONFIG:=$(shell $(TOPDIR)/scripts/command_all.sh pkg-config | grep '/usr' -m 1)
 export PATH:=$(TOPDIR)/staging_dir/host/bin:$(PATH)
 
 ifneq ($(OPENWRT_BUILD),1)
@@ -38,6 +38,7 @@ else
   include $(INCLUDE_DIR)/depends.mk
   include $(INCLUDE_DIR)/subdir.mk
   include target/Makefile
+  include target/pm-prep/Makefile
   include package/Makefile
   include tools/Makefile
   include toolchain/Makefile
@@ -119,9 +120,26 @@ world: prepare $(target/stamp-compile) $(package/stamp-compile) $(package/stamp-
 	$(_SINGLE)$(SUBMAKE) -r json_overview_image_info
 	$(_SINGLE)$(SUBMAKE) -r checksum
 
+pm-clean:
+	$(call PM/Build/Clean)
+
+pm-prep:
+	$(call PM/Build/Prepare)
+
+pm-sign-ipk:
+	$(call PM/Build/Sign_ipk)
+
+pm-pack:
+	$(call PM/Build)
+
+pm-sign-index:
+	$(call PM/Build/Sign_index)
+
+pm: pm-clean pm-prep pm-sign-ipk pm-pack pm-sign-index
+
 sign:
 	LD_LIBRARY_PATH=$(STAGING_DIR_HOST)/lib PATH=$(STAGING_DIR_HOST)/bin $(TOPDIR)/scripts/sign_images.sh
 
-.PHONY: clean dirclean prereq prepare world sign package/symlinks package/symlinks-install package/symlinks-clean
+.PHONY: clean dirclean prereq prepare world package/symlinks package/symlinks-install package/symlinks-clean pm pm-clean pm-prep pm-sign-ipk pm-pack pm-sign-index sign
 
 endif

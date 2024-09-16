@@ -4,7 +4,9 @@
 	DEVICE="$(mnf_info -n 2>/dev/null | cut -c -6)"
 	[ -n "$DEVICE" ] || DEVICE="Unknown"
 
-	cat /etc/banner | sed "s/{DEVICE_NAME}/${DEVICE}/"
+	cat /etc/banner | sed                    \
+		-e "s/{DEVICE_NAME}/${DEVICE}/"      \
+		-e "s/{KERNEL_VERSION}/$(uname -r)/"
 }
 [ -n "$FAILSAFE" ] && cat /etc/banner.failsafe
 

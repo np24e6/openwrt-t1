@@ -1,55 +1,77 @@
-#!/bin/sh
+#!/usr/bin/env bash
 
-IMAGE_NAME="rutos-focal:v1.1"
+IMAGE_NAME="rutos-focal:1.2"
 
 PROJDIR="$(pwd)"
 HOMEDIR="$PROJDIR:$PROJDIR"
 PASSWD="/etc/passwd:/etc/passwd:ro"
 GROUP="/etc/group:/etc/group:ro"
 HOSTS="/etc/hosts/:/etc/hosts:ro"
-USER="$(id -u):$(id -g)"
+USER_ARG="$(id -u):$(id -g)"
 
-SUDO=""
+info() {
+	#shellcheck disable=2059
+	printf "$@"
+}
 
-# check if docker is installed
-which docker &>/dev/null || {
-	echo "Docker is not installed, please install it first."
+err() {
+	info "$@" >&2
+}
+
+[[ $EUID -eq 0 ]] && {
+	err "Running this script as root is unsupported. Please use a regular user for correct file permissions.\n"
 	exit 1
 }
 
-# check if docker is running
-[ ! -S /var/run/docker.sock ] && {
-	# check if systemd-bloatd is installed
-	which systemctl &>/dev/null || {
-		echo "Docker is not running, systemd is not available."
-		echo "Please start Docker service."
+# Check for Docker installation
+if ! command -v docker &>/dev/null; then
+	err "Docker is not installed, please install it first.\n"
+	exit 1
+fi
+
+# Chicken and egg problem - cannot reliably check if docker is running before determining correct permissions,
+# but permissions check might print wrong information if the docker is not running.
+
+# Permission handling for Docker command
+DOCKER_CMD="docker"
+if docker info -f "{{println .SecurityOptions}}" 2>/dev/null | grep -q rootless; then
+	info "Rootless docker is unsupported due to file ownership issues. Will proceed with sudo...\n"
+	DOCKER_CMD="sudo docker"
+fi
+
+if ! $DOCKER_CMD ps &>/dev/null; then
+	info "Docker commands require sudo. Attempting to proceed with sudo...\n"
+	DOCKER_CMD="sudo docker"
+fi
+
+# Check if Docker daemon is running
+if ! $DOCKER_CMD info &>/dev/null; then
+	info "Docker is not running. "
+	# Check for systemd to start Docker
+	if ! command -v systemctl &>/dev/null; then
+		err "Systemd not found. Please start Docker manually.\n"
+		exit 1
+	fi
+
+	info "Attempting to start Docker using systemd...\n"
+	sudo systemctl start docker || {
+		err "Failed to start Docker. Please start Docker manually.\n"
 		exit 1
 	}
-
-	echo "Docker is not running, attempting to start... "
-	sudo systemctl start docker
-	[ "$?" -ne 0 ] && {
-		echo "Unable to start docker."
-		exit 1
-	}
-}
-
-# check docker permissions
-[ "$(docker image ls 2>&1 | grep 'permission denied')" ] && {
-	echo "Cannot run docker root-less mode, 'sudo' will be used"
-	SUDO="sudo"
-}
+	info "Docker started successfully.\n"
+fi
 
 # check if image is built
-[ -n "$($SUDO docker images -q "$IMAGE_NAME")" ] || {
-	echo "Image $IMAGE_NAME is not built, running docker build..."
-	$SUDO docker build -t "$IMAGE_NAME" "$PROJDIR/scripts"
+[ -n "$($DOCKER_CMD images -q "$IMAGE_NAME")" ] || {
+	info "Image $IMAGE_NAME is not built, running docker build...\n"
+	$DOCKER_CMD build -t "$IMAGE_NAME" "$PROJDIR/scripts" || exit $?
 }
 
-$SUDO docker run -it \
+#shellcheck disable=2086
+$DOCKER_CMD run -it \
 	--rm \
 	--network host \
-	-u "$USER" \
+	-u $USER_ARG \
 	-w "$PROJDIR" \
 	-v "$HOMEDIR" \
 	-v "$HOME:$HOME" \
@@ -57,4 +79,4 @@ $SUDO docker run -it \
 	-v "$GROUP" \
 	-v "$HOSTS" \
 	--ulimit "nofile=1024:1048576" \
-	$IMAGE_NAME $@
+	$IMAGE_NAME "$@"

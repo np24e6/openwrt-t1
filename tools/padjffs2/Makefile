@@ -10,6 +10,8 @@ include $(TOPDIR)/rules.mk
 PKG_NAME:=padjffs2
 PKG_RELEASE:=1
 
+PKG_LICENSE:=GPL-2.0
+
 include $(INCLUDE_DIR)/host-build.mk
 include $(INCLUDE_DIR)/gpl.mk
 

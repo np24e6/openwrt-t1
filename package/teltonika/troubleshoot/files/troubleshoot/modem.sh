@@ -7,16 +7,56 @@ get_pdp_ctx_list get_active_pdp_ctx_list get_pdp_addr_list get_ims_state get_vol
 
 methods_with_args="get_time{\"mode\":\"gmt\"} get_time{\"mode\":\"local\"} get_pdp_call{\"cid\":1}"
 
+ALLOWED_TIMEOUTS=2
+
+check_output()
+{
+	local output="$1"
+	local log_file="$2"
+
+	case "$output" in
+	*"Request timeout expired"*) TIMEOUT_COUNTER=$((TIMEOUT_COUNTER+1)) ;;
+	esac
+
+	if [ $TIMEOUT_COUNTER -ge $ALLOWED_TIMEOUTS ]; then
+		printf "GSM commands appear to be timing out. Skipping the rest...\n" >> "$log_file"
+	fi
+}
+
+# Executes method and tracks how long the call took 
+invoke_and_print_cmd() {
+	local modem="$1"
+	local method="$2"
+	local log_file="$3"
+	local cmd_and_time cmd_output cmd_time
+
+	if [ $TIMEOUT_COUNTER -ge $ALLOWED_TIMEOUTS ]; then
+		printf "Skipping: %s\n" "$method" >> "$log_file"
+		return
+	fi
+	
+	cmd_and_time=$(time -f '%e' ubus call "$modem" "$method" 2>&1) || return
+	cmd_output=$(echo "$cmd_and_time" | head -n -1)
+	cmd_time=$(echo "$cmd_and_time" | tail -n1)
+
+	printf "%s(%ss):\n%s\n" "$method" "$cmd_time" "$cmd_output" >> "$log_file"
+	check_output "$cmd_output" "$log_file"
+}
+
 invoke_ubus_with_args() {
 	method=$(echo "$1" | sed "s/{/ &/")
-	cmd="$(ubus call "$2" $method 2>&1)"
-	[ "$cmd" = "Command failed: Operation not supported" ] && return
-	printf "%s:\n%s\n" "$method" "$cmd" >>"$3"
+	invoke_and_print_cmd "$2" "$method" "$3"
 }
 
 get_special_info() {
-	modem_num="$2"
 	model="$1"
+	modem_num="$2"
+	log_file="$3"
+
+	if [ $TIMEOUT_COUNTER -ge $ALLOWED_TIMEOUTS ]; then
+		printf "Skipping AT commands\n" >> "$log_file"
+		return
+	fi
 
 	MEIG_AT_LIST="AT+EFSRW=0,0,\"/nv/item_files/ims/IMS_enable\" \
 AT+NVBURS=2"
@@ -48,14 +88,12 @@ get_gsm_info() {
 
 		at_ans="$(ubus call "$mdm" exec "{\"command\":\"AT\"}")"
 		if [ -z "${at_ans##*\\r\\nOK\\r\\n*}" ]; then
-			info_output="$(ubus call "$mdm" info 2>&1)"
-			printf "%-40s\n%s\n" "Running info..." "$info_output" >>"$log_file"
-
+			TIMEOUT_COUNTER=0
+			invoke_and_print_cmd "$mdm" "info" "$log_file"
+			
 			#foreach top_priority_methods
 			for method in $top_priority_methods; do
-				cmd="$(ubus call "$mdm" "$method" 2>&1)"
-				[ "$cmd" = "Command failed: Operation not supported" ] && continue
-				printf "%s:\n%s\n" "$method" "$cmd" >>"$log_file"
+				invoke_and_print_cmd "$mdm" "$method" "$log_file"
 			done
 
 			#foreach 'get' command without arguments
@@ -70,9 +108,7 @@ get_gsm_info() {
 				#skip methods from top_priority_methods list
 				echo "$top_priority_methods" | grep -q "$method_name" && continue
 
-				cmd="$(ubus call "$mdm" "$method_name" 2>&1)"
-				[ "$cmd" = "Command failed: Operation not supported" ] && continue
-				printf "%s:\n%s\n" "$method_name" "$cmd" >>"$log_file"
+				invoke_and_print_cmd "$mdm" "$method_name" "$log_file"
 			done
 
 			#foreach methods_with_args
@@ -84,7 +120,7 @@ get_gsm_info() {
 			json_load "$info_output"
 			json_get_vars model
 
-			get_special_info "$model" "$mdm"
+			get_special_info "$model" "$mdm" "$log_file"
 		else
 			troubleshoot_add_log "Modem not responding to AT commands. Skipping.." "$log_file"
 		fi

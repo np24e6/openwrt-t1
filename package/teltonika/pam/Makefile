@@ -3,25 +3,24 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=pam
-PKG_VERSION:=2022-01-03
+PKG_VERSION:=2024-03-07
 PKG_RELEASE:=2
 
 PKG_SOURCE_VERSION:=1.0
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_SOURCE_VERSION)-$(PKG_VERSION)
 PKG_SOURCE:=$(PKG_SOURCE_SUBDIR).tar.gz
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_SOURCE_SUBDIR)
+PKG_LICENSE:=Teltonika-closed
 
 include $(INCLUDE_DIR)/package.mk
+
+RCOMPR:=:
 
 define Package/pam
 	SECTION:=utils
 	CATEGORY:=Base system
-	DEPENDS:=+rpcd +libubus +libubox +libpam +pam-radius +pam-tacacs +libpam-mod-deny +libpam-mod-permit +libpam-mod-umask +libpam-mod-unix +vuci-app-pamd-ui
+	DEPENDS:=+rpcd +libubus +libubox +libpam +pam-radius +pam-tacacs +libpam-mod-deny +libpam-mod-permit +libpam-mod-umask +libpam-mod-unix
 	TITLE:=Teltonika PAM support
-	ifeq (m, $(CONFIG_PACKAGE_pam))
-  		PKG_TLT_NAME:=PAM
-  		PKG_ROUTER:=$(TLT_PLATFORM_NAME)
-  	endif
 endef
 
 define Package/pam/description
@@ -35,13 +34,15 @@ endef
 
 
 define Package/pam/install
-	$(INSTALL_DIR) $(1)/etc $(1)/usr/sbin/
-	$(CP) ./files/* $(1)/etc/
+	$(INSTALL_DIR) $(1)/etc/init.d $(1)/usr/sbin $(1)/etc/config
+	$(INSTALL_CONF) ./files/pam.config $(1)/etc/config/pam
+	$(INSTALL_BIN) ./files/pam.init $(1)/etc/init.d/pam
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/pam $(1)/usr/sbin/pamd
 endef
 
 define Package/pam/prerm
 	#!/bin/sh
+	[ -z "$${IPKG_INSTROOT}" ] || exit 0
 	. /lib/functions.sh
 	
 	clean_rpcd() {

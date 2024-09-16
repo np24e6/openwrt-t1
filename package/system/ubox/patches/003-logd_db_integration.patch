@@ -43,7 +43,7 @@ Index: ubox-2020-10-25-9ef88681/log/logdb.c
 ===================================================================
 --- /dev/null
 +++ ubox-2020-10-25-9ef88681/log/logdb.c
-@@ -0,0 +1,504 @@
+@@ -0,0 +1,510 @@
 +#define _GNU_SOURCE
 +
 +#include <stdio.h>
@@ -367,6 +367,12 @@ Index: ubox-2020-10-25-9ef88681/log/logdb.c
 +
 +	if (sqlite3_exec(conn, "VACUUM", NULL, NULL, &err) != SQLITE_OK) {
 +		syslog(LOG_ERR, "Failed to execute `VACUUM`: `%s`\n", err);
++		sqlite3_close(conn);
++		unlink(DB_BAK);
++		unlink(DB);
++		init_db();
++		g_vc_running = false;
++		return;
 +	}
 +
 +	if (sqlite3_close(conn) != SQLITE_OK) {
@@ -469,10 +475,8 @@ Index: ubox-2020-10-25-9ef88681/log/logdb.c
 +		}
 +	} else if (output != SQLITE_DONE) {
 +		syslog(LOG_ERR, "failed to step through query. Error '%s'\n",sqlite3_errmsg(conn));
-+		if (output == SQLITE_FULL || output == SQLITE_READONLY || output == SQLITE_CANTOPEN) {
-+			// attempt to recover full database
-+			perform_cleanup(stmt, true);
-+		}
++		// attempt to recover full database
++		perform_cleanup(stmt, true);
 +		return SQLITE_ERROR;
 +	}
 +
@@ -519,6 +523,8 @@ Index: ubox-2020-10-25-9ef88681/log/logdb.c
 +	sqlite3_stmt *stmt = NULL;
 +	if (sqlite3_prepare_v2(conn, query, -1, &stmt, NULL) != SQLITE_OK) {
 +		syslog(LOG_ERR, "sqlite3_prepare_v2 failure: %s\n", sqlite3_errmsg(conn));
++		// attempt to recover full database
++		perform_cleanup(&stmt, true);
 +		return NULL;
 +	}
 +	return stmt;

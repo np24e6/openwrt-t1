@@ -1,0 +1,11 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+tcp_keepalive=$(uci_get uhttpd main tcp_keepalive)
+[ -n "$tcp_keepalive" ] && [ "$tcp_keepalive" -lt 5 ] && {
+	uci_set "uhttpd" "main" "tcp_keepalive" "5"
+	uci_commit "uhttpd"
+}
+
+exit 0

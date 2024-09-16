@@ -1,54 +1,28 @@
 
-. /usr/share/libubox/jshn.sh
-
 # when device contains 2 internal modems, this function will return '2' if
 #  selected modem(inc_id) is builtin and primary.
 # And if it's only builtin, then '1'
+
 is_builtin_modem() {
-	local inc_id="$1"
-	local modem modems id builtin primary
+	local builtin primary
 
-	json_init
-	json_load_file "/etc/board.json"
+	eval "$(jsonfilter -q -i "/etc/board.json" \
+		-e "builtin=@['modems'][@.id='$1'].builtin" \
+		-e "primary=@['modems'][@.id='$1'].primary" \
+		)"
 
-	json_get_keys modems modems
-	json_select modems
-
-	for modem in $modems; do
-		json_select "$modem"
-		json_get_vars id builtin primary
-
-		[ "$id" = "$inc_id" ] && {
-			[ -n "$builtin" ] && {
-				[ -n "$primary" ] && {
-					echo 2
-					return
-				}
-
-				echo 1
-				return
-			}
-
-			echo 0
+	[ "$builtin" -eq 1 ] && {
+		[ "$primary" -eq 1 ] && {
+			echo 2
 			return
 		}
-
-		json_select ..
-	done
+		echo 1
+		return
+	}
 
 	echo 0
 }
 
 is_dual_modem() {
-	json_init
-	json_load_file "/etc/board.json"
-
-	json_get_keys hwinfo hwinfo
-	json_select hwinfo
-
-	json_get_vars dual_modem
-
-	[ "$dual_modem" = "1" ] && echo 1 || echo 0
-
-	json_select ..
+	[ "$(jsonfilter -i /etc/board.json -e '@.hwinfo.dual_modem')" = "true" ] && echo 1 || echo 0
 }

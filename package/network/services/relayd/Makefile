@@ -27,11 +27,7 @@ define Package/relayd
   CATEGORY:=Network
   SUBMENU:=Routing and Redirection
   TITLE:=Transparent routing / relay daemon
-  DEPENDS:=+libubox +vuci-app-relayd-ui +libubus
-  ifeq (m, $(CONFIG_PACKAGE_relayd))
-    PKG_TLT_NAME:=Relay configuration
-    PKG_ROUTER:=$(TLT_PLATFORM_NAME)
-  endif
+  DEPENDS:=+libubox +libubus
 endef
 
 TARGET_CFLAGS += -I$(STAGING_DIR)/usr/include

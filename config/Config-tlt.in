@@ -12,13 +12,11 @@ config CORE_PACKAGES
 	imply PACKAGE_troubleshoot
 	imply PACKAGE_vuci-app-troubleshoot-ui
 	imply PACKAGE_rpcd-mod-mnfinfo
-	imply PACKAGE_ucert-full
+	imply PACKAGE_fwcert
 	imply PACKAGE_kmod-gpio-button-hotplug
-	imply PACKAGE_cgi-io
 	imply PACKAGE_uci-default
 	imply BUSYBOX_CONFIG_PASSWD
 	imply UCI_LOG_SUPPORT
-	imply PACKAGE_curl if !(AP_DEVICE || x86_64)
 
 config PROFILES_SUPPORT
 	bool
@@ -75,7 +73,7 @@ config PAM_SUPPORT
 	tristate
 	depends on PKG_SUPPORT
 	default m
-	imply PACKAGE_pam
+	imply PACKAGE_vuci-app-pamd-ui
 	imply DROPBEAR_UBUS_PAM
 	imply RPCD_PAM
 
@@ -89,7 +87,7 @@ config CRYPTO
 	imply PACKAGE_kmod-crypto-crc32c
 	imply PACKAGE_kmod-crypto-sha512
 	imply PACKAGE_kmod-crypto-gcm
-	
+
 config HNAT
 	bool
 	imply PACKAGE_qssdk-hnat
@@ -115,6 +113,7 @@ config ADVANCED_NETWORK
 	default y
 	imply PACKAGE_ethtool
 	imply PACKAGE_networkmap
+	imply BUSYBOX_DEFAULT_ARPING
 	imply PACKAGE_vuci-app-networkmap-ui
 	imply PACKAGE_iptables-mod-nat-extra
 	imply PACKAGE_iptables-mod-conntrack-extra
@@ -134,6 +133,13 @@ config NFTABLES_SUPORT
 	imply PACKAGE_kmod-nft-netdev
 	imply PACKAGE_nftables-nojson
 
+config VRF_SUPPORT
+	tristate
+	depends on PKG_SUPPORT
+	default y if NAND_SUPPORT
+	default m
+	imply PACKAGE_vuci-app-vrf-ui
+
 config EBTABLES_DNS_SUPPORT
 	bool
 	depends on AP_DEVICE
@@ -148,7 +154,7 @@ config STUNNEL_SUPPORT
 	depends on PKG_SUPPORT && ADVANCED_NETWORK
 	default m if !NAND_SUPPORT || (NAND_SUPPORT && GATEWAY_DEVICE)
 	default y
-	imply PACKAGE_stunnel
+	imply PACKAGE_vuci-app-stunnel-ui
 
 config STRONGSWAN_SUPPORT
 	bool
@@ -191,21 +197,21 @@ config SSTP_SUPPORT
 	depends on PKG_SUPPORT && ADVANCED_NETWORK
 	default m if !NAND_SUPPORT || (NAND_SUPPORT && GATEWAY_DEVICE)
 	default y
-	imply PACKAGE_sstp-client
+	imply PACKAGE_vuci-app-sstp-ui
 
 config DMVPN_SUPPORT
 	tristate
 	depends on !64MB_RAM && PKG_SUPPORT && GRE_SUPPORT && STRONGSWAN_SUPPORT && FRR_SUPPORT
 	default m if !NAND_SUPPORT || (NAND_SUPPORT && GATEWAY_DEVICE)
 	default y
-	imply PACKAGE_dmvpn
+	imply PACKAGE_vuci-app-dmvpn-ui
 
 config DMVPN_FRR5_SUPPORT
 	tristate
 	depends on 64MB_RAM && PKG_SUPPORT && GRE_SUPPORT && STRONGSWAN_SUPPORT && FRR5_SUPPORT
 	default m if !NAND_SUPPORT || (NAND_SUPPORT && GATEWAY_DEVICE)
 	default y
-	imply PACKAGE_dmvpn_frr5
+	imply PACKAGE_vuci-app-dmvpn5-ui
 
 config PPTP_SUPPORT
 	bool
@@ -230,13 +236,13 @@ config ZEROTIER_SUPPORT
 	tristate
 	depends on PKG_SUPPORT
 	default m
-	imply PACKAGE_zerotier
+	imply PACKAGE_vuci-app-zerotier-ui
 
 config TINC_SUPPORT
 	tristate
 	depends on PKG_SUPPORT
 	default m
-	imply PACKAGE_tinc
+	imply PACKAGE_vuci-app-tinc-ui
 
 config WIREGUARD_SUPPORT
 	bool
@@ -244,12 +250,12 @@ config WIREGUARD_SUPPORT
 	default y
 	imply PACKAGE_wireguard if !HAS_DOWNSTREAM_KERNEL
 	imply PACKAGE_wireguard-trb5 if HAS_DOWNSTREAM_KERNEL
+	imply PACKAGE_vuci-app-wireguard-ui
 
 config TAILSCALE_SUPPORT
 	tristate
-	depends on !SMALL_FLASH && PKG_SUPPORT
+	depends on !SMALL_FLASH && PKG_SUPPORT && ( !GATEWAY_DEVICE || BYPASS_OFFLOAD_FEATURE )
 	default m
-	imply PACKAGE_tailscale
 	imply PACKAGE_vuci-app-tailscale-ui
 
 #
@@ -267,7 +273,7 @@ config RELAYD_SUPPORT
 	depends on PKG_SUPPORT && !GATEWAY_DEVICE && !BASIC_ROUTER && !POE_SUPPORT
 	default y if NAND_SUPPORT
 	default m
-	imply PACKAGE_relayd
+	imply PACKAGE_vuci-app-relayd-ui
 
 config FRR_SUPPORT
 	tristate
@@ -277,11 +283,11 @@ config FRR_SUPPORT
 	imply PACKAGE_frr
 	imply PACKAGE_frr-zebra
 	imply PACKAGE_frr-libfrr
-	imply PACKAGE_frr-ripd
-	imply PACKAGE_frr-ospfd
-	imply PACKAGE_frr-eigrpd
-	imply PACKAGE_frr-bgpd
-	imply PACKAGE_frr-nhrp
+	imply PACKAGE_vuci-app-dynamic-routes-rip-ui
+	imply PACKAGE_vuci-app-dynamic-routes-ospf-ui
+	imply PACKAGE_vuci-app-dynamic-routes-eigrp-ui
+	imply PACKAGE_vuci-app-dynamic-routes-bgp-ui
+	imply PACKAGE_vuci-app-dynamic-routes-nhrp-ui
 
 config FRR_VTYSH_SUPPORT
 	tristate
@@ -297,32 +303,31 @@ config FRR5_SUPPORT
 	imply PACKAGE_frr5
 	imply PACKAGE_frr5-zebra
 	imply PACKAGE_frr5-libfrr
-	imply PACKAGE_frr5-ripd
-	imply PACKAGE_frr5-ospfd
-	imply PACKAGE_frr5-eigrpd
-	imply PACKAGE_frr5-bgpd
-	imply PACKAGE_frr5-nhrp
+	imply PACKAGE_vuci-app-dynamic-routes-rip5-ui
+	imply PACKAGE_vuci-app-dynamic-routes-ospf5-ui
+	imply PACKAGE_vuci-app-dynamic-routes-eigrp5-ui
+	imply PACKAGE_vuci-app-dynamic-routes-bgp5-ui
+	imply PACKAGE_vuci-app-dynamic-routes-nhrp5-ui
 
 config VRR_SUPPORT
 	tristate
 	depends on PKG_SUPPORT && ADVANCED_NETWORK
 	default m if !NAND_SUPPORT || GATEWAY_DEVICE
 	default y
-	imply PACKAGE_vrrpd
+	imply PACKAGE_vuci-app-vrrp-ui
 
 config MULTIWAN_SUPPORT
 	tristate
 	depends on PKG_SUPPORT && (!GATEWAY_DEVICE || (GATEWAY_DEVICE && SERIAL_SUPPORT && !MULTI_DEVICE_QUIRK))
 	default m if HAS_SINGLE_ETH_PORT || POE_SUPPORT
 	default y
-	imply PACKAGE_mwan3
 	imply PACKAGE_vuci-app-mwan3-ui
 
 config IGMPPROXY_SUPPORT
 	tristate
 	depends on PKG_SUPPORT
 	default m
-	imply PACKAGE_igmpproxy
+	imply PACKAGE_vuci-app-igmp-proxy-ui
 
 #
 # network tools, services, utils
@@ -331,9 +336,9 @@ config IGMPPROXY_SUPPORT
 config WOL_SUPPORT
 	tristate
 	depends on PKG_SUPPORT
-	default m if !NAND_SUPPORT
-	default y
-	imply PACKAGE_etherwake
+	default y if NAND_SUPPORT && !POE_SUPPORT
+	default m
+	imply PACKAGE_vuci-app-wol-ui
 
 config BRIDGE_SUPPORT
 	bool
@@ -356,7 +361,7 @@ config SPEEDTEST_SUPPORT
 	depends on PKG_SUPPORT
 	default m if !NAND_SUPPORT || (NAND_SUPPORT && GATEWAY_DEVICE)
 	default y
-	imply PACKAGE_speedtest
+	imply PACKAGE_vuci-app-speed-test-ui
 
 config NTP_SUPPORT
 	bool
@@ -368,7 +373,7 @@ config NTPD_SUPPORT
 	tristate
 	depends on PKG_SUPPORT
 	default m
-	imply PACKAGE_ntpd
+	imply PACKAGE_vuci-app-ntpd-ui
 	imply BUSYBOX_DEFAULT_NTPD
 	imply BUSYBOX_DEFAULT_FEATURE_NTPD_SERVER
 
@@ -377,7 +382,7 @@ config NF_LOGGING_SUPPORT
 	depends on PKG_SUPPORT && !BYPASS_OFFLOAD_FEATURE
 	default m if !NAND_SUPPORT
 	default y
-	imply PACKAGE_tlt-ulogd
+	imply PACKAGE_vuci-app-ulog-ui
 
 config IPTABLES_FILTER_EXTENSION
 	tristate
@@ -390,45 +395,45 @@ config DDNS_SUPPORT
 	depends on PKG_SUPPORT && ADVANCED_NETWORK
 	default m if !NAND_SUPPORT
 	default y
-	imply PACKAGE_tlt-ddns
+	imply PACKAGE_vuci-app-ddns-ui
 
 config WEB_FILTER_SUPPORT
 	tristate
 	depends on PKG_SUPPORT && ADVANCED_NETWORK
 	default y if (NAND_SUPPORT && !GATEWAY_DEVICE) || WIFI_GUEST_NETWORK_SUPPORT
 	default m
-	imply PACKAGE_web_filter
+	imply PACKAGE_vuci-app-webfilter-ui
 
 config UPNP_SUPPORT
 	tristate
 	depends on PKG_SUPPORT
 	default m
-	imply PACKAGE_miniupnpd
+	imply PACKAGE_vuci-app-upnp-ui
 
 config SQM_SUPPORT
 	tristate
 	depends on PKG_SUPPORT && !BYPASS_OFFLOAD_FEATURE
 	default m if !NAND_SUPPORT || (NAND_SUPPORT && GATEWAY_DEVICE)
 	default y
-	imply PACKAGE_sqm-scripts
+	imply PACKAGE_vuci-app-sqm-ui
 
 config QOS_SUPPORT
 	tristate
 	depends on PKG_SUPPORT && !BYPASS_OFFLOAD_FEATURE
 	default m
-	imply PACKAGE_qos-scripts
+	imply PACKAGE_vuci-app-qos-ui
 
 config DLNA_SUPPORT
 	tristate
 	depends on PKG_SUPPORT && USB_SUPPORT_EXTERNAL
 	default m
-	imply PACKAGE_tlt-minidlna
+	imply PACKAGE_vuci-app-minidlna-ui
 
 config SSHFS_SUPPORT
 	tristate
 	depends on PKG_SUPPORT
 	default m
-	imply PACKAGE_sshfs
+	imply PACKAGE_vuci-app-sshfs-ui
 
 config TELNET_SUPPORT
 	tristate
@@ -446,13 +451,13 @@ config UDPRELAY_SUPPORT
 	tristate
 	depends on PKG_SUPPORT
 	default m
-	imply PACKAGE_udprelay
+	imply PACKAGE_vuci-app-udprelay-ui
 
 config EMAILRELAY
 	tristate
 	depends on PKG_SUPPORT
 	default m
-	imply PACKAGE_emailrelay
+	imply PACKAGE_vuci-app-email-relay-ui
 
 config UMDNS_SUPPORT
 	bool
@@ -460,6 +465,19 @@ config UMDNS_SUPPORT
 	default y
 	imply PACKAGE_umdns
 
+
+config CONNCHECKER_SUPPORT
+	tristate
+	depends on PKG_SUPPORT && !AP_DEVICE
+	default m if !NAND_SUPPORT
+	default y
+	imply PACKAGE_vuci-app-internet-ui
+
+config IP_BRIDGE_SUPPORT
+	bool
+	depends on DSA_SUPPORT
+	default y
+	imply PACKAGE_ip-bridge
 
 #
 # cloud
@@ -469,13 +487,13 @@ config AZURE_SUPPORT
 	tristate
 	depends on PKG_SUPPORT
 	default m
-	imply PACKAGE_azure_iothub
+	imply PACKAGE_vuci-app-azure-iothub-ui
 
 config CUMULOCITY_SUPPORT
 	tristate
 	depends on PKG_SUPPORT
 	default m
-	imply PACKAGE_cmStreamApp
+	imply PACKAGE_vuci-app-cumulocity-ui
 
 config GREENGRASS_SUPPORT
 	tristate
@@ -486,13 +504,13 @@ config GREENGRASS_SUPPORT
 	imply BUSYBOX_CONFIG_CHPASSWD
 	imply BUSYBOX_CONFIG_REALPATH
 	imply KERNEL_CGROUP_DEVICE
-	imply PACKAGE_greengrass
+	imply PACKAGE_vuci-app-greengrass-ui
 
 config THINGWORX_SUPPORT
 	tristate
 	depends on PKG_SUPPORT
 	default m
-	imply PACKAGE_twStreamApp
+	imply PACKAGE_vuci-app-thingworx-ui
 
 #
 # modem, mobile, etc
@@ -507,10 +525,9 @@ config MOBILE_SUPPORT
 	imply PACKAGE_quota_limit if !BYPASS_OFFLOAD_FEATURE
 	imply PACKAGE_rpcd-mod-smslimit
 	imply PACKAGE_email_to_sms
-	imply PACKAGE_uqmi if !BYPASS_OFFLOAD_FEATURE
-	imply PACKAGE_qmi-utils if BYPASS_OFFLOAD_FEATURE
+	imply PACKAGE_uqmi if !HAVE_QRTR_PIPE_ENDPOINTS
+	imply PACKAGE_qmi-utils if HAVE_QRTR_PIPE_ENDPOINTS
 	imply PACKAGE_vuci-app-mobile-ui
-	imply PACKAGE_vuci-app-mobile-utilities-ui
 	imply PACKAGE_vuci-app-mobile-usage-ui
 	imply PACKAGE_dfota if !BASEBAND_SUPPORT
 	imply PACKAGE_post-get
@@ -532,7 +549,9 @@ config MOBILE_UTILS_SUPPORT
 	depends on MOBILE_SUPPORT
 	default y
 	imply PACKAGE_mobutils
-	imply PACKAGE_mobutils-call_utilities if !BYPASS_OFFLOAD_FEATURE
+	imply PACKAGE_vuci-app-mobile-utilities-ui
+	imply PACKAGE_mobutils-call_utilities if !TARGET_sdxlemur && !TARGET_sdxnightjar
+	imply PACKAGE_vuci-app-call-utilities-ui if !TARGET_sdxlemur && !TARGET_sdxnightjar
 	imply PACKAGE_mobutils-sms_utilities
 	imply SMS_UTILS_HANDLER_IO if IO_SUPPORT
 	imply SMS_UTILS_HANDLER_WIFI if WIFI_SUPPORT
@@ -559,7 +578,7 @@ config SMPP_SUPPORT
 	tristate
 	depends on PKG_SUPPORT && MOBILE_SUPPORT && !BASIC_ROUTER
 	default m
-	imply PACKAGE_smpp
+	imply PACKAGE_vuci-app-smpp-ui
 
 config GSM_CHECKER_SUPPORT
 	bool
@@ -575,8 +594,13 @@ config SIM_IDLE_PROTECTION_SUPPORT
 	tristate
 	depends on PKG_SUPPORT && DUAL_SIM_SUPPORT
 	default m
-	imply PACKAGE_sim_idle_protection
 	imply PACKAGE_vuci-app-sim-idle-protection-ui
+
+config APN_DATABASE_WEBUI_SUPPORT
+	tristate "APN Database support for WebUI"
+	depends on PKG_SUPPORT && MOBILE_SUPPORT
+	default m
+	imply PACKAGE_vuci-app-apn-database-ui
 
 #
 # wifi, hostspot, etc
@@ -608,15 +632,16 @@ config WIFI_SCANNER_SUPPORT
 	depends on PKG_SUPPORT && WIFI_SUPPORT
 	default m if !NAND_SUPPORT
 	default y
-	imply PACKAGE_wifi_scanner
+	imply PACKAGE_vuci-app-wifi-scanner-ui
 
 config HOTSPOT_SUPPORT
 	tristate
 	depends on PKG_SUPPORT
-	default y if NAND_SUPPORT && !GATEWAY_DEVICE
+	default y if NAND_SUPPORT && !GATEWAY_DEVICE && !POE_SUPPORT
 	default m
-	imply PACKAGE_coova-chilli
+	imply PACKAGE_vuci-app-coovachilli-ui
 	imply COOVACHILLI_CHILLIQUERY
+	imply IP_BLOCKD_MAC_SUPPORT
 
 config HOTSPOT_THEMES_SUPPORT
 	tristate
@@ -631,6 +656,13 @@ config HOTSPOT_THEMES_SUPPORT
 	imply PACKAGE_hs_theme_park
 	imply PACKAGE_hs_theme_ship
 	imply PACKAGE_hs_theme_station
+
+config HOTSPOT20_SUPPORT
+	tristate
+	depends on PKG_SUPPORT && HOTSPOT_SUPPORT && WIFI_SUPPORT
+	default y if NAND_SUPPORT && !GATEWAY_DEVICE
+	default m
+	imply PACKAGE_vuci-app-hotspot2-ui
 
 config TRAVELMATE_SUPPORT
 	tristate
@@ -667,9 +699,8 @@ config USB_STORAGE_SUPPORT
 config APP_SAMBA
 	tristate
 	depends on PKG_SUPPORT && USB_STORAGE_SUPPORT
-	default m if !NAND_SUPPORT
-	default y
-	imply PACKAGE_samba36-server
+	default m
+	imply PACKAGE_vuci-app-samba-ui
 
 config PRINTER_SUPPORT
 	bool
@@ -687,7 +718,6 @@ config APP_SOCAT
 
 config SERIAL_SUPPORT
 	bool
-	imply PACKAGE_sodog-tlt
 	imply PACKAGE_modbusgwd
 	imply PACKAGE_vuci-app-overip-ui
 	imply PACKAGE_vuci-app-modbus-serial-gateway-ui
@@ -741,6 +771,14 @@ config IO_SUPPORT
 	imply PACKAGE_post-get
 	imply PACKAGE_post-get-io
 
+config POWER_CONTROL_SUPPORT
+	bool
+	depends on HAS_POWER_CONTROL
+	default y
+	imply PACKAGE_input_output
+	imply PACKAGE_iojuggler
+	imply PACKAGE_vuci-app-power-control-ui
+
 config GPS_SUPPORT
 	bool
 	imply PACKAGE_gpsctl
@@ -755,7 +793,7 @@ config NTRIP_SUPPORT
 	tristate
 	depends on PKG_SUPPORT && NTRIP_MODULE_SUPPORT
 	default m
-	imply PACKAGE_ntrip_client_v2
+	imply PACKAGE_vuci-app-ntrip-ui
 
 config BLUETOOTH_SUPPORT
 	bool
@@ -770,14 +808,14 @@ config EASYCWMP_SUPPORT
 	tristate
 	depends on PKG_SUPPORT
 	default m
-	imply PACKAGE_easycwmp
+	imply PACKAGE_vuci-app-tr069-ui
 
 config SNMP_SUPPORT
 	tristate
 	depends on PKG_SUPPORT
 	default m if !NAND_SUPPORT
 	default y
-	imply PACKAGE_snmp
+	imply PACKAGE_vuci-app-snmp-ui
 	imply SNMPTRAP_GSM if MOBILE_SUPPORT
 	imply SNMPTRAP_IO if IO_SUPPORT
 	imply SNMPTRAP_CHILLI if HOTSPOT_SUPPORT
@@ -787,22 +825,23 @@ config MQTT_SUPPORT
 	depends on PKG_SUPPORT
 	default m if !NAND_SUPPORT
 	default y
-	imply PACKAGE_mqtt_pub
+	imply PACKAGE_vuci-app-mqtt-ui
 
 config IO_MODBUS_SUPPORT
 	tristate
 	depends on PKG_SUPPORT
 	default m if !HAS_MODBUS
 	default y
-	imply PACKAGE_modbus_server
-	imply PACKAGE_modbus_client
-	imply PACKAGE_mqtt-modbus-gateway
+	imply PACKAGE_vuci-app-modbus-server-ui
+	imply PACKAGE_vuci-app-modbus-client-ui
+	imply PACKAGE_vuci-app-modbus-serial-ui if SERIAL_SUPPORT
+	imply PACKAGE_vuci-app-modbus-gateway-ui
 
 config DNP3_SUPPORT
 	tristate
 	depends on PKG_SUPPORT
 	default m
-	imply PACKAGE_dnp3
+	imply PACKAGE_vuci-app-dnp3-ui
 
 config BACNET_MODULE_SUPPORT
 	bool
@@ -811,7 +850,7 @@ config BACNET_SUPPORT
 	tristate
 	depends on PKG_SUPPORT && BACNET_MODULE_SUPPORT
 	default m
-	imply PACKAGE_bacnet-router
+	imply PACKAGE_vuci-app-bacnet-ui
 
 config MBUS
 	bool
@@ -823,19 +862,19 @@ config OPCUA
 	tristate
 	depends on PKG_SUPPORT
 	default m
-	imply PACKAGE_opcua_client
+	imply PACKAGE_vuci-app-opcua-ui
 
 config OPCUA_SERVER
 	tristate
 	depends on PKG_SUPPORT
 	default m
-	imply PACKAGE_opcua_server
+	imply PACKAGE_vuci-app-opcua-server-ui
 
 config DLMS_SUPPORT
 	tristate
 	depends on PKG_SUPPORT
 	default m
-	imply PACKAGE_dlms_client
+	imply PACKAGE_vuci-app-dlms-ui
 	imply PACKAGE_libdlms
 
 #
@@ -864,9 +903,9 @@ config CORE_UI_PACKAGES
 	imply PACKAGE_vuci-app-access-control-ui
 	imply PACKAGE_vuci-app-firmware-ui
 	imply PACKAGE_vuci-app-backup-ui
-	imply PACKAGE_vuci-app-license-ui
 	imply PACKAGE_vuci-app-realtime-ui
 	imply PACKAGE_vuci-app-logs-ui
+	imply BUSYBOX_CONFIG_CHPASSWD
 
 config NORMAL_SERVICES_WEBUI
 	bool
@@ -884,6 +923,7 @@ config NORMAL_SERVICES_WEBUI
 	imply PACKAGE_vuci-advanced-mode
 	imply PACKAGE_vuci-app-vlan-ui
 	imply PACKAGE_vuci-app-dhcp-ui
+	imply PACKAGE_vuci-app-network-devices-api
 
 config MINIMAL_SERVICES_WEBUI
 	bool
@@ -893,6 +933,7 @@ config MINIMAL_SERVICES_WEBUI
 	imply PACKAGE_vuci-app-network-tap-ui
 	imply PACKAGE_vuci-app-overview-tap-ui
 	imply PACKAGE_vuci-app-jwt-ui
+	imply PACKAGE_vuci-app-network-devices-api
 
 # Commented for now - uncomment for 7.5
 # config DEVICE_MANAGER_SUPPORT
@@ -926,7 +967,7 @@ config DATA_SENDER_SUPPORT
 	imply PACKAGE_data-sender-mod-base
 	imply PACKAGE_data-sender-mod-mnfinfo
 	imply PACKAGE_data-sender-mod-gsm if MOBILE_SUPPORT
-	imply PACKAGE_data-sender-mod-mdcollect if MOBILE_SUPPORT
+	imply PACKAGE_data-sender-mod-mdcollect if MOBILE_SUPPORT && !BYPASS_OFFLOAD_FEATURE
 	imply PACKAGE_data-sender-mod-bluetooth if BLUETOOTH_SUPPORT
 	imply PACKAGE_data-sender-mod-mbus if MBUS
 	imply PACKAGE_data-sender-mod-mqtt_in
@@ -935,8 +976,8 @@ config DATA_SENDER_SUPPORT
 	imply PACKAGE_data-sender-mod-ubus
 	imply PACKAGE_data-sender-mod-custom
 
-config APN_DATABASE_WEBUI_SUPPORT
-	tristate "APN Database support for WebUI"
-	depends on PKG_SUPPORT && MOBILE_SUPPORT
+config IPERF3_SUPPORT
+	tristate
+	depends on PKG_SUPPORT
 	default m
-	imply PACKAGE_apn-db-webui
+	imply PACKAGE_iperf3

@@ -8,12 +8,12 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=tailscale
-PKG_VERSION:=1.50.0
+PKG_VERSION:=1.62.1
 PKG_RELEASE:=1
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_SOURCE_URL:=https://codeload.github.com/tailscale/tailscale/tar.gz/v$(PKG_VERSION)?
-PKG_HASH:=a7e024577854c07b793c4bbd81a497250e6a1b4536e303351a388810f13b7316
+PKG_HASH:=22737fae37e971fecdf49d6b741b99988868aa3f1e683e67e14b872a2c49ca1c
 
 PKG_MAINTAINER:=Jan Pavlinec <jan.pavlinec1@gmail.com>
 PKG_LICENSE:=BSD-3-Clause
@@ -41,9 +41,7 @@ define Package/tailscale
   SUBMENU:=VPN
   TITLE:=Zero config VPN
   URL:=https://tailscale.com
-  PKG_ROUTER:=$(TLT_PLATFORM_NAME)
-  PKG_TLT_NAME:=Tailscale
-  DEPENDS:=$(GO_ARCH_DEPENDS) +ca-bundle +kmod-tun +vuci-app-tailscale-ui
+  DEPENDS:=$(GO_ARCH_DEPENDS) +ca-bundle +kmod-tun
 endef
 
 define Build/Compile

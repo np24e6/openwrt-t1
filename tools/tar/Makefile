@@ -16,6 +16,8 @@ PKG_HASH:=d0d3ae07f103323be809bc3eac0dcc386d52c5262499fe05511ac4788af1fdd8
 
 HOST_BUILD_PARALLEL:=1
 
+PKG_LICENSE:=GPL-3.0-or-later
+
 include $(INCLUDE_DIR)/host-build.mk
 include $(INCLUDE_DIR)/gpl.mk
 

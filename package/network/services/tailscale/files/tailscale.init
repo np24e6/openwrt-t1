@@ -7,14 +7,36 @@
 USE_PROCD=1
 START=80
 
+log() {
+	local type="$1"
+	local msg="$2"
+	logger -t "tailscaled" -p daemon."${type}" "$msg"
+}
+
+change_dns() {
+	echo "# Interface tailscale" >/tmp/resolv.conf.d/resolv.conf.tailscale
+	while IFS= read -r line; do
+		[ -n "$line" ] && [ -z "${line##*nameserver*}" ] && {
+			echo "$line" >> /tmp/resolv.conf.d/resolv.conf.tailscale
+			log "info" "Added tailscale DNS: ${line#*nameserver }"
+		}
+	done < "/etc/resolv.conf"
+	cp /tmp/resolv.conf.d/resolv.conf.auto /tmp/resolv.conf.d/resolv.conf.auto.backup
+	cp /tmp/resolv.conf.d/resolv.conf.tailscale /tmp/resolv.conf.d/resolv.conf.auto
+}
+
 connect() {
-	local status auth_url state param routes
+	local status auth_url state param routes flags answ
 	local counter=0
 	local auth_type="$1"
 	local auth_key="$2"
 	local exit_node="$3"
 	local accept_routes="$4"
 	local advert_routes="$5"
+	local default_route="$6"
+	local exit_node_ip="$7"
+	local login_server="$8"
+
 	status=$(/etc/init.d/tailscale status)
 	while [ "$status" != "running" ]; do
 		sleep 1
@@ -23,37 +45,49 @@ connect() {
 		[ $counter -ge 5 ] && exit
 	done
 
-	[ "$accept_routes" -eq 1 ] && accept_routes="--accept-routes" && param="$accept_routes"
-	if [ "$exit_node" -eq 1 ] && exit_node="--advertise-exit-node"; then
-		[ -z "$param" ] && param="$exit_node" || param="$param $exit_node"
+	[ -n "$login_server" ] && param="$param --login-server=$login_server"
+	if [ "$default_route" -eq 1 ]; then
+		[ -n "$exit_node_ip" ] && param="$param --exit-node=$exit_node_ip --exit-node-allow-lan-access"
+	else
+		[ "$exit_node" -eq 1 ] && param="$param --advertise-exit-node"
 	fi
 	if [ -n "$advert_routes" ]; then
 		for route in $advert_routes; do
 			[ -z "$routes" ] && routes="$route" && continue
 			routes="${routes},${route}"
 		done
-		advert_routes="--advertise-routes $routes"
-		[ -z "$param" ] && param="$advert_routes" || param="$param $advert_routes"
+		param="$param --advertise-routes $routes"
 	fi
+	[ "$accept_routes" -eq 1 ] && param="$param --accept-routes"
 
+	param=$(echo "$param" | sed 's/^\ *//g')
+	[ -n "$param" ] && flags="and flags '"$param"'"
+
+	local type="info"
 	eval "$(/usr/sbin/tailscale status --json | jsonfilter -e 'auth_url=@.AuthURL' -e 'state=@.BackendState')"
 	if [ "$auth_type" = "url" ]; then
+		log "info" "Trying to connect using 'URL' mode $flags"
 		if [ "$state" = "NeedsLogin" ] && [ -z "$auth_url" ]; then
-			/usr/sbin/tailscale login --timeout 5s 1>/dev/null 2>&1
+			answ=$(/usr/sbin/tailscale login $param --timeout 5s 2>&1) || type="err"
 		else
-			/usr/sbin/tailscale up $param --reset --timeout 5s 1>/dev/null 2>&1
+			answ=$(/usr/sbin/tailscale up $param --reset --timeout 5s 2>&1) || type="err"
 		fi
+		[ -n "$answ" ] && log "$type" "$answ"
 	fi
 
 	if [ "$auth_type" = "key" ] && [ -n "$auth_key" ]; then
 		/usr/sbin/tailscale logout 1>/dev/null 2>&1
-		/usr/sbin/tailscale up --auth-key $auth_key $param --reset --timeout 5s 1>/dev/null 2>&1
+		log "info" "Trying to connect using 'KEY' mode $flags"
+		answ=$(/usr/sbin/tailscale up --auth-key $auth_key $param --reset --timeout 5s 2>&1) || type="err"
+		[ -n "$answ" ] && log "$type" "$answ"
 	fi
+
+	[ "$default_route" -eq 1 ] && [ -e "/etc/resolv.pre-tailscale-backup.conf" ] && change_dns
 }
 
 start_service() {
 	local state_file port std_err std_out
-	local auth_key exit_node accept_routes advert_routes auth_type
+	local auth_key exit_node accept_routes advert_routes auth_type verbose default_route exit_node_ip login_server
 
 	[ "$(uci -q get tailscale.settings.enabled)" = "0" ] && return
 
@@ -67,6 +101,10 @@ start_service() {
 	config_get_bool accept_routes "settings" accept_routes 0
 	config_get advert_routes "settings" advert_routes ""
 	config_get auth_type "settings" auth_type "url"
+	config_get verbose "settings" verbose 0
+	config_get default_route "settings" default_route 0
+	config_get exit_node_ip "settings" exit_node_ip ""
+	config_get login_server "settings" login_server ""
 
 	/usr/sbin/tailscaled --cleanup 1>/dev/null 2>&1
 
@@ -79,20 +117,28 @@ start_service() {
 # settings.
 	procd_append_param command --port "$port"
 	procd_append_param command --state "$state_file"
+	procd_append_param command --verbose "$verbose"
 
 	procd_set_param respawn
 	procd_set_param stdout "$std_out"
 	procd_set_param stderr "$std_err"
 
 	procd_close_instance
+	log "info" "Service started"
 
 	#Connect the device when tailscale service started
-	connect "$auth_type" "$auth_key" "$exit_node" "$accept_routes" "$advert_routes" &
+	connect "$auth_type" "$auth_key" "$exit_node" "$accept_routes" "$advert_routes" "$default_route" "$exit_node_ip" "$login_server" &
 }
 
 stop_service() {
 	/usr/sbin/tailscale down
 	/usr/sbin/tailscaled --cleanup 1>/dev/null 2>&1
+	if grep -q "tailscale" /tmp/resolv.conf.d/resolv.conf.auto; then
+		mv /tmp/resolv.conf.d/resolv.conf.auto.backup /tmp/resolv.conf.d/resolv.conf.auto
+		rm /tmp/resolv.conf.d/resolv.conf.tailscale
+		log "info" "Added default DNS"
+	fi
+	log "info" "Service stopped"
 }
 
 reload_service() {

@@ -13,6 +13,8 @@ PKG_SOURCE:=$(PKG_NAME)_$(PKG_VERSION).tar.xz
 PKG_SOURCE_URL:=http://ftp.de.debian.org/debian/pool/main/m/mklibs/
 PKG_HASH:=3af0b6bd35e5b6fc58d8b68827fbae2ff6b7e20dd2b238ccb9b49d84722066c2
 
+PKG_LICENSE:=WTFPL
+
 HOST_FIXUP:=autoreconf
 
 include $(INCLUDE_DIR)/host-build.mk

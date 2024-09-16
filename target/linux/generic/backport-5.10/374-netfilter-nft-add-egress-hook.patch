@@ -159,7 +159,7 @@ Signed-off-by: Pablo Neira Ayuso <pablo@netfilter.org>
  
 --- a/net/core/dev.c
 +++ b/net/core/dev.c
-@@ -3890,6 +3890,7 @@ EXPORT_SYMBOL(dev_loopback_xmit);
+@@ -3898,6 +3898,7 @@ EXPORT_SYMBOL(dev_loopback_xmit);
  static struct sk_buff *
  sch_handle_egress(struct sk_buff *skb, int *ret, struct net_device *dev)
  {
@@ -167,7 +167,7 @@ Signed-off-by: Pablo Neira Ayuso <pablo@netfilter.org>
  	struct mini_Qdisc *miniq = rcu_dereference_bh(dev->miniq_egress);
  	struct tcf_result cl_res;
  
-@@ -3924,11 +3925,24 @@ sch_handle_egress(struct sk_buff *skb, i
+@@ -3932,11 +3933,24 @@ sch_handle_egress(struct sk_buff *skb, i
  	default:
  		break;
  	}
@@ -193,7 +193,7 @@ Signed-off-by: Pablo Neira Ayuso <pablo@netfilter.org>
  #ifdef CONFIG_XPS
  static int __get_xps_queue_idx(struct net_device *dev, struct sk_buff *skb,
  			       struct xps_dev_maps *dev_maps, unsigned int tci)
-@@ -4116,13 +4130,16 @@ static int __dev_queue_xmit(struct sk_bu
+@@ -4124,13 +4138,16 @@ static int __dev_queue_xmit(struct sk_bu
  	qdisc_pkt_len_init(skb);
  #ifdef CONFIG_NET_CLS_ACT
  	skb->tc_at_ingress = 0;

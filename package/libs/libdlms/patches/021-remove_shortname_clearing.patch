@@ -1,0 +1,12 @@
+--- a/development/src/gxobjects.c
++++ b/development/src/gxobjects.c
+@@ -732,9 +732,6 @@ void obj_clear(gxObject* object)
+             object->access = NULL;
+ #endif //DLMS_IGNORE_MALLOC
+         }
+-#ifndef DLMS_IGNORE_ASSOCIATION_SHORT_NAME
+-        object->shortName = 0;
+-#endif //DLMS_IGNORE_ASSOCIATION_SHORT_NAME
+         switch (object->objectType)
+         {
+ #ifndef DLMS_IGNORE_DATA

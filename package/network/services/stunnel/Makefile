@@ -34,13 +34,9 @@ include $(INCLUDE_DIR)/package.mk
 define Package/stunnel
   SECTION:=net
   CATEGORY:=Network
-  DEPENDS:=+libopenssl +zlib +libpthread +vuci-app-stunnel-ui
+  DEPENDS:=+libopenssl +zlib +libpthread
   TITLE:=SSL TCP Wrapper
   URL:=http://www.stunnel.org/
-  ifeq (m, $(CONFIG_PACKAGE_stunnel))
-    PKG_TLT_NAME:=Stunnel
-    PKG_ROUTER:=$(TLT_PLATFORM_NAME)
-  endif
 endef
 
 define Package/stunnel/description

@@ -122,7 +122,7 @@ get_mwan3_status() {
 	else
 		uptime=0
 		up=0
-		status="unknown"
+		[ "$enabled" = "0" ] && status="notracking" || status="starting"
 	fi
 
 	json_add_object "${iface}"

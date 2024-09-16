@@ -58,10 +58,6 @@ proto_connm_setup() {
 	sleep "$delay"
 
 	[ -z "$sim" ] && sim=$(get_config_sim "$interface")
-	check_pdp_context "$pdp" "$modem" || {
-		proto_notify_error "$interface" "NO_DEVICE"
-		proto_block_restart "$interface"
-	}
 
 #~ Parameters part------------------------------------------------------
 
@@ -105,28 +101,12 @@ proto_connm_setup() {
 
 	first_uqmi_call "uqmi -d $device --timeout 10000 --set-autoconnect disabled" || return 1
 
-	apn="$(uci -q get network.$interface.apn)"
-	echo "Starting network $interface using APN: $apn"
-
-	auth="$(uci -q get network.$interface.auth)"
-	[ -n "$auth" ] && [ "$auth" != "none" ] && {
-		username="$(uci -q get network.$interface.username)"
-		password="$(uci -q get network.$interface.password)"
-	}
-
 	cid="$(uqmi -d "$device" $options --get-client-id wds)"
 	qmi_error_handle "$cid" "$error_cnt" "$modem" || return 1
 
 #~ Do not add TABS!
 call_uqmi_command "uqmi -d $device $options --set-client-id wds,$cid --release-client-id wds \
---modify-profile --profile-identifier 3gpp,${pdp} \
---profile-name profile${pdp} \
---roaming-disallowed-flag ${deny_roaming} \
-${username:+ --username $username} \
-${password:+ --password $password} \
-${auth:+ --auth-type $auth} \
-${apn:+ --apn $apn} \
-${pdptype:+ --pdp-type $pdptype}"
+--modify-profile 3gpp,${pdp} --profile-name ${pdp} --roaming-disallowed-flag ${deny_roaming}"
 
 	retry_before_reinit="$(cat /tmp/conn_retry_$interface)" 2>/dev/null
 	[ -z "$retry_before_reinit" ] && retry_before_reinit="0"
@@ -151,8 +131,7 @@ ${pdptype:+ --pdp-type $pdptype}"
 
 		#~ Start PS call
 		pdh_4=$(call_uqmi_command "uqmi -d $device $options --set-client-id wds,$cid_4 \
---start-network ${apn:+--apn $apn} --profile $pdp ${auth:+ --auth-type $auth --username $username \
---password $password}" "true")
+--start-network --profile $pdp --ip-family ipv4" "true")
 
 		echo "pdh4: $pdh_4"
 
@@ -193,8 +172,7 @@ ${pdptype:+ --pdp-type $pdptype}"
 
 		#~ Start PS call
 		pdh_6=$(call_uqmi_command "uqmi -d $device $options --set-client-id wds,$cid_6 \
---start-network ${apn:+--apn $apn} --profile $pdp ${auth:+ --auth-type $auth --username $username \
---password $password}" "true")
+--start-network --profile $pdp --ip-family ipv6" "true")
 
 		echo "pdh6: $pdh_6"
 
@@ -254,7 +232,7 @@ ${pdptype:+ --pdp-type $pdptype}"
 		#Passthrough
 		[ "$method" = "passthrough" ] && {
 			iptables -w -tnat -I postrouting_rule -o "$ifname" -j SNAT --to "$bridge_ipaddr"
-			ip route add default dev "$ifname"
+			ip route add default dev "$ifname" metric "$metric"
 		}
 	}
 
@@ -299,7 +277,8 @@ ${pdptype:+ --pdp-type $pdptype}"
 proto_connm_teardown() {
 	local interface="$1"
 	local device="/dev/cdc-wdm0" conn_proto
-	local bridge_ipaddr method braddr_f
+	local bridge_ipaddr method
+	local braddr_f="/var/run/${interface}_braddr"
 
 	[ -n "$ctl_device" ] && device=$ctl_device
 
@@ -307,9 +286,10 @@ proto_connm_teardown() {
 
 	conn_proto="qmux"
 
-	braddr_f="/var/run/${interface}_braddr"
-	method=$(grep -o 'method:[^ ]*' $braddr_f 2> /dev/null | cut -d':' -f2)
-	bridge_ipaddr=$(grep -o 'bridge_ipaddr:[^ ]*' $braddr_f 2> /dev/null | cut -d':' -f2)
+	[ -f "$braddr_f" ] && {
+		method=$(get_braddr_var method "$interface")
+		bridge_ipaddr=$(get_braddr_var bridge_ipaddr "$interface")
+	}
 
 	clear_connection_values $interface $device "4" $conn_proto
 	ubus call network.interface down "{\"interface\":\"${interface}_4\"}"
@@ -327,15 +307,16 @@ proto_connm_teardown() {
 		rm -f "/tmp/dnsmasq.d/bridge" 2>/dev/null
 		rm -f "$braddr_f" 2> /dev/null
 		ethtool -r eth0
+
+		#Clear passthrough and bridge params
+		iptables -t nat -F postrouting_rule
+
+		local zone="$(fw3 -q network "$interface" 2>/dev/null)"
+		iptables -F forwarding_${zone}_rule
+
+		ip neigh flush proxy
+		ip neigh flush dev br-lan
 	}
-
-	#Clear passthrough and bridge params
-	iptables -t nat -F postrouting_rule
-
-	local zone="$(fw3 -q network "$interface" 2>/dev/null)"
-	iptables -F forwarding_${zone}_rule
-
-	ip neigh flush proxy
 
 	proto_init_update "*" 0
 	proto_send_update "$interface"

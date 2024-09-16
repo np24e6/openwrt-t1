@@ -6,10 +6,11 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=modbus_server
-PKG_VERSION:=2024-01-24
+PKG_VERSION:=2024-04-02
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
-PKG_SOURCE_VERSION:=7.6.5
+PKG_SOURCE_VERSION:=7.7
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
+PKG_LICENSE:=Teltonika-closed
 
 include $(INCLUDE_DIR)/package.mk
 
@@ -17,19 +18,13 @@ define Package/$(PKG_NAME)
 	SECTION:=net
 	CATEGORY:=Network
 	TITLE:=Modbus server daemon by Teltonika
-	DEPENDS:=+libuci +libtlt_uci +libubus +libubox +libjson-c +libblobmsg-json \
+	DEPENDS:=+libuci +libtlt_uci +libtlt_termios +libubus +libubox +libjson-c +libblobmsg-json \
 		 +MOBILE_SUPPORT:libmdcollect +MOBILE_SUPPORT:libgsm \
-		 +vuci-app-modbus-server-ui +IO_SUPPORT:iomand +libmnfinfo +libmodbus +libboardjson
-
-	ifeq (m, $(CONFIG_PACKAGE_modbus_server))
-		PKG_TLT_NAME:=MODBUS Server
-		PKG_ROUTER:=$(TLT_PLATFORM_NAME)
-		PKG_FIRMWARE:=7.0
-	endif
+		 +IO_SUPPORT:iomand +libmnfinfo +libmodbus +libboardjson
 endef
 
 define Package/$(PKG_NAME)/description
-	Modbus server daemon by Teltonika
+	MODBUS TCP/Serial server designed for MODBUS clients to read and write device data.
 endef
 
 define Package/$(PKG_NAME)/conffiles

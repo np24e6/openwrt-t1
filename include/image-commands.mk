@@ -228,12 +228,6 @@ define Build/fit
 	@mv $@.new $@
 endef
 
-define Build/append-signature
-	$(TOPDIR)/scripts/add_signature.sh $@ $@.tmp $(word 1,$(1))
-	mv $@.tmp $@
-	echo "appending signature to $@"
-endef
-
 define Build/gzip
 	gzip -f -9n -c $@ $(1) > $@.new
 	@mv $@.new $@
@@ -421,65 +415,6 @@ define Build/sysupgrade-tar
 		--kernel $(call param_get_default,kernel,$(1),$(IMAGE_KERNEL)) \
 		--rootfs $(call param_get_default,rootfs,$(1),$(IMAGE_ROOTFS)) \
 		$@
-endef
-
-define Build/tplink-safeloader
-	-$(STAGING_DIR_HOST)/bin/tplink-safeloader \
-		-B $(TPLINK_BOARD_ID) \
-		-V $(REVISION) \
-		-k $(IMAGE_KERNEL) \
-		-r $@ \
-		-o $@.new \
-		-j \
-		$(wordlist 2,$(words $(1)),$(1)) \
-		$(if $(findstring sysupgrade,$(word 1,$(1))),-S) && mv $@.new $@ || rm -f $@
-endef
-
-define Build/tplink-v1-header
-	$(STAGING_DIR_HOST)/bin/mktplinkfw \
-		-c -H $(TPLINK_HWID) -W $(TPLINK_HWREV) -L $(KERNEL_LOADADDR) \
-		-E $(if $(KERNEL_ENTRY),$(KERNEL_ENTRY),$(KERNEL_LOADADDR)) \
-		-m $(TPLINK_HEADER_VERSION) -N "$(VERSION_DIST)" -V $(REVISION) \
-		-k $@ -o $@.new $(1)
-	@mv $@.new $@
-endef
-
-# combine kernel and rootfs into one image
-# mktplinkfw <type> <optional extra arguments to mktplinkfw binary>
-# <type> is "sysupgrade" or "factory"
-#
-# -a align the rootfs start on an <align> bytes boundary
-# -j add jffs2 end-of-filesystem markers
-# -s strip padding from end of the image
-# -X reserve <size> bytes in the firmware image (hexval prefixed with 0x)
-define Build/tplink-v1-image
-	-$(STAGING_DIR_HOST)/bin/mktplinkfw \
-		-H $(TPLINK_HWID) -W $(TPLINK_HWREV) -F $(TPLINK_FLASHLAYOUT) \
-		-N "$(VERSION_DIST)" -V $(REVISION) -m $(TPLINK_HEADER_VERSION) \
-		-k $(IMAGE_KERNEL) -r $(IMAGE_ROOTFS) -o $@.new -j -X 0x40000 \
-		-a $(call rootfs_align,$(FILESYSTEM)) \
-		$(wordlist 2,$(words $(1)),$(1)) \
-		$(if $(findstring sysupgrade,$(word 1,$(1))),-s) && mv $@.new $@ || rm -f $@
-endef
-
-define Build/tplink-v2-header
-	$(STAGING_DIR_HOST)/bin/mktplinkfw2 \
-		-c -H $(TPLINK_HWID) -W $(TPLINK_HWREV) -L $(KERNEL_LOADADDR) \
-		-E $(if $(KERNEL_ENTRY),$(KERNEL_ENTRY),$(KERNEL_LOADADDR))  \
-		-w $(TPLINK_HWREVADD) -F "$(TPLINK_FLASHLAYOUT)" \
-		-T $(TPLINK_HVERSION) -V "ver. 2.0" \
-		-k $@ -o $@.new $(1)
-	@mv $@.new $@
-endef
-
-define Build/tplink-v2-image
-	$(STAGING_DIR_HOST)/bin/mktplinkfw2 \
-		-H $(TPLINK_HWID) -W $(TPLINK_HWREV) \
-		-w $(TPLINK_HWREVADD) -F "$(TPLINK_FLASHLAYOUT)" \
-		-T $(TPLINK_HVERSION) -V "ver. 2.0" -a 0x4 -j \
-		-k $(IMAGE_KERNEL) -r $(IMAGE_ROOTFS) -o $@.new $(1)
-	cat $@.new >> $@
-	rm -rf $@.new
 endef
 
 define Build/uImage

@@ -1,0 +1,22 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+MODBUS_CLIENT="modbus_client"
+DLMS_CLIENT="dlms_client"
+OPCUA_CLIENT="opcua_client"
+
+rename_enabled_option() {
+	local cfg="$1"
+
+	config_load "$cfg" || return
+	config_get ENABLED "main" "enabled" "0"
+	uci_set "$cfg" "main" "enabled_old" "$ENABLED"
+	uci_commit "$cfg"
+}
+
+rename_enabled_option "$MODBUS_CLIENT"
+rename_enabled_option "$DLMS_CLIENT"
+rename_enabled_option "$OPCUA_CLIENT"
+
+exit 0

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import sys
 import os
 import subprocess
 import json
@@ -10,6 +11,7 @@ from subprocess import Popen
 list_profiles = list()
 list_features = list()
 list_packages = list()
+dump_list = False
 
 def empty_none_value(value):
     if value is None:
@@ -173,34 +175,7 @@ class Profile:
         self.read_config()
         self.fetch_features()
 
-        for f in self.features:
-
-            info = {
-                'name': f.name,
-                'title': f.title,
-                'maintainer': f.maintainer,
-                'description': f.desc,
-                'detail': f.detail,
-                'packages': []
-            }
-
-            for i in f.packages:
-                pkg = find_pkg_by_name(i)
-
-                if pkg is None:
-                    continue
-
-                info2 = {
-                    'name': pkg.name,
-                    'title': pkg.title,
-                    'maintainer': pkg.maint,
-                    'description': pkg.desc,
-                    'detail': pkg.detail,
-                    'depends': pkg.deps, #self.find_package_deps(pkg.deps),
-                }
-                info['packages'].append(info2)
-
-            data['features'].append(info)
+        data['features'] = dump_features(self.features)
 
         return json.dumps(data, indent=2)
 
@@ -318,6 +293,39 @@ def initialize_features():
 
         f.close()
 
+def dump_features(data):
+    features = []
+
+    for f in data:
+        info = {
+            'name': f.name,
+            'title': f.title,
+            'maintainer': f.maintainer,
+            'description': f.desc,
+            'detail': f.detail,
+            'packages': []
+        }
+
+        for i in f.packages:
+            pkg = find_pkg_by_name(i)
+
+            if pkg is None:
+                continue
+
+            info2 = {
+                'name': pkg.name,
+                'title': pkg.title,
+                'maintainer': pkg.maint,
+                'description': pkg.desc,
+                'detail': pkg.detail,
+                'depends': pkg.deps, #self.find_package_deps(pkg.deps),
+            }
+            info['packages'].append(info2)
+
+        features.append(info)
+
+    return features
+
 class Package:
     def __init__(self, name):
         self.name = name
@@ -390,9 +398,18 @@ def initialize_packageinfo():
 
         f.close()
 
-initialize_targets()
+
+if len(sys.argv) >= 1 and 'dump' in sys.argv:
+    dump_list = True
+
+if not dump_list:
+    initialize_targets()
+
 initialize_features()
 initialize_packageinfo()
 
-for i in list_profiles:
-    print(i.json() + ',')
+if dump_list:
+    print(json.dumps(dump_features(list_features), indent=2))
+else:
+    for i in list_profiles:
+        print(i.json() + ',')

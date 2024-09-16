@@ -6,11 +6,17 @@ CFG=/etc/board.json
 
 [ -s $CFG ] || /bin/board_detect || exit 1
 
+get_hw_support() {
+	[ "$(jsonfilter -i $CFG -q -l1 -e @.hwinfo.$1)" = "true" ] && return 0
+	return 1
+}
+
 [ -s /etc/config/network ] && \
 [ -s /etc/config/system ] && \
-[ -s /etc/config/blesem ] && \
-[ -s /etc/config/overview ] && \
-[ -s /etc/config/poe ] && \
+[ -f /etc/config/overview ] && \
+[ -f /etc/config/widget ] && \
+( [ -s /etc/config/blesem ] || ! get_hw_support bluetooth ) && \
+( [ -s /etc/config/poe ] || ! get_hw_support poe ) && \
 exit 0
 
 generate_bridge() {
@@ -697,9 +703,11 @@ set_poe_chips(){
 generate_poe_config(){
 	if json_is_a poe object; then
 		json_select poe
-			json_get_vars chip_count budget poe_ports
+			json_get_vars bus chip_count budget poe_ports
 			uci -q batch <<-EOF
 				set poe.poe='poe'
+				set poe.poe.enable='1'
+				set poe.poe.bus='$bus'
 				set poe.poe.chip_count='$chip_count'
 				set poe.poe.budget='$budget'
 				set poe.poe.poe_ports='$poe_ports'
@@ -821,6 +829,7 @@ if [ ! -s /etc/config/network ]; then
 fi
 
 if [ ! -s /etc/config/system ]; then
+	touch /log/reboot
 	touch /etc/config/system
 	generate_static_system
 
@@ -838,25 +847,27 @@ if [ ! -s /etc/config/system ]; then
 	fi
 fi
 
-if [ ! -s /etc/config/poe ]; then
+if [ ! -s /etc/config/poe ] && get_hw_support poe; then
 	touch /etc/config/poe
 	generate_poe_config
 fi
 
-if [ ! -s /etc/config/blesem ]; then
-	bluetooth=""
-	json_select hwinfo
-	json_get_vars bluetooth
-	json_select ..
-	[ "$bluetooth" -eq 1 ] && {
-		touch /etc/config/blesem
-		touch /etc/config/ble_devices
-		generate_bluetooth
-	}
+if [ ! -s /etc/config/blesem ] && get_hw_support bluetooth; then
+	touch /etc/config/blesem
+	touch /etc/config/ble_devices
+	generate_bluetooth
 fi
 
-if [ ! -s /etc/config/overview ]; then
+if [ ! -f /etc/config/overview ]; then
 	touch /etc/config/overview
+fi
+
+if [ ! -f /etc/config/widget ]; then
+	touch /etc/config/widget
+fi
+
+if [ ! "$(uci -q get vuci.main.device_identifier)" ]; then
+	uci -q set vuci.main.device_identifier=$(openssl rand -hex 16)
 fi
 
 uci commit

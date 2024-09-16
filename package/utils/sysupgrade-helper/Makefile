@@ -1,15 +1,21 @@
+#
+# Copyright (C) 2024 Teltonika-Networks
+#
+
 include $(TOPDIR)/rules.mk
-include $(INCLUDE_DIR)/download.mk
 include $(INCLUDE_DIR)/kernel.mk
 include $(INCLUDE_DIR)/version.mk
 
 PKG_DISTNAME:=sysupgrade-helper
+
 PKG_NAME:=u-boot-ipq86xx
 PKG_VERSION:=1.0
 PKG_RELEASE:=1
 
 PKG_SOURCE_DATE:=2021-03-03
 PKG_SOURCE_VERSION:=1.0
+
+PKG_LICENSE:=GPL-2.0-or-later
 
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_DISTNAME)/$(PKG_NAME)-$(PKG_VERSION)
 

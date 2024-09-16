@@ -7,7 +7,9 @@ include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=mobifd
 
-PKG_SOURCE_VERSION:=4.3
+PKG_SOURCE_VERSION:=5.0
+
+PKG_LICENSE:=Teltonika-closed
 
 include $(INCLUDE_DIR)/package.mk
 
@@ -17,7 +19,11 @@ define Package/mobifd
 	CATEGORY:=Network
 	TITLE:=GSM Modem manager
 	DEPENDS:= +libubus +libubox +libgsm +liburc +libuci +libtlt_uci +libtlt-logger \
-			+libsqlite3 +libmnfinfo +libboardjson
+			+libsqlite3 +libmnfinfo +libboardjson +liblpac
+endef
+
+define Package/mobifd/description
+	Daemon for managing operator connection establishment and data connection handling.
 endef
 
 define Package/mobifd/config

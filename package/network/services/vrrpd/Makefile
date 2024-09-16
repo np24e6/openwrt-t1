@@ -30,15 +30,7 @@ define Package/vrrpd
   SUBMENU:=Routing and Redirection
   TITLE:=Virtual Router Redundancy Protocol daemon
   URL:=http://www.sourceforge.net/projects/vrrpd
-  DEPENDS:=+liblog +librt +libubus +vuci-app-vrrp-ui
-  ifeq (m, $(CONFIG_PACKAGE_vrrpd))
-	PKG_TLT_NAME:=VRRP
-	PKG_ROUTER:=$(TLT_PLATFORM_NAME)
-  endif
-endef
-
-define Package/vrrpd/mdm9x07
-  PKG_ROUTER:=TRB140 TRB143 TRB500
+  DEPENDS:=+liblog +librt +libubus
 endef
 
 define Package/vrrpd/description
@@ -62,7 +54,7 @@ define Package/vrrpd/install
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/vrrpd $(1)/usr/sbin/
 	$(INSTALL_BIN) ./files/vrrp_check.sh $(1)/usr/sbin/vrrp_check.sh
 	$(INSTALL_DIR) $(1)/etc/config
-	$(INSTALL_DATA) ./files/vrrpd.config $(1)/etc/config/vrrpd
+	$(INSTALL_CONF) ./files/vrrpd.config $(1)/etc/config/vrrpd
 	$(INSTALL_DIR) $(1)/etc/init.d
 	$(INSTALL_BIN) ./files/vrrpd.init $(1)/etc/init.d/vrrpd
 	$(INSTALL_BIN) ./files/vrrp_check.init $(1)/etc/init.d/vrrp_check

@@ -1,8 +1,6 @@
-Index: ubox-2020-10-25-9ef88681/log/logd.c
-===================================================================
---- ubox-2020-10-25-9ef88681.orig/log/logd.c
-+++ ubox-2020-10-25-9ef88681/log/logd.c
-@@ -437,6 +437,18 @@ void ubus_notify_log_extended(struct log
+--- a/log/logd.c
++++ b/log/logd.c
+@@ -483,6 +483,18 @@ void ubus_notify_log_extended(struct log
  	blob_buf_free(&b);
  }
  
@@ -21,7 +19,7 @@ Index: ubox-2020-10-25-9ef88681/log/logd.c
  static void
  ubus_connect_handler(struct ubus_context *ctx)
  {
-@@ -472,6 +484,16 @@ main(int argc, char **argv)
+@@ -518,6 +530,16 @@ main(int argc, char **argv)
  	log_init(log_size);
  	conn.cb = ubus_connect_handler;
  	ubus_auto_connect(&conn);

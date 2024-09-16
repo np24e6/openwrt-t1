@@ -6,10 +6,12 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=mobutils
-PKG_VERSION:=2024-03-13
+PKG_VERSION:=2024-04-04
 PKG_RELEASE:=1
 
-PKG_SOURCE_VERSION:=3.5.2
+PKG_SOURCE_VERSION:=3.6.1
+
+PKG_LICENSE:=Teltonika-closed
 
 PKG_FIXUP:=autoreconf
 
@@ -111,7 +113,8 @@ define Package/mobutils-sms_utilities/install
 	$(CP) $(PKG_BUILD_DIR)/files/99_sms_utils-mobutils $(1)/etc/uci-defaults/etc
 	$(CP) $(PKG_BUILD_DIR)/files/99_sms_utils-mobutils_3 $(1)/etc/uci-defaults/etc
 	$(CP) $(PKG_BUILD_DIR)/files/99_sms_gateway $(1)/etc/uci-defaults/etc
-	if [ $(TLT_PLATFORM_RUTX) ] || [ $(TLT_PLATFORM_RUTM) ] || [ $(TLT_PLATFORM_X86_64) ]; then \
+	if [ $(TLT_PLATFORM_RUTX) ] || [ $(TLT_PLATFORM_RUTM) ] || [ $(TLT_PLATFORM_RUTC) ] ||			\
+	   [ $(TLT_PLATFORM_X86_64) ] || [ $(TLT_PLATFORM_ATRM50) ]; then \
 		$(INSTALL_CONF) $(PKG_BUILD_DIR)/sms_utils/files/sms_utils_rutx.conf $(1)/etc/config/sms_utils; \
 	elif [ $(TLT_PLATFORM_TRB2) ] || [ $(TLT_PLATFORM_TRB2M) ] ; then \
 		$(INSTALL_CONF) $(PKG_BUILD_DIR)/sms_utils/files/sms_utils_trb2.conf $(1)/etc/config/sms_utils; \
@@ -120,13 +123,13 @@ define Package/mobutils-sms_utilities/install
 	elif [ $(TLT_PLATFORM_RUT36X) ] || [ $(TLT_PLATFORM_RUT30X) ] || [ $(TLT_PLATFORM_RUT361) ] ||		\
 	     [ $(TLT_PLATFORM_RUT301) ]; then \
 		$(INSTALL_CONF) $(PKG_BUILD_DIR)/sms_utils/files/sms_utils_rut3.conf $(1)/etc/config/sms_utils; \
-	elif [ $(TLT_PLATFORM_RUT9) ] || [ $(TLT_PLATFORM_RUT9M) ]; then \
+	elif [ $(TLT_PLATFORM_RUT9M) ]; then \
 		$(INSTALL_CONF) $(PKG_BUILD_DIR)/sms_utils/files/sms_utils_rut9.conf $(1)/etc/config/sms_utils; \
-	elif [ $(TLT_PLATFORM_RUT2) ] || [ $(TLT_PLATFORM_RUT2M) ]; then \
+	elif [ $(TLT_PLATFORM_RUT2M) ]; then \
 		$(INSTALL_CONF) $(PKG_BUILD_DIR)/sms_utils/files/sms_utils_rut2.conf $(1)/etc/config/sms_utils; \
 	elif [ $(TLT_PLATFORM_TCR1) ]; then \
 		$(INSTALL_CONF) $(PKG_BUILD_DIR)/sms_utils/files/sms_utils_tcr1.conf $(1)/etc/config/sms_utils; \
-	elif [ $(TLT_PLATFORM_OTD140) ]; then \
+	elif [ $(TLT_PLATFORM_OTD140) ] || [ $(TLT_PLATFORM_OTD500) ]; then \
 		$(INSTALL_CONF) $(PKG_BUILD_DIR)/sms_utils/files/sms_utils_otd1.conf $(1)/etc/config/sms_utils; \
 	fi;
 endef

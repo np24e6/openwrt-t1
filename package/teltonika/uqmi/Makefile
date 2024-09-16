@@ -6,7 +6,7 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=uqmi
-PKG_SOURCE_VERSION:=3.0
+PKG_SOURCE_VERSION:=5.0
 PKG_MAINTAINER:=Mindaugas Antanavicius <mindaugas.antanavicius@teltonika.lt>
 
 GPL_INCLUDE_HEADERS:=1

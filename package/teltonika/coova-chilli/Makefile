@@ -9,14 +9,14 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=coova-chilli
-PKG_VERSION:=2024-01-26
+PKG_VERSION:=2024-03-06
 PKG_MAINTAINER:=Jaehoon You <teslamint@gmail.com>
-PKG_LICENSE:=GPL-2.0+
+PKG_LICENSE:=GPL-2.0-or-later
 PKG_LICENSE_FILES:=COPYING
 PKG_RELEASE:=1
 
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
-PKG_SOURCE_VERSION:=2.12.1
+PKG_SOURCE_VERSION:=2.13
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_SOURCE_VERSION)-$(PKG_VERSION)
 PKG_SOURCE:=$(PKG_SOURCE_SUBDIR).tar.gz
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_SOURCE_SUBDIR)
@@ -51,20 +51,10 @@ define Package/coova-chilli
   SECTION:=net
   CATEGORY:=Network
   DEPENDS:=+libuci +libtlt_uci +kmod-tun +librt +COOVACHILLI_CYASSL:libcyassl +COOVACHILLI_OPENSSL:libopenssl \
-	+COOVACHILLI_DATABASE:libsqlite3 +MOBILE_SUPPORT:libgsm +libubus +libubox \
-	+vuci-app-coovachilli-ui +vuci-app-landingpage +WIFI_SUPPORT:vuci-app-hotspot2-ui +libtltchilli \
-	+tlt_hs_theme_default
+	+COOVACHILLI_DATABASE:libsqlite3 +MOBILE_SUPPORT:libgsm +libubus +libubox +libtltchilli +libjson-c
   TITLE:=Wireless LAN HotSpot controller (Coova Chilli Version)
   URL:=https://coova.github.io/
   MENU:=1
-  ifeq (m, $(CONFIG_PACKAGE_coova-chilli))
-  	PKG_TLT_NAME:=Hotspot
-  	PKG_ROUTER:=$(TLT_PLATFORM_NAME)
-  endif
-endef
-
-define Package/coova-chilli/mdm9x07
-  PKG_ROUTER:=TRB140 TRB143
 endef
 
 define Package/coova-chilli/description
@@ -173,60 +163,6 @@ define Package/coova-chilli/install
 	$(INSTALL_BIN) files/wireless.sh $(1)/etc/chilli/
 	$(INSTALL_DATA) files/chilli.upgrade $(1)/lib/upgrade/keep.d/chilli
 	$(INSTALL_DATA) files/hotspot.sh $(1)/lib/troubleshoot/
-endef
-
-define Package/coova-chilli/prerm
-	#!/bin/sh
-	. /lib/functions.sh
-
-	remove_section() {
-		uci_remove wireless "$$1"
-	}
-
-	remove_item() {
-		uci_remove_list wireless "$$2" "$$3" "$$1"
-	}
-
-	cleanup_wless_iface() {
-		uci_remove wireless "$$1" "interworking"
-		uci_remove wireless "$$1" "hs20"
-		uci_remove wireless "$$1" "internet"
-		uci_remove wireless "$$1" "access_network_type"
-		uci_remove wireless "$$1" "hessid"
-		uci_remove wireless "$$1" "network_auth_type"
-		uci_remove wireless "$$1" "ipaddr_type_"
-		uci_remove wireless "$$1" "venue_group"
-		uci_remove wireless "$$1" "venue_type"
-		uci_remove wireless "$$1" "osu_ssid"
-		uci_remove wireless "$$1" "osu_server_uri"
-		uci_remove wireless "$$1" "osu_friendly_name"
-		uci_remove wireless "$$1" "osu_nai"
-		uci_remove wireless "$$1" "osu_service_desc"
-		uci_remove wireless "$$1" "hs20_wan_status"
-		uci_remove wireless "$$1" "hs20_wan_dw_speed"
-		uci_remove wireless "$$1" "hs20_wan_up_speed"
-
-		config_list_foreach "$$1" "domain_name" remove_item "$$1" "domain_name"
-		config_list_foreach "$$1" "osu_method_list" remove_item "$$1" "osu_method_list"
-		config_list_foreach "$$1" "venue_url" remove_item "$$1" "venue_url"
-		config_list_foreach "$$1" "venue_name" remove_item "$$1" "venue_name"
-		config_list_foreach "$$1" "anqp_3gpp_cell_net" remove_item "$$1" "anqp_3gpp_cell_net"
-		config_list_foreach "$$1" "nai_realm" remove_item "$$1" "nai_realm"
-		config_list_foreach "$$1" "hs20_oper_friendly_name" remove_item "$$1" "hs20_oper_friendly_name"
-		config_list_foreach "$$1" "hs20_conn_capab" remove_item "$$1" "hs20_conn_capab"
-	}
-
-	config_load wireless
-	config_foreach remove_section "venue"
-	config_foreach remove_section "nai-realm"
-	config_foreach remove_section "hs20_conn_capab"
-	config_foreach remove_section "anqp_3gpp_cell_net"
-	config_foreach remove_section "hs20_oper_friendly_name"
-
-	config_foreach cleanup_wless_iface "wifi-iface" 2> /dev/null
-
-	uci_commit wireless 2> /dev/null
-	/etc/init.d/wpad reload 2> /dev/null || true
 endef
 
 $(eval $(call BuildPackage,coova-chilli))

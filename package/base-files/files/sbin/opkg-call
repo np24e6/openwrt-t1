@@ -33,7 +33,7 @@ handle_offline_install() {
 
 	local package_v=$(grep "Version:" "$extracted_dir/main" 2>/dev/null | sed 's/.* //g')
 
-	check_package_arch "$extracted_dir/main" || exit $WRONG_ARCH
+	check_package_arch "$(cat "$extracted_dir/main")" || exit $WRONG_ARCH
 
 	check_package_fw "$extracted_dir/main" || exit $WRONG_FW
 
@@ -57,6 +57,11 @@ handle_online_install() {
 	local free_fmem=0
 	local return_code=0
 	local pr_on_hold=0
+	local pkg_info=$(echo "$OUTPUT" | sed -n "/Package: $package_name$/,/Package:/p")
+
+	[ -n "$pkg_info" ] && {
+		check_package_arch "$pkg_info" || exit $WRONG_ARCH
+	}
 
 	calculate_size "$package_name"
 
@@ -143,12 +148,12 @@ check_package_fw() {
 
 check_package_arch() {
 
-	local main_file="$1"
+	local main_file_text="$1"
 
 	local hw_arch=$(grep "platform" "/etc/board.json" | sed 's/.* //g')
 	hw_arch="${hw_arch:1:-1}"
 
-	local package_arch=$(grep "Router:" "$main_file" 2>/dev/null | sed 's/.*: //g')
+	local package_arch=$(echo "$main_file_text" | grep "Router:" 2>/dev/null | sed 's/.*: //g')
 
 	[ "${hw_arch}" = "${package_arch}" ] && return $SUCCESS
 

@@ -110,11 +110,13 @@ ucidef_set_hwinfo() {
 	ethernet
 	sfp_port
 	ios
+	power_ios
 	sfp_switch
 	rs232
 	rs485
 	console
 	dual_modem
+	m2_modem
 	sd_card
 	sw_rst_on_init
 	dsa

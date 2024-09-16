@@ -1,7 +1,15 @@
 #ifndef LIBBOARDJSON_H
 #define LIBBOARDJSON_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdbool.h>
+#include <syslog.h>
+#include <libubox/blob.h>
+#include <libubox/blobmsg.h>
+#include <libubox/blobmsg_json.h>
 #include <libubox/blob.h>
 
 // filepaths
@@ -18,6 +26,7 @@
 #define BJSON_SWITCH_MAX 5
 #define BJSON_ROLE_MAX 20
 #define BJSON_PORT_MAX 20
+#define BJSON_SERIAL_DEVICES_MAX 3 // rs232, rs485 and usb
 
 // enum that represents possible
 // output states of any lbjson function
@@ -32,7 +41,7 @@ typedef enum {
 enum lbjson_modem_type {
 	BJSON_INTERNAL_PRIMARY,
 	BJSON_INTERNAL_SECONDARY,
-	BJSON_INTERNAL, 
+	BJSON_INTERNAL,
 	BJSON_EXTERNAL,
 };
 
@@ -74,11 +83,11 @@ struct lbjson_modem {
 	bool primary;
 	bool gps_out;
 
-	const char *id;
-	const char *vendor;
-	const char *product;
-	const char *type;
-	const char *desc;
+	char *id;
+	char *vendor;
+	char *product;
+	char *type;
+	char *desc;
 
 	int num;
 	int simcount;
@@ -98,18 +107,97 @@ struct lbjson_modem {
 
 // struct that represents a network description in /etc/board.json
 struct lbjson_network {
-	const char *name;
-	const char *ifname; // linux iface id
-	const char *proto; // could be turned into an enum
+	char *name;
+	char *ifname; // linux iface id
+	char *proto; // could be turned into an enum
 };
 
+// represents 'hwinfo' section in /etc/board.json
+struct lbjson_hwinfo {
+	bool dual_sim         : 1;
+	bool usb              : 1;
+	bool bluetooth        : 1;
+	bool wifi             : 1;
+	bool dual_band_ssid   : 1;
+	bool wps              : 1;
+	bool mobile           : 1;
+	bool gps              : 1;
+	bool sfp_port         : 1;
+	bool ios              : 1;
+	bool at_sim           : 1;
+	bool poe              : 1;
+	bool ethernet         : 1;
+	bool sfp_switch       : 1;
+	bool rs232            : 1;
+	bool rs485            : 1;
+	bool console          : 1;
+	bool dual_modem       : 1;
+	bool m2_modem         : 1;
+	bool sd_card          : 1;
+	bool sw_rst_on_init   : 1;
+	bool dsa              : 1;
+	bool nat_offloading   : 1;
+	bool hw_nat           : 1;
+	bool vcert            : 1;
+	bool port_link        : 1;
+	bool multi_tag        : 1;
+	bool micro_usb        : 1;
+	bool soft_port_mirror : 1;
+	bool gigabit_port     : 1;
+	bool gigabit_port_2_5 : 1;
+	bool esim	      : 1;
+};
+
+///////////////////////////////////////////////
+
+#include <termios.h>
+
+struct lbjson_baudrate {
+	uint32_t bps;
+	bool available;
+};
+
+struct lbjson_data_bits {
+	uint8_t data_bits;
+	bool available;
+};
+
+struct lbjson_stop_bits {
+	uint8_t stop_bits;
+	bool available;
+};
+
+struct lbjson_parity {
+	char type[16];
+	bool available;
+};
+
+struct lbjson_flow_control {
+	char type[16];
+	bool available;
+};
+
+struct lbjson_serial_device {
+	struct lbjson_baudrate bauds[24];
+	struct lbjson_data_bits data_bits[4];
+	struct lbjson_stop_bits stop_bits[2];
+	struct lbjson_parity parity[5];
+	struct lbjson_flow_control flow_control[3];
+
+	char device[64];
+	char path[64];
+};
+
+int lbjson_parse_serial(struct lbjson_serial_device *devices, int max_count, struct blob_attr *data, struct lbjson_hwinfo *hw);
+
+////////////////////////////
 
 // struct that represents most of /etc/board.json
 struct lbjson_board {
 	// model info
-	const char *model_id;
-	const char *model_name;
-	const char *model_platform;
+	char *model_id;
+	char *model_name;
+	char *model_platform;
 
 	// network info
 	int network_count;
@@ -124,25 +212,18 @@ struct lbjson_board {
 	struct lbjson_switch switches[BJSON_SWITCH_MAX];
 
 	// hardware info
-	bool hw_dual_sim;
-	bool hw_usb;
-	bool hw_bluetooth;
-	bool hw_wifi;
-	bool hw_dual_band_ssid;
-	bool hw_wps;
-	bool hw_mobile;
-	bool hw_gps;
-	bool hw_eth;
-	bool hw_sfp_port;
-	bool hw_ios;
-	bool hw_at_sim;
+	struct lbjson_hwinfo hw;
+
+	// serial info
+	int device_count;
+	struct lbjson_serial_device devices[BJSON_SERIAL_DEVICES_MAX];
 
 	// board release version? May or may not exist.
 	char *release_version;
 };
 
 
-// Function that calls the libboardjson ubus object and 
+// Function that calls the libboardjson ubus object and
 // fills out the *output blob_attr with the result.
 // *section_name is optional, and can be passed as NULL.
 // returns BJSON_SUCCESS on successful retreival
@@ -179,10 +260,30 @@ lbjson_status lbjson_get_modem_by_num(int num, struct lbjson_modem *output);
 
 /**
  * @brief converts modem type to string
- * 
+ *
  * @param type modem type
  * @return const char* string of the modem type
  */
 const char *lbjson_modem_type_itoa(enum lbjson_modem_type type);
+
+// Frees internal cache of board struct.
+// Invalidates all structs gotten from other functions.
+// A good place to call this function would be just
+// before the program closes so that valgrind is happy.
+void lbjson_free();
+
+bool is_string_defined(const char *str);
+void free_string(char **text);
+
+// macros that retreive and null-check parsed blobmsg values
+#define blob_get_str_nullchk(value) (value) ? strdup(blobmsg_get_string(value)) : ""
+#define blob_get_bool_nullchk(value) (value) ? blobmsg_get_bool(value) : 0
+#define blob_get_num_nullchk(value) (value) ? atoi(blobmsg_get_string(value)) : 0 // for string->int conversion
+#define blob_get_u32_nullchk(value) (value) ? blobmsg_get_u32(value) : 0
+#define blob_memdup_nullchk(value) (value) ? blob_memdup(value) : NULL
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* LIBBOARDJSON_H */

@@ -119,7 +119,7 @@ proto_ncm_setup() {
 	local mtu method device pdp modem pdptype sim dhcp dhcpv6 $PROTO_DEFAULT_OPTIONS IFACE4 IFACE6 delay
 	local ip4table ip6table mdm_ubus_obj pin_state pdp_ctx_state pdp_ctx
 	local timeout=2 retries=0
-	local multisim="0" active_sim="1"
+	local active_sim="1"
 	local retry_before_reinit
 
 	json_get_vars mtu method device modem pdptype sim dhcp dhcpv6 delay ip4table ip6table $PROTO_DEFAULT_OPTIONS
@@ -140,33 +140,18 @@ proto_ncm_setup() {
 	sleep "$delay"
 
 	[ -z "$sim" ] && sim=$(get_config_sim "$interface")
-	check_pdp_context "$pdp" "$modem" || {
-		proto_notify_error "$interface" "NO_DEVICE"
-		proto_block_restart "$interface"
-	}
 
-	#Check sim positions count in simcard config
-	get_sim_count(){
-		local section=$1
-		local sim_modem sim_position
-		config_get sim_modem "$section" modem
-		config_get sim_position "$section" position
-		[ "$modem" = "$sim_modem" ] && [ "$sim_position" -gt 1 ] && multisim="1"
-	}
-	config_load simcard
-	config_foreach get_sim_count sim
+	echo "Quering active sim position"
+	json_set_namespace gobinet old_cb
+	json_load "$(ubus call $gsm_modem get_sim_slot)"
+	json_get_var active_sim index
+	json_set_namespace $old_cb
 
-	#Check sim position in simd if modem is registered as multisim
-	[ "$multisim" = "1" ] && {
-		echo "Quering active sim position"
-		json_set_namespace gobinet old_cb
-		json_load "$(ubus call $gsm_modem get_sim_slot)"
-		json_get_var active_sim index
-		json_set_namespace $old_cb
-	}
-
-	#Restart if check failed
-	[ "$active_sim" -ge 1 ] && [ "$active_sim" -le 2 ] || return
+# 	Restart if check failed
+	if [ "$active_sim" -lt 1 ] || [ "$active_sim" -gt 2 ]; then
+		echo "Bad active sim: $active_sim."
+		return
+	fi
 
 	# check if current sim and interface sim match
 	[ "$active_sim" = "$sim" ] || {
@@ -238,6 +223,9 @@ proto_ncm_setup() {
 		ip link set mtu "$mtu" "$ifname"
 	}
 
+	# Disable GRO, CDC NCM does not provide RX csum offloading.
+	ethtool -K $ifname gro off
+
 	proto_init_update "$ifname" 1
 	proto_set_keep 1
 	proto_add_data
@@ -258,7 +246,7 @@ proto_ncm_setup() {
 			#Passthrough
 			[ "$method" = "passthrough" ] && {
 				iptables -w -tnat -I postrouting_rule -o "$ifname" -j SNAT --to "$bridge_ipaddr"
-				ip route add default dev "$ifname"
+				ip route add default dev "$ifname" metric "$metric"
 			}
 		}
 	}
@@ -308,28 +296,30 @@ proto_ncm_setup() {
 }
 
 proto_ncm_teardown() {
-	local interface="$1" pdp bridge_ipaddr method braddr_f
+	local interface="$1" pdp bridge_ipaddr method
 	json_get_vars pdp modem
+	local braddr_f="/var/run/${interface}_braddr"
 
 	mdm_ubus_obj="$(find_mdm_ubus_obj "$modem")"
 
 	echo "Stopping network ${interface}"
 
-	braddr_f="/var/run/${interface}_braddr"
-	method=$(grep -o 'method:[^ ]*' $braddr_f 2> /dev/null | cut -d':' -f2)
-	bridge_ipaddr=$(grep -o 'bridge_ipaddr:[^ ]*' $braddr_f 2> /dev/null | cut -d':' -f2)
+	[ -f "$braddr_f" ] && {
+		method=$(get_braddr_var method "$interface")
+		bridge_ipaddr=$(get_braddr_var bridge_ipaddr "$interface")
+	}
 
 	#Kill udhcpc instance
 	proto_kill_command "$interface"
 
-	ubus call network.interface down "{\"interface\":\"${interface}_4\"}" 2>/dev/null
-	ubus call network.interface down "{\"interface\":\"${interface}_6\"}" 2>/dev/null
+	ubus call network.interface."${interface}_4" remove 2>/dev/null
+	ubus call network.interface."${interface}_6" remove 2>/dev/null
 
 	#Stop data call
-	ubus call "$mdm_ubus_obj" set_pdp_call "{\"mode\":\"disconnect\",\"cid\":${pdp},\"urc_en\":true}"
+	ubus -t 3 call "$mdm_ubus_obj" set_pdp_call "{\"mode\":\"disconnect\",\"cid\":${pdp},\"urc_en\":true,\"timeout\":0}"
 
 	#Deactivate context
-	ubus call "$mdm_ubus_obj" set_pdp_ctx_state "{\"cid\":${pdp},\"state\":\"deactivated\"}"
+	ubus -t 3 call "$mdm_ubus_obj" set_pdp_ctx_state "{\"cid\":${pdp},\"state\":\"deactivated\",\"timeout\":0}"
 	kill -9 $(cat /var/run/ncm_conn.pid 2>/dev/null) &>/dev/null
 	rm -f /var/run/ncm_conn.pid &>/dev/null
 
@@ -341,17 +331,23 @@ proto_ncm_teardown() {
 		ip route del "$bridge_ipaddr"
 		ubus call network.interface down "{\"interface\":\"mobile_bridge\"}"
 		rm -f "/tmp/dnsmasq.d/bridge"
-		swconfig dev switch0 set soft_reset 5 &
+
+		if is_device_dsa ; then
+			restart_dsa_interfaces
+		else
+			swconfig dev 'switch0' set soft_reset 5 &
+		fi
 		rm -f "$braddr_f" 2> /dev/null
+
+		#Clear passthrough and bridge params
+		iptables -t nat -F postrouting_rule
+
+		local zone="$(fw3 -q network "$interface" 2>/dev/null)"
+		iptables -F forwarding_${zone}_rule
+
+		ip neigh flush proxy
+		ip neigh flush dev br-lan
 	}
-
-	#Clear passthrough and bridge params
-	iptables -t nat -F postrouting_rule
-
-	local zone="$(fw3 -q network "$interface" 2>/dev/null)"
-	iptables -F forwarding_${zone}_rule
-
-	ip neigh flush proxy
 
 	proto_init_update "*" 0
 	proto_send_update "$interface"

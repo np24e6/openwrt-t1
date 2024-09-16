@@ -163,7 +163,7 @@ wifi_detect_notice() {
 }
 
 wifi_config() {
-	[ ! -f /etc/config/wireless ] && touch /etc/config/wireless
+	[ ! -f /etc/config/wireless ] && (umask 077 ; touch /etc/config/wireless)
 
 	for driver in $DRIVERS; do (
 		if eval "type detect_$driver" 2>/dev/null >/dev/null; then
@@ -232,7 +232,9 @@ scan_wifi() {
 				config_get device "$CONFIG_SECTION" device
 				config_get vifs "$device" vifs
 				append vifs "$CONFIG_SECTION"
-				config_set "$device" vifs "$vifs"
+				for dev in $device; do
+					config_set "$dev" vifs "$vifs"
+				done
 			;;
 		esac
 	}

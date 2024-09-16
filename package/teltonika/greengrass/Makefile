@@ -12,6 +12,8 @@ PKG_UPSTREAM_URL:=https://d1onfpft10uf5o.cloudfront.net/greengrass-core/download
 PKG_SOURCE:=$(PKG_NAME)-openwrt-armv7l-$(PKG_VERSION).tar.gz
 PKG_HASH:=fce721a94d8d5607bf0fecad693eea604034ebfc35e948fea79bfb2b9d6d75bb
 
+PKG_LICENSE:=Teltonika-3p-closed
+
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_SOURCE_SUBDIR)
 
@@ -24,14 +26,13 @@ include $(INCLUDE_DIR)/package.mk
 define Package/greengrass
 	SECTION:=net
 	CATEGORY:=Network
-	DEPENDS:=+USE_GLIBC:libc +vuci-app-greengrass-ui +bash
+	DEPENDS:=+USE_GLIBC:libc +bash
 	TITLE:=AWS Greengrass Core
-	PKG_TLT_NAME:=AWS Greengrass Core
-	PKG_ROUTER:=$(TLT_PLATFORM_NAME)
 endef
 
 define Package/greengrass/description
-	Amazon Web Services Greengrass Core software
+	AWS Greengrass Core is a service meant for communication
+	with Amazon Web Services Greengrass Core cloud software.
 endef
 
 define Package/greengrass/conffiles

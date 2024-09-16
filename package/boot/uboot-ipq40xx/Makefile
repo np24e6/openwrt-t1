@@ -1,17 +1,14 @@
 #
-# Copyright (c) 2014 2015 The Linux Foundation. All rights reserved.
-# Copyright (C) 2012 OpenWrt.org
-#
-# This is free software, licensed under the GNU General Public License v2.
-# See /LICENSE for more information.
+# Copyright (C) 2024 Teltonika-Networks
 #
 
 include $(TOPDIR)/rules.mk
-include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=uboot
 
-PKG_SOURCE_VERSION:=2.2
+PKG_SOURCE_VERSION:=2.3
+
+PKG_LICENSE:=GPL-2.0-or-later
 
 DEVICE_VENDOR='teltonika'
 

@@ -1,0 +1,16 @@
+Index: pam-tacacs-2023-11-08/libtac/include/libtac.h
+===================================================================
+--- pam-tacacs-2023-11-08.orig/libtac/include/libtac.h
++++ pam-tacacs-2023-11-08/libtac/include/libtac.h
+@@ -37,11 +37,7 @@ extern "C" {
+ #include <netdb.h>
+ #include <unistd.h>
+ #include <sys/types.h>
+-#ifdef __linux__
+-#include <sys/cdefs.h>
+-#else
+ #include "cdefs.h"
+-#endif
+ #include "tacplus.h"
+ 
+ #if defined(__clang__)

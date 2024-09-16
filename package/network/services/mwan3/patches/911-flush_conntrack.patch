@@ -2,12 +2,12 @@ Index: mwan3-2.10.12/files/usr/share/15-mwan3
 ===================================================================
 --- mwan3-2.10.12.orig/files/usr/share/15-mwan3
 +++ mwan3-2.10.12/files/usr/share/15-mwan3
-@@ -45,6 +45,8 @@ config_get_bool enabled $INTERFACE 'enab
- 	exit 0
- }
+@@ -86,6 +86,8 @@ case "$ACTION" in
+ 	;;
+ esac
  
 +mwan3_flush_conntrack "$INTERFACE" "$ACTION"
 +
- config_get initial_state $INTERFACE initial_state "online"
- if [ "$initial_state" = "offline" ]; then
- 	status=$(cat $MWAN3TRACK_STATUS_DIR/$INTERFACE/STATUS 2>/dev/null || echo unknown)
+ flush_conntrack() {
+ 	local enabled
+ 	local conn_name="${1%_*}"

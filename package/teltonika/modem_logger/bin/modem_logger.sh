@@ -4,6 +4,7 @@ DEBUG_LOG="1"
 DEBUG_ECHO="0"
 SSHFS_PATH="/usr/bin/sshfs"
 DEFAULT_FILTER_FILE_PATH="/etc/modem_logger_default.cfg"
+DEFAULT_UNISOC_FILTER_FILE_PATH="/etc/unisoc_ps_dsp_important_log.conf"
 LOGGER_PATH="" # Logger selection in set_logger
 LOGGERS="qlog diag_saver diag_mdlog"
 HOSTNAME="https://modemfota.teltonika-networks.com"
@@ -183,9 +184,12 @@ started_logging(){
         echo "[INFO] Run logger directly with [LOGGER_START] to see more info. Exiting."
         exit 1
     }
-    local OPEN_FILES=$(ls -l "/proc/$PID/fd" 2>/dev/null | grep -Ei ".*(\.qmdl.*|\.sdl|\.logel)$")
-    [ "$OPEN_FILES" != "" ] && return 0
-    return 1
+    [ $LOG_DIR != "9000" ] && {
+        local OPEN_FILES=$(ls -l "/proc/$PID/fd" 2>/dev/null | grep -Ei ".*(\.qmdl.*|\.sdl|\.logel)$")
+        [ "$OPEN_FILES" != "" ] && return 0
+        return 1
+    }
+    return 0
 }
 
 #Checks ttyUSBx-1 and ttyUSBx-2(in rare cases I have seen this to happen where one tty port skipped)
@@ -284,6 +288,21 @@ start_logger(){
                 }
             }
 
+            local modems="$(ubus list gsm.modem* | tr "\n" " ")"
+            for modem in $modems; do
+                local info="$(ubus call "$modem" info)"
+                local model="$(echo "$info" | jsonfilter -e "@.model")"
+                local usb_id="$(echo "$info" | jsonfilter -e "@.usb_id")"
+                [ -n "$MODEM_ID" ] && [ "$usb_id" != "$MODEM_ID" ] && continue
+                [ "$model" == "RG500U-EA" ] && [ -z "$FILTER_PATH" ] && [ -f "$DEFAULT_UNISOC_FILTER_FILE_PATH" ] &&
+                FILTER_PATH="$DEFAULT_UNISOC_FILTER_FILE_PATH"
+            done
+
+            [[ "$PLATFORM" =~ "TRB[51]" ]] && [ -z "$FILTER_PATH" ] && [ -e "$DEFAULT_FILTER_FILE_PATH" ] && {
+                # Sets default.cfg filter file to use if it exists and not already set
+                FILTER_PATH="$DEFAULT_FILTER_FILE_PATH"
+            }
+
             echo "[LOGGER_START]: $LOGGER_PATH -Dqmdl ${QLOG_DEV:+-p $QLOG_DEV} ${FILTER_PATH:+-f "$FILTER_PATH"} -s $LOG_DIR"
             "$LOGGER_PATH" -Dqmdl ${QLOG_DEV:+-p "$QLOG_DEV"} ${FILTER_PATH:+-f "$FILTER_PATH"} -s "$LOG_DIR" &>/dev/null &
         ;;
@@ -310,8 +329,7 @@ start_logger(){
         ;;
         *) ;;
     esac
-
-    wait_till_start
+    [ "$LOG_DIR" != "9000" ] && wait_till_start
 }
 
 available_loggers(){
@@ -383,7 +401,13 @@ start_logging(){
         exit 0
     fi
 
-    [ ! -f "$LOG_DIR" ] && mkdir -p "$LOG_DIR"
+    if [ "$LOGGER_PATH" != "/usr/bin/qlog" ] && [ $LOG_DIR == "9000" ]; then
+        echo "[ERROR] Only qlog can be run as a TCP server. Exiting."
+        available_loggers
+        exit 1
+    fi
+
+    [ ! -f "$LOG_DIR" ] && [ "$LOG_DIR" != "9000" ] && mkdir -p "$LOG_DIR"
 
     get_pre_init_set
     execute_at_array
@@ -469,7 +493,8 @@ helpFunction() {
     echo -e "\t Use \"-r show\" to show available versions on the server."
     echo -e "\t-m --mount \t <local_dir> <ip> <user> <password> <remote_dir> mount with sshfs."
     echo -e "\t-u --unmount \t <dir> unmount the directory."
-    echo -e "\t-s --start \t <dir> Start logging in the specified dir. Deletes existing logs from the directory."
+    echo -e "\t-s --start \t <dir> Start logging in the specified dir. Deletes existing logs from the directory.\
+            \n\r\t\t\t If set as '9000', QLog will run in TCP Server Mode"
     echo -e "\t-x --stop \t stop logging."
     echo -e "Helpers:"
     echo -e "\t-h --help \t Print help."
@@ -485,7 +510,7 @@ helpFunction() {
 
 while [ -n "$1" ]; do
 	case "$1" in
-        -s|--start) 
+        -s|--start)
             shift
             LOG_DIR="$1"
             START="1"
@@ -537,11 +562,11 @@ while [ -n "$1" ]; do
         #    shift
         #    LOG_DEV="$1"
         #;;
-        -g|--get_modems) 
+        -g|--get_modems)
             get_modems
             exit 1
         ;;
-        -r|--requirements) 
+        -r|--requirements)
             echo "Command is no longer supported. Please use the following command to install this package:"
             echo "opkg update && opkg install modem_logger sshfs"
             exit 1

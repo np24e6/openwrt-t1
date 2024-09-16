@@ -17,7 +17,7 @@ start_service() {
             logger "twd.init error: invalid configuration"
         else
             procd_open_instance
-            procd_set_param respawn 0
+            procd_set_param respawn
             procd_set_param command /usr/bin/twStreamApp
             procd_append_param command "$server" "$port" "$appkey" "$thing"
             procd_close_instance

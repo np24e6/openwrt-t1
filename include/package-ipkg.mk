@@ -4,6 +4,7 @@
 
 ifndef DUMP
   include $(INCLUDE_DIR)/feeds.mk
+  include $(INCLUDE_DIR)/os-version.mk
 endif
 
 IPKG_REMOVE:= \
@@ -105,7 +106,8 @@ ifeq ($(DUMP),)
     IDIR_$(1):=$(PKG_BUILD_DIR)/ipkg-$(PKGARCH)/$(1)
     KEEP_$(1):=$(strip $(call Package/$(1)/conffiles))
 
-    ifeq ($(BUILD_VARIANT),$$(if $$(VARIANT),$$(VARIANT),$(BUILD_VARIANT)))
+    TARGET_VARIANT:=$$(if $(ALL_VARIANTS),$$(if $$(VARIANT),$$(filter-out *,$$(VARIANT)),$(firstword $(ALL_VARIANTS))))
+    ifeq ($(BUILD_VARIANT),$$(if $$(TARGET_VARIANT),$$(TARGET_VARIANT),$(BUILD_VARIANT)))
     do_install=
     ifdef Package/$(1)/install
       do_install=yes
@@ -195,6 +197,7 @@ $$(call addfield,Depends,$$(Package/$(1)/DEPENDS)
 )$(if $(PKG_REBOOT),pkg_reboot: $(PKG_REBOOT)
 )$(if $(PKG_NETWORK_RESTART),pkg_network_restart: $(PKG_NETWORK_RESTART)
 )$(if $(PKG_TLT_NAME),tlt_name: $(PKG_TLT_NAME)
+)$(if $(PKG_APP_NAME),AppName: $(PKG_APP_NAME)
 )Architecture: $(PKGARCH)
 Installed-Size: 0
 $(_endef)
@@ -223,6 +226,7 @@ $(_endef)
 	$(CheckDependencies)
 
 	$(RSTRIP) $$(IDIR_$(1))
+	$(if $(and $(CONFIG_SMALL_FLASH),$(findstring m,$(CONFIG_PACKAGE_$(1)))),$(RCOMPR) $$(IDIR_$(1)))
 
     ifneq ($$(CONFIG_IPK_FILES_CHECKSUMS),)
 	(cd $$(IDIR_$(1)); \

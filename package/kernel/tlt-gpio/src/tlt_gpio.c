@@ -15,25 +15,27 @@
 #define DEBUG_MESSAGE(...)
 #endif
 
+#define MNF_ERROR_STRING(s) pr_err("\033[1;31mtlt_gpio: error setting GPIO's - %s\033[0m\n", s)
+
 static int read_mnf(const char **model, const char **hwver)
 {
 	*model = mnf_info_get_device_name();
 	if (*model == NULL) {
-		DEBUG_MESSAGE("Device name is empty\n");
+		MNF_ERROR_STRING("mnf name is empty");
 		return 1;
 	}
 	if(strlen(*model) < 6) {
-		DEBUG_MESSAGE("Device name is too short\n");
+		MNF_ERROR_STRING("mnf name is too short");
 		return 1;
 	}
 
 	*hwver = mnf_info_get_hw_version();
 	if (*hwver == NULL) {
-		DEBUG_MESSAGE("Device hwver is empty\n");
+		MNF_ERROR_STRING("mnf hwver is empty");
 		return 1;
 	}
 	if (strlen(*hwver) < 4) {
-		DEBUG_MESSAGE("Device hwver is too short\n");
+		MNF_ERROR_STRING("mnf hwver is too short");
 		return 1;
 	}
 
@@ -238,6 +240,9 @@ static int __init tlt_gpio_init(void)
 	device = (char *) kzalloc(sizeof(char) * 7, GFP_KERNEL);
 	strncpy(device, device_long, 6);
 	hwver = 10 * (hwver_long[0] - '0') + (hwver_long[1] - '0');
+	if(hwver == 0) {
+		hwver = 10 * (hwver_long[2] - '0') + (hwver_long[3] - '0');
+	}
 
 	while ((gc = gpiochip_find_by_id(chip_index))) {
 		DEBUG_MESSAGE("Found a chip with name %s\n", gc->label);

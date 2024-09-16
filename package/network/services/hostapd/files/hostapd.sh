@@ -266,6 +266,7 @@ hostapd_common_add_bss_config() {
 	config_add_string radius_client_addr
 	config_add_string iapp_interface
 	config_add_string eap_type ca_cert client_cert identity anonymous_identity auth priv_key priv_key_pwd
+	config_add_string use_pkcs pkcs_cert pkcs_passwd
 	config_add_boolean ca_cert_usesystem ca_cert2_usesystem
 	config_add_string subject_match subject_match2
 	config_add_array altsubject_match altsubject_match2
@@ -290,6 +291,7 @@ hostapd_common_add_bss_config() {
 	config_add_boolean wnm_sleep_mode wnm_sleep_mode_no_keys bss_transition
 	config_add_int time_advertisement
 	config_add_string time_zone
+	config_add_string vendor_elements
 
 	config_add_boolean ieee80211k rrm_neighbor_report rrm_beacon_report
 
@@ -314,8 +316,10 @@ hostapd_common_add_bss_config() {
 	config_add_array supported_rates
 
 	config_add_boolean sae_require_mfp
+	config_add_int sae_pwe
 
 	config_add_string 'owe_transition_bssid:macaddr' 'owe_transition_ssid:string'
+	config_add_string owe_transition_ifname
 
 	config_add_boolean interworking internet asra esr uesa
 	config_add_int access_network_type venue_group venue_type
@@ -598,24 +602,27 @@ hostapd_set_bss_options() {
 		sae|owe|eap192|eap-eap192)
 			set_default ieee80211w 2
 			set_default sae_require_mfp 1
+			set_default sae_pwe 2
 		;;
 		psk-sae)
 			set_default ieee80211w 1
 			set_default sae_require_mfp 1
+			set_default sae_pwe 2
 		;;
 	esac
 	[ -n "$sae_require_mfp" ] && append bss_conf "sae_require_mfp=$sae_require_mfp" "$N"
+	[ -n "$sae_pwe" ] && append bss_conf "sae_pwe=$sae_pwe" "$N"
 
 	local vlan_possible=""
 	wps_not_configured=
 
 	case "$auth_type" in
 		none|owe)
-			json_get_vars owe_transition_bssid owe_transition_ssid
+			json_get_vars owe_transition_bssid owe_transition_ssid owe_transition_ifname
 
 			[ -n "$owe_transition_ssid" ] && append bss_conf "owe_transition_ssid=\"$owe_transition_ssid\"" "$N"
 			[ -n "$owe_transition_bssid" ] && append bss_conf "owe_transition_bssid=$owe_transition_bssid" "$N"
-
+			[ -n "$owe_transition_ifname" ] && append bss_conf "owe_transition_ifname=$owe_transition_ifname" "$N"
 			wps_possible=1
 			# Here we make the assumption that if we're in open mode
 			# with WPS enabled, we got to be in unconfigured state.
@@ -689,7 +696,24 @@ hostapd_set_bss_options() {
 		;;
 	esac
 
-	local auth_algs=$((($auth_mode_shared << 1) | $auth_mode_open))
+	case "$auth_type" in
+		none|owe|psk|sae|psk-sae|wep)
+			json_get_vars \
+			auth_server auth_port auth_secret \
+			ownip radius_client_addr
+
+			[ -n "$auth_server" ] &&  {
+				set_default auth_port 1812
+
+				json_for_each_item append_auth_server auth_server
+				[ -n "$ownip" ] && append bss_conf "own_ip_addr=$ownip" "$N"
+				[ -n "$radius_client_addr" ] && append bss_conf "radius_client_addr=$radius_client_addr" "$N"
+				append bss_conf "macaddr_acl=2" "$N"
+			}
+		;;
+	esac
+
+	local auth_algs="$((($auth_mode_shared << 1) | $auth_mode_open))"
 	append bss_conf "auth_algs=${auth_algs:-1}" "$N"
 	append bss_conf "wpa=$wpa" "$N"
 	[ -n "$wpa_pairwise" ] && append bss_conf "wpa_pairwise=$wpa_pairwise" "$N"
@@ -911,13 +935,17 @@ hostapd_set_bss_options() {
 	}
 
 	[ -n "$vlan_possible" -a -n "$dynamic_vlan" ] && {
-		json_get_vars vlan_naming vlan_tagged_interface vlan_bridge vlan_file
+		json_get_vars vlan_naming vlan_tagged_interface vlan_bridge vlan_file vlan_no_bridge
 		set_default vlan_naming 1
 		[ -z "$vlan_file" ] && set_default vlan_file /var/run/hostapd-$ifname.vlan
 		append bss_conf "dynamic_vlan=$dynamic_vlan" "$N"
 		append bss_conf "vlan_naming=$vlan_naming" "$N"
-		[ -n "$vlan_bridge" ] && \
+		if [ -n "$vlan_bridge" ]; then
 			append bss_conf "vlan_bridge=$vlan_bridge" "$N"
+		else
+			set_default vlan_no_bridge 1
+		fi
+		append bss_conf "vlan_no_bridge=$vlan_no_bridge" "$N"
 		[ -n "$vlan_tagged_interface" ] && \
 			append bss_conf "vlan_tagged_interface=$vlan_tagged_interface" "$N"
 		[ -n "$vlan_file" ] && {
@@ -985,6 +1013,13 @@ hostapd_set_bss_options() {
 		[ -n "$anqp_3gpp_cell_net_conf" ] && \
 			append bss_conf "anqp_3gpp_cell_net=$anqp_3gpp_cell_net_conf" "$N"
 	fi
+
+	set_default iw_qos_map_set 0,0,2,16,1,1,255,255,18,22,24,38,40,40,44,46,48,56
+	case "$iw_qos_map_set" in
+		*,*);;
+		*) iw_qos_map_set="";;
+	esac
+	[ -n "$iw_qos_map_set" ] && append bss_conf "qos_map_set=$iw_qos_map_set" "$N"
 
 	local hs20 disable_dgaf osen anqp_domain_id hs20_deauth_req_timeout \
 		osu_server_uri osu_service_desc osu_friendly_name osu_nai osu_ssid \
@@ -1176,16 +1211,16 @@ wpa_supplicant_set_fixed_freq() {
 	append network_data "frequency=$freq" "$N$T"
 	case "$htmode" in
 		NOHT) append network_data "disable_ht=1" "$N$T";;
-		HT20|VHT20) append network_data "disable_ht40=1" "$N$T";;
-		HT40*|VHT40*|VHT80*|VHT160*) append network_data "ht40=1" "$N$T";;
+		HE20|HT20|VHT20) append network_data "disable_ht40=1" "$N$T";;
+		HT40*|VHT40|VHT80|VHT160|HE40|HE80|HE160) append network_data "ht40=1" "$N$T";;
 	esac
 	case "$htmode" in
 		VHT*) append network_data "vht=1" "$N$T";;
 	esac
 	case "$htmode" in
-		VHT80) append network_data "max_oper_chwidth=1" "$N$T";;
-		VHT160) append network_data "max_oper_chwidth=2" "$N$T";;
-		VHT20|VHT40) append network_data "max_oper_chwidth=0" "$N$T";;
+		HE80|VHT80) append network_data "max_oper_chwidth=1" "$N$T";;
+		HE160|VHT160) append network_data "max_oper_chwidth=2" "$N$T";;
+		HE20|HE40|VHT20|VHT40) append network_data "max_oper_chwidth=0" "$N$T";;
 		*) append network_data "disable_vht=1" "$N$T";;
 	esac
 }
@@ -1309,10 +1344,16 @@ wpa_supplicant_add_network() {
 			[ -n "$anonymous_identity" ] && append network_data "anonymous_identity=\"$anonymous_identity\"" "$N$T"
 			case "$eap_type" in
 				tls)
-					json_get_vars client_cert priv_key priv_key_pwd
-					append network_data "client_cert=\"$client_cert\"" "$N$T"
-					append network_data "private_key=\"$priv_key\"" "$N$T"
-					append network_data "private_key_passwd=\"$priv_key_pwd\"" "$N$T"
+					json_get_vars client_cert priv_key priv_key_pwd use_pkcs pkcs_cert pkcs_passwd
+
+					if [ "$use_pkcs" = "1" ]; then
+						append network_data "private_key=\"$pkcs_cert\"" "$N$T"
+						append network_data "private_key_passwd=\"$pkcs_passwd\"" "$N$T"
+					else
+						append network_data "client_cert=\"$client_cert\"" "$N$T"
+						append network_data "private_key=\"$priv_key\"" "$N$T"
+						append network_data "private_key_passwd=\"$priv_key_pwd\"" "$N$T"
+					fi
 
 					json_get_vars subject_match
 					[ -n "$subject_match" ] && append network_data "subject_match=\"$subject_match\"" "$N$T"
@@ -1438,10 +1479,12 @@ wpa_supplicant_add_network() {
 		;;
 	esac
 
-	[ "$wpa_cipher" = GCMP ] && {
-		append network_data "pairwise=GCMP" "$N$T"
-		append network_data "group=GCMP" "$N$T"
-	}
+	case "$wpa_cipher" in
+		*GCMP*)
+			append network_data "pairwise=$wpa_cipher" "$N$T"
+			append network_data "group=$wpa_cipher" "$N$T"
+		;;
+	esac
 
 	[ "$mode" = mesh ] || {
 		case "$wpa" in
@@ -1525,34 +1568,4 @@ network={
 EOF
 	fi
 	return 0
-}
-
-wpa_supplicant_run() {
-	local ifname="$1"
-	local hostapd_ctrl="$2"
-	local hostapd_primary_ap="$3"
-	local add_ap="$4"
-
-	_wpa_supplicant_common "$ifname"
-
-	ubus wait_for wpa_supplicant
-	[ -n "$hostapd_primary_ap" ] && [ "$has_ap" != 0 ] && ubus -t 10 wait_for hostapd.$primary_ap
-	local supplicant_res="$(ubus call wpa_supplicant config_add "{ \
-		\"driver\": \"${_w_driver:-wext}\", \"ctrl\": \"$_rpath\", \
-		\"iface\": \"$ifname\", \"config\": \"$_config\" \
-		${network_bridge:+, \"bridge\": \"$network_bridge\"} \
-		${hostapd_ctrl:+, \"hostapd_ctrl\": \"$hostapd_ctrl\"} \
-		}")"
-
-	ret="$?"
-
-	[ "$ret" != 0 -o -z "$supplicant_res" ] && wireless_setup_vif_failed WPA_SUPPLICANT_FAILED
-
-	wireless_add_process "$(jsonfilter -s "$supplicant_res" -l 1 -e @.pid)" "/usr/sbin/wpa_supplicant" 1 1
-
-	return $ret
-}
-
-hostapd_common_cleanup() {
-	killall meshd-nl80211
 }

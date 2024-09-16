@@ -2,9 +2,38 @@
 # Copyright (C) 2006 OpenWrt.org
 
 START=16
+
+_check_paths() {
+	for id in $@; do
+		path="/sys/bus/usb/drivers/usb/$id"
+		[ ! -d $path ] && return 1
+	done
+
+	return 0
+}
+
 boot() {
 	mount_root done
 	rm -f /sysupgrade.tgz && sync
+
+	#Reset USB hub if it is not detected
+	usb_id="$(jsonfilter -i /etc/board.json -e '@.usbhubcheck.usb_id')"
+
+	if [ -n "$usb_id" ]; then
+		gpio="$(jsonfilter -i /etc/board.json -e '@.usbhubcheck.gpio')"
+		gpio_path="/sys/class/gpio/${gpio}/value"
+
+		if ! _check_paths "$usb_id" && [ -f "$gpio_path" ]; then
+			for count in $(seq 3); do 
+				echo "USB hub not detected, resetting" > /dev/kmsg
+				echo 1 > $gpio_path
+				sleep 1
+				echo 0 > $gpio_path
+				sleep 2
+				_check_paths "$usb_id" && break
+			done
+		fi
+	fi
 
 	#Reboot if usb subsystem doesnt start properly
 	if [ -n "$(uci -q get system.usbcheck.path)" ]; then

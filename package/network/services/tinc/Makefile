@@ -21,20 +21,18 @@ PKG_CPE_ID:=cpe:/a:tinc:tinc
 PKG_BUILD_PARALLEL:=1
 PKG_INSTALL:=1
 
-PKG_LICENSE:=LGPL-2.1
+PKG_LICENSE:=GPL-2.0-or-later
 
 include $(INCLUDE_DIR)/package.mk
 
 define Package/tinc
   SECTION:=net
   CATEGORY:=Network
-  DEPENDS:=+liblzo +libopenssl +kmod-tun +zlib +vuci-app-tinc-ui
+  DEPENDS:=+liblzo +libopenssl +kmod-tun +zlib
   TITLE:=VPN tunneling daemon
   URL:=http://www.tinc-vpn.org/
   MAINTAINER:=Saverio Proto <zioproto@gmail.com>
   SUBMENU:=VPN
-  PKG_ROUTER:=$(TLT_PLATFORM_NAME)
-  PKG_TLT_NAME:=Tinc VPN
 endef
 
 

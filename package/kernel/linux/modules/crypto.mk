@@ -186,6 +186,10 @@ define KernelPackage/crypto-des/sdxlemur
   FILES:=$(LINUX_DIR)/crypto/des_generic.ko
 endef
 
+define KernelPackage/crypto-des/sdxnightjar
+  FILES:=$(LINUX_DIR)/crypto/des_generic.ko
+endef
+
 $(eval $(call KernelPackage,crypto-des))
 
 
@@ -395,8 +399,9 @@ $(eval $(call KernelPackage,crypto-hw-padlock))
 
 define KernelPackage/crypto-hw-safexcel
   TITLE:= MVEBU SafeXcel Crypto Engine module
-  DEPENDS:=@(TARGET_mvebu_cortexa53||TARGET_mvebu_cortexa72) +eip197-mini-firmware \
-	+kmod-crypto-authenc +kmod-crypto-md5 +kmod-crypto-hmac +kmod-crypto-sha256 +kmod-crypto-sha512
+  DEPENDS:=@(TARGET_mvebu_cortexa53||TARGET_mvebu_cortexa72||TARGET_mediatek_mt7981) +eip197-mini-firmware \
+	+kmod-crypto-authenc +kmod-crypto-des +kmod-crypto-md5 +kmod-crypto-hmac \
+	+kmod-crypto-sha1 +kmod-crypto-sha256 +kmod-crypto-sha512
   KCONFIG:= \
 	CONFIG_CRYPTO_HW=y \
 	CONFIG_CRYPTO_DEV_SAFEXCEL

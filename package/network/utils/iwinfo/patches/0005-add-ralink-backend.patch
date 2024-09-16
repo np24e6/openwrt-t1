@@ -1,8 +1,19 @@
-diff --git a/Makefile b/Makefile
-index 57b6a09..be1e71b 100644
 --- a/Makefile
 +++ b/Makefile
-@@ -34,6 +34,10 @@ ifneq ($(filter nl80211,$(IWINFO_BACKENDS)),)
+@@ -17,10 +17,10 @@ IWINFO_CLI_LDFLAGS = $(LDFLAGS) -L. -liw
+ IWINFO_CLI_OBJ     = iwinfo_cli.o
+ 
+ 
+-ifneq ($(filter wl wext madwifi,$(IWINFO_BACKENDS)),)
++#ifneq ($(filter wl wext madwifi,$(IWINFO_BACKENDS)),)
+ 	IWINFO_CFLAGS  += -DUSE_WEXT
+ 	IWINFO_LIB_OBJ += iwinfo_wext.o iwinfo_wext_scan.o
+-endif
++#endif
+ 
+ ifneq ($(filter wl,$(IWINFO_BACKENDS)),)
+ 	IWINFO_CFLAGS  += -DUSE_WL
+@@ -39,6 +39,10 @@ ifneq ($(filter nl80211,$(IWINFO_BACKEND
  	IWINFO_LIB_OBJ     += iwinfo_nl80211.o
  endif
  
@@ -13,11 +24,9 @@ index 57b6a09..be1e71b 100644
  
  compile: clean $(IWINFO_LIB) $(IWINFO_LUA) $(IWINFO_CLI)
  
-diff --git a/include/iwinfo.h b/include/iwinfo.h
-index de61736..aaab910 100644
 --- a/include/iwinfo.h
 +++ b/include/iwinfo.h
-@@ -305,6 +305,7 @@ extern const struct iwinfo_ops wext_ops;
+@@ -412,6 +412,7 @@ extern const struct iwinfo_ops wext_ops;
  extern const struct iwinfo_ops madwifi_ops;
  extern const struct iwinfo_ops nl80211_ops;
  extern const struct iwinfo_ops wl_ops;
@@ -25,8 +34,6 @@ index de61736..aaab910 100644
  
  #include "iwinfo/utils.h"
  
-diff --git a/include/iwinfo/lua.h b/include/iwinfo/lua.h
-index 8b76b25..9a80a6e 100644
 --- a/include/iwinfo/lua.h
 +++ b/include/iwinfo/lua.h
 @@ -41,6 +41,10 @@
@@ -40,25 +47,21 @@ index 8b76b25..9a80a6e 100644
  
  #define LUA_REG(type,op) \
  	{ #op, iwinfo_L_##type##_##op }
-diff --git a/iwinfo_lib.c b/iwinfo_lib.c
-index 70b080c..07b7702 100644
 --- a/iwinfo_lib.c
 +++ b/iwinfo_lib.c
-@@ -338,6 +338,9 @@ static const struct iwinfo_ops *backends[] = {
- #endif
+@@ -391,6 +391,9 @@ static const struct iwinfo_ops *backends
  #ifdef USE_WL
  	&wl_ops,
-+#endif
+ #endif
 +#ifdef USE_RALINK
 +	&ralink_ops,
- #endif
++#endif
+ #ifdef USE_WEXT
  	&wext_ops,
- };
-diff --git a/iwinfo_lua.c b/iwinfo_lua.c
-index e49e454..133625b 100644
+ #endif
 --- a/iwinfo_lua.c
 +++ b/iwinfo_lua.c
-@@ -769,6 +769,35 @@ LUA_WRAP_STRUCT_OP(nl80211,mbssid_support)
+@@ -777,6 +777,35 @@ LUA_WRAP_STRUCT_OP(nl80211,mbssid_suppor
  LUA_WRAP_STRUCT_OP(nl80211,hardware_id)
  #endif
  
@@ -92,9 +95,9 @@ index e49e454..133625b 100644
 +#endif
 +
  /* Wext */
+ #ifdef USE_WEXT
  LUA_WRAP_INT_OP(wext,channel)
- LUA_WRAP_INT_OP(wext,frequency)
-@@ -896,6 +925,39 @@ static const luaL_reg R_nl80211[] = {
+@@ -906,6 +935,39 @@ static const luaL_reg R_nl80211[] = {
  };
  #endif
  
@@ -132,9 +135,9 @@ index e49e454..133625b 100644
 +#endif
 +
  /* Wext table */
+ #ifdef USE_WEXT
  static const luaL_reg R_wext[] = {
- 	LUA_REG(wext,channel),
-@@ -965,6 +1027,15 @@ LUALIB_API int luaopen_iwinfo(lua_State *L) {
+@@ -977,6 +1039,15 @@ LUALIB_API int luaopen_iwinfo(lua_State
  	lua_setfield(L, -2, "nl80211");
  #endif
  
@@ -147,6 +150,6 @@ index e49e454..133625b 100644
 +	lua_setfield(L, -2, "ralink");
 +#endif
 +
+ #ifdef USE_WEXT
  	luaL_newmetatable(L, IWINFO_WEXT_META);
  	luaL_register(L, NULL, R_common);
- 	luaL_register(L, NULL, R_wext);

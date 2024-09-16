@@ -1,0 +1,23 @@
+Index: rpcd-2021-03-11-ccb75178/iwinfo.c
+===================================================================
+--- rpcd-2021-03-11-ccb75178.orig/iwinfo.c	2024-01-31 14:47:01.129648353 +0200
++++ rpcd-2021-03-11-ccb75178/iwinfo.c	2024-01-31 14:48:44.133031994 +0200
+@@ -201,12 +201,18 @@
+ 		if (ciph & IWINFO_CIPHER_TKIP)
+ 			blobmsg_add_string(&buf, NULL, "tkip");
+ 
++		if (ciph & IWINFO_CIPHER_CCMP256)
++			blobmsg_add_string(&buf, NULL, "ccmp-256");
++
+ 		if (ciph & IWINFO_CIPHER_CCMP)
+ 			blobmsg_add_string(&buf, NULL, "ccmp");
+ 
+ 		if (ciph & IWINFO_CIPHER_GCMP)
+ 			blobmsg_add_string(&buf, NULL, "gcmp");
+ 
++		if (ciph & IWINFO_CIPHER_GCMP256)
++			blobmsg_add_string(&buf, NULL, "gcmp-256");
++
+ 		if (ciph & IWINFO_CIPHER_WRAP)
+ 			blobmsg_add_string(&buf, NULL, "wrap");
+ 

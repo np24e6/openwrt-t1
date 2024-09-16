@@ -28,17 +28,15 @@ include ../../devel/meson/meson.mk
 
 define Package/sshfs
 	TITLE:=SSHFS service for Teltonika package manager
-	DEPENDS:=+fuse3-utils +glib2 +libpthread +vuci-app-sshfs-ui
+	DEPENDS:=+fuse3-utils +glib2 +libpthread
 	SECTION:=net
 	CATEGORY:=Network
 	SUBMENU:=Filesystem
 	URL:=https://github.com/libfuse/sshfs
-	PKG_TLT_NAME:=SSHFS
-	PKG_ROUTER:=$(TLT_PLATFORM_NAME)
 endef
 
 define Package/sshfs/description
-	Simple application to mount remote system over SFTP.
+	Simple application to mount and interact with directories and files located on a remote server or workstation over SFTP.
 endef
 
 define Package/sshfs/conffiles

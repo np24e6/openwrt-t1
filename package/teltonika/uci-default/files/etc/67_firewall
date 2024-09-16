@@ -34,7 +34,16 @@ if [ "$hotspot_enabled" = "true" ] && [ "$rule_exists" = "false" ]; then
 		set firewall.@forwarding[-1].dest='wan'
 
 		add firewall rule
-		set firewall.@rule[-1].dest_port='53 67-68 444 81 1812 1813 3991 3990'
+		add_list firewall.@rule[-1].dest_port='53'
+		add_list firewall.@rule[-1].dest_port='67'
+		add_list firewall.@rule[-1].dest_port='68'
+		add_list firewall.@rule[-1].dest_port='444'
+		add_list firewall.@rule[-1].dest_port='81'
+		add_list firewall.@rule[-1].dest_port='1812'
+		add_list firewall.@rule[-1].dest_port='1813'
+		add_list firewall.@rule[-1].dest_port='3991'
+		add_list firewall.@rule[-1].dest_port='3990'
+		set firewall.@rule[-1].proto='all'
 		set firewall.@rule[-1].src='hotspot'
 		set firewall.@rule[-1].name='Hotspot_input'
 		set firewall.@rule[-1].target='ACCEPT'

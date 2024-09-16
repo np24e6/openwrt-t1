@@ -146,7 +146,7 @@ Signed-off-by: David S. Miller <davem@davemloft.net>
  		tp->rx_buf_sz		= 32 * 1024;
  		tp->eee_en		= true;
  		tp->eee_adv		= MDIO_EEE_1000T | MDIO_EEE_100TX;
-@@ -6835,7 +6844,7 @@ static int rtl8152_probe(struct usb_inte
+@@ -6836,7 +6845,7 @@ static int rtl8152_probe(struct usb_inte
  		netdev->max_mtu = ETH_DATA_LEN;
  		break;
  	default:

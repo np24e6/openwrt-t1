@@ -13,55 +13,46 @@ PRIORITY=0
 SSID=""
 ENCRYPTION=""
 BSSID=""
-NAME=""
+AP_JSON="{}"
+MULTI_AP_IFACE=""
 
 get_wifi_section() {
 	local multiple
 	local section="$1"
-
 	config_get multiple "$section" multiple ""
 	[ "$multiple" = "1" ] || return
 	SECTION="$1"
 	config_get DEVICE "$section" device ""
-	config_get NAME "$section" network ""
-}
-
-check_connection() {
-	json_load "$(/bin/ubus call iwinfo info "{\"device\":\"$DEVICE\"}")"
-	json_get_vars ssid
-	[ -z "$ssid" ] && PRIORITY=0
+	config_get WIFI_ID "$section" wifi_id ""
 }
 
 find_available() {
-	local enabled ssid_name priority key
+	local enabled ssid_name bssid priority key encryption
+	local is_available="0"
 	local section="$1"
 
 	config_get enabled "$section" "enabled" 0
 	config_get ssid_name "$section" "ssid" ""
 	config_get priority "$section" "priority" 0
+
 	[ "$enabled" -ne 1 ] || [ "$priority" -eq 0 ] || [ -z "$ssid_name" ] && return
 	config_get key "$section" key ""
-
 	for ap in $LIST; do
 		json_select "$ap"
-		json_get_vars ssid bssid
+		json_get_var ssid ssid
 		owe=0 sae=0 psk=0 wpa1=0 wpa2=0 ccmp=0 tkip=0 aes=0
 
-		[ "$PRIORITY" -ne 0 ] && [ "$priority" -gt "$PRIORITY" ] || [ "$ssid" != "$ssid_name" ] && {
+		[ "$ssid" != "$ssid_name" ] && {
 			json_select ..
 			continue
 		}
 
-		PRIORITY="$priority"
-		SSID="$ssid"
-		BSSID="$bssid"
-		KEY="$key"
-		ENCRYPTION=""
-
+		is_available="1"
+		json_get_var bssid bssid
 		json_select encryption
 		json_get_vars enabled
 		[ "$enabled" ] && [ "$enabled" -ne 0 ] || {
-			ENCRYPTION="none"
+			encryption="none"
 			json_select ..
 			json_select ..
 			continue
@@ -102,20 +93,143 @@ find_available() {
 		json_select ..
 		json_select ..
 
-		[ "$owe" -eq 1 ] && ENCRYPTION="owe" && continue
+		[ "$owe" -eq 1 ] && encryption="owe" && continue
 		[ "$sae" -eq 1 ] && {
-			ENCRYPTION="sae"
-			[ "$psk" -eq 1 ] && ENCRYPTION="$ENCRYPTION-mixed"
+			encryption="sae"
+			[ "$psk" -eq 1 ] && encryption="$encryption-mixed"
 			continue
 		}
 		[ "$psk" -eq 1 ] && {
-			ENCRYPTION="psk"
-			[ "$wpa1" -eq 1 ] && [ "$wpa2" -eq 1 ] && ENCRYPTION="$ENCRYPTION-mixed"
-			[ "$wpa1" -eq 0 ] && [ "$wpa2" -eq 1 ] && ENCRYPTION="${ENCRYPTION}2"
-			[ "$tkip" -eq 1 ] && ENCRYPTION="$ENCRYPTION+tkip"
-			[ "$ccmp" -eq 1 ] && ENCRYPTION="$ENCRYPTION+ccmp" && continue
-			[ "$aes" -eq 1 ] && ENCRYPTION="$ENCRYPTION+aes" && continue
+			encryption="psk"
+			[ "$wpa1" -eq 1 ] && [ "$wpa2" -eq 1 ] && encryption="$encryption-mixed"
+			[ "$wpa1" -eq 0 ] && [ "$wpa2" -eq 1 ] && encryption="${encryption}2"
+			[ "$tkip" -eq 1 ] && encryption="$encryption+tkip"
+			[ "$ccmp" -eq 1 ] && encryption="$encryption+ccmp" && continue
+			[ "$aes" -eq 1 ] && encryption="$encryption+aes" && continue
 		}
+
+	done
+
+	[ "$is_available" -eq 0 ] && return
+	[ -z "$bssid" ] || [ -z "$encryption" ] && return
+	[ "$PRIORITY" -ne 0 ] && [ "$PRIORITY" -lt "$priority" ] && {
+		return
+	}
+	local temp_json="$(json_dump)"
+	json_load "$AP_JSON"
+	json_select "$ssid_name"
+	json_get_vars password_correct
+	[ "$password_correct" -eq 2 ] && {
+		check_connection "$ssid_name" "$bssid" "$key" "$encryption"
+		password_correct=$?
+	}
+
+	[ "$password_correct" -eq 1 ] && {
+		PRIORITY="$priority"
+		SSID="$ssid_name"
+		BSSID="$bssid"
+		KEY="$key"
+		ENCRYPTION="$encryption"
+	}
+
+	json_load "$temp_json"
+	json_get_keys LIST results
+	json_select results
+}
+
+check_connection() {
+	local ssid bssid key encryption
+	ssid="$1"
+	bssid="$2"
+	key="$3"
+	encryption="$4"
+
+	write_wireless_config "$ssid" "$bssid" "$key" "$encryption"
+	[ -z "$MULTI_AP_IFACE" ] && {
+		get_multi_ap_iface
+		json_load "$AP_JSON"
+		json_select "$ssid"
+		json_get_vars password_correct
+	}
+	local i=0
+
+	while [ "$i" -le 25 ]; do
+		sleep 5
+
+		[ -n "$MULTI_AP_IFACE" ] && ubus wait_for wpa_supplicant.$MULTI_AP_IFACE
+		local output=$(/bin/ubus call wpa_supplicant.$MULTI_AP_IFACE get_status)
+		[ -z "$output" ] && {
+			i=$(($i + 5))
+			continue
+		}
+
+		json_load "$output"
+		json_get_vars wpa_state disconnect_reason
+		json_load "$AP_JSON"
+		json_select "$ssid"
+		[ "$wpa_state" = "COMPLETED" ] && {
+			json_add_int "password_correct" "1"
+			break
+		}
+		[ "$disconnect_reason" -eq 15 ] && {
+			json_add_int "password_correct" "0"
+			break
+		}
+		i=$(($i + 5))
+
+	done
+
+	json_get_vars password_correct
+	json_select ..
+	AP_JSON="$(json_dump)"
+	return "$password_correct"
+}
+
+write_wireless_config() {
+	local ssid bssid key encryption
+	ssid="$1"
+	bssid="$2"
+	key="$3"
+	encryption="$4"
+	[ -z "$ssid" ] || [ -z "$bssid" ] || [ -z "$encryption" ] && return
+	uci_set "wireless" "$SECTION" "ssid" "$ssid"
+	uci_set "wireless" "$SECTION" "bssid" "$bssid"
+	uci_set "wireless" "$SECTION" "encryption" "$encryption"
+	[ "$encryption" != "none" ] && [ "$encryption" != "owe" ] && uci_set "wireless" "$SECTION" "key" "$key"
+	uci_set "wireless" "$SECTION" "disabled" "0"
+	uci_commit "wireless"
+	ubus call network reload
+	[ -z "$MULTI_AP_IFACE" ] && sleep 10 || ubus wait_for wpa_supplicant.$MULTI_AP_IFACE
+}
+
+add_ap_to_json() {
+	local ap_ssid
+	config_get ap_ssid "$1" ssid
+	json_load "$AP_JSON"
+	json_add_object "$ap_ssid"
+	json_add_int "password_correct" "2" #  0 incorrect, 1 correct, 2 not tested
+	json_close_object
+	AP_JSON="$(json_dump)"
+}
+
+get_multi_ap_iface() {
+	status_json="$(wifi status)"
+	json_load "$status_json"
+	json_select "$DEVICE"
+	json_select interfaces
+	idx=1
+	while json_is_a ${idx} object; do
+		json_select $idx
+		json_get_var ifname ifname
+		json_select config
+		json_get_var wifi_id wifi_id
+		json_select ..
+		json_select ..
+		[ "$wifi_id" = "$WIFI_ID" ] && {
+			MULTI_AP_IFACE="$ifname"
+			break
+		}
+		idx=$((idx + 1))
 	done
 }
 
@@ -134,36 +248,44 @@ ssid_exists=$(uci_get "multi_wifi" "@wifi-iface[0]")
 ssid_disabled=$(uci_get "wireless" "$SECTION" "disabled")
 [ -z "$ssid_exists" ] && [ "$ssid_disabled" = "0" ] && uci_set "wireless" "$SECTION" "disabled" "1" \
 	&& uci_commit "wireless" && wifi up
-
 multi_ap_enabled=$(uci_get "multi_wifi" "general" "enabled")
 [ "$multi_ap_enabled" != 1 ] && exit 1
 
-config_load "multi_wifi"
 json_init
+config_load "multi_wifi"
+config_foreach add_ap_to_json "wifi-iface"
 while uci_get "multi_wifi" "@wifi-iface[0]" >/dev/null; do
-	tmp_ssid="$SSID"
-	tmp_bssid="$BSSID"
-	tmp_enc="$ENCRYPTION"
+	[ -n "$MULTI_AP_IFACE" ] && {
+		ubus wait_for wpa_supplicant.$MULTI_AP_IFACE
+		output=$(/bin/ubus call wpa_supplicant.$MULTI_AP_IFACE get_status)
+		[ -z "$output" ] && sleep $TIMEOUT && continue
 
-	[ -n "$SSID" ] && [ "$PRIORITY" -eq 1 ] && check_connection
-	[ "$PRIORITY" -eq 1 ] && sleep "$TIMEOUT" && continue
+		json_load "$output"
+		json_get_vars wpa_state disconnect_reason
+		[ "$wpa_state" = "COMPLETED" ] && [ -n "$SSID" ] && [ "$PRIORITY" -eq 1 ] && sleep "$TIMEOUT" && continue
+		json_load "$AP_JSON"
+		json_select "$SSID"
+		[ "$disconnect_reason" -ne 0 ] && [ "$wpa_state" != "COMPLETED" ] && {
+			if [ "$disconnect_reason" -eq 15 ]; then # reason=15 "4-Way handshake timeout"
+				json_add_int "password_correct" "0"
+			else
+				json_add_int "password_correct" "2"
+			fi
+		}
+		json_select ..
+		AP_JSON="$(json_dump)"
+	}
 
-	json_load "$(/bin/ubus call iwinfo scan "{\"device\":\"$DEVICE\"}")"
+	output=$(/bin/ubus call iwinfo scan "{\"device\":\"$DEVICE\"}")
+	[ -z "$output" ] && sleep $TIMEOUT && continue
+	json_load "$output"
 	json_get_keys LIST results
 	json_select results
 	PRIORITY=0
+
 	config_foreach find_available "wifi-iface"
 	[ "$PRIORITY" -eq 0 ] || [ -z "$SSID" ] || [ -z "$BSSID" ] || [ -z "$ENCRYPTION" ] && sleep "$TIMEOUT" && continue
-	[ "$SSID" = "$tmp_ssid" ] && [ "$BSSID" = "$tmp_bssid" ] && [ "$ENCRYPTION" = "$tmp_enc" ] && sleep "$TIMEOUT" && continue
-
-	uci_set "wireless" "$SECTION" "ssid" "$SSID"
-	uci_set "wireless" "$SECTION" "bssid" "$BSSID"
-	uci_set "wireless" "$SECTION" "encryption" "$ENCRYPTION"
-	[ "$ENCRYPTION" != "none" ] && [ "$ENCRYPTION" != "owe" ] && uci_set "wireless" "$SECTION" "key" "$KEY"
-	uci_set "wireless" "$SECTION" "disabled" "0"
-	uci_commit "wireless"
-	ubus call network reload
-	sleep "$TIMEOUT"
+	write_wireless_config "$SSID" "$BSSID" "$KEY" "$ENCRYPTION" && sleep "$TIMEOUT"
 done
 
 exit 0

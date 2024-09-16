@@ -24,6 +24,7 @@ export TLT_PLATFORM_NAME:=$(subst 6X,60,$(subst 0X,00,$(TLT_DEV_NAME)))
 
 TARGET_CPPFLAGS += -D$(TLT_PLATFORM_NAME)_PLATFORM
 
+$(eval $(call export_feature,CONFIG_GATEWAY_DEVICE))
 $(eval $(call export_feature,CONFIG_HAS_SINGLE_ETH_PORT,SINGLE_ETH_PORT))
 $(eval $(call export_feature,CONFIG_MOBILE_SUPPORT))
 $(eval $(call export_feature,CONFIG_DUAL_SIM_SUPPORT))
@@ -31,6 +32,10 @@ $(eval $(call export_feature,CONFIG_GPS_SUPPORT))
 $(eval $(call export_feature,CONFIG_BLUETOOTH_SUPPORT))
 $(eval $(call export_feature,CONFIG_WIFI_SUPPORT))
 $(eval $(call export_feature,CONFIG_IO_SUPPORT))
+$(eval $(call export_feature,CONFIG_POWER_CONTROL_SUPPORT))
 $(eval $(call export_feature,CONFIG_BASEBAND_SUPPORT))
 $(eval $(call export_feature,CONFIG_DSA_SUPPORT))
 $(eval $(call export_feature,CONFIG_PPP_MOBILE_SUPPORT))
+$(eval $(call export_feature,CONFIG_USB_SUPPORT_EXTERNAL))
+$(eval $(call export_feature,CONFIG_USES_VENDOR_WIFI_DRIVER))
+$(eval $(call export_feature,CONFIG_MODEM_RESET_QUIRK))

@@ -2,12 +2,14 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=azure_iothub
-PKG_VERSION:=2023-12-06
+PKG_VERSION:=2024-03-28
 
-PKG_SOURCE_VERSION:=2.9
+PKG_SOURCE_VERSION:=2.10
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_SOURCE_VERSION)-$(PKG_VERSION)
 PKG_SOURCE:=$(PKG_SOURCE_SUBDIR).tar.gz
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_SOURCE_SUBDIR)
+
+PKG_LICENSE:=Teltonika-closed
 
 include $(INCLUDE_DIR)/package.mk
 
@@ -15,10 +17,13 @@ define Package/azure_iothub
 	SECTION:=base
 	CATEGORY:=Base system
 	DEPENDS:=+libc +libuci +libubus +libblobmsg-json +libtlt-logger \
-		 +libubox +libazure-iot-sdk-c +vuci-app-azure-iothub-ui
+		 +libubox +libazure-iot-sdk-c
 	TITLE:=Azure IoT Hub client
-	PKG_TLT_NAME:=Azure IoT Hub
-	PKG_ROUTER:=$(TLT_PLATFORM_NAME)
+endef
+
+define Package/azure_iothub/description
+	Azure IoT Hub is a utility meant to interact with
+	Microsoft Azure IoT Hub cloud platform.
 endef
 
 define Package/azure_iothub/conffiles

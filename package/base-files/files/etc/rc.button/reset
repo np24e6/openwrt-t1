@@ -30,7 +30,7 @@ handler_reboot() {
 
 handler_firstboot() {
 	notify "FACTORY RESET"
-	firstboot -y && reboot -b
+	firstboot -y -f && reboot -b
 	clean
 }
 

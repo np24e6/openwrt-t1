@@ -1,0 +1,29 @@
+Index: libdlms-fa855d2e/development/src/client.c
+===================================================================
+--- libdlms-fa855d2e.orig/development/src/client.c
++++ libdlms-fa855d2e/development/src/client.c
+@@ -410,7 +410,7 @@ int cl_getApplicationAssociationRequest(
+     message* messages)
+ {
+     int ret;
+-    gxByteBuffer challenge;
++    gxByteBuffer challenge = { 0 };
+     gxByteBuffer* pw;
+     dlmsVARIANT data;
+ #ifndef DLMS_IGNORE_HIGH_GMAC
+@@ -423,7 +423,6 @@ int cl_getApplicationAssociationRequest(
+ #else
+     static unsigned char APPLICATION_ASSOCIATION_REQUEST[32];
+ #endif //DLMS_IGNORE_HIGH_GMAC
+-    bb_attach(&challenge, APPLICATION_ASSOCIATION_REQUEST, 0, sizeof(APPLICATION_ASSOCIATION_REQUEST));
+     if (settings->authentication != DLMS_AUTHENTICATION_HIGH_ECDSA &&
+ #ifndef DLMS_IGNORE_HIGH_GMAC
+         settings->authentication != DLMS_AUTHENTICATION_HIGH_GMAC &&
+@@ -482,7 +481,6 @@ int cl_getApplicationAssociationRequest(
+             }
+         }
+ #ifndef DLMS_IGNORE_MALLOC
+-        var_clear(&data);
+         bb_clear(&challenge);
+ #endif //DLMS_IGNORE_MALLOC
+     }

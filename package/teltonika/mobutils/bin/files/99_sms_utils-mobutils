@@ -34,8 +34,13 @@ fix_sms_utils(){
 			uci_remove "sms_utils" "$sec"
 		}
 		;;
+	"io_set")
+		[ "$ios" -eq 0 ] && {
+			uci_remove "sms_utils" "$sec"
+		}
+		;;
 	"send_status")
-		[ "$smstext" = "iostatus" -a "$ios" -eq 0 ] && {
+		[ "$smstext" = "iostatus" ] && [ "$ios" -eq 0 ] && {
 			uci_remove "sms_utils" "$sec"
 		}
 		;;

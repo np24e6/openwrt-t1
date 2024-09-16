@@ -33,6 +33,7 @@ $(curdir)/builddirs := $(if $(CONFIG_GDB),gdb) $(if $(CONFIG_EXTERNAL_TOOLCHAIN)
 $(curdir)/builddirs += $(if $(CONFIG_TARGET_sdxprairie),python2)
 $(curdir)/builddirs += $(if $(CONFIG_TARGET_mdm9x07),python2)
 $(curdir)/builddirs += $(if $(CONFIG_TARGET_sdxlemur),python2)
+$(curdir)/builddirs += $(if $(CONFIG_TARGET_sdxnightjar),python2)
 
 # builddir dependencies
 ifeq ($(CONFIG_EXTERNAL_TOOLCHAIN),)

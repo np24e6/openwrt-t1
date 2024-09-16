@@ -8,6 +8,7 @@ include $(INCLUDE_DIR)/kernel.mk
 include $(INCLUDE_DIR)/version.mk
 include $(INCLUDE_DIR)/image-commands.mk
 include $(INCLUDE_DIR)/portable.mk
+include $(INCLUDE_DIR)/os-version.mk
 
 ifndef IB
   ifdef CONFIG_TARGET_PER_DEVICE_ROOTFS
@@ -373,6 +374,7 @@ define Device/InitProfile
   DEVICE_INITIAL_FIRMWARE_SUPPORT :=
   DEVICE_MTD_LOG_PARTNAME :=
   DEVICE_MULTI_PROFILE_NAME :=
+  GPL_PREFIX := SDK
   HW_MODS :=
   HW_SUPPORT :=
   DEVICE_COMPAT_CODE := ".*"
@@ -451,8 +453,8 @@ DEFAULT_DEVICE_VARS := \
   DEVICE_ALT1_VENDOR DEVICE_ALT1_MODEL DEVICE_ALT1_VARIANT \
   DEVICE_ALT2_VENDOR DEVICE_ALT2_MODEL DEVICE_ALT2_VARIANT \
   DEVICE_INITIAL_FIRMWARE_SUPPORT DEVICE_MULTI_PROFILE_NAME \
-  HW_MODS HW_SUPPORT DEVICE_COMPAT_CODE DEVICE_MTD_LOG_PARTNAME \
-  DEVICE_BOOT_NAME $(DEVICE_HARDWARE_VARS)
+  GPL_PREFIX HW_MODS HW_SUPPORT DEVICE_COMPAT_CODE \
+  DEVICE_MTD_LOG_PARTNAME DEVICE_BOOT_NAME $(DEVICE_HARDWARE_VARS)
 
 define Device/ExportVar
   $(1) : $(2):=$$($(2))
@@ -619,10 +621,6 @@ define Device/Build/image
 
   .IGNORE: $(BIN_DIR)/$(call IMAGE_NAME,$(1),$(2))
 
-   ifeq ($(CONFIG_TARGET_ath79),y)
-     .NOTPARALLEL:
-   endif
-
   $(BIN_DIR)/$(call IMAGE_NAME,$(1),$(2)).gz: $(KDIR)/tmp/$(call IMAGE_NAME,$(1),$(2))
 	gzip -c -9n $$^ > $$@
 
@@ -708,6 +706,7 @@ Target-Profile-InitialSupportVersion: $(DEVICE_INITIAL_FIRMWARE_SUPPORT)
 Target-Profile-DefaultLogPartition: $(DEVICE_MTD_LOG_PARTNAME)
 Target-Profile-MultiProfileName: $(DEVICE_MULTI_PROFILE_NAME)
 Target-Profile-hasImageMetadata: $(if $(foreach image,$(IMAGES),$(findstring append-metadata,$(IMAGE/$(image)))),1,0)
+Target-Profile-GPLPrefix: $(GPL_PREFIX)
 Target-Profile-SupportedDevices: $(SUPPORTED_DEVICES)
 Target-Profile-BootName: $(DEVICE_BOOT_NAME)
 $(if $(BROKEN),Target-Profile-Broken: $(BROKEN))

@@ -4,6 +4,10 @@
 
 menu "Target Firmware options"
 
+config GENERATE_PROMPT_HEADER
+	bool "Generate prompt header"
+	default y
+
 config DEVICE_DEFAULT_IP
 	string "Default IP address"
 	default "192.168.2.1" if BASEBAND_SUPPORT

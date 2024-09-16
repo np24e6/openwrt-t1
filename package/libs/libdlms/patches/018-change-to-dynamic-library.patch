@@ -1,0 +1,38 @@
+Index: libdlms-6d6e0f0c/development/makefile
+===================================================================
+--- libdlms-6d6e0f0c.orig/development/makefile
++++ libdlms-6d6e0f0c/development/makefile
+@@ -1,5 +1,5 @@
+ # Generate STATIC library.
+-TARGET   = libgurux_dlms_c.a
++TARGET   = libgurux_dlms_c.so
+ 
+ CC       = gcc
+ # compiling flags here
+@@ -10,9 +10,8 @@ CFLAGS   = -g -std=c99 -Wall -fPIC
+ #Add this if you want to use EPOC time. -DDLMS_USE_EPOCH_TIME
+ #Example: make CFLAGS='-DDLMS_IGNORE_OBJECT_POINTERS'
+ 
+-LINKER   = ar rvs
+ # linking flags here
+-LFLAGS   = 
++LFLAGS   = -shared
+ 
+ # change these to set the proper directories where each files shoould be
+ SRCDIR   = src
+@@ -26,7 +25,7 @@ rm       = rm -f
+ 
+ 
+ $(BINDIR)/$(TARGET): $(OBJECTS)
+-	@$(LINKER) $@ $(LFLAGS) $(OBJECTS)
++	@$(CC) $(LFLAGS) -o $@ $(OBJECTS)
+ 	@echo "Linking complete!"
+ 
+ $(OBJECTS): $(OBJDIR)/%.o : $(SRCDIR)/%.c
+@@ -42,4 +41,4 @@ clean:
+ .PHONEY: remove
+ remove: clean
+ 	@$(rm) $(BINDIR)/$(TARGET)
+-	@echo "Executable removed!"
+\ No newline at end of file
++	@echo "Executable removed!"
