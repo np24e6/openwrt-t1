@@ -1,0 +1,15 @@
+Index: backports-6.1.24/net/mac80211/tx.c
+===================================================================
+--- backports-6.1.24.orig/net/mac80211/tx.c	2024-06-13 09:07:11.041163898 +0300
++++ backports-6.1.24/net/mac80211/tx.c	2024-06-13 09:09:07.256425893 +0300
+@@ -5007,7 +5007,9 @@
+ 	beacon->cntdwn_current_counter--;
+ 
+ 	/* the counter should never reach 0 */
+-	WARN_ON_ONCE(!beacon->cntdwn_current_counter);
++	if (!beacon->cntdwn_current_counter) {
++		pr_info("mac80211: counter cntdwn_current_counter reached 0\n");
++	}
+ 
+ 	return beacon->cntdwn_current_counter;
+ }

@@ -1,3 +1,17 @@
+# 2024-06-18 00.07.07.3
+
+### New
+
+* API: added TRB160 documentation (ID: 18564)
+* RUTOS: added support for RUT260 hardware version 3 (ID: 18186)
+
+### Fix
+
+* FOTA: fixed config when upgrading from older firmware with keep settings (ID: 18653)
+* WebUI: fixed port advertisement change (ID: 18840)
+* FRR: patched CVE-2024-31950 and CVE-2024-31951 vulnerabilities (ID: 17644)
+* USB: fixed windows usb to ethernet detection for TRB1601 device (ID: 18407)
+
 # 2024-06-10 00.07.07.2
 
 ### Improvements

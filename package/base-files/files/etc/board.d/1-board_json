@@ -450,7 +450,7 @@ setup_json() {
 		ucidef_set_interface_lan "eth0 usb0"
 		ucidef_set_interface_default_macaddr "lan" "$(mtd_get_mac_binary mnf_info 0x0)" \
 			"$(macaddr_add "$(mtd_get_mac_binary mnf_info 0x0)" 1)"
-		ucidef_set_hwinfo mobile ethernet ios micro_usb port_link
+		ucidef_set_hwinfo mobile ethernet ios micro_usb port_link gigabit_port
 		ucidef_set_network_options "vlans" 4094 "max_mtu" 1500
 		;;
 	RUTM50*)

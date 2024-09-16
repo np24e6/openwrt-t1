@@ -493,6 +493,9 @@ generate_static_system() {
 		delete system.debug
 		set system.debug='debug'
 		set system.debug.sms_utils_debug_level='4'
+
+		delete system.default
+		set system.default=remote_logger
 	EOF
 
 	if json_is_a system object; then

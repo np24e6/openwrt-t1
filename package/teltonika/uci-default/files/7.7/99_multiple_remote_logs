@@ -2,6 +2,8 @@
 
 . /lib/functions.sh
 
+uci get "system.default" && exit 0
+
 uci -q set "system.default=remote_logger"
 ip=$(uci_get system system log_ip)
 port=$(uci_get system system log_port)

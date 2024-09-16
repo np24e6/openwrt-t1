@@ -1,0 +1,26 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+CONFIG="rut_fota"
+
+migrate_section() {
+	local section="$1"
+
+	config_get enabled "$section" "enabled"
+	config_get communication_host "$section" "communication_host"
+	config_get communication_port "$section" "communication_port"
+
+	uci_remove "$CONFIG" "$section"
+	uci_add "$CONFIG" rut_fota "$section"
+	uci_set "$CONFIG" "$section" enabled "$enabled"
+	uci_set "$CONFIG" "$section" notify "0"
+	uci_set "$CONFIG" "$section" communication_host "$communication_host"
+	uci_set "$CONFIG" "$section" communication_port "$communication_port"
+}
+
+config_load "$CONFIG"
+config_foreach migrate_section "rutfota"
+uci_commit "$CONFIG"
+
+exit 0

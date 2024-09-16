@@ -1,0 +1,12 @@
+Index: gettext-0.19.8.1/gettext-tools/src/locating-rule.c
+===================================================================
+--- gettext-0.19.8.1.orig/gettext-tools/src/locating-rule.c
++++ gettext-0.19.8.1/gettext-tools/src/locating-rule.c
+@@ -26,6 +26,7 @@
+ #include "basename.h"
+ #include "concat-filename.h"
+ #include "c-strcase.h"
++#include <stdlib.h>
+ 
+ #if HAVE_DIRENT_H
+ # include <dirent.h>
