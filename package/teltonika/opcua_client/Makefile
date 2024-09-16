@@ -6,8 +6,8 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=opcua_client
-PKG_VERSION:=2023-12-08
-PKG_SOURCE_VERSION:=7.6
+PKG_VERSION:=2024-01-25
+PKG_SOURCE_VERSION:=7.6.5
 
 include $(INCLUDE_DIR)/package.mk
 

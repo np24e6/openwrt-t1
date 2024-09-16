@@ -1104,7 +1104,6 @@ mac80211_setup_vif() {
 
 	json_select ..
 	[ -n "$failed" ] || wireless_add_vif "$name" "$ifname"
-	ubus send wireless.state "{\"state\":\"up\", \"ifname\":\"$ifname\", \"mode\":\"$mode\"}"
 }
 
 get_freq() {
@@ -1307,10 +1306,6 @@ drv_mac80211_teardown() {
 		echo "Bug: PHY is undefined for device '$1'"
 		return 1
 	}
-
-	for wdev in $(list_phy_interfaces "$phy"); do
-		ubus send wireless.state "{\"state\":\"down\", \"ifname\":\"$wdev\"}"
-	done
 
 	mac80211_reset_config "$phy"
 

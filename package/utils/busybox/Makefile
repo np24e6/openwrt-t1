@@ -16,6 +16,7 @@ PKG_HASH:=415fbd89e5344c96acf449d94a6f956dbed62e18e835fc83e064db33a34bd549
 
 PKG_BUILD_DEPENDS:=BUSYBOX_CONFIG_PAM:libpam
 PKG_BUILD_PARALLEL:=1
+PKG_BUILD_FLAGS:=lto
 PKG_CHECK_FORMAT_SECURITY:=0
 
 #Busybox use it's own PIE config flag and LDFLAGS are used with ld, not gcc.
@@ -87,9 +88,6 @@ endif
 ifdef BUSYBOX_CONFIG_FEATURE_NETIFD
 LDLIBS += -lnetifd
 endif
-
-TARGET_CFLAGS += -flto
-TARGET_LDFLAGS += -flto=jobserver -fuse-linker-plugin
 
 MAKE_VARS :=
 MAKE_FLAGS += \

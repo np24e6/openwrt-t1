@@ -21,6 +21,8 @@ PKG_LICENSE_FILES:=COPYING
 
 PKG_CONFIG_DEPENDS:=CONFIG_EMAILRELAY_SUPPORT_VERBOSE_DBG CONFIG_EMAILRELAY_SSL
 
+PKG_BUILD_FLAGS:=gc-sections lto
+
 include $(INCLUDE_DIR)/package.mk
 
 define Package/emailrelay
@@ -95,7 +97,7 @@ ifeq ($(CONFIG_EMAILRELAY_SUPPORT_VERBOSE_DBG),y)
 		--enable-debug=yes
 endif
 
-TARGET_CXXFLAGS += -ffunction-sections -fdata-sections -flto -O1
+TARGET_CXXFLAGS += -O1
 TARGET_CXXFLAGS += -Wl,--gc-sections,--as-needed
 
 define Package/emailrelay/install

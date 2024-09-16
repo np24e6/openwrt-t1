@@ -1,0 +1,13 @@
+Index: firewall-2022-02-17-4cd7d4f3/options.c
+===================================================================
+--- firewall-2022-02-17-4cd7d4f3.orig/options.c
++++ firewall-2022-02-17-4cd7d4f3/options.c
+@@ -685,7 +685,7 @@ fw3_parse_date(void *ptr, const char *va
+ 	char *p;
+ 
+ 	year = strtoul(val, &p, 10);
+-	if ((*p != '-' && *p) || year < 1970 || year > 2038)
++	if ((*p != '-' && *p) || year < 1970 || year > 2105)
+ 		goto fail;
+ 	else if (!*p)
+ 		goto ret;

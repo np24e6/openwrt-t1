@@ -56,6 +56,7 @@ PKG_CONFIG_DEPENDS:= \
 
 PKG_FIXUP:=autoreconf
 PKG_BUILD_PARALLEL:=1
+PKG_BUILD_FLAGS:=lto
 PKG_INSTALL:=1
 
 PKG_BUILD_DEPENDS:=frr/host
@@ -273,7 +274,6 @@ define BuildDaemon
 endef
 
 TARGET_LDFLAGS += -Wl,--gc-sections,--as-needed -latomic
-TARGET_CFLAGS += -flto
 
 define Host/Configure
 	$(Host/Configure/Default)

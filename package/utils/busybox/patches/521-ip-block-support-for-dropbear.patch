@@ -66,7 +66,7 @@
  	if (opt & LOGIN_OPT_f) {
  		if (!run_by_root)
  			bb_simple_error_msg_and_die("-f is for root only");
-@@ -391,10 +414,31 @@ int login_main(int argc UNUSED_PARAM, ch
+@@ -391,10 +414,29 @@ int login_main(int argc UNUSED_PARAM, ch
  		full_tty = xstrdup("UNKNOWN");
  	short_tty = skip_dev_pfx(full_tty);
  
@@ -88,8 +88,6 @@
 +#else
 +		fromhost = xasprintf(" on %s from %s", short_tty, ip_log);
 +#endif // CONFIG_FEATURE_IP_BLOCKD
-+		free(ip_log);
-+		ip_log = NULL;
  	} else {
 -		fromhost = xasprintf(" on '%s'", short_tty);
 +#ifdef CONFIG_FEATURE_IP_BLOCKD
@@ -100,7 +98,7 @@
  	}
  
  	/* Was breaking "login <username>" from shell command line: */
-@@ -485,11 +529,9 @@ int login_main(int argc UNUSED_PARAM, ch
+@@ -485,11 +527,9 @@ int login_main(int argc UNUSED_PARAM, ch
  		syslog(LOG_WARNING, "pam_%s call failed: %s (%d)", failed_msg,
  					pam_strerror(pamh, pamret), pamret);
  		login_pam_end(pamh);
@@ -112,7 +110,7 @@
  			goto fake_it;
  		}
  
-@@ -518,8 +560,17 @@ int login_main(int argc UNUSED_PARAM, ch
+@@ -518,8 +558,17 @@ int login_main(int argc UNUSED_PARAM, ch
  		pause_after_failed_login();
  		/* TODO: doesn't sound like correct English phrase to me */
  		puts("Login incorrect");
@@ -130,7 +128,7 @@
  		if (++count == 3) {
  			if (ENABLE_FEATURE_CLEAN_UP)
  				free(fromhost);
-@@ -577,11 +628,22 @@ int login_main(int argc UNUSED_PARAM, ch
+@@ -577,11 +626,22 @@ int login_main(int argc UNUSED_PARAM, ch
  	}
  #endif
  
@@ -153,7 +151,7 @@
  
  	if (ENABLE_FEATURE_CLEAN_UP)
  		free(fromhost);
-@@ -616,3 +678,124 @@ int login_main(int argc UNUSED_PARAM, ch
+@@ -616,3 +676,124 @@ int login_main(int argc UNUSED_PARAM, ch
  
  	/* return EXIT_FAILURE; - not reached */
  }
@@ -299,28 +297,17 @@
  	struct termios termbuf;
  	int fd, pid;
  	char tty_name[GETPTY_BUFSIZE];
-@@ -435,6 +438,10 @@ make_new_session(
- 	/*ts->buf1 = (char *)(ts + 1);*/
- 	/*ts->buf2 = ts->buf1 + BUFSIZE;*/
- 
-+	/* used to retreive IP addr info for passing into the login applet */
-+	len_and_sockaddr *lsa = NULL;
-+	char *ipaddr = NULL;
-+
- 	/* Got a new connection, set up a tty */
- 	fd = xgetpty(tty_name);
- 	if (fd > G.maxfd)
-@@ -513,8 +520,16 @@ make_new_session(
+@@ -513,8 +516,16 @@ make_new_session(
  
  	pid = getpid();
  
 +	/* Acquire simple hostname */
-+	lsa = get_peer_lsa(sock);
++	len_and_sockaddr *lsa = get_peer_lsa(sock);
++	char *ipaddr = NULL;
 +	if (lsa) {
 +		ipaddr = xmalloc_sockaddr2dotted_noport(&lsa->u.sa);
 +		free(lsa);
 +	}
-+
 +
  	if (ENABLE_FEATURE_UTMP) {
 -		len_and_sockaddr *lsa = get_peer_lsa(sock);
@@ -328,25 +315,38 @@
  		char *hostname = NULL;
  		if (lsa) {
  			hostname = xmalloc_sockaddr2dotted(&lsa->u.sa);
-@@ -556,7 +571,16 @@ make_new_session(
+@@ -556,13 +567,29 @@ make_new_session(
  
  	/* Exec shell / login / whatever */
  	login_argv[0] = G.loginpath;
 -	login_argv[1] = NULL;
 +	login_argv[1] = "-h";
-+	login_argv[2] = strdup(ipaddr);
++	login_argv[2] = ipaddr;
 +	login_argv[3] = NULL;
 +#if ENABLE_FEATURE_TELNETD_STANDALONE
 +	if (G.port) {
 +		login_argv[3] = "-P";
 +		login_argv[4] = G.port;
++		login_argv[5] = NULL;
 +	}
 +#endif
-+	login_argv[5] = NULL;
  	/* exec busybox applet (if PREFER_APPLETS=y), if that fails,
  	 * exec external program.
  	 * NB: sock is either 0 or has CLOEXEC set on it.
-@@ -701,6 +725,7 @@ int telnetd_main(int argc UNUSED_PARAM,
+ 	 * fd has CLOEXEC set on it too. These two fds will be closed here.
+ 	 */
+ 	BB_EXECVP(G.loginpath, (char **)login_argv);
++	free(ipaddr);
++#if ENABLE_FEATURE_TELNETD_STANDALONE
++	if(G.port) {
++		free(G.port);
++		G.port = NULL;
++	}
++#endif
+ 	/* _exit is safer with vfork, and we shouldn't send message
+ 	 * to remote clients anyway */
+ 	_exit(EXIT_FAILURE); /*bb_perror_msg_and_die("execv %s", G.loginpath);*/
+@@ -701,6 +728,7 @@ int telnetd_main(int argc UNUSED_PARAM,
  		logmode = LOGMODE_SYSLOG;
  	}
  #if ENABLE_FEATURE_TELNETD_STANDALONE

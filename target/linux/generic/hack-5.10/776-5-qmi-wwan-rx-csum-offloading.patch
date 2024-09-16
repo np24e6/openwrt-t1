@@ -1,0 +1,94 @@
+Index: linux-5.10.199/drivers/net/usb/qmi_wwan.c
+===================================================================
+--- linux-5.10.199.orig/drivers/net/usb/qmi_wwan.c
++++ linux-5.10.199/drivers/net/usb/qmi_wwan.c
+@@ -120,6 +120,8 @@ struct rmnet_map_v5_csum_header {
+ 	__be16 reserved;
+ } __aligned(1);
+ 
++#define MAPV5_CSUMINFO_VALID_FLAG	BIT(7)
++
+ static int qmimux_open(struct net_device *dev)
+ {
+ 	struct qmimux_priv *priv = netdev_priv(dev);
+@@ -428,10 +430,23 @@ static bool qmimux_has_slaves(struct usb
+ 	return !list_empty(&dev->net->adj_list.upper);
+ }
+ 
++static bool qmimux_is_qmap_v5(struct usbnet *dev) {
++	return (dev->driver_info->data & QMI_WWAN_V5_HEAD) != 0;
++}
++
++static void qmimux_rx_csum(struct sk_buff* skb, struct rmnet_map_v5_csum_header *csum_hdr) {
++	if (csum_hdr->csum_info & MAPV5_CSUMINFO_VALID_FLAG) {
++		skb->ip_summed = CHECKSUM_UNNECESSARY;
++	} else {
++		skb->ip_summed = CHECKSUM_NONE;
++	}
++}
++
+ static int qmimux_rx_fixup(struct usbnet *dev, struct sk_buff *skb)
+ {
+ 	unsigned int len, offset = 0, pad_len, pkt_len, hdr_len;
+ 	struct qmimux_hdr *hdr;
++	struct rmnet_map_v5_csum_header *csum_hdr;
+ 	struct net_device *net;
+ 	struct sk_buff *skbn;
+ 	u8 qmimux_hdr_sz = sizeof(*hdr);
+@@ -443,10 +458,17 @@ static int qmimux_rx_fixup(struct usbnet
+ 
+ 	while (offset + qmimux_hdr_sz < skb->len) {
+ 		hdr = (struct qmimux_hdr *)(skb->data + offset);
++		offset += sizeof(*hdr);
++
++		if (qmimux_is_qmap_v5(dev)) {
++			csum_hdr = (struct rmnet_map_v5_csum_header *)(skb->data + offset);
++			offset += sizeof(*csum_hdr);
++		}
++
+ 		len = be16_to_cpu(hdr->pkt_len);
+ 
+ 		/* drop the packet, bogus length */
+-		if (offset + len + qmimux_hdr_sz > skb->len)
++		if (offset + len > skb->len)
+ 			return 0;
+ 
+ 		/* struct rmnet_map_header has the same size as qmimux_hdr */
+@@ -460,7 +482,7 @@ static int qmimux_rx_fixup(struct usbnet
+ 			goto skip;
+ 		pkt_len = len - pad_len;
+ 
+-		switch (skb->data[offset + qmimux_hdr_sz] & 0xf0) {
++		switch (skb->data[offset] & 0xf0) {
+ 		case 0x40:
+ 			ipv6 = false;
+ 			break;
+@@ -483,7 +505,7 @@ static int qmimux_rx_fixup(struct usbnet
+ 		hdr_len = ipv6? 72 : 52;
+ 
+ 		skbn = usbnet_clone_zerocopy(
+-			net, skb, offset + qmimux_hdr_sz, pkt_len, hdr_len, 0, 64);
++			net, skb, offset, pkt_len, hdr_len, 0, 64);
+ 
+ 		/* packet doesn't have mac header
+ 		 * so reset its offset */
+@@ -494,6 +516,10 @@ static int qmimux_rx_fixup(struct usbnet
+ 		else
+ 		 	skbn->protocol = htons(ETH_P_IP);
+ 
++		if (qmimux_is_qmap_v5(dev)) {
++			qmimux_rx_csum(skbn, csum_hdr);
++		}
++
+ 		if (usbnet_napi_rx(dev, skbn) != NET_RX_SUCCESS) {
+ 			net->stats.rx_errors++;
+ 			return 0;
+@@ -509,7 +535,7 @@ static int qmimux_rx_fixup(struct usbnet
+ 		}
+ 
+ skip:
+-		offset += len + qmimux_hdr_sz;
++		offset += len;
+ 	}
+ 	return 1;
+ }

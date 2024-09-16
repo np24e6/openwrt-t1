@@ -25,6 +25,7 @@ HOST_BUILD_DIR:=$(BUILD_DIR_HOST)/glib-$(PKG_VERSION)
 PKG_BUILD_DEPENDS:=meson/host gettext-full libiconv/host
 HOST_BUILD_DEPENDS:=meson/host gettext-full/host libiconv/host libffi/host
 PKG_CONFIG_DEPENDS:=CONFIG_BUILD_NLS
+PKG_BUILD_FLAGS:=gc-sections
 PKG_INSTALL:=1
 
 include $(INCLUDE_DIR)/host-build.mk
@@ -45,8 +46,7 @@ define Package/glib2/description
 endef
 
 HOST_LDFLAGS += -liconv -Wl,-rpath,$(STAGING_DIR_HOSTPKG)/lib
-TARGET_CFLAGS += -ffunction-sections -fdata-sections
-TARGET_LDFLAGS += -Wl,--gc-sections $(if $(INTL_FULL),-lintl)
+TARGET_LDFLAGS += $(if $(INTL_FULL),-lintl)
 
 COMP_ARGS= \
 	-Ddefault_library=both \

@@ -1,3 +1,47 @@
+# 2024-02-12 00.07.06.5
+
+### New
+
+* GSM: added support for multi line USSD (ID: 16418)
+* WebUI: added PoE configuration support in Network->Ports->Ports Settings for OTD140 device (ID: 12527)
+
+### Improvements
+
+* Certificates: improved upload, delete, download validations (ID: 16373)
+* Mobile: improved logging when the modem is being restarted (ID: 16525)
+* Netifd: updated netifd version to 2024-01-04 (ID: 16404)
+* PPP: updated package version to 2.4.9 (ID: 15861)
+* E2fsprogs: updated package version to 1.47.0 (ID: 15861)
+* Musl: updated package version to 1.2.4 (ID: 15861)
+* DMZ: improved DMZ to use its source zone on port forwards creation (ID: 14862)
+
+### Fix
+
+* Modbus TCP Over Serial Gateway: fixed crash occurring at start up in some edge cases (ID: 16616)
+* Hotspot: fixed themes packages appearing on devices with no hotspot (ID: 16208)
+* Tailscale: fixed tailscale firewall zone creation issue (ID: 16420)
+* Firewall: fixed action descriptions in the traffic rules table (ID: 16247)
+* GPS: fixed custom GPS NMEA prefix (ID: 16401)
+* Bootloader: fixed GPIO output instability while booting for RUT360 devices (ID: 16245)
+* Libsmpp34: updated package mirror URL (ID: 16275)
+* Mobile: fixed possible packet corruption on RUTX devices (ID: 15790)
+* WebUI: fixed BACnet allow remote access functionality (ID: 15395)
+* Ledman: fixed WiFi LED indication when access point is turned off (ID: 16518)
+* Wireless: fixed incorrect MAC address assignment for TCR100 (ID: 16593)
+* Mobile: fixed an issue where SLM750 modems would display incorrect signal values (ID: 15259)
+* OPC UA Server: fixed issue of service not launching on TRB14X devices, except TRB140. (ID: 16537)
+* System: fixed year 2038 problem with time counter overflow on all devices except TRB500 (ID: 15861)
+* Network: fixed an issue where DNS resolution failed for wireless clients connected to an access point configured on a specific VLAN (ID: 16281)
+* WebUI: added 'Ports Settings' configuration page for OTD140 (ID: 16106)
+* Uqmi: fixed response freeze for Meiglink modules (ID: 16365)
+* Hotspot: fixed custom theme files upload validations (ID: 16452)
+
+# 2024-01-17 00.07.06.4
+
+### Fix
+
+* Mobile: fixed an issue where SLM750 modems would display incorrect signal values (ID: 15259)
+
 # 2024-01-11 00.07.06.3
 
 ### Improvements

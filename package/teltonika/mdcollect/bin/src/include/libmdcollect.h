@@ -26,7 +26,7 @@ typedef struct lmdc_data {
 } lmdc_data;
 
 int lmdc_ubus_read_raw_total_db(struct ubus_context *ctx, lmdc_data *output,
-			     long int from, long int to, const char *modem, int sim,
+			     int64_t from, int64_t to, const char *modem, int sim,
 			     const char *iface);
 /**
  * Gathers tx,rx data of the current day

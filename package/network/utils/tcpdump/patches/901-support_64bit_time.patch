@@ -1,0 +1,35 @@
+Index: tcpdump-4.99.4/util-print.c
+===================================================================
+--- tcpdump-4.99.4.orig/util-print.c
++++ tcpdump-4.99.4/util-print.c
+@@ -225,15 +225,15 @@ ts_frac_print(netdissect_options *ndo, l
+  *   if date_flag == WITH_DATE print YY:MM:DD before HH:MM:SS.FRAC
+  */
+ static void
+-ts_date_hmsfrac_print(netdissect_options *ndo, long sec, long usec,
++ts_date_hmsfrac_print(netdissect_options *ndo, time_t sec, long usec,
+ 		      enum date_flag date_flag, enum time_flag time_flag)
+ {
+ 	time_t Time = sec;
+ 	struct tm *tm;
+-	char timebuf[32];
++	char timebuf[64];
+ 	const char *timestr;
+ 
+-	if ((unsigned)sec & 0x80000000) {
++	if ((unsigned)sec & 0x8000000000000000) {
+ 		ND_PRINT("[Error converting time]");
+ 		return;
+ 	}
+@@ -259,9 +259,9 @@ ts_date_hmsfrac_print(netdissect_options
+  * Print the timestamp - Unix timeval style, as SECS.FRAC.
+  */
+ static void
+-ts_unix_print(netdissect_options *ndo, long sec, long usec)
++ts_unix_print(netdissect_options *ndo, time_t sec, long usec)
+ {
+-	if ((unsigned)sec & 0x80000000) {
++	if ((unsigned)sec & 0x8000000000000000) {
+ 		ND_PRINT("[Error converting time]");
+ 		return;
+ 	}

@@ -346,6 +346,9 @@ ${ifid} --ep-iface-number ${ep_iface} --set-client-id wds,${cid_4}"
 
 	set_mtu "$qmimux"
 
+	# Disable GRO on non-qmapv5 interfaces, only qmapv5 provides RX csum offloading.
+	[ $dl_max_size -le 16384 ] && ethtool -K "$qmimux" gro off
+
 	proto_init_update "$ifname" 1
 	proto_set_keep 1
 	proto_add_data

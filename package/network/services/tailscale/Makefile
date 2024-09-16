@@ -22,7 +22,7 @@ PKG_LICENSE_FILES:=LICENSE
 PKG_BUILD_DIR:=$(BUILD_DIR)/tailscale-$(PKG_VERSION)
 PKG_BUILD_DEPENDS:=golang/host upx/host
 PKG_BUILD_PARALLEL:=1
-PKG_USE_MIPS16:=0
+PKG_BUILD_FLAGS:=no-mips16
 
 GO_PKG:=\
 	tailscale.com/cmd/tailscale \
@@ -70,6 +70,8 @@ define Package/tailscale/install
 	$(INSTALL_BIN) ./files/tailscale.init $(1)/etc/init.d/tailscale
 	$(INSTALL_DIR) $(1)/etc/config/
 	$(INSTALL_DATA) ./files/tailscale.conf $(1)/etc/config/tailscale
+	$(INSTALL_DIR) $(1)/etc/uci-defaults/7.6
+	$(CP) ./files/defaults/99_tailscale_fw_rules $(1)/etc/uci-defaults/7.6/99_tailscale_fw_rules
 endef
 
 $(eval $(call BuildPackage,tailscale))

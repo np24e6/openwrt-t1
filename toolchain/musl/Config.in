@@ -1,7 +1,8 @@
 # Password crypt stubbing
 
 config MUSL_DISABLE_CRYPT_SIZE_HACK
-	bool "Include crypt() support for SHA256, SHA512 and Blowfish ciphers"
+	bool
+	prompt "Include crypt() support for SHA256, SHA512 and Blowfish ciphers" if TOOLCHAINOPTS
 	depends on USE_MUSL && !EXTERNAL_TOOLCHAIN
 	default y
 	help

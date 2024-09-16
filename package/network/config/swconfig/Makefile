@@ -14,6 +14,8 @@ PKG_MAINTAINER:=Felix Fietkau <nbd@nbd.name>
 PKG_LICENSE:=GPL-2.0
 PKG_ORIGIN_URL:=https://github.com/openwrt/openwrt/tree/openwrt-21.02/package/network/config/swconfig
 
+PKG_BUILD_FLAGS:=lto
+
 include $(INCLUDE_DIR)/package.mk
 include $(INCLUDE_DIR)/kernel.mk
 
@@ -23,9 +25,6 @@ define Package/swconfig
   DEPENDS:=+libuci +libnl-tiny
   TITLE:=Switch configuration utility
 endef
-
-TARGET_CFLAGS += -flto
-TARGET_LDFLAGS += -flto=jobserver
 
 TARGET_CPPFLAGS := \
 	-D_GNU_SOURCE \

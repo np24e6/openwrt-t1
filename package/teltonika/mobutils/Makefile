@@ -6,10 +6,10 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=mobutils
-PKG_VERSION:=2023-12-13
+PKG_VERSION:=2024-01-18
 PKG_RELEASE:=1
 
-PKG_SOURCE_VERSION:=3.5
+PKG_SOURCE_VERSION:=3.5.1
 
 PKG_FIXUP:=autoreconf
 

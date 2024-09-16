@@ -1,0 +1,70 @@
+--- a/source3/lib/time.c
++++ b/source3/lib/time.c
+@@ -52,27 +52,27 @@ NTTIME nttime_from_string(const char *s)
+ 
+ uint32_t convert_time_t_to_uint32_t(time_t t)
+ {
+-#if (defined(SIZEOF_TIME_T) && (SIZEOF_TIME_T == 8))
+-	/* time_t is 64-bit. */
+-	if (t == 0x8000000000000000LL) {
+-		return 0x80000000;
+-	} else if (t == 0x7FFFFFFFFFFFFFFFLL) {
+-		return 0x7FFFFFFF;
++	if (sizeof(time_t) == 8) {
++		/* time_t is 64-bit. */
++		if (t == 0x8000000000000000LL) {
++			return 0x80000000;
++		} else if (t == 0x7FFFFFFFFFFFFFFFLL) {
++			return 0x7FFFFFFF;
++		}
+ 	}
+-#endif
+ 	return (uint32_t)t;
+ }
+ 
+ time_t convert_uint32_t_to_time_t(uint32_t u)
+ {
+-#if (defined(SIZEOF_TIME_T) && (SIZEOF_TIME_T == 8))
+-	/* time_t is 64-bit. */
+-	if (u == 0x80000000) {
+-		return (time_t)0x8000000000000000LL;
+-	} else if (u == 0x7FFFFFFF) {
+-		return (time_t)0x7FFFFFFFFFFFFFFFLL;
++	if (sizeof(time_t) == 8) {
++		/* time_t is 64-bit. */
++		if (u == 0x80000000) {
++			return (time_t)0x8000000000000000LL;
++		} else if (u == 0x7FFFFFFF) {
++			return (time_t)0x7FFFFFFFFFFFFFFFLL;
++		}
+ 	}
+-#endif
+ 	return (time_t)u;
+ }
+ 
+--- a/source3/passdb/pdb_get_set.c
++++ b/source3/passdb/pdb_get_set.c
+@@ -49,11 +49,9 @@ bool pdb_is_password_change_time_max(tim
+ 	if (test_time == get_time_t_max()) {
+ 		return true;
+ 	}
+-#if (defined(SIZEOF_TIME_T) && (SIZEOF_TIME_T == 8))
+-	if (test_time == 0x7FFFFFFFFFFFFFFFLL) {
++	if (sizeof(time_t) == 8 && test_time == 0x7FFFFFFFFFFFFFFFLL) {
+ 		return true;
+ 	}
+-#endif
+ 	if (test_time == 0x7FFFFFFF) {
+ 		return true;
+ 	}
+--- a/lib/util/time.h
++++ b/lib/util/time.h
+@@ -38,7 +38,7 @@
+  * gmtime() fails with INT64_MAX
+  */
+ #ifndef TIME_T_MAX
+-#define TIME_T_MAX MIN(INT32_MAX,_TYPE_MAXIMUM(time_t))
++#define TIME_T_MAX _TYPE_MAXIMUM(time_t)
+ #endif
+ 
+ 

@@ -1,88 +1,20 @@
---- a/system-linux.c
-+++ b/system-linux.c
-@@ -72,6 +72,7 @@
- #include "device.h"
- #include "system.h"
- #include "utils.h"
-+#include "port_link.h"
-
- #if LINUX_VERSION_CODE < KERNEL_VERSION(4,4,300)
- enum ethtool_link_mode_bit_indices {
-@@ -1899,6 +1900,53 @@
- 		s->arp_accept = strtoul(buf, NULL, 0);
- 		s->flags |= DEV_OPT_ARP_ACCEPT;
- 	}
-+}
-+
-+int set_dev_link(const char *ifname, bool autoneg, bool duplex, int speed, int advert)
-+{
-+	if (!ifname) {
-+		return EXIT_FAILURE;
-+	}
-+
-+	struct ethtool_cmd ecmd = { 0 };
-+	ecmd.cmd = ETHTOOL_GSET;
-+
-+	struct ifreq ifr = { 0 };
-+	ifr.ifr_data = (caddr_t)&ecmd;
-+
-+	strncpy(ifr.ifr_name, ifname, sizeof(ifr.ifr_name) - 1);
-+
-+	if (ioctl(sock_ioctl, SIOCETHTOOL, &ifr) != 0) {
-+		return EXIT_FAILURE;
-+	}
-+
-+	ecmd.cmd = ETHTOOL_SSET;
-+
-+	if (advert < 1 || advert >= MAX_ADV_VAL) {
-+		advert = MAX_ADV_VAL;
-+	}
-+
-+	ecmd.autoneg = autoneg;
-+	if (autoneg) {
-+		ecmd.supported = MAX_ADV_VAL;
-+		ecmd.advertising = advert;
-+		goto end;
-+	}
-+
-+	ecmd.duplex = duplex ? DUPLEX_FULL : DUPLEX_HALF;
-+	
-+	switch(speed) {
-+	case SPEED_10:
-+	case SPEED_100:
-+	case SPEED_1000:
-+		ethtool_cmd_speed_set(&ecmd, speed);
-+		break;
-+	default:
-+		ethtool_cmd_speed_set(&ecmd, SPEED_UNKNOWN);
-+	}
-+
-+end:
-+	return ioctl(sock_ioctl, SIOCETHTOOL, &ifr);
- }
+Index: netifd-2024-01-04-c18cc79d/CMakeLists.txt
+===================================================================
+--- netifd-2024-01-04-c18cc79d.orig/CMakeLists.txt
++++ netifd-2024-01-04-c18cc79d/CMakeLists.txt
+@@ -26,7 +26,7 @@ SET(SOURCES
+ 	iprule.c proto.c proto-static.c proto-shell.c
+ 	config.c device.c bridge.c veth.c vlan.c alias.c
+ 	macvlan.c ubus.c vlandev.c wireless.c
+-	extdev.c bonding.c)
++	extdev.c bonding.c port_link.c)
  
- void
-
---- a/system.h
-+++ b/system.h
-@@ -18,6 +18,7 @@
- #include <sys/time.h>
- #include <sys/socket.h>
- #include <arpa/inet.h>
-+#include <linux/ethtool.h>
- #include "device.h"
- #include "interface-ip.h"
- #include "iprule.h"
-@@ -313,5 +314,6 @@
- int system_link_netns_move(struct device *dev, const pid_t target_ns, const char *target_ifname);
- int system_netns_open(const pid_t target_ns);
- int system_netns_set(int netns_fd);
-+int set_dev_link(const char *ifname, bool autoneg, bool duplex, int speed, int advert);
  
- #endif
-
---- a/config.c
-+++ b/config.c
+ FIND_LIBRARY(uci NAMES uci)
+Index: netifd-2024-01-04-c18cc79d/config.c
+===================================================================
+--- netifd-2024-01-04-c18cc79d.orig/config.c
++++ netifd-2024-01-04-c18cc79d/config.c
 @@ -27,8 +27,10 @@
  #include "proto.h"
  #include "wireless.h"
@@ -94,8 +26,8 @@
  
  static struct uci_context *uci_ctx;
  static struct uci_package *uci_network;
-@@ -705,6 +707,22 @@
- 	}
+@@ -689,6 +691,22 @@ config_init_wireless(void)
+ 		vlist_flush(&wdev->interfaces);
  }
  
 +static int
@@ -114,15 +46,13 @@
 +
 +	return EXIT_SUCCESS;
 +}
-
+ 
  static struct blob_attr *
  config_find_blobmsg_attr(struct blob_attr *attr, const char *name, int type)
-@@ -754,6 +772,63 @@
-		return;
-
-	board_netdevs = blob_memdup(cur);
-+}
-+
+@@ -776,6 +794,63 @@ config_init_board(void)
+ 	board_netdevs = blob_memdup(cur);
+ }
+ 
 +static int
 +get_board_hwinfo_bool(const char *value)
 +{
@@ -178,10 +108,12 @@
 +		config_find_port_section(s);
 +	}
 +
- }
- 
++}
++
  int
-@@ -781,6 +856,7 @@
+ config_init_all(void)
+ {
+@@ -801,6 +876,7 @@ config_init_all(void)
  	config_init_board();
  
  	vlist_update(&interfaces);
@@ -189,18 +121,20 @@
  	config_init = true;
  
  	device_reset_config();
-@@ -803,5 +879,7 @@
+@@ -822,5 +898,8 @@ config_init_all(void)
  	interface_start_pending();
- 	wireless_start_pending();
+ 	wireless_start_pending(0);
  
 +	config_init_ports();
 +	vlist_flush(&port_entries);
++
  	return ret;
  }
-
---- a/port_link.c
-+++ b/port_link.c
-@@ -0,0 +1,144 @@
+Index: netifd-2024-01-04-c18cc79d/port_link.c
+===================================================================
+--- /dev/null
++++ netifd-2024-01-04-c18cc79d/port_link.c
+@@ -0,0 +1,145 @@
 +#include "netifd.h"
 +#include "port_link.h"
 +#include "device.h"
@@ -345,10 +279,11 @@
 +{
 +	vlist_init(&port_entries, avl_strcmp, port_entry_update);
 +}
-
-
---- a/port_link.h
-+++ b/port_link.h
++
+Index: netifd-2024-01-04-c18cc79d/port_link.h
+===================================================================
+--- /dev/null
++++ netifd-2024-01-04-c18cc79d/port_link.h
 @@ -0,0 +1,35 @@
 +#ifndef __NETIFD_PORT_LINK_H
 +#define __NETIFD_PORT_LINK_H
@@ -385,16 +320,88 @@
 +struct port_entry *ret_port_section(struct uci_section *s, struct uci_context *uci_ctx);
 +
 +#endif // __NETIFD_PORT_LINK_H
-
---- a/CMakeLists.txt
-+++ b/CMakeLists.txt
-@@ -21,7 +21,7 @@
- 	iprule.c proto.c proto-static.c proto-shell.c
- 	config.c device.c bridge.c veth.c vlan.c alias.c
- 	macvlan.c ubus.c vlandev.c wireless.c
--	extdev.c bonding.c)
-+	extdev.c bonding.c port_link.c)
+Index: netifd-2024-01-04-c18cc79d/system-linux.c
+===================================================================
+--- netifd-2024-01-04-c18cc79d.orig/system-linux.c
++++ netifd-2024-01-04-c18cc79d/system-linux.c
+@@ -77,6 +77,7 @@
+ #include "device.h"
+ #include "system.h"
+ #include "utils.h"
++#include "port_link.h"
  
+ struct event_socket {
+ 	struct uloop_fd uloop;
+@@ -2228,6 +2229,53 @@ system_if_get_settings(struct device *de
+ #endif
+ }
  
- SET(LIBS
-
++int set_dev_link(const char *ifname, bool autoneg, bool duplex, int speed, int advert)
++{
++	if (!ifname) {
++		return EXIT_FAILURE;
++	}
++
++	struct ethtool_cmd ecmd = { 0 };
++	ecmd.cmd = ETHTOOL_GSET;
++
++	struct ifreq ifr = { 0 };
++	ifr.ifr_data = (caddr_t)&ecmd;
++
++	strncpy(ifr.ifr_name, ifname, sizeof(ifr.ifr_name) - 1);
++
++	if (ioctl(sock_ioctl, SIOCETHTOOL, &ifr) != 0) {
++		return EXIT_FAILURE;
++	}
++
++	ecmd.cmd = ETHTOOL_SSET;
++
++	if (advert < 1 || advert >= MAX_ADV_VAL) {
++		advert = MAX_ADV_VAL;
++	}
++
++	ecmd.autoneg = autoneg;
++	if (autoneg) {
++		ecmd.supported = MAX_ADV_VAL;
++		ecmd.advertising = advert;
++		goto end;
++	}
++
++	ecmd.duplex = duplex ? DUPLEX_FULL : DUPLEX_HALF;
++
++	switch(speed) {
++	case SPEED_10:
++	case SPEED_100:
++	case SPEED_1000:
++		ethtool_cmd_speed_set(&ecmd, speed);
++		break;
++	default:
++		ethtool_cmd_speed_set(&ecmd, SPEED_UNKNOWN);
++	}
++
++end:
++	return ioctl(sock_ioctl, SIOCETHTOOL, &ifr);
++}
++
+ void
+ system_if_apply_settings(struct device *dev, struct device_settings *s, uint64_t apply_mask)
+ {
+Index: netifd-2024-01-04-c18cc79d/system.h
+===================================================================
+--- netifd-2024-01-04-c18cc79d.orig/system.h
++++ netifd-2024-01-04-c18cc79d/system.h
+@@ -18,6 +18,7 @@
+ #include <sys/time.h>
+ #include <sys/socket.h>
+ #include <arpa/inet.h>
++#include <linux/ethtool.h>
+ #include "device.h"
+ #include "interface-ip.h"
+ #include "iprule.h"
+@@ -314,5 +315,6 @@ int system_update_ipv6_mtu(struct device
+ int system_link_netns_move(struct device *dev, const pid_t target_ns, const char *target_ifname);
+ int system_netns_open(const pid_t target_ns);
+ int system_netns_set(int netns_fd);
++int set_dev_link(const char *ifname, bool autoneg, bool duplex, int speed, int advert);
+ 
+ #endif

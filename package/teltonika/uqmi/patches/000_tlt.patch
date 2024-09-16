@@ -14,7 +14,7 @@ diff --recursive --unified --new-file --no-dereference orig/.gitignore src/.giti
 -qmi-errors.c
 diff --recursive --unified --new-file --no-dereference orig/.gitlab-ci.yml src/.gitlab-ci.yml
 --- orig/.gitlab-ci.yml	1970-01-01 00:00:00.000000000 +0000
-+++ src/.gitlab-ci.yml	2023-07-10 05:34:36.000000000 +0000
++++ src/.gitlab-ci.yml	2024-01-24 06:27:29.000000000 +0000
 @@ -0,0 +1,20 @@
 +include:
 +  - project: teltonika/ci-templates
@@ -39,7 +39,7 @@ diff --recursive --unified --new-file --no-dereference orig/.gitlab-ci.yml src/.
 \ No newline at end of file
 diff --recursive --unified --new-file --no-dereference orig/CMakeLists.txt src/CMakeLists.txt
 --- orig/CMakeLists.txt	2023-11-09 07:11:45.000000000 +0000
-+++ src/CMakeLists.txt	2023-07-10 05:34:36.000000000 +0000
++++ src/CMakeLists.txt	2024-01-24 06:27:29.000000000 +0000
 @@ -4,11 +4,11 @@
  
  OPTION(BUILD_STATIC OFF)
@@ -96,7 +96,7 @@ diff --recursive --unified --new-file --no-dereference orig/CMakeLists.txt src/C
  )
 diff --recursive --unified --new-file --no-dereference orig/commands-nas.c src/commands-nas.c
 --- orig/commands-nas.c	2023-11-09 07:17:16.000000000 +0000
-+++ src/commands-nas.c	2023-07-10 05:34:36.000000000 +0000
++++ src/commands-nas.c	2024-01-24 06:27:29.000000000 +0000
 @@ -924,6 +924,18 @@
  		[QMI_NAS_REGISTRATION_STATE_REGISTRATION_DENIED] = "registering_denied",
  		[QMI_NAS_REGISTRATION_STATE_UNKNOWN] = "unknown",
@@ -147,7 +147,7 @@ diff --recursive --unified --new-file --no-dereference orig/commands-nas.c src/c
  
 diff --recursive --unified --new-file --no-dereference orig/commands-wda.c src/commands-wda.c
 --- orig/commands-wda.c	2023-11-09 07:17:16.000000000 +0000
-+++ src/commands-wda.c	2023-07-10 05:34:36.000000000 +0000
++++ src/commands-wda.c	2024-01-24 06:27:29.000000000 +0000
 @@ -31,30 +31,231 @@
  	{ "raw-ip", QMI_WDA_LINK_LAYER_PROTOCOL_RAW_IP },
  };
@@ -408,7 +408,7 @@ diff --recursive --unified --new-file --no-dereference orig/commands-wda.c src/c
  static enum qmi_cmd_result
 diff --recursive --unified --new-file --no-dereference orig/commands-wda.h src/commands-wda.h
 --- orig/commands-wda.h	2023-11-09 07:11:45.000000000 +0000
-+++ src/commands-wda.h	2023-07-10 05:34:36.000000000 +0000
++++ src/commands-wda.h	2024-01-24 06:27:29.000000000 +0000
 @@ -20,11 +20,32 @@
   */
  
@@ -447,7 +447,7 @@ diff --recursive --unified --new-file --no-dereference orig/commands-wda.h src/c
  
 diff --recursive --unified --new-file --no-dereference orig/commands-wds.c src/commands-wds.c
 --- orig/commands-wds.c	2023-11-09 07:17:16.000000000 +0000
-+++ src/commands-wds.c	2023-07-10 05:34:36.000000000 +0000
++++ src/commands-wds.c	2024-01-24 06:27:29.000000000 +0000
 @@ -24,6 +24,30 @@
  
  #include "qmi-message.h"
@@ -725,7 +725,7 @@ diff --recursive --unified --new-file --no-dereference orig/commands-wds.c src/c
 +}
 diff --recursive --unified --new-file --no-dereference orig/commands-wds.h src/commands-wds.h
 --- orig/commands-wds.h	2023-11-09 07:17:16.000000000 +0000
-+++ src/commands-wds.h	2023-07-10 05:34:36.000000000 +0000
++++ src/commands-wds.h	2024-01-24 06:27:29.000000000 +0000
 @@ -28,13 +28,21 @@
  	__uqmi_command(wds_set_ip_family_pref, ip-family, required, CMD_TYPE_OPTION), \
  	__uqmi_command(wds_set_autoconnect, autoconnect, no, CMD_TYPE_OPTION), \
@@ -774,7 +774,7 @@ diff --recursive --unified --new-file --no-dereference orig/commands-wds.h src/c
  
 diff --recursive --unified --new-file --no-dereference orig/commands.c src/commands.c
 --- orig/commands.c	2023-11-09 07:11:45.000000000 +0000
-+++ src/commands.c	2023-07-10 05:34:36.000000000 +0000
++++ src/commands.c	2024-01-24 06:27:29.000000000 +0000
 @@ -19,11 +19,13 @@
   * Boston, MA 02110-1301 USA.
   */
@@ -966,7 +966,7 @@ diff --recursive --unified --new-file --no-dereference orig/commands.c src/comma
  #include "commands-nas.c"
 diff --recursive --unified --new-file --no-dereference orig/commands.h src/commands.h
 --- orig/commands.h	2023-11-09 07:11:45.000000000 +0000
-+++ src/commands.h	2023-07-10 05:34:36.000000000 +0000
++++ src/commands.h	2024-01-24 06:27:29.000000000 +0000
 @@ -59,6 +59,7 @@
  	__uqmi_command(set_client_id, set-client-id, required, CMD_TYPE_OPTION), \
  	__uqmi_command(get_client_id, get-client-id, required, QMI_SERVICE_CTL), \
@@ -977,7 +977,7 @@ diff --recursive --unified --new-file --no-dereference orig/commands.h src/comma
  	__uqmi_nas_commands, \
 diff --recursive --unified --new-file --no-dereference orig/data/gen-verbose-error-list.pl src/data/gen-verbose-error-list.pl
 --- orig/data/gen-verbose-error-list.pl	1970-01-01 00:00:00.000000000 +0000
-+++ src/data/gen-verbose-error-list.pl	2023-07-10 05:34:36.000000000 +0000
++++ src/data/gen-verbose-error-list.pl	2024-01-24 06:27:29.000000000 +0000
 @@ -0,0 +1,116 @@
 +#!/usr/bin/env perl
 +use strict;
@@ -1097,7 +1097,7 @@ diff --recursive --unified --new-file --no-dereference orig/data/gen-verbose-err
 +
 diff --recursive --unified --new-file --no-dereference orig/data/qmi-service-wda.json src/data/qmi-service-wda.json
 --- orig/data/qmi-service-wda.json	2023-11-09 07:17:16.000000000 +0000
-+++ src/data/qmi-service-wda.json	2023-07-10 05:34:36.000000000 +0000
++++ src/data/qmi-service-wda.json	2024-01-24 06:27:29.000000000 +0000
 @@ -80,10 +80,25 @@
                       "since"         : "1.18",
                       "format"        : "sequence",
@@ -1129,17 +1129,20 @@ diff --recursive --unified --new-file --no-dereference orig/data/qmi-service-wda
                       "id"            : "0x10",
 diff --recursive --unified --new-file --no-dereference orig/dev.c src/dev.c
 --- orig/dev.c	2023-11-09 07:11:45.000000000 +0000
-+++ src/dev.c	2023-07-10 05:34:36.000000000 +0000
-@@ -28,6 +28,8 @@
++++ src/dev.c	2024-01-24 06:27:29.000000000 +0000
+@@ -28,6 +28,11 @@
  #include "qmi-errors.h"
  #include "qmi-errors.c"
  #include "mbim.h"
 +#include "commands-wds.h"
 +#include "libuqmi.h"
++
++#define DEFAULT_CALL_TIMEOUT 8 * 1000
++#define DEFAULT_MAX_REQUEST  3
  
  bool cancel_all_requests = false;
  
-@@ -37,19 +39,6 @@
+@@ -37,19 +42,6 @@
  };
  #undef __qmi_service
  
@@ -1159,7 +1162,7 @@ diff --recursive --unified --new-file --no-dereference orig/dev.c src/dev.c
  static int
  qmi_get_service_idx(QmiService svc)
  {
-@@ -76,14 +65,19 @@
+@@ -76,14 +68,19 @@
  	if (msg) {
  		tlv_buf = qmi_msg_get_tlv_buf(msg, &tlv_len);
  		req->ret = qmi_check_message_status(tlv_buf, tlv_len);
@@ -1182,7 +1185,79 @@ diff --recursive --unified --new-file --no-dereference orig/dev.c src/dev.c
  
  	if (req->complete) {
  		*req->complete = true;
-@@ -364,6 +358,7 @@
+@@ -96,8 +93,10 @@
+ 	struct qmi_request *req;
+ 	uint16_t tid;
+ 
+-	if (msg->flags != QMI_CTL_FLAG_RESPONSE && msg->flags != QMI_SERVICE_FLAG_RESPONSE)
++	if (msg->flags != QMI_CTL_FLAG_RESPONSE && msg->flags != QMI_SERVICE_FLAG_RESPONSE) {
++		uloop_timeout_set(&qmi->request_timeout, DEFAULT_CALL_TIMEOUT);
+ 		return;
++	}
+ 
+ 	if (msg->qmux.service == QMI_SERVICE_CTL)
+ 		tid = msg->ctl.transaction;
+@@ -105,12 +104,27 @@
+ 		tid = le16_to_cpu(msg->svc.transaction);
+ 
+ 	list_for_each_entry(req, &qmi->req, list) {
+-		if (req->service != msg->qmux.service)
++		if (req->service != msg->qmux.service) {
++			qmi->read_req_retry++;
++			if (qmi->read_req_retry >= DEFAULT_MAX_REQUEST) {
++				uloop_timeout_set(&qmi->request_timeout, 0);
++				return;
++			}
++			uloop_timeout_set(&qmi->request_timeout, DEFAULT_CALL_TIMEOUT);
+ 			continue;
++		}
+ 
+-		if (req->tid != tid)
++		if (req->tid != tid) {
++			qmi->read_req_retry++;
++			if (qmi->read_req_retry >= DEFAULT_MAX_REQUEST) {
++				uloop_timeout_set(&qmi->request_timeout, 0);
++				return;
++			}
++			uloop_timeout_set(&qmi->request_timeout, DEFAULT_CALL_TIMEOUT);
+ 			continue;
++		}
+ 
++		qmi->read_req_retry = 0;
+ 		__qmi_request_complete(qmi, req, msg);
+ 		return;
+ 	}
+@@ -123,6 +137,9 @@
+ 	char *buf;
+ 	int len, msg_len;
+ 
++	if (qmi->request_timeout.pending) {
++		uloop_timeout_cancel(&qmi->request_timeout);
++	}
+ 
+ 	while (1) {
+ 		buf = ustream_get_read_buf(us, &len);
+@@ -194,6 +211,11 @@
+ 
+ 	dump_packet("Send packet", buf, len);
+ 	ustream_write(&qmi->sf.stream, buf, len, false);
++
++	if (!qmi->request_timeout.pending) {
++		qmi->request_timeout.cb = _request_timeout_handler;
++		uloop_timeout_set(&qmi->request_timeout, DEFAULT_CALL_TIMEOUT);
++	}
+ 	return 0;
+ }
+ 
+@@ -322,7 +344,6 @@
+ 	for (idx = 0; connected; idx++, connected >>= 1) {
+ 		if (!(connected & 1))
+ 			continue;
+-
+ 		if (qmi->service_keep_cid & (1 << idx))
+ 			continue;
+ 
+@@ -364,6 +385,7 @@
  	INIT_LIST_HEAD(&qmi->req);
  	qmi->ctl_tid = 1;
  	qmi->buf = msgbuf.u.buf;
@@ -1192,8 +1267,8 @@ diff --recursive --unified --new-file --no-dereference orig/dev.c src/dev.c
  }
 diff --recursive --unified --new-file --no-dereference orig/libuqmi.c src/libuqmi.c
 --- orig/libuqmi.c	1970-01-01 00:00:00.000000000 +0000
-+++ src/libuqmi.c	2023-07-10 05:34:36.000000000 +0000
-@@ -0,0 +1,37 @@
++++ src/libuqmi.c	2024-01-24 06:27:29.000000000 +0000
+@@ -0,0 +1,49 @@
 +#include <stdio.h>
 +#include <stdlib.h>
 +
@@ -1231,15 +1306,32 @@ diff --recursive --unified --new-file --no-dereference orig/libuqmi.c src/libuqm
 +	}
 +	qmi_service_release_client_id(qmi, svc);
 +}
++
++void handle_exit_signal(int signal)
++{
++	cancel_all_requests = true;
++	uloop_end();
++}
++
++void _request_timeout_handler(struct uloop_timeout *timeout)
++{
++	fprintf(stderr, "Request timed out\n");
++	handle_exit_signal(0);
++}
+\ No newline at end of file
 diff --recursive --unified --new-file --no-dereference orig/libuqmi.h src/libuqmi.h
 --- orig/libuqmi.h	1970-01-01 00:00:00.000000000 +0000
-+++ src/libuqmi.h	2023-07-10 05:34:36.000000000 +0000
-@@ -0,0 +1,11 @@
++++ src/libuqmi.h	2024-01-24 06:27:29.000000000 +0000
+@@ -0,0 +1,15 @@
 +#ifndef __LIBUQMI_H
 +#define __LIBUQMI_H
 +
 +#include "uqmi.h"
 +#include "commands.h"
++
++
++void handle_exit_signal(int signal);
++void _request_timeout_handler(struct uloop_timeout *timeout);
 +
 +void dump_packet(const char *prefix, void *ptr, int len);
 +
@@ -1248,7 +1340,7 @@ diff --recursive --unified --new-file --no-dereference orig/libuqmi.h src/libuqm
 +#endif
 diff --recursive --unified --new-file --no-dereference orig/main.c src/main.c
 --- orig/main.c	2023-11-09 07:11:45.000000000 +0000
-+++ src/main.c	2023-07-10 05:34:36.000000000 +0000
++++ src/main.c	2024-01-24 06:27:29.000000000 +0000
 @@ -28,9 +28,11 @@
  #include <errno.h>
  #include <getopt.h>
@@ -1271,7 +1363,7 @@ diff --recursive --unified --new-file --no-dereference orig/main.c src/main.c
  		wds_helptext
  		dms_helptext
  		uim_helptext
-@@ -79,26 +82,6 @@
+@@ -79,44 +82,11 @@
  	return 1;
  }
  
@@ -1295,10 +1387,20 @@ diff --recursive --unified --new-file --no-dereference orig/main.c src/main.c
 -	qmi_service_release_client_id(qmi, svc);
 -}
 -
- static void handle_exit_signal(int signal)
- {
- 	cancel_all_requests = true;
-@@ -116,7 +99,8 @@
+-static void handle_exit_signal(int signal)
+-{
+-	cancel_all_requests = true;
+-	uloop_end();
+-}
+-
+-static void _request_timeout_handler(struct uloop_timeout *timeout)
+-{
+-	fprintf(stderr, "Request timed out\n");
+-	handle_exit_signal(0);
+-}
+-
+-struct uloop_timeout request_timeout = { .cb = _request_timeout_handler, };
+-
  int main(int argc, char **argv)
  {
  	static struct qmi_dev dev;
@@ -1308,7 +1410,16 @@ diff --recursive --unified --new-file --no-dereference orig/main.c src/main.c
  
  	uloop_init();
  	signal(SIGINT, handle_exit_signal);
-@@ -154,19 +138,26 @@
+@@ -147,26 +117,34 @@
+ 			dev.is_mbim = true;
+ 			break;
+ 		case 't':
+-			uloop_timeout_set(&request_timeout, atol(optarg));
++			dev.request_timeout.cb = _request_timeout_handler;
++			uloop_timeout_set(&dev.request_timeout, strtol(optarg, NULL, 10));
+ 			break;
+ 		default:
+ 			return usage(argv[0]);
  		}
  	}
  
@@ -1338,7 +1449,7 @@ diff --recursive --unified --new-file --no-dereference orig/main.c src/main.c
  }
 diff --recursive --unified --new-file --no-dereference orig/qmi-enums-wds.h src/qmi-enums-wds.h
 --- orig/qmi-enums-wds.h	2023-11-09 07:17:16.000000000 +0000
-+++ src/qmi-enums-wds.h	2023-07-10 05:34:36.000000000 +0000
++++ src/qmi-enums-wds.h	2024-01-24 06:27:29.000000000 +0000
 @@ -37,14 +37,14 @@
  
  /**
@@ -2154,7 +2265,7 @@ diff --recursive --unified --new-file --no-dereference orig/qmi-enums-wds.h src/
      QMI_WDS_IP_SUPPORT_TYPE_IPV4   = 0,
 diff --recursive --unified --new-file --no-dereference orig/qmi-message.c src/qmi-message.c
 --- orig/qmi-message.c	2023-11-09 07:11:45.000000000 +0000
-+++ src/qmi-message.c	2023-07-10 05:34:36.000000000 +0000
++++ src/qmi-message.c	2024-01-24 06:27:29.000000000 +0000
 @@ -24,6 +24,15 @@
  #include <stdlib.h>
  
@@ -2207,7 +2318,7 @@ diff --recursive --unified --new-file --no-dereference orig/qmi-message.c src/qm
 +}
 diff --recursive --unified --new-file --no-dereference orig/qmi-message.h src/qmi-message.h
 --- orig/qmi-message.h	2023-11-09 07:11:45.000000000 +0000
-+++ src/qmi-message.h	2023-07-10 05:34:36.000000000 +0000
++++ src/qmi-message.h	2024-01-24 06:27:29.000000000 +0000
 @@ -122,5 +122,6 @@
  int qmi_complete_request_message(struct qmi_msg *qm);
  int qmi_check_message_status(void *buf, unsigned int len);
@@ -2217,7 +2328,7 @@ diff --recursive --unified --new-file --no-dereference orig/qmi-message.h src/qm
  #endif
 diff --recursive --unified --new-file --no-dereference orig/uqmi.h src/uqmi.h
 --- orig/uqmi.h	2023-11-09 07:11:45.000000000 +0000
-+++ src/uqmi.h	2023-07-10 05:34:36.000000000 +0000
++++ src/uqmi.h	2024-01-24 06:27:29.000000000 +0000
 @@ -72,6 +72,8 @@
  typedef void (*request_cb)(struct qmi_dev *qmi, struct qmi_request *req, struct qmi_msg *msg);
  
@@ -2227,3 +2338,13 @@ diff --recursive --unified --new-file --no-dereference orig/uqmi.h src/uqmi.h
  	struct ustream_fd sf;
  
  	struct list_head req;
+@@ -90,6 +92,9 @@
+ 	void *buf;
+ 
+ 	bool is_mbim;
++	int read_req_retry;
++
++	struct uloop_timeout request_timeout;
+ };
+ 
+ struct qmi_request {

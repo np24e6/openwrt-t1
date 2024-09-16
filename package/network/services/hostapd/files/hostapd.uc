@@ -26,8 +26,10 @@ function iface_remove(cfg)
 	if (!cfg || !cfg.bss || !cfg.bss[0] || !cfg.bss[0].ifname)
 		return;
 
-	for (let bss in cfg.bss)
+	for (let bss in cfg.bss) {
 		wdev_remove(bss.ifname);
+		ubus.event("wireless.state", {state: "down", ifname: bss.ifname});
+	}
 }
 
 function iface_gen_config(phy, config, start_disabled)
@@ -165,11 +167,13 @@ function iface_restart(phydev, config, old_config)
 
 		hostapd.printf(`Failed to bring up phy ${phy} ifname=${bss.ifname} with supplicant provided frequency`);
 	}
-
+	
 	ubus.call("wpa_supplicant", "phy_set_state", { phy: phy, stop: true });
 	if (!iface_add(phy, config))
 		hostapd.printf(`hostapd.add_iface failed for phy ${phy} ifname=${bss.ifname}`);
 	ubus.call("wpa_supplicant", "phy_set_state", { phy: phy, stop: false });
+
+	ubus.event("wireless.state", {state: "up", ifname: bss.ifname, mode: "ap"});
 }
 
 function array_to_obj(arr, key, start)

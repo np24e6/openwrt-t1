@@ -1,0 +1,12 @@
+--- a/config.c
++++ b/config.c
+@@ -845,7 +845,7 @@
+	free(board_netdevs);
+	board_netdevs = NULL;
+
+-	cur = config_find_blobmsg_attr(b.head, "network_device",
++	cur = config_find_blobmsg_attr(b.head, "network-device",
+				       BLOBMSG_TYPE_TABLE);
+	if (!cur)
+		return;
+

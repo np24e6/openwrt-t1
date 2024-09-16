@@ -8,7 +8,7 @@ TOP_PKG_DIR="${TOP_DIR:-./bin}"
 TOP_DIR="${TOP_DIR:-./bin/targets}"
 # key to sign images
 BUILD_KEY="${BUILD_KEY:-key-build}" # TODO unify naming?
-# remove other signatures (added e.g.  by buildbot)
+# remove other signatures (added e.g. by buildbot)
 REMOVE_OTHER_SIGNATURES="${REMOVE_OTER_SIGNATURES:-1}"
 
 # find all *_WEBUI.bin images in TOP_DIR
@@ -23,6 +23,7 @@ for image in "${TOP_DIR}"/**/*_WEBUI.bin; do
 
 	# run same operation as build root does for signing
 	cp "$BUILD_KEY.ucert" "$image.ucert"
+	/usr/bin/chmod u+w "$image.ucert"
 	usign -S -m "$image" -s "$BUILD_KEY" -x "$image.sig"
 	ucert -A -c "$image.ucert" -x "$image.sig"
 	fwtool -S "$image.ucert" "$image"

@@ -1,5 +1,7 @@
---- a/log/logread.c
-+++ b/log/logread.c
+Index: ubox-2020-10-25-9ef88681/log/logread.c
+===================================================================
+--- ubox-2020-10-25-9ef88681.orig/log/logread.c
++++ ubox-2020-10-25-9ef88681/log/logread.c
 @@ -11,7 +11,7 @@
   * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
   * GNU General Public License for more details.
@@ -173,7 +175,7 @@
 +			}
 +
 +			int i = 1;
-+			if ( sqlite3_bind_int(stmt, i++, (int)t) != SQLITE_OK ||
++			if ( sqlite3_bind_int64(stmt, i++, t) != SQLITE_OK ||
 +				sqlite3_bind_text(stmt, i++, msg_sender, strlen(msg_sender), SQLITE_STATIC) != SQLITE_OK ||
 +				sqlite3_bind_text(stmt, i++, getcodetext(LOG_PRI(p), prioritynames),strlen(getcodetext(LOG_PRI(p), prioritynames)),SQLITE_STATIC) != SQLITE_OK ||
 +				sqlite3_bind_text(stmt, i++, m,strlen(m),SQLITE_STATIC) != SQLITE_OK ) {

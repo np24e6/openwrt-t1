@@ -117,11 +117,6 @@ ifneq ($(LOCAL_TYPE),hostapd)
   endif
 endif
 
-ifdef CONFIG_USE_GLIBC
-  TARGET_LDFLAGS += -lrt
-  TARGET_LDFLAGS_C += -lrt
-endif
-
 DRV_DEPENDS:=+PACKAGE_kmod-cfg80211:libnl-tiny
 
 
@@ -423,8 +418,7 @@ TARGET_CPPFLAGS := \
 	-D_GNU_SOURCE \
 	$(if $(CONFIG_WPA_MSG_MIN_PRIORITY),-DCONFIG_MSG_MIN_PRIORITY=$(CONFIG_WPA_MSG_MIN_PRIORITY))
 
-TARGET_CFLAGS += -ffunction-sections -fdata-sections -flto
-TARGET_LDFLAGS += -Wl,--gc-sections -flto=jobserver -fuse-linker-plugin -lubox -lubus -llog -lblobmsg_json -lucode
+TARGET_LDFLAGS += -lubox -lubus -llog -lblobmsg_json -lucode
 
 ifneq ($(or $(CONFIG_PACKAGE_kmod-cfg80211),$(CONFIG_PACKAGE_kmod-cfg80211_54)),)
   TARGET_LDFLAGS += -lm -lnl-tiny

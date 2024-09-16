@@ -17,8 +17,7 @@ PKG_HASH:=719e169c79255816cdcf6dccd9ed2d089a72a9f6c42273aae12d55e8d35bdcf8
 PKG_MAINTAINER:=Jan Pavlinec <jan.pavlinec1@gmail.com>
 PKG_LICENSE:=MIT
 PKG_LICENSE_FILES:=LICENSE
-# FIXME: remove when GCC10 is the oldest supported compiler, or the issue goes away
-PKG_USE_MIPS16:=0
+PKG_BUILD_FLAGS:=no-mips16
 
 include ../pypi.mk
 include $(INCLUDE_DIR)/package.mk

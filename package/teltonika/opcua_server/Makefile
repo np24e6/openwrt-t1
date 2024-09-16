@@ -2,9 +2,9 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=opcua_server
-PKG_VERSION:=2023-12-08
+PKG_VERSION:=2024-02-01
 PKG_RELEASE:=1
-PKG_SOURCE_VERSION:=1.1
+PKG_SOURCE_VERSION:=7.6.5
 
 include $(INCLUDE_DIR)/package.mk
 

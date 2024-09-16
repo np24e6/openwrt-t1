@@ -2,10 +2,10 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=mqtt_pub
-PKG_VERSION:=2023-12-06
+PKG_VERSION:=2024-01-25
 PKG_RELEASE:=1
 
-PKG_SOURCE_VERSION:=2.2
+PKG_SOURCE_VERSION:=2.2.1
 
 include $(INCLUDE_DIR)/package.mk
 

@@ -52,7 +52,6 @@ menu "Global build settings"
 
 	config INSTALL_LOCAL_KEY
 		bool "Install local usign key into image"
-		default y if !BUILDBOT
 
 	config SIGNED_PACKAGES
 		bool "Cryptographically signed package lists"

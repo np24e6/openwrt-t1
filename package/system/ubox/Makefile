@@ -1,7 +1,7 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=ubox
-PKG_RELEASE:=2
+PKG_RELEASE:=3
 
 PKG_SOURCE_PROTO:=git
 PKG_SOURCE_URL=$(PROJECT_GIT)/project/ubox.git
@@ -18,12 +18,10 @@ PKG_MAINTAINER:=John Crispin <john@phrozen.org>
 include $(INCLUDE_DIR)/package.mk
 include $(INCLUDE_DIR)/cmake.mk
 
-TARGET_LDFLAGS += $(if $(CONFIG_USE_GLIBC),-lrt)
-
 define Package/ubox
   SECTION:=base
   CATEGORY:=Base system
-  DEPENDS:=+libubox +ubusd +ubus +libubus +libuci +USE_GLIBC:librt
+  DEPENDS:=+libubox +ubusd +ubus +libubus +libuci
   TITLE:=OpenWrt system helper toolbox
   ALTERNATIVES:=\
     100:/sbin/rmmod:/sbin/kmodloader \
@@ -42,7 +40,7 @@ endef
 define Package/logd
   SECTION:=base
   CATEGORY:=Base system
-  DEPENDS:=+libubox +libubus +libblobmsg-json +USE_GLIBC:librt +libsqlite3 +log_rotation
+  DEPENDS:=+libubox +libubus +libblobmsg-json +libsqlite3 +log_rotation
   TITLE:=OpenWrt system log implementation
   USERID:=logd=514:logd=514
 endef

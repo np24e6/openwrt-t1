@@ -22,6 +22,7 @@ PKG_CPE_ID:=cpe:/a:bluez:bluez
 
 PKG_BUILD_PARALLEL:=1
 PKG_BUILD_DEPENDS:=dbus
+PKG_BUILD_FLAGS:=gc-sections
 PKG_INSTALL:=1
 
 include $(INCLUDE_DIR)/package.mk
@@ -40,10 +41,9 @@ $(call Package/bluez/Default)
   DEPENDS:=+libpthread +USB_SUPPORT:kmod-bluetooth +glib2
 endef
 
-TARGET_CFLAGS += -D_GNU_SOURCE -ffunction-sections -fdata-sections
+TARGET_CFLAGS += -D_GNU_SOURCE
 TARGET_CFLAGS += -I$(STAGING_DIR)/usr/include/dbus-1.0
 TARGET_CFLAGS += -I$(STAGING_DIR)/usr/lib/dbus-1.0/include
-TARGET_LDFLAGS += -Wl,--gc-sections
 
 CONFIGURE_ARGS += \
 	--enable-static \

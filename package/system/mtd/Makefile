@@ -20,6 +20,7 @@ PKG_LICENSE_FILES:=
 PKG_ORIGIN_URL:=https://github.com/openwrt/openwrt/tree/openwrt-21.02/package/system/mtd
 
 PKG_FLAGS:=nonshared
+PKG_BUILD_FLAGS:=lto
 
 include $(INCLUDE_DIR)/package.mk
 
@@ -38,8 +39,7 @@ endef
 target=$(firstword $(subst -, ,$(BOARD)))
 
 MAKE_FLAGS += TARGET="$(target)"
-TARGET_CFLAGS += -Dtarget_$(target)=1 -Wall -flto
-TARGET_LDFLAGS += -flto=jobserver
+TARGET_CFLAGS += -Dtarget_$(target)=1 -Wall
 
 ifdef CONFIG_MTD_REDBOOT_PARTS
   MAKE_FLAGS += FIS_SUPPORT=1

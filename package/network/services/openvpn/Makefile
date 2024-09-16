@@ -23,6 +23,7 @@ PKG_MAINTAINER:=Magnus Kroken <mkroken@gmail.com>
 PKG_INSTALL:=1
 PKG_FIXUP:=autoreconf
 PKG_BUILD_PARALLEL:=1
+PKG_BUILD_FLAGS:=gc-sections
 PKG_LICENSE:=GPL-2.0
 PKG_CPE_ID:=cpe:/a:openvpn:openvpn
 
@@ -56,7 +57,6 @@ CONFIGURE_VARS += \
 	IPROUTE=/sbin/ip \
 	NETSTAT=/sbin/netstat
 
-TARGET_CFLAGS += -ffunction-sections -fdata-sections
 TARGET_LDFLAGS += -Wl,--gc-sections,-luci
 
 define Build/Configure

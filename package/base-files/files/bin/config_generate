@@ -673,7 +673,7 @@ set_poe_ports() {
 	json_select "$1"
 		json_get_vars name class budget
 		uci -q batch <<-EOF
-			set poe.port$1='port$1'
+			set poe.port$1='port'
 			set poe.port$1.name='$name'
 			set poe.port$1.poe_enable='1'
 			set poe.port$1.class='$class'
@@ -684,7 +684,7 @@ set_poe_ports() {
 
 set_poe_chips(){
 	local keys key
-	uci -q set poe.chip$1=chip$1
+	uci -q set poe.chip$1='chip'
 	json_get_keys keys "$1"
 	json_select "$1"
 		for key in $keys; do

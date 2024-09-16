@@ -1,0 +1,25 @@
+Index: iw-5.19/phy.c
+===================================================================
+--- iw-5.19.orig/phy.c
++++ iw-5.19/phy.c
+@@ -131,17 +131,17 @@ static int print_channels_handler(struct
+ 
+ 					if (!tb_freq[NL80211_FREQUENCY_ATTR_DISABLED] && tb_freq[NL80211_FREQUENCY_ATTR_DFS_STATE]) {
+ 						enum nl80211_dfs_state state = nla_get_u32(tb_freq[NL80211_FREQUENCY_ATTR_DFS_STATE]);
+-						unsigned long time;
++						uint64_t time;
+ 
+ 						printf("\t  DFS state: %s", dfs_state_name(state));
+ 						if (tb_freq[NL80211_FREQUENCY_ATTR_DFS_TIME]) {
+-							time = nla_get_u32(tb_freq[NL80211_FREQUENCY_ATTR_DFS_TIME]);
++							time = nla_get_u64(tb_freq[NL80211_FREQUENCY_ATTR_DFS_TIME]);
+ 							printf(" (for %lu sec)", time / 1000);
+ 						}
+ 						printf("\n");
+ 						if (tb_freq[NL80211_FREQUENCY_ATTR_DFS_CAC_TIME])
+ 							printf("\t  DFS CAC time: %u ms\n",
+-							       nla_get_u32(tb_freq[NL80211_FREQUENCY_ATTR_DFS_CAC_TIME]));
++							       nla_get_u64(tb_freq[NL80211_FREQUENCY_ATTR_DFS_CAC_TIME]));
+ 					}
+ 				}
+ 			}

@@ -291,6 +291,9 @@ ${pdptype:+ --pdp-type $pdptype}"
 
 	set_mtu "$ifname"
 
+	# Disable GRO, non-qmap qmi does not provide RX csum offloading.
+	ethtool -K "$ifname" gro off
+
 	proto_init_update "$ifname" 1
 	proto_set_keep 1
 	proto_add_data

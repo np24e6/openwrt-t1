@@ -6,7 +6,7 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=uqmi
-PKG_SOURCE_VERSION:=2.0
+PKG_SOURCE_VERSION:=3.0
 PKG_MAINTAINER:=Mindaugas Antanavicius <mindaugas.antanavicius@teltonika.lt>
 
 GPL_INCLUDE_HEADERS:=1
@@ -19,6 +19,7 @@ PKG_LICENSE:=GPL-2.0
 PKG_LICENSE_FILES:=
 
 PKG_BUILD_PARALLEL:=1
+PKG_BUILD_FLAGS:=gc-sections
 GPL_INCLUDE_SRC:=1
 
 include $(INCLUDE_DIR)/package.mk
@@ -50,9 +51,7 @@ endef
 
 
 TARGET_CFLAGS += \
-	-I$(STAGING_DIR)/usr/include -ffunction-sections -fdata-sections
-
-TARGET_LDFLAGS += -Wl,--gc-sections
+	-I$(STAGING_DIR)/usr/include
 
 CMAKE_OPTIONS += \
 	-DDEBUG=1

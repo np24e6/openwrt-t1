@@ -444,12 +444,11 @@ setup_json() {
 		ucidef_set_interface_default_macaddr "lan" "$(mtd_get_mac_binary config 0x0)"
 		ucidef_set_interface "lan" "default_ip" "%%LAN_IP%%"
 		ucidef_add_static_modem_info "$model" "1-1" "2" "primary"
-		ucidef_set_hwinfo ethernet mobile dual_sim poe
 		ucidef_set_network_options "vlans" 16 "readonly_vlans" 1
-		ucidef_set_poe 2 15400 1 "lan2" "3" 15400
-		ucidef_set_poe_chip "0X77" "0:lan2"
-		ucidef_set_poe_chip "0X2F" "1:lan2"
-		ucidef_set_hwinfo dual_sim mobile ethernet nat_offloading
+		ucidef_set_poe 2 15400 1 "_lan1" "3" 15400
+		ucidef_set_poe_chip "0X77" "0:_lan1"
+		ucidef_set_poe_chip "0X2F" "1:_lan1"
+		ucidef_set_hwinfo dual_sim mobile ethernet nat_offloading port_link poe
 		ucidef_set_network_options "vlans" 16 "max_mtu" 1500
 		;;
 	TAP100*)

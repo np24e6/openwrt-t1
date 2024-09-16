@@ -1,6 +1,8 @@
---- a/scripts/netifd-wireless.sh
-+++ b/scripts/netifd-wireless.sh
-@@ -215,10 +215,19 @@
+Index: netifd-2024-01-04-c18cc79d/scripts/netifd-wireless.sh
+===================================================================
+--- netifd-2024-01-04-c18cc79d.orig/scripts/netifd-wireless.sh
++++ netifd-2024-01-04-c18cc79d/scripts/netifd-wireless.sh
+@@ -218,6 +218,13 @@ wireless_vif_parse_encryption() {
  		wpa_cipher="CCMP"
  	fi
  
@@ -13,11 +15,4 @@
 +
  	case "$encryption" in
  		*tkip+aes|*tkip+ccmp|*aes+tkip|*ccmp+tkip) wpa_cipher="CCMP TKIP";;
-+		*ccmp256) wpa_cipher="CCMP-256";;
- 		*aes|*ccmp) wpa_cipher="CCMP";;
- 		*tkip) wpa_cipher="TKIP";;
-+		*gcmp256) wpa_cipher="GCMP-256";;
- 		*gcmp) wpa_cipher="GCMP";;
- 	esac
- 
-
+ 		*ccmp256) wpa_cipher="CCMP-256";;

@@ -1,0 +1,13 @@
+Index: iptables-1.8.7/extensions/libxt_time.c
+===================================================================
+--- iptables-1.8.7.orig/extensions/libxt_time.c
++++ iptables-1.8.7/extensions/libxt_time.c
+@@ -98,7 +98,7 @@ static time_t time_parse_date(const char
+ 	char *e;
+ 
+ 	year = strtoul(s, &e, 10);
+-	if ((*e != '-' && *e != '\0') || year < 1970 || year > 2038)
++	if ((*e != '-' && *e != '\0') || year < 1970 || year > 2105)
+ 		goto out;
+ 	if (*e == '\0')
+ 		goto eval;

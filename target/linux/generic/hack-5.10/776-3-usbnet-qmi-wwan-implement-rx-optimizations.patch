@@ -16,7 +16,7 @@ Implement zerocopy and napi/GRO optimizations for qmimux driver
  
  	if (dev->driver_info->data & QMI_WWAN_V5_HEAD) {
  		qmimux_hdr_sz += sizeof(struct rmnet_map_v5_csum_header);
-@@ -456,33 +457,43 @@ static int qmimux_rx_fixup(struct usbnet
+@@ -456,33 +457,41 @@ static int qmimux_rx_fixup(struct usbnet
  			goto skip;
  		pkt_len = len - pad_len;
  
@@ -70,8 +70,6 @@ Implement zerocopy and napi/GRO optimizations for qmimux driver
 +			skbn->protocol = htons(ETH_P_IPV6);
 +		else
 +		 	skbn->protocol = htons(ETH_P_IP);
-+
-+		skbn->ip_summed = CHECKSUM_UNNECESSARY;
 +
 +		if (usbnet_napi_rx(dev, skbn) != NET_RX_SUCCESS) {
  			net->stats.rx_errors++;

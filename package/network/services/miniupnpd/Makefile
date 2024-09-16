@@ -22,6 +22,7 @@ PKG_CPE_ID:=cpe:/a:miniupnp_project:miniupnpd
 
 PKG_INSTALL:=1
 PKG_BUILD_PARALLEL:=1
+PKG_BUILD_FLAGS:=lto
 
 include $(INCLUDE_DIR)/package.mk
 include $(INCLUDE_DIR)/version.mk
@@ -61,7 +62,7 @@ CONFIGURE_ARGS = \
 	--firewall=iptables \
 	--disable-fork
 
-TARGET_CFLAGS += $(FPIC) -flto
+TARGET_CFLAGS += $(FPIC)
 TARGET_LDFLAGS += -Wl,--gc-sections,--as-needed
 
 define Package/miniupnpd/install
