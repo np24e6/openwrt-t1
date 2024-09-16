@@ -43,6 +43,7 @@
 	ACT(wps, ##__VA_ARGS__)                                                                              \
 	ACT(serial, ##__VA_ARGS__)                                                                           \
 	ACT(hwver, ##__VA_ARGS__)                                                                            \
+	ACT(branch, ##__VA_ARGS__)                                                                           \
 	ACT(batch, ##__VA_ARGS__)                                                                            \
 	ACT(simpin1, ##__VA_ARGS__)                                                                          \
 	ACT(simpin2, ##__VA_ARGS__)                                                                          \

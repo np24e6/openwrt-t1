@@ -340,6 +340,7 @@ proto_ncm_teardown() {
 		ip route flush table 43
 		ip route del "$bridge_ipaddr"
 		ubus call network.interface down "{\"interface\":\"mobile_bridge\"}"
+		rm -f "/tmp/dnsmasq.d/bridge"
 		swconfig dev switch0 set soft_reset 5 &
 		rm -f "$braddr_f" 2> /dev/null
 	}
@@ -350,7 +351,6 @@ proto_ncm_teardown() {
 	local zone="$(fw3 -q network "$interface" 2>/dev/null)"
 	iptables -F forwarding_${zone}_rule
 
-	rm -f "/tmp/dnsmasq.d/bridge"
 	ip neigh flush proxy
 
 	proto_init_update "*" 0

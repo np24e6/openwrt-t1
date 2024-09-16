@@ -1,7 +1,7 @@
-Index: mwan3-2.10.12/files/etc/hotplug.d/iface/15-mwan3
+Index: mwan3-2.10.12/files/usr/share/15-mwan3
 ===================================================================
---- mwan3-2.10.12.orig/files/etc/hotplug.d/iface/15-mwan3
-+++ mwan3-2.10.12/files/etc/hotplug.d/iface/15-mwan3
+--- mwan3-2.10.12.orig/files/usr/share/15-mwan3
++++ mwan3-2.10.12/files/usr/share/15-mwan3
 @@ -85,4 +85,19 @@ case "$ACTION" in
  		mwan3_set_policies_iptables
  	;;

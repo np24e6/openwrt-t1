@@ -1,0 +1,40 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+function change_device_value(){
+    local section="$1"
+    local device
+    config_get device "$section" "device"
+
+    if [ "$device" = "radio0" ]; then
+        uci_set "wireless" "$section" "device" "radio1"
+    elif [ "$device" = "radio1" ]; then
+        uci_set "wireless" "$section" "device" "radio0"
+    fi
+}
+
+function check_radio(){
+    config_load "wireless"
+    local hwmode
+
+    config_get hwmode "radio0" "hwmode"
+
+    [ "$hwmode" != "11a" ] && return 0 
+
+    uci_rename "wireless" "radio0" "temp"
+    uci_rename "wireless" "radio1" "radio0"
+    uci_rename "wireless" "temp" "radio1"
+
+    config_foreach change_device_value "wifi-iface"
+
+    uci_rename "wireless" "default_radio0" "default_temp"
+    uci_rename "wireless" "default_radio1" "default_radio0"
+    uci_rename "wireless" "default_temp" "default_radio1"
+
+    uci_commit "wireless"
+}
+
+check_radio
+
+exit 0

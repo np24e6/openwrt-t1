@@ -27,10 +27,10 @@ endef
 
 define Package/gkeepalive/install
 	$(INSTALL_DIR) $(1)/etc/init.d/
-	$(INSTALL_DIR) $(1)/etc/hotplug.d/iface/
+	$(INSTALL_DIR) $(1)/usr/share/gkeepalive
 	$(INSTALL_DIR) $(1)/usr/bin
 	$(INSTALL_BIN) ./files/gre_tunnel.init $(1)/etc/init.d/gre_tunnel
-	$(INSTALL_BIN) ./files/90-gre-keep-alive $(1)/etc/hotplug.d/iface/90-gre-keep-alive
+	$(INSTALL_BIN) ./files/90-gre-keep-alive $(1)/usr/share/gkeepalive/90-gre-keep-alive
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/gkeepalive $(1)/usr/bin
 endef
 

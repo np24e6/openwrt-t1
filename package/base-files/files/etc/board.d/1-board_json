@@ -12,7 +12,7 @@
 	. /lib/functions/target-defaults.sh
 
 setup_json() {
-	local model="$1"
+	local model="$(mnf_info --name)" 2>/dev/null;
 	local hw_ver="$(cut -c -2 /sys/mnf_info/hwver)"
 
 	case "$model" in
@@ -511,6 +511,7 @@ setup_json() {
 		ucidef_set_usb_jack "/usb1/1-1/"
 		ucidef_set_hwinfo usb ethernet ios dsa hw_nat nat_offloading multi_tag port_link soft_port_mirror gigabit_port
 		ucidef_set_network_options "vlans" 4094 "max_mtu" 2030 "readonly_vlans" 1
+		ucidef_set_release_version "7.6.1"
 		;;
 	RUTM09*)
 		ucidef_set_interfaces_lan_wan "lan1 lan2 lan3" "wan"
@@ -519,6 +520,7 @@ setup_json() {
 		ucidef_set_hwinfo usb ethernet ios gps mobile dual_sim dsa hw_nat nat_offloading multi_tag port_link soft_port_mirror \
 			gigabit_port
 		ucidef_set_network_options "vlans" 4094 "max_mtu" 2030 "readonly_vlans" 1
+		ucidef_set_release_version "7.6.1"
 		;;
 	RUTM10*)
 		ucidef_set_interfaces_lan_wan "lan1 lan2 lan3" "wan"
@@ -528,6 +530,7 @@ setup_json() {
 		ucidef_set_hwinfo usb ethernet ios wifi dual_band_ssid dsa hw_nat nat_offloading multi_tag port_link soft_port_mirror \
 			gigabit_port
 		ucidef_set_network_options "vlans" 4094 "max_mtu" 2030 "readonly_vlans" 1
+		ucidef_set_release_version "7.6.1"
 		;;
 	RUTM11*)
 		ucidef_set_interfaces_lan_wan "lan1 lan2 lan3" "wan"
@@ -538,6 +541,7 @@ setup_json() {
 		ucidef_set_hwinfo usb ethernet ios gps mobile wifi dual_band_ssid dual_sim dsa hw_nat nat_offloading multi_tag \
 			port_link soft_port_mirror gigabit_port
 		ucidef_set_network_options "vlans" 4094 "max_mtu" 2030 "readonly_vlans" 1
+		ucidef_set_release_version "7.6.1"
 		;;
 	RUTM12*)
 		ucidef_set_interfaces_lan_wan "lan1 lan2 lan3 lan4" "wan"
@@ -549,6 +553,7 @@ setup_json() {
 		ucidef_set_hwinfo usb ethernet ios gps mobile wifi dual_band_ssid dual_modem dsa hw_nat nat_offloading multi_tag \
 			port_link soft_port_mirror gigabit_port
 		ucidef_set_network_options "vlans" 4094 "max_mtu" 2030 "readonly_vlans" 1
+		ucidef_set_release_version "7.6.1"
 		;;
 
 	x86)
@@ -570,15 +575,11 @@ setup_json() {
 		ucidef_target_defaults "$model"
 }
 
-#~ Get model name for RUTX products
-if ! model="$(mnf_info --name)" 2>/dev/null; then
-	model="$(mnf_info --prod-code)" 2>/dev/null
-fi
 
 platform="$(cat /proc/device-tree/platform)" 2>/dev/null
 
 board_config_update
-setup_json "$model"
+setup_json
 ucidef_set_board_platform "$platform"
 board_config_flush
 

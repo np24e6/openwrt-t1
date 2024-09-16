@@ -89,11 +89,11 @@ define Package/mwan3/install
 	$(INSTALL_CONF) $(PKG_BUILD_DIR)/files/etc/config/mwan3 \
 		$(1)/etc/config/
 
-	$(INSTALL_DIR) $(1)/etc/hotplug.d/iface
-	$(INSTALL_DATA) $(PKG_BUILD_DIR)/files/etc/hotplug.d/iface/15-mwan3 \
-		$(1)/etc/hotplug.d/iface/
-	$(INSTALL_DATA) $(PKG_BUILD_DIR)/files/etc/hotplug.d/iface/16-mwan3-user \
-		$(1)/etc/hotplug.d/iface/
+	$(INSTALL_DIR) $(1)/usr/share/mwan3
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/files/usr/share/15-mwan3 \
+		$(1)/usr/share/mwan3/
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/files/usr/share/16-mwan3-user \
+		$(1)/usr/share/mwan3/
 
 	$(INSTALL_DIR) $(1)/etc/init.d
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/files/etc/init.d/mwan3 \

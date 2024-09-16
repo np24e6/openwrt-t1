@@ -1,7 +1,7 @@
-Index: mwan3-2.10.12/files/etc/hotplug.d/iface/15-mwan3
+Index: mwan3-2.10.12/files/usr/share/15-mwan3
 ===================================================================
---- mwan3-2.10.12.orig/files/etc/hotplug.d/iface/15-mwan3
-+++ mwan3-2.10.12/files/etc/hotplug.d/iface/15-mwan3
+--- mwan3-2.10.12.orig/files/usr/share/15-mwan3
++++ mwan3-2.10.12/files/usr/share/15-mwan3
 @@ -45,6 +45,8 @@ config_get_bool enabled $INTERFACE 'enab
  	exit 0
  }

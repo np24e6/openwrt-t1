@@ -1,6 +1,6 @@
 diff --recursive --unified --new-file --no-dereference orig/.gitlab-ci.yml src/.gitlab-ci.yml
 --- orig/.gitlab-ci.yml	1970-01-01 00:00:00.000000000 +0000
-+++ src/.gitlab-ci.yml	2023-11-28 15:20:53.000000000 +0000
++++ src/.gitlab-ci.yml	2023-12-28 11:47:31.000000000 +0000
 @@ -0,0 +1,20 @@
 +include:
 +  - project: teltonika/ci-templates
@@ -205,7 +205,7 @@ diff --recursive --unified --new-file --no-dereference orig/HOWTO src/HOWTO
 -interval from the RFC-4330-mandated 15 seconds.
 diff --recursive --unified --new-file --no-dereference orig/Makefile src/Makefile
 --- orig/Makefile	2016-01-01 04:53:42.000000000 +0000
-+++ src/Makefile	2023-11-28 15:20:53.000000000 +0000
++++ src/Makefile	2023-12-28 11:47:31.000000000 +0000
 @@ -16,28 +16,34 @@
  # but as of ntpclient-2015, I cleaned up those casts enough to make both
  # gcc-4.9.2 and clang-3.5.0 happy without it.
@@ -757,7 +757,7 @@ diff --recursive --unified --new-file --no-dereference orig/envelope src/envelop
 -closeout();
 diff --recursive --unified --new-file --no-dereference orig/files/ntpclient.config src/files/ntpclient.config
 --- orig/files/ntpclient.config	1970-01-01 00:00:00.000000000 +0000
-+++ src/files/ntpclient.config	2023-11-28 15:20:53.000000000 +0000
++++ src/files/ntpclient.config	2023-12-28 11:47:31.000000000 +0000
 @@ -0,0 +1,19 @@
 +config ntpserver '1'
 +	option hostname '0.openwrt.pool.ntp.org'
@@ -780,7 +780,7 @@ diff --recursive --unified --new-file --no-dereference orig/files/ntpclient.conf
 +	option zoneName 'UTC'
 diff --recursive --unified --new-file --no-dereference orig/files/ntpclient.hotplug src/files/ntpclient.hotplug
 --- orig/files/ntpclient.hotplug	1970-01-01 00:00:00.000000000 +0000
-+++ src/files/ntpclient.hotplug	2023-11-28 15:20:53.000000000 +0000
++++ src/files/ntpclient.hotplug	2023-12-28 11:47:31.000000000 +0000
 @@ -0,0 +1,23 @@
 +#!/bin/sh
 +# Copyright (C) 2006-2014 OpenWrt.org
@@ -807,7 +807,7 @@ diff --recursive --unified --new-file --no-dereference orig/files/ntpclient.hotp
 +esac
 diff --recursive --unified --new-file --no-dereference orig/files/ntpclient.init src/files/ntpclient.init
 --- orig/files/ntpclient.init	1970-01-01 00:00:00.000000000 +0000
-+++ src/files/ntpclient.init	2023-11-28 15:20:53.000000000 +0000
++++ src/files/ntpclient.init	2023-12-28 11:47:31.000000000 +0000
 @@ -0,0 +1,35 @@
 +#!/bin/sh /etc/rc.common
 +
@@ -2261,7 +2261,7 @@ diff --recursive --unified --new-file --no-dereference orig/rate2.awk src/rate2.
 -
 diff --recursive --unified --new-file --no-dereference orig/src/HOWTO src/src/HOWTO
 --- orig/src/HOWTO	1970-01-01 00:00:00.000000000 +0000
-+++ src/src/HOWTO	2023-11-28 15:20:53.000000000 +0000
++++ src/src/HOWTO	2023-12-28 11:47:31.000000000 +0000
 @@ -0,0 +1,176 @@
 +The goal of ntpclient is not only to set your computer's clock
 +right once, but keep it there.
@@ -2441,7 +2441,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/HOWTO src/src/HO
 +interval from the RFC-4330-mandated 15 seconds.
 diff --recursive --unified --new-file --no-dereference orig/src/README src/src/README
 --- orig/src/README	1970-01-01 00:00:00.000000000 +0000
-+++ src/src/README	2023-11-28 15:20:53.000000000 +0000
++++ src/src/README	2023-12-28 11:47:31.000000000 +0000
 @@ -0,0 +1,201 @@
 +ntpclient is an NTP (RFC-1305, RFC-4330) client for unix-alike computers.
 +Its functionality is a small subset of xntpd, but IMHO performs
@@ -2646,7 +2646,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/README src/src/R
 +       - Larry Doolittle  <larry@doolittle.boa.org>
 diff --recursive --unified --new-file --no-dereference orig/src/adjtimex.c src/src/adjtimex.c
 --- orig/src/adjtimex.c	1970-01-01 00:00:00.000000000 +0000
-+++ src/src/adjtimex.c	2023-11-28 15:20:53.000000000 +0000
++++ src/src/adjtimex.c	2023-12-28 11:47:31.000000000 +0000
 @@ -0,0 +1,153 @@
 +/*
 + * adjtimex_1.c - read, and possibly modify, the Linux kernel `timex' variables.
@@ -2803,7 +2803,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/adjtimex.c src/s
 +}
 diff --recursive --unified --new-file --no-dereference orig/src/debug.h src/src/debug.h
 --- orig/src/debug.h	1970-01-01 00:00:00.000000000 +0000
-+++ src/src/debug.h	2023-11-28 15:20:53.000000000 +0000
++++ src/src/debug.h	2023-12-28 11:47:31.000000000 +0000
 @@ -0,0 +1,11 @@
 +#ifndef _DEBUG_H_
 +#define _DEBUG_H_
@@ -2819,7 +2819,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/debug.h src/src/
 \ No newline at end of file
 diff --recursive --unified --new-file --no-dereference orig/src/envelope src/src/envelope
 --- orig/src/envelope	1970-01-01 00:00:00.000000000 +0000
-+++ src/src/envelope	2023-11-28 15:20:53.000000000 +0000
++++ src/src/envelope	2023-12-28 11:47:31.000000000 +0000
 @@ -0,0 +1,75 @@
 +#!/usr/bin/perl
 +
@@ -2898,7 +2898,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/envelope src/src
 +closeout();
 diff --recursive --unified --new-file --no-dereference orig/src/log.h src/src/log.h
 --- orig/src/log.h	1970-01-01 00:00:00.000000000 +0000
-+++ src/src/log.h	2023-11-28 15:20:53.000000000 +0000
++++ src/src/log.h	2023-12-28 11:47:31.000000000 +0000
 @@ -0,0 +1,24 @@
 +#ifndef _LOG_H_
 +#define _LOG_H_
@@ -2926,7 +2926,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/log.h src/src/lo
 +#endif // _LOG_H_
 diff --recursive --unified --new-file --no-dereference orig/src/log2date.pl src/src/log2date.pl
 --- orig/src/log2date.pl	1970-01-01 00:00:00.000000000 +0000
-+++ src/src/log2date.pl	2023-11-28 15:20:53.000000000 +0000
++++ src/src/log2date.pl	2023-12-28 11:47:31.000000000 +0000
 @@ -0,0 +1,15 @@
 +# Adds human-readable UTC stamps at the end of
 +# ntpclient log files
@@ -2945,7 +2945,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/log2date.pl src/
 +}
 diff --recursive --unified --new-file --no-dereference orig/src/net.c src/src/net.c
 --- orig/src/net.c	1970-01-01 00:00:00.000000000 +0000
-+++ src/src/net.c	2023-11-28 15:20:53.000000000 +0000
++++ src/src/net.c	2023-12-28 11:47:31.000000000 +0000
 @@ -0,0 +1,96 @@
 +#include "debug.h"
 +#include "log.h"
@@ -3045,7 +3045,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/net.c src/src/ne
 +}
 diff --recursive --unified --new-file --no-dereference orig/src/net.h src/src/net.h
 --- orig/src/net.h	1970-01-01 00:00:00.000000000 +0000
-+++ src/src/net.h	2023-11-28 15:20:53.000000000 +0000
++++ src/src/net.h	2023-12-28 11:47:31.000000000 +0000
 @@ -0,0 +1,6 @@
 +#ifndef _NET_H_
 +#define _NET_H_
@@ -3055,8 +3055,8 @@ diff --recursive --unified --new-file --no-dereference orig/src/net.h src/src/ne
 +#endif
 diff --recursive --unified --new-file --no-dereference orig/src/ntpclient.c src/src/ntpclient.c
 --- orig/src/ntpclient.c	1970-01-01 00:00:00.000000000 +0000
-+++ src/src/ntpclient.c	2023-11-28 15:20:53.000000000 +0000
-@@ -0,0 +1,1117 @@
++++ src/src/ntpclient.c	2023-12-28 11:47:31.000000000 +0000
+@@ -0,0 +1,1118 @@
 +/*
 + * ntpclient.c - NTP client
 + *
@@ -3545,13 +3545,14 @@ diff --recursive --unified --new-file --no-dereference orig/src/ntpclient.c src/
 +
 +static void ntpc_sleep(time_t seconds)
 +{
-+	struct timeval tv;
-+	int i;
-+	tv.tv_sec  = seconds;
-+	tv.tv_usec = 0;
++	struct timeval tv = { .tv_sec = 1, .tv_usec = 0 };
++	int status, i;
++
 +	do {
++		waitpid(-1, &status, WNOHANG);
 +		i = select(1, NULL, NULL, NULL, &tv);
-+	} while (i == -1 && errno == EINTR);
++		seconds -= tv.tv_sec;
++	} while (seconds > 0 && (i == 0 || (i == -1 && errno == EINTR)));
 +}
 +
 +#ifdef MOBILE_SUPPORT
@@ -4176,7 +4177,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/ntpclient.c src/
 +}
 diff --recursive --unified --new-file --no-dereference orig/src/ntpclient.h src/src/ntpclient.h
 --- orig/src/ntpclient.h	1970-01-01 00:00:00.000000000 +0000
-+++ src/src/ntpclient.h	2023-11-28 15:20:53.000000000 +0000
++++ src/src/ntpclient.h	2023-12-28 11:47:31.000000000 +0000
 @@ -0,0 +1,54 @@
 +#ifndef NTPCLIENT_H
 +#define NTPCLIENT_H
@@ -4234,7 +4235,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/ntpclient.h src/
 +#endif
 diff --recursive --unified --new-file --no-dereference orig/src/phaselock.c src/src/phaselock.c
 --- orig/src/phaselock.c	1970-01-01 00:00:00.000000000 +0000
-+++ src/src/phaselock.c	2023-11-28 15:20:53.000000000 +0000
++++ src/src/phaselock.c	2023-12-28 11:47:31.000000000 +0000
 @@ -0,0 +1,382 @@
 +/*
 + * phaselock.c - Phase locking for NTP client
@@ -4620,7 +4621,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/phaselock.c src/
 +}
 diff --recursive --unified --new-file --no-dereference orig/src/phaselock.h src/src/phaselock.h
 --- orig/src/phaselock.h	1970-01-01 00:00:00.000000000 +0000
-+++ src/src/phaselock.h	2023-11-28 15:20:53.000000000 +0000
++++ src/src/phaselock.h	2023-12-28 11:47:31.000000000 +0000
 @@ -0,0 +1,6 @@
 +#ifndef _PHASELOCK_H_
 +#define _PHASELOCK_H_
@@ -4631,7 +4632,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/phaselock.h src/
 \ No newline at end of file
 diff --recursive --unified --new-file --no-dereference orig/src/rate.awk src/src/rate.awk
 --- orig/src/rate.awk	1970-01-01 00:00:00.000000000 +0000
-+++ src/src/rate.awk	2023-11-28 15:20:53.000000000 +0000
++++ src/src/rate.awk	2023-12-28 11:47:31.000000000 +0000
 @@ -0,0 +1,18 @@
 +(FNR==1){ day_off=$1;        t1=$2; o1=$5; f1=$7}
 +        { t2=($1-day_off)*86400+$2; o2=$5; f2=$7; if (f2!=f1) fwarn=1}
@@ -4653,7 +4654,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/rate.awk src/src
 +# you put -1318109 into the -f switch of adjtimex (e.g., adjtimex -f -1318109)
 diff --recursive --unified --new-file --no-dereference orig/src/rate2.awk src/src/rate2.awk
 --- orig/src/rate2.awk	1970-01-01 00:00:00.000000000 +0000
-+++ src/src/rate2.awk	2023-11-28 15:20:53.000000000 +0000
++++ src/src/rate2.awk	2023-12-28 11:47:31.000000000 +0000
 @@ -0,0 +1,193 @@
 +#!/usr/bin/awk -f
 +
@@ -4850,7 +4851,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/rate2.awk src/sr
 +
 diff --recursive --unified --new-file --no-dereference orig/src/test.dat src/src/test.dat
 --- orig/src/test.dat	1970-01-01 00:00:00.000000000 +0000
-+++ src/src/test.dat	2023-11-28 15:20:53.000000000 +0000
++++ src/src/test.dat	2023-12-28 11:47:31.000000000 +0000
 @@ -0,0 +1,200 @@
 +36765 180.386    1398.0     40.3  953773.9    793.5  -1240000
 +36765 780.382    1358.0     41.3  954329.0    915.5  -1240000
@@ -5054,7 +5055,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/test.dat src/src
 +36766 33180.132    1607.0     39.9  811465.7   2059.9  -1240000
 diff --recursive --unified --new-file --no-dereference orig/src/todo src/src/todo
 --- orig/src/todo	1970-01-01 00:00:00.000000000 +0000
-+++ src/src/todo	2023-11-28 15:20:53.000000000 +0000
++++ src/src/todo	2023-12-28 11:47:31.000000000 +0000
 @@ -0,0 +1,18 @@
 +Ask on newsgroup about making sanity checks mandatory, default, or optional
 +   Rob Landley says disable checks with CONFIG to save space

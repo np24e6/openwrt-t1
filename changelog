@@ -1,3 +1,13 @@
+# 2024-01-02 00.07.06.1
+
+### Fix
+
+* User Settings: fixed validation for changing to the same password (ID: 15870)
+* Wireless: swapped radio names of 5Ghz and 2.4Ghz radios for TCR100 (ID: 15232)
+* NTPclient: fixed zombie processes problem (ID: 16002)
+* MQTT Modbus Gateway: fixed function 5 not working with high register numbers (ID: 15568)
+* Mobile: fixed issues with VoLTE status and 5G network type in the WebUI (ID: 15915)
+
 # 2023-12-08 00.07.06
 
 ### New

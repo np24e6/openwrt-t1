@@ -94,8 +94,8 @@ define Package/xl2tpd/install
 	$(INSTALL_BIN) ./files/l2tp-up $(1)/lib/netifd/
 	$(INSTALL_BIN) ./files/l2tp-down $(1)/lib/netifd/
 
-	$(INSTALL_DIR) $(1)/etc/hotplug.d/iface/
-	$(INSTALL_BIN) ./files/19-l2tp.hotplug $(1)/etc/hotplug.d/iface/19-l2tp
+	$(INSTALL_DIR) $(1)/usr/share/l2tp
+	$(INSTALL_BIN) ./files/19-l2tp.hotplug $(1)/usr/share/l2tp/19-l2tp.hotplug
 
 endef
 

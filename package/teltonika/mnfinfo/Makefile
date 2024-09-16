@@ -7,7 +7,7 @@ include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=mnfinfo
 
-PKG_SOURCE_VERSION:=2.13
+PKG_SOURCE_VERSION:=2.14
 
 GPL_INCLUDE_HEADERS:=1
 

@@ -144,6 +144,7 @@ proto_wireguard_setup() {
 
 	ip link del dev "${config}" 2>/dev/null
 	ip link add dev "${config}" type wireguard
+	[ -e "/etc/hotplug.d/iface/18-wireguard" ] || ln -s /usr/share/wireguard/18-wireguard /etc/hotplug.d/iface/18-wireguard
 
 	if [ -z "${mtu}" ]; then
 		wan_interface="$(ip route show default | awk -F 'dev' '{print $2}' | awk 'NR==1 {print $1}')"
@@ -232,8 +233,17 @@ proto_wireguard_setup() {
 	proto_send_update "${config}"
 }
 
+count_sections(){
+	config_get proto "$1" proto
+	config_get disabled "$1" disabled
+	[ "$proto" = "wireguard" ] && [ "$disabled" != "1" ] && count=$(($count+1))
+}
+
 proto_wireguard_teardown() {
-	local config="$1"
+	local config="$1" count=0
+	config_load network
+	config_foreach count_sections interface
+	[ "$count" = 0 ] && rm /etc/hotplug.d/iface/18-wireguard &>/dev/null
 	ip link del dev "${config}" >/dev/null 2>&1	
 	if [ -e "$DEFAULT_STATUS" ] && grep -qw "$config" "$DEFAULT_STATUS" ;then
 		eval "$(tail -n +3 "$DEFAULT_STATUS")"

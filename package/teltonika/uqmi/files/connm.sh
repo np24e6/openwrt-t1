@@ -324,6 +324,7 @@ proto_connm_teardown() {
 		ip route flush table 43
 		ip route del "$bridge_ipaddr"
 		ubus call network.interface down "{\"interface\":\"mobile_bridge\"}"
+		rm -f "/tmp/dnsmasq.d/bridge" 2>/dev/null
 		rm -f "$braddr_f" 2> /dev/null
 		ethtool -r eth0
 	}
@@ -334,7 +335,6 @@ proto_connm_teardown() {
 	local zone="$(fw3 -q network "$interface" 2>/dev/null)"
 	iptables -F forwarding_${zone}_rule
 
-	rm -f "/tmp/dnsmasq.d/bridge" 2>/dev/null
 	ip neigh flush proxy
 
 	proto_init_update "*" 0

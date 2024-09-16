@@ -1,7 +1,7 @@
-Index: mwan3-2.10.12/files/etc/hotplug.d/iface/15-mwan3
+Index: mwan3-2.10.12/files/usr/share/15-mwan3
 ===================================================================
---- mwan3-2.10.12.orig/files/etc/hotplug.d/iface/15-mwan3
-+++ mwan3-2.10.12/files/etc/hotplug.d/iface/15-mwan3
+--- mwan3-2.10.12.orig/files/usr/share/15-mwan3
++++ mwan3-2.10.12/files/usr/share/15-mwan3
 @@ -79,6 +79,9 @@ case "$ACTION" in
  		[ "$ACTION" = ifup ] && procd_running mwan3 "track_$INTERFACE" && procd_send_signal mwan3 "track_$INTERFACE" USR2
  		;;

@@ -47,7 +47,10 @@ proto_l2tp_setup() {
 
 	host="${server%:*}"
 	mkdir -p /tmp/l2tp
-	[ "$defaultroute" -eq 1 ] && echo "$interface" > "/tmp/l2tp/default-status"
+	[ "$defaultroute" -eq 1 ] && {
+		echo "$interface" > "/tmp/l2tp/default-status"
+		ln -s /usr/share/l2tp/19-l2tp.hotplug /etc/hotplug.d/iface/19-l2tp
+	}
 
 	for ip in $(resolveip -t 5 "$host"); do
 		[ "$defaultroute" -eq 1 ] && {
@@ -158,7 +161,7 @@ proto_l2tp_teardown() {
 			ip route delete "$ip"
 		done
 	fi
-	[ -f "/tmp/l2tp/default-status" ] && rm "/tmp/l2tp/default-status" >/dev/null 2>&1
+	[ -f "/tmp/l2tp/default-status" ] && rm "/tmp/l2tp/default-status" "/etc/hotplug.d/iface/19-l2tp" >/dev/null 2>&1
 }
 
 [ -n "$INCLUDE_ONLY" ] || {

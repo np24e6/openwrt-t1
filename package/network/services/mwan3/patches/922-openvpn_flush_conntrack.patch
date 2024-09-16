@@ -1,5 +1,5 @@
---- a/files/etc/hotplug.d/iface/15-mwan3
-+++ b/files/etc/hotplug.d/iface/15-mwan3
+--- a/files/usr/share/15-mwan3
++++ b/files/usr/share/15-mwan3
 @@ -115,8 +115,24 @@ flush_conntrack() {
  	ipsec down "${conn_name}-${1}"
  }

@@ -3,8 +3,6 @@
 . /lib/functions.sh
 . /usr/share/libubox/jshn.sh
 
-[ -f /tmp/l2tp/default-status ] || exit 0
-
 config="$(cat /tmp/l2tp/default-status | sed '1q;d')"
 interface="$(cat /tmp/l2tp/default-status | sed '2q;d')"
 default="$(ip route show default | grep -w "$DEVICE" )"

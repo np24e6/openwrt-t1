@@ -14,13 +14,17 @@ check_tunlink_up() {
 	[ "$up" == 1 ]
 }
 
+HOTPLUG_COLD="/usr/share/gkeepalive/90-gre-keep-alive"
+HOTPLUG_ACTIVE="/etc/hotplug.d/iface/90-gre-keep-alive"
+enabled=false
 start_tunnel(){
-	local enabled proto peeraddr keep_alive keep_alive_interval dev localIP
-
+	local proto peeraddr keep_alive keep_alive_interval dev localIP
 	config_get proto "$1" "proto" ""
 	config_get disabled "$1" "disabled" "0"
 
 	[ "$disabled" != 1 -a "$proto" = "gre" ] && {
+		enabled=true
+		[ -f "$HOTPLUG_ACTIVE" ] || ln -s "$HOTPLUG_COLD" "$HOTPLUG_ACTIVE"
 
 		config_get ipaddr_tunlink "$1" "tunlink"
 		check_tunlink_up $ipaddr_tunlink || return 0
@@ -68,4 +72,5 @@ service_triggers()
 start_service() {
 	config_load 'network'
 	config_foreach start_tunnel 'interface'
+	$enabled || rm -f "$HOTPLUG_ACTIVE"
 }

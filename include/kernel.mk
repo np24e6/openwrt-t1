@@ -222,6 +222,8 @@ define KernelPackage/depends
   endef
 endef
 
+PROFILE=$(call qstrip,$(CONFIG_TARGET_PROFILE))
+
 define KernelPackage
   NAME:=$(1)
   $(eval $(call Package/Default))
@@ -229,6 +231,7 @@ define KernelPackage
   $(eval $(call KernelPackage/$(1)))
   $(eval $(call KernelPackage/$(1)/$(BOARD)))
   $(eval $(call KernelPackage/$(1)/$(BOARD)/$(if $(SUBTARGET),$(SUBTARGET),generic)))
+  $(eval $(call KernelPackage/$(1)/$(subst DEVICE_,,$(PROFILE))))
 
   define Package/kmod-$(1)
     TITLE:=$(TITLE)
@@ -241,6 +244,7 @@ define KernelPackage
     $(call KernelPackage/$(1))
     $(call KernelPackage/$(1)/$(BOARD))
     $(call KernelPackage/$(1)/$(BOARD)/$(if $(SUBTARGET),$(SUBTARGET),generic))
+    $(call KernelPackage/$(1)/$(subst DEVICE_,,$(PROFILE)))
   endef
 
   ifdef KernelPackage/$(1)/conffiles
