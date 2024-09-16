@@ -45,6 +45,17 @@ typedef enum {
 	LGSM_INFO_SIMCOUNT,
 	LGSM_INFO_BAND,
 	LGSM_INFO_CACHE,
+	LGSM_INFO_FEATURE_OPER_SCAN,
+	LGSM_INFO_FEATURE_IPV6,
+	LGSM_INFO_FEATURE_VOLTE,
+	LGSM_INFO_FEATURE_MUTLI_APN,
+	LGSM_INFO_FEATURE_DPO,
+	LGSM_INFO_FEATURE_RMNET,
+	LGSM_INFO_FEATURE_ECM,
+	LGSM_INFO_FEATURE_DYNAMIC_MTU,
+	LGSM_INFO_FEATURE_AUTO_IMS,
+	LGSM_INFO_FEATURE_DHCP_FILTER,
+	LGSM_INFO_FEATURE_EXTENDED_TIMEOUT,
 	LGSM_INFO_MAX,
 } lgsm_info_t;
 
@@ -891,6 +902,18 @@ typedef struct {
 	char serial_num[32];
 	char imei[16];
 	char imsi[16];
+	bool volte_ready;
+	bool oper_scan_support;
+	bool ipv6_support;
+	bool volte_support;
+	bool multi_apn_support;
+	bool dpo_support;
+	bool rmnet_support;
+	bool ecm_support;
+	bool dynamic_mtu_support;
+	bool auto_ims_support;
+	bool dhcp_filter_support;
+	bool extended_timeout;
 	uint32_t baudrate;
 	uint32_t simcount;
 	uint32_t ubus_obj_id;

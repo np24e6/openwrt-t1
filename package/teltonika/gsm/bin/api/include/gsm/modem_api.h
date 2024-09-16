@@ -78,6 +78,7 @@ enum pin_state_id {
 	PIN_STATE_NOT_INSERTED = 10, /*!< Simcard is not inserted */
 	PIN_STATE_SIM_FAILURE = 13, /*!< Simcard failure */
 	PIN_STATE_SIM_BUSY = 14, /*!< Simcard busy */
+	PIN_STATE_PUK_BLOCKED  = 15, /*!< Simcard PUK is blocked */
 
 	__PIN_STATE_MAX,
 };

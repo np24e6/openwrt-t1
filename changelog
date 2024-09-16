@@ -1,3 +1,24 @@
+# 2023-07-24 00.07.04.5
+  * Improvements:
+    * Mobile: improved MBN reselection algorithm when switching SIM (ID: 13360)
+    * WebUI: updated SIM slot labeling in modem card Overview page (ID: 13546)
+    * BGP: added metric field support in BGP Route-maps page (ID: 13480)
+    * Mobile: improved SIM card change detection algorithm (ID: 13355)
+    * Mobile: improved connection to operator time on RUTM51 (ID: 13305)
+    * Mobile: improved connection establishment speeds after sim switch (ID: 13027)
+  * Fix:
+    * Mobile: fixed an issue with MBN selection when device is started for the first time (ID: 13523)
+    * Mobile: fixed an APN configuration issue on RUTX50 (ID: 13322)
+    * Mobile: fixed an issue where MBN activation would not be successful (ID: 13321)
+    * Uboot-mt7621: fixed not working port LEDs on RUTM51 (ID: 13632)
+    * Mobile: fixed an issue with BG96 where SIM switch was causing a modem restart (ID: 13591)
+    * Mobile: fixed service provider parsing when operator does not provide all fields for Quectel modems (ID: 13393)
+    * Mobile: fixed TRB devices not establishing mobile connection by failing to parse MBN list (ID: 13446)
+    * Mobile: fixed a condition where mobile connection would not get established after a SIM switch (ID: 13338)
+    * Mobile: fixed an issue with sim switch causing connection problems (ID: 13027)
+    * OpenVPN: fixed firewall zone migration when upgrading from legacy firmwares (ID: 13296)
+    * Mobile: fixed device showing 5G connection when 5G connection is not established or configured (ID: 12856)
+
 # 2023-06-26 00.07.04.4
   * New:
     * Mobile: add RG500U support to modem_updater (ID: 12907)

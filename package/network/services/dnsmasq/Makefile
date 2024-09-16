@@ -42,7 +42,7 @@ define Package/dnsmasq/Default
   CATEGORY:=Base system
   TITLE:=DNS and DHCP server
   URL:=http://www.thekelleys.org.uk/dnsmasq/
-  DEPENDS:=+libubus +CORE_UI_PACKAGES:vuci-app-dhcp-ui +CORE_UI_PACKAGES:vuci-app-dns-ui
+  DEPENDS:=+libubus +CORE_UI_PACKAGES:vuci-app-dhcp-ui +CORE_UI_PACKAGES:vuci-app-dns-ui +TARGET_ramips_mt76x8_DEVICE_teltonika_tap100:libpcre
   USERID:=dnsmasq=453:dnsmasq=453
 endef
 
@@ -133,6 +133,10 @@ TARGET_LDFLAGS += -flto=jobserver
 
 COPTS = -DHAVE_UBUS -DHAVE_POLL_H \
 	$(if $(CONFIG_IPV6),,-DNO_IPV6)
+
+ifeq ($(TLT_PLATFORM_TAP100), y)
+	COPTS += -DHAVE_REGEX
+endif
 
 ifeq ($(BUILD_VARIANT),nodhcpv6)
 	COPTS += -DNO_DHCP6

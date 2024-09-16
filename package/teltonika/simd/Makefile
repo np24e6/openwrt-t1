@@ -7,7 +7,7 @@ include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=simd
 
-PKG_SOURCE_VERSION:=05772ceece40aade0a1ed32904f50d5ee10cade3
+PKG_SOURCE_VERSION:=9c1f4153250903928a2fb9df0584577c949ab287
 
 include $(INCLUDE_DIR)/package.mk
 

@@ -190,9 +190,11 @@ prepare_route_map() {
 	config_get local_preference "$section" "local_preference"
 	config_get action "$section" "action"
 	config_get metric "$section" "metric"
+	config_get sequence "$section" "sequence"
 
-	write_bgp_config "route-map $section $action $metric"
+	write_bgp_config "route-map $section $action $sequence"
 	write_if_exists write_bgp_config "  set local-preference $local_preference" "$local_preference"
+	write_if_exists write_bgp_config "  set metric $metric" "$metric"
 	write_bgp_config "!"
 }
 

@@ -4,7 +4,7 @@
 
 [ "$INTERFACE" = "lan" ] && [ "$ACTION" = "ifup" ] && {
 	network_get_ipaddr ipaddr "lan"
-	network_is_up dhcp || echo "address=/tap100.rutos.net/$ipaddr" > /tmp/dnsmasq.d/hostname
+	network_is_up dhcp || echo "address=/:tap100.rutos.net*:/$ipaddr" > /tmp/dnsmasq.d/hostname
 	/etc/init.d/dnsmasq reload
 }
 
@@ -13,11 +13,11 @@
 case "$ACTION" in
 	ifup)
 		network_get_ipaddr ipaddr "$INTERFACE"
-		echo "address=/tap100.rutos.net/$ipaddr" > /tmp/dnsmasq.d/hostname
+		echo "address=/:tap100.rutos.net*:/$ipaddr" > /tmp/dnsmasq.d/hostname
 	;;
 	ifdown)
 		network_get_ipaddr ipaddr "lan"
-		echo "address=/tap100.rutos.net/$ipaddr" > /tmp/dnsmasq.d/hostname
+		echo "address=/:tap100.rutos.net*:/$ipaddr" > /tmp/dnsmasq.d/hostname
 	;;
 esac
 

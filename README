@@ -7,7 +7,7 @@
 	You might succeed with other distributions.
 
 	It is recommended to use Docker environment to build RUTOS firmware which
-	is accessible from "RUTX_R_GPL_00.07.04.4/scripts/dockerbuild".
+	is accessible from "RUTX_R_GPL_00.07.04.5/scripts/dockerbuild".
 
 ## Building with Docker environment
 
@@ -15,12 +15,12 @@
 
 	2. Extract the GPL archive to an empty folder
 
-		$ mkdir RUTX_R_GPL_00.07.04.4
-		$ tar -xzf ~/Downloads/RUTX_R_GPL_00.07.04.4.tar.gz -C RUTX_R_GPL_00.07.04.4
+		$ mkdir RUTX_R_GPL_00.07.04.5
+		$ tar -xzf ~/Downloads/RUTX_R_GPL_00.07.04.5.tar.gz -C RUTX_R_GPL_00.07.04.5
 
 	3. Update feeds
 
-		$ cd RUTX_R_GPL_00.07.04.4
+		$ cd RUTX_R_GPL_00.07.04.5
 		$ ./scripts/dockerbuild ./scripts/feeds update -a
 
 	4. Build the image
@@ -45,12 +45,12 @@
 
 	3. Extract the GPL archive to an empty folder
 
-		$ mkdir RUTX_R_GPL_00.07.04.4
-		$ tar -xzf ~/Downloads/RUTX_R_GPL_00.07.04.4.tar.gz -C RUTX_R_GPL_00.07.04.4
+		$ mkdir RUTX_R_GPL_00.07.04.5
+		$ tar -xzf ~/Downloads/RUTX_R_GPL_00.07.04.5.tar.gz -C RUTX_R_GPL_00.07.04.5
 
 	4. Update feeds
 
-		$ cd RUTX_R_GPL_00.07.04.4
+		$ cd RUTX_R_GPL_00.07.04.5
 		$ ./scripts/feeds update -a
 
 	5. Build the image
@@ -60,6 +60,6 @@
 ## Installation
 
 	After successful build you will get the firmware file in
-		"RUTX_R_GPL_00.07.04.4/bin/targets/ipq40xx/generic/tltFws".
+		"RUTX_R_GPL_00.07.04.5/bin/targets/ipq40xx/generic/tltFws".
 
 	Update the new firmware via the web interface on your device.

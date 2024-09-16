@@ -1,0 +1,21 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+[ -f "/etc/config/frr" ] || exit 0
+
+fix_bgp_maps() {
+	local metric
+	local sequence
+	local section="$1"
+	config_get metric "$section" metric
+	config_get sequence "$section" sequence
+	if [ -n "$metric" ] && [ -z "$sequence" ]; then
+		uci_rename "frr" "$section" "metric" "sequence"
+	fi
+	
+}
+
+config_load frr
+config_foreach fix_bgp_maps route_maps
+uci_commit frr
