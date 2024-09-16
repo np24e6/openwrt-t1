@@ -1242,3 +1242,18 @@ config KERNEL_UBIFS_FS_SECURITY
 
 config KERNEL_JFFS2_FS_SECURITY
 	bool "JFFS2 Security Labels"
+
+config KERNEL_WEXT_CORE
+	bool
+
+config KERNEL_WEXT_PRIV
+	bool
+
+config KERNEL_WEXT_PROC
+	bool
+
+config KERNEL_WEXT_SPY
+	bool
+
+config KERNEL_WIRELESS_EXT
+	bool

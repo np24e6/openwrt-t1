@@ -7,52 +7,59 @@ USE_PROCD=1
 PROG="/usr/sbin/log_rotation.sh"
 
 start_service() {
-        config_load 'system'
+	config_load 'system'
 
-        local log_file
-        local log_size
-        local compress
+	local log_file
+	local log_size
+	local compress
 	local log_dir
 
-        config_get log_file system log_file
-        config_get compress system log_compress
-        config_get log_size system log_size
+	config_get log_file system log_file
+	config_get compress system log_compress
+	config_get log_size system log_size
 
-        [ -z "$log_file" ] && {
-                return 1
-        }
-	
+	[ -z "$log_file" ] && {
+		return 1
+	}
+
+	local system_size=$(df | grep -E "()/$" | awk '{print $4}')
+	local threshold=$((log_size + 200))
+	[ $system_size -lt $threshold ] && {
+		return 1
+	}
+
 	log_dir=$(dirname "${log_file}") 
 	[ -d "${log_dir}" ] || mkdir -p "${log_dir}" 
 	[ -f "${log_file}" ] || touch "${log_file}"
 
-        if [ "$compress" -eq 1 ]; then
-                compress="-c"
-        else
-                compress=
-        fi
+	if [ "$compress" -eq 1 ]; then
+		compress="-c"
+	else
+		compress=
+	fi
 
-        log_size=$((log_size * 1024))
+	log_size=$((log_size * 1024))
 
-        procd_open_instance
-        procd_set_param command /bin/sh "$PROG" -l "$log_file" \
-                                -m "/" -t 24 -s "$log_size" "$compress"
-        procd_close_instance
+	procd_open_instance
+	procd_set_param command /bin/sh "$PROG" -l "$log_file" \
+							-m "/" -t 24 -s "$log_size" "$compress"
+	procd_close_instance
+}
+
+reload_service() {
+	stop
+	start
 }
 
 service_triggers() {
-        procd_add_reload_trigger "system"
+	procd_add_reload_trigger "system"
 }
 
 stop_service() {
-        config_load 'system'
+	local log_file=$(uci -q get system.system.log_file)
+	local pid_list=$(pgrep -f "$PROG -l $log_file")
 
-        local log_file
-        config_get log_file system log_file
-
-        pid_list=$(ps | grep "$PROG" | grep "$log_file" | awk '{print $1}')
-
-        for pid in $pid_list; do
-                kill "$pid"
-        done
+	for pid in $pid_list; do
+		kill "$pid"
+	done
 }

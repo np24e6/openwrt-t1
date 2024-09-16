@@ -6,10 +6,10 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=iojuggler
-PKG_VERSION:=2023-09-01
+PKG_VERSION:=2023-12-06
 PKG_RELEASE:=1
 
-PKG_SOURCE_VERSION:=1.6
+PKG_SOURCE_VERSION:=1.7
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_SOURCE_VERSION)-$(PKG_VERSION)
 PKG_SOURCE:=$(PKG_SOURCE_SUBDIR).tar.gz
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_SOURCE_SUBDIR)
@@ -21,8 +21,8 @@ define Package/iojuggler
 	CATEGORY:=Libraries
 	TITLE:=iojuggler
 	DEPENDS:=+libubox +libblobmsg-json +libjson-c +libubus +libuci \
-		+libtlt-logger +libgsm +libcurl +iomand +libmnfinfo \
-		+libtlt_smtp +libparam +libmosquitto
+		+libtlt-logger +MOBILE_SUPPORT:libgsm +libcurl +iomand +libmnfinfo \
+		+libtlt_smtp +libparam +libmosquitto +libboardjson
 endef
 
 define Package/iojuggler/description

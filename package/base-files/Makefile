@@ -195,9 +195,9 @@ define Package/base-files/install
 		cat $(BIN_DIR)/version.buildinfo >>$(1)/etc/build.version)
 
 	$(if $(CONFIG_CLEAN_IPKG),, \
-		mkdir -p $(1)/etc/opkg; \
-		$(call FeedSourcesAppend,$(1)/etc/opkg/distfeeds.conf); \
-		$(VERSION_SED_SCRIPT) $(1)/etc/opkg/distfeeds.conf)
+		mkdir -p $(1)/etc/opkg/openwrt; \
+		$(call FeedSourcesAppend,$(1)/etc/opkg/openwrt/distfeeds.conf); \
+		$(VERSION_SED_SCRIPT) $(1)/etc/opkg/openwrt/distfeeds.conf)
 	$(if $(CONFIG_IPK_FILES_CHECKSUMS),, \
 		rm -f $(1)/sbin/pkg_check)
 
@@ -232,16 +232,18 @@ define Package/base-files/install
 	$(if $(CONFIG_RFKILL_SUPPORT),,\
 		$(RM) $(1)/etc/rc.button/rfkill)
 
+	$(if $(CONFIG_MOBILE_SUPPORT),,\
+		$(RM) $(1)/bin/board_modem)
+
 	if [ ! $(CONFIG_MOBILE_SUPPORT) ] || [ $(CONFIG_BASEBAND_SUPPORT) ]; then \
 		$(RM) $(1)/lib/preinit/82_modem_power; \
-		$(RM) $(1)/sbin/mctl $(1)/bin/board_modem; \
 	fi;
 
 	if [ ! $(CONFIG_MOBILE_SUPPORT) ] || [ ! $(CONFIG_SERIAL_SUPPORT) ]; then \
 		$(RM) $(1)/etc/init.d/rs_modem $(1)/etc/config/rs_modem; \
 	fi;
 
-	if [ ! $(CONFIG_WIFI_SUPPORT) ]; then \
+	if [ ! $(CONFIG_WIFI_SUPPORT) ] && [ ! $(CONFIG_BUILD_FACTORY_TEST_IMAGE) ]; then \
 		$(RM) $(1)/sbin/wifi; \
 	fi;
 
@@ -260,6 +262,14 @@ define Package/base-files/install
 	fi;
 
 	$(RM) $(1)/etc/config/rutx_console;
+
+	if [ $(CONFIG_BUILD_FACTORY_TEST_IMAGE) ]; then \
+		$(RM) $(1)/etc/rc.local $(1)/usr/libexec/login.sh; \
+	fi;
+
+	if [ ! $(CONFIG_SMP_SUPPORT) ]; then \
+		$(RM) $(1)/lib/functions/smp.sh; \
+	fi;
 endef
 
 ifneq ($(DUMP),1)

@@ -110,22 +110,6 @@
       }
 
     --></script>
-    <script>
-      function bindEvent2(element, eventName, eventHandler) {
-            if (element.addEventListener) {
-                  element.addEventListener(eventName, eventHandler, false);
-            } else if (element.attachEvent) {
-                  element.attachEvent('on' + eventName, eventHandler);
-            }
-      }
-
-      bindEvent2(window, 'message', function (e) {
-            if (window.location.href.indexOf(e.origin.substring(0, e.origin.lastIndexOf(':'))) !== -1 &&
-                  e.data === 'reconnect') {
-                  window.location.reload(true);
-            }
-      });
-    </script>
     <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
     <script type="text/javascript" src="ShellInABox.js"></script>
   </head>

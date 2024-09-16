@@ -1,0 +1,25 @@
+Index: hostapd-2023-09-08-e5ccbfc6/wpa_supplicant/wpa_supplicant.c
+===================================================================
+--- hostapd-2023-09-08-e5ccbfc6.orig/wpa_supplicant/wpa_supplicant.c	2023-11-06 10:40:20.723735858 +0200
++++ hostapd-2023-09-08-e5ccbfc6/wpa_supplicant/wpa_supplicant.c	2023-11-06 10:42:08.239017659 +0200
+@@ -6972,6 +6972,7 @@
+ 	struct wpa_driver_capa capa;
+ 	int capa_res;
+ 	u8 dfs_domain;
++	unsigned int band;
+ 
+ 	wpa_printf(MSG_DEBUG, "Initializing interface '%s' conf '%s' driver "
+ 		   "'%s' ctrl_interface '%s' bridge '%s'", iface->ifname,
+@@ -7343,6 +7344,12 @@
+ 
+ 	wpa_supplicant_set_default_scan_ies(wpa_s);
+ 
++	band = wpas_get_bands(wpa_s, NULL);
++
++       if (band != BAND_5_GHZ) {
++               wpa_s->scan_interval = 10;
++       }
++
+ 	return 0;
+ }
+ 

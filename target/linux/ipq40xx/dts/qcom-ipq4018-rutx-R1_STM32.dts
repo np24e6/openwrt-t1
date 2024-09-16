@@ -4,6 +4,12 @@
 	model = "RUTXR1 STM32";
 
 	soc {
+		mdio@90000 {
+			ethphy4: ethernet-phy@4 {
+				qcom,fiber-enable;
+			};
+		};
+
 		gpio-export {
 			compatible = "gpio-export";
 			#size-cells = <0>;
@@ -76,6 +82,73 @@
 				label = "mob_ssid_5";
 				gpios = <&stm32_io 11 GPIO_ACTIVE_HIGH>;
 				linux,default-trigger = "timer";
+			};
+		};
+	};
+
+	tlt_gpios { // Modify according to wiki page "DTS syntax with Libgpiod changes"
+		gpiochip_info {
+			hw_0 {
+				hwver = <0>;
+				gpiochip_count = <2>;
+
+				gpiochip_0 = <100>; // Built-in
+				gpiochip_1 = <37>;  // STM32 expander
+			};
+		};
+
+		ledman {
+			GPIO_100 {
+				compatible_versions = <0 5>;
+				line_name = "LED_SIM_1";
+			};
+			GPIO_101 {
+				compatible_versions = <0 5>;
+				line_name = "LED_SIM_2";
+			};
+			GPIO_103 {
+				compatible_versions = <0 5>;
+				line_name = "LED_WAN_ETH";
+			};
+			GPIO_116 {
+				compatible_versions = <0 5>;
+				line_name = "LED_WAN_MOB";
+			};
+			GPIO_105 {
+				compatible_versions = <0 5>;
+				line_name = "LED_TECH_GEN_3";
+			};
+			GPIO_106 {
+				compatible_versions = <0 5>;
+				line_name = "LED_TECH_GEN_4";
+			};
+			GPIO_107 {
+				compatible_versions = <0 5>;
+				line_name = "LED_SSID_1";
+			};
+			GPIO_109 {
+				compatible_versions = <0 5>;
+				line_name = "LED_SSID_3";
+			};
+			GPIO_111 {
+				compatible_versions = <0 5>;
+				line_name = "LED_SSID_5";
+			};
+		};
+
+		misc {
+			GPIO_120 {
+				compatible_versions = <0 5>;
+				line_name = "GPIO_MODEM_POWER_1";
+			};
+			GPIO_121 {
+				compatible_versions = <0 5>;
+				line_name = "GPIO_MODEM_RESET_1";
+			};
+			GPIO_122 {
+				compatible_versions = <0 5>;
+				line_name = "GPIO_SIM_SELECT";
+				active_low;
 			};
 		};
 	};

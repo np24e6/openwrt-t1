@@ -1,50 +1,55 @@
 #!/bin/sh
 . /usr/share/libubox/jshn.sh
-DEBUG_LOG="1"
-DEBUG_ECHO="0"
+
+### Static defines
+
 HOSTNAME="modemfota.teltonika-networks.com"
 SSH_PASS="u3qQo99duKeaVWr7"
-DEVICE=""
-SKIP_VALIDATION="0"
-FW_PATH="/tmp/firmware/"
-FLASHER_PATH=""
 SSHFS_PATH="/usr/bin/sshfs"
-LEGACY_MODE="0"
-TTY_PORT=""
-modem_n=""
-modem_usb_id=""
+DEVICE_PATH="/sys/bus/usb/devices/"
+
+##############################################################################
+
+### Flasher names
 MEIG_FLASHER="meig_firehose"
 MEIG_ASR_FLASHER="fbfdownloader"
 QUECTEL_FLASHER="quectel_flash"
 QUECTEL_ASR_FLASHER="QDLoader"
-JUST_LIST="0"
+
+##############################################################################
+
+### Dynamic variables
+
 PRODUCT_NAME=$(mnf_info -n | cut -b 1-4)
-CPU_NAME=$( < /proc/cpuinfo grep -e model)
-KERNEL_VERSION=$(uname -a | awk -F ' ' '{print $3}')
-current_version=$( < /etc/version awk -F '.' '{print $2 "." $3}')
+
+DEBUG_LOG="1"
+DEBUG_ECHO="0"
+
+DEVICE=""
+SKIP_VALIDATION="0"
+FW_PATH="/tmp/firmware/"
+FLASHER_PATH=""
+LEGACY_MODE="0"
+TTY_PORT=""
+MODEM_N=""
+MODEM_USB_ID=""
+JUST_LIST="0"
 USER_PATH="0"
 VERSION=""
 NEED_MODEM_RESTART="0"
 NEED_SERVICE_RESTART="0"
-device_path="/sys/bus/usb/devices/"
 
-find_modem_edl_device() {
-    sys_path=""
-    for entry in "$device_path"/*
-    do
-        #echo "$entry"
-        idVendor=$(cat "$entry/idVendor") > /dev/null 2>&1
-        [ "$idVendor" = "05c6" ] || continue
-        idProduct=$(cat "$entry/idProduct") > /dev/null 2>&1
-        [ "$idProduct" = "9008" ] || continue
-        [ "$sys_path" != "" ] && {
-            echo "[WARN] Found multiple devices in EDL mode!"
-            sys_path=""
-            return
-        }
-        echo "Found EDL device: $entry"
-        sys_path="$entry"
-    done
+##############################################################################
+
+### General Utils
+
+debug() {
+    if [ "$DEBUG_LOG" = "1" ]; then
+        logger -t "modem_updater" "$1"
+    fi
+    if [ "$DEBUG_ECHO" = "1" ]; then
+        echo "$1"
+    fi
 }
 
 exec_ubus_call() {
@@ -68,40 +73,174 @@ validate_connection()  {
     fi
 }
 
+restarted="0"
+graceful_exit() {
+
+    [ "$NEED_SERVICE_RESTART" = "1" ] && sleep 10 && start_services
+    # If we don't need to restart we just exit here
+    [ "$NEED_MODEM_RESTART" = "0" ] && exit 0
+    # Skip validation was used, we are done here
+    [ "$SKIP_VALIDATION" = "0" ] && exit 0
+
+    # Wait for modem to turn ON, if it doesn't restart it
+    # Most modems will power by themselves
+    retries=10
+    live=0
+    echo "[INFO] Waiting for modem: $MODEM_N"
+    while [ $retries != 0 ]; do
+        echo "."
+        retries=$((retries-1))
+        is_modem_live
+        [ "$live" = "1" ] && echo "Modem is responding to AT commands" && exit 0
+
+        sleep 5
+    done
+
+    result=$(mctl -r -m "$MODEM_N")
+    [ "$result" = "Unable to find specified modem" ] && {
+        echo "[INFO] Restart failed. Trying to restart default modem"
+        mctl -r
+
+        [ "$restarted" = "0" ] && {
+            restarted=1
+            NEED_SERVICE_RESTART=0
+            graceful_exit
+        }
+        echo "Looks like modem is not responsive. A system reboot may be required."
+        exit 0
+    }
+}
+
+start_services() {
+    echo "[INFO] Starting services:"
+    /etc/init.d/gsmd start
+    /etc/init.d/modem_trackd start
+    /etc/init.d/ledman start
+}
+
+stop_services() {
+    echo "[INFO] Stopping services.."
+    /etc/init.d/gsmd stop
+    /etc/init.d/modem_trackd stop
+    /etc/init.d/ledman stop
+    NEED_SERVICE_RESTART="1"
+}
+
+##############################################################################
+
+### Modem generic functions
+
+is_modem_live() {
+    result=$(gsmctl ${MODEM_N:+-N "$MODEM_N"} -A "AT")
+    case "$result" in 
+    *OK*)
+        live="1"
+        return
+        ;;
+    esac
+    live="0"
+}
+
+find_modem_edl_device() {
+    sys_path=""
+    for entry in "$DEVICE_PATH"/*
+    do
+        #echo "$entry"
+        idVendor=$(cat "$entry/idVendor") > /dev/null 2>&1
+        [ "$idVendor" = "05c6" ] || continue
+        idProduct=$(cat "$entry/idProduct") > /dev/null 2>&1
+        [ "$idProduct" = "9008" ] || continue
+        [ "$sys_path" != "" ] && {
+            echo "[WARN] Found multiple devices in EDL mode!"
+            sys_path=""
+            return
+        }
+        echo "Found EDL device: $entry"
+        sys_path="$entry"
+    done
+}
+
 get_modems() {
     echo "Modem List:"
     modem_array="$(ubus list gsm.modem* | tr "\n" " ")"
     for s in $modem_array ; do
-        modem_n="${s: -1}"
+        MODEM_N="${s: -1}"
         modem_info="$(ubus call "$s" info)"
         builtin="$(echo "$modem_info" | grep "builtin" | tr -d ' ,\"\t')"
-        exec_ubus_call "$modem_n" "get_firmware"
+        exec_ubus_call "$MODEM_N" "get_firmware"
         fwver=$(parse_from_ubus_rsp "firmware")
         usbid="$(echo "$modem_info" | grep "usb_id" | cut -d'"' -f 4)"
         name="$(echo "$modem_info" | grep "name" | cut -d'"' -f 4)"
-        echo "[$modem_n] $name | USB_ID: $usbid | Firmware: $fwver | $builtin"
+        echo "[$MODEM_N] $name | USB_ID: $usbid | Firmware: $fwver | $builtin"
         get_fw_list
     done
 }
 
-verify_modem_n() {
-    if [ "$modem_n" = "" ]; then
-        echo "[ERROR] modem_n is not set. Please use \"-i\" or \"-u\" option."
+verify_MODEM_N() {
+    if [ "$MODEM_N" = "" ]; then
+        echo "[ERROR] MODEM_N is not set. Please use \"-i\" or \"-u\" option."
         helpFunction
         graceful_exit
     fi
-    exec_ubus_call "$modem_n" "exec" "{\"command\":\"AT\"}"
-    #AT_RESULT=$(ubus call gsm.modem"$modem_n" exec {\"command\":\"AT\"}) > /dev/null 2>&1
+    exec_ubus_call "$MODEM_N" "exec" "{\"command\":\"AT\"}"
+    #AT_RESULT=$(ubus call gsm.modem"$MODEM_N" exec {\"command\":\"AT\"}) > /dev/null 2>&1
     case "$ubus_rsp" in
         *OK*)
-            debug "[INFO] $modem_n is responding to AT commands."
+            debug "[INFO] $MODEM_N is responding to AT commands."
         ;;
         *)
-            echo "[ERROR] modem_n is wrong or modem is not responding."
+            echo "[ERROR] MODEM_N is wrong or modem is not responding."
             helpFunction
             graceful_exit
     esac
 }
+
+get_MODEM_USB_ID() {
+    exec_ubus_call "$1" "info"
+    MODEM_USB_ID=$(parse_from_ubus_rsp "usb_id")
+    echo "[INFO] MODEM_USB_ID: $MODEM_USB_ID"
+}
+
+usb_id_to_MODEM_N() {
+    modem_array="$(ubus list gsm.modem* | tr "\n" " ")"
+    for s in $modem_array ; do
+        modem_info="$(ubus call "$s" info)"
+        usbid="$(echo "$modem_info" | grep "usb_id" | cut -d'"' -f 4)"
+        [ "$usbid" != "$MODEM_USB_ID" ] && continue
+        MODEM_N="${s: -1}"
+        break
+    done
+    echo "[INFO]found MODEM_N: ""$MODEM_N"""
+}
+
+find_modem_n() {
+    local get_any="$1"
+    modem_array="$(ubus list gsm.modem* | tr "\n" " ")"
+    if [ "$(echo "$modem_array" | wc -w)" = 1 ]; then
+        MODEM_N="${modem_array: -2}"
+        echo "[INFO] Detected MODEM_N: ""$MODEM_N"""
+    elif [ "$get_any" != "" ]; then
+        MODEM_N="${modem_array: -2}"
+        echo "[INFO] Detected MODEM_N: ""$MODEM_N"""
+    fi
+}
+
+confirm_modem_usb_id() {
+    local match_in_path="$1"
+    local match_id="$2"
+    case "$match_in_path" in
+        *"$match_id"*)
+            confirm_modem_usb_id_result="1"
+            ;;
+        *)
+            confirm_modem_usb_id_result="0"
+            ;;
+    esac
+}
+
+##############################################################################
+
+### SSHFS HELPERS
 
 exec_sshfs() {
     SSHFS_RESULT=$(echo $SSH_PASS | $SSHFS_PATH -p 21 rut@$HOSTNAME:/"$1" "$2" -o password_stdin 2>&1)
@@ -162,81 +301,9 @@ mount_sshfs() {
     fi
 }
 
-debug() {
-    if [ "$DEBUG_LOG" = "1" ]; then
-        logger -t "modem_updater" "$1"
-    fi
-    if [ "$DEBUG_ECHO" = "1" ]; then
-        echo "$1"
-    fi
-}
+##############################################################################
 
-is_modem_live() {
-    result=$(gsmctl ${modem_n:+-N "$modem_n"} -A "AT")
-    case "$result" in 
-    *OK*)
-        live="1"
-        return
-        ;;
-    esac
-    live="0"
-}
-
-restarted="0"
-graceful_exit() {
-
-    [ "$NEED_SERVICE_RESTART" = "1" ] && sleep 10 && start_services
-    # If we don't need to restart we just exit here
-    [ "$NEED_MODEM_RESTART" = "0" ] && exit 0
-
-    # Wait for modem to turn ON, if it doesn't restart it
-    # Most modems will power by themselves
-    retries=10
-    live=0
-    echo "[INFO] Waiting for modem: $modem_n"
-    while [ $retries != 0 ]; do
-        echo "."
-        retries=$((retries-1))
-        is_modem_live
-        [ "$live" = "1" ] && exit 0
-
-        sleep 5
-    done
-
-    result=$(mctl -r -m "$modem_n")
-    [ "$result" = "Unable to find specified modem" ] && {
-        echo "[INFO] Restart failed. Trying to restart default modem"
-        mctl -r
-
-        [ "$restarted" = "0" ] && {
-            restarted=1
-            NEED_SERVICE_RESTART=0
-            graceful_exit
-        }
-        exit 0
-    }
-}
-
-helpFunction() {
-    echo ""
-    echo "Usage: $0 -v <version> <options>."
-    printf "\t-g \t List all available modems and versions available for them.\n"
-    printf "\t-v \t <version> Modem firmware version to install.\n"
-    printf "\t-p \t <path> Specify a custom firmware path. Remote mounting with sshfs will not be used by the script.\n"
-    printf "\t-r \t <fwver> Install missing dependencies into tmp folder. (Deprecated)\n"
-    printf "\t-s \t Search for EDL devices.\n"
-    printf "\t \t Use \"-r show\" to show available versions on the server.\n"
-    printf "\t-h \t Print help.\n"
-
-    echo "auxiliary options:"
-    printf "\t-n \t <modem_n> Modem ID(number). eg.: 0, 1, 2...\n"
-    printf "\t-i \t <modem_n> Modem USB ID. eg.: 1-1 3-1 etc.\n"
-    printf "\t-f \t Force upgrade start without extra validation. USE AT YOUR OWN RISK.\n"
-    printf "\t-l \t Legacy mode for quectel modems(Fastboot).\n"
-    printf "\t-d \t <name> Manually set device Vendor (Quectel, QuectelASR, QuectelUNISOC or Meiglink, MeiglinkASR).\n"
-    printf "\t-t \t <ttyUSBx> ttyUSBx port(for legacy mode).\n"
-    printf "\t-D \t debug\n"
-}
+### Meiglink specific functions
 
 nvresultcheck() {
     case "$NV_RESULT" in
@@ -253,13 +320,42 @@ nvresultcheck() {
     NV_FAILED=0
 }
 
+retry_backup=0
+backupnvr() {
+    debug "[INFO] Meiglink device lets backup NVRAM"
+    NV_RESULT=$(gsmctl -N "$MODEM_N" -A AT+NVBURS=2)
+    exec_ubus_call "$MODEM_N" "info" 
+    nvresultcheck
+    #if no backup exists then we make one.
+    if [ $NV_FAILED = 1 ]; then
+        NV_RESULT=$(gsmctl -N "$MODEM_N" -A AT+NVBURS=0)
+        nvresultcheck
+        if [ $NV_FAILED = 1 ]; then
+            #failed to make a backup.
+            echo "[ERROR] Failed to make NV ram backup..."
+            [ "$retry_backup" = 0 ] && {
+                retry_backup=1
+                sleep 5
+                backupnvr
+            }
+            graceful_exit
+        else
+            echo "[INFO] NVRAM backup successful"
+        fi
+    fi
+}
+
+##############################################################################
+
+### Flasher functions
+
 setDevice() {
-    if [ "$modem_n" = "" ]; then
+    if [ "$MODEM_N" = "" ]; then
         echo "[ERROR] Failed to find modem."
         exit 1
     fi
 
-    exec_ubus_call "$modem_n" "info"
+    exec_ubus_call "$MODEM_N" "info"
     DEVICE=$(parse_from_ubus_rsp "manuf")
     if [ "$DEVICE" = "N/A" ]; then
         echo "[ERROR] Device manufacturer not properly recognized. Exiting.."
@@ -269,7 +365,7 @@ setDevice() {
 
     # Change Quectel to QuectelASR here
     if [ "$DEVICE" = "Quectel" ]; then
-        exec_ubus_call "$modem_n" "get_firmware"
+        exec_ubus_call "$MODEM_N" "get_firmware"
         MODEM=$(parse_from_ubus_rsp "firmware")
         case $MODEM in
         EC200*) 
@@ -284,7 +380,7 @@ setDevice() {
     fi
     # Change Meiglink to MeiglinkASR here
     if [ "$DEVICE" = "Meiglink" ]; then
-        exec_ubus_call "$modem_n" "get_firmware"
+        exec_ubus_call "$MODEM_N" "get_firmware"
         MODEM=$(parse_from_ubus_rsp "firmware")
         echo "fw: $MODEM"
         case $MODEM in
@@ -310,31 +406,6 @@ setFlasherPath() {
     fi
 }
 
-retry_backup=0
-backupnvr() {
-    debug "[INFO] Meiglink device lets backup NVRAM"
-    NV_RESULT=$(gsmctl -N "$modem_n" -A AT+NVBURS=2)
-    exec_ubus_call "$modem_n" "info" 
-    nvresultcheck
-    #if no backup exists then we make one.
-    if [ $NV_FAILED = 1 ]; then
-        NV_RESULT=$(gsmctl -N "$modem_n" -A AT+NVBURS=0)
-        nvresultcheck
-        if [ $NV_FAILED = 1 ]; then
-            #failed to make a backup.
-            echo "[ERROR] Failed to make NV ram backup..."
-            [ "$retry_backup" = 0 ] && {
-                retry_backup=1
-                sleep 5
-                backupnvr
-            }
-            graceful_exit
-        else
-            echo "[INFO] NVRAM backup successful"
-        fi
-    fi
-}
-
 get_compatible_fw_list() {
     validate_connection
     if [ "$CONNECTION_STATUS" = "INACTIVE" ]; then
@@ -350,11 +421,11 @@ get_compatible_fw_list() {
 get_fw_list() {
     setDevice
 
-    if [ "$modem_n" != "" ]; then
-        verify_modem_n
+    if [ "$MODEM_N" != "" ]; then
+        verify_MODEM_N
     fi
 
-    exec_ubus_call "$modem_n" "get_firmware"
+    exec_ubus_call "$MODEM_N" "get_firmware"
     MODEM=$(parse_from_ubus_rsp "firmware")
 
     if [ "$DEVICE" = "Quectel" ]; then
@@ -383,36 +454,6 @@ get_fw_list() {
     fi
 }
 
-get_modem_usb_id() {
-    exec_ubus_call "$1" "info"
-    modem_usb_id=$(parse_from_ubus_rsp "usb_id")
-    echo "[INFO] modem_usb_id: $modem_usb_id"
-}
-
-usb_id_to_modem_n() {
-    modem_array="$(ubus list gsm.modem* | tr "\n" " ")"
-    for s in $modem_array ; do
-        modem_info="$(ubus call "$s" info)"
-        usbid="$(echo "$modem_info" | grep "usb_id" | cut -d'"' -f 4)"
-        [ "$usbid" != "$modem_usb_id" ] && continue
-        modem_n="${s: -1}"
-        break
-    done
-    echo "[INFO]found modem_n: ""$modem_n"""
-}
-
-find_modem_n() {
-    local get_any="$1"
-    modem_array="$(ubus list gsm.modem* | tr "\n" " ")"
-    if [ "$(echo "$modem_array" | wc -w)" = 1 ]; then
-        modem_n="${modem_array: -2}"
-        echo "[INFO] Detected modem_n: ""$modem_n"""
-    elif [ "$get_any" != "" ]; then
-        modem_n="${modem_array: -2}"
-        echo "[INFO] Detected modem_n: ""$modem_n"""
-    fi
-}
-
 # Returns 0 if firmware can not be upgraded due to embargo
 check_blocked() {
     local current_firmware="$1"
@@ -429,6 +470,10 @@ check_blocked() {
     return 1
 }
 
+##############################################################################
+
+### Common validation method (used for all devices)
+
 common_validation() {
     if [ "$VERSION" = "" ] &&
     [ "$USER_PATH" = "0" ]; then
@@ -444,10 +489,10 @@ common_validation() {
         graceful_exit
     fi
 
-    if [ "$modem_n" = "" ]; then
+    if [ "$MODEM_N" = "" ]; then
         #TODO: Get it automatically. If cant then or multiple then error.
         find_modem_n
-        if [ "$modem_n" = "" ]; then
+        if [ "$MODEM_N" = "" ] && [ "$SKIP_VALIDATION" = "0" ]; then
             echo "[ERROR] Cannot find modem_n automatically. "
             helpFunction
             graceful_exit
@@ -455,13 +500,13 @@ common_validation() {
     fi
 
     if [ "$SKIP_VALIDATION" = "0" ]; then
-        verify_modem_n
+        verify_MODEM_N
     fi
 
-    if [ "$modem_usb_id" = "" ]; then
-        get_modem_usb_id "$modem_n"
-        if [ "$modem_usb_id" = "" ]; then
-            echo "[ERROR] Could not get modem_usb_id automatically."
+    if [ "$MODEM_USB_ID" = "" ]; then
+        get_MODEM_USB_ID "$MODEM_N"
+        if [ "$MODEM_USB_ID" = "" ]; then
+            echo "[ERROR] Could not get MODEM_USB_ID automatically."
             helpFunction
             graceful_exit
         fi
@@ -483,7 +528,7 @@ common_validation() {
 
     if [ "$SKIP_VALIDATION" = "0" ] &&
     [ "$VERSION" != "" ]; then
-        exec_ubus_call "$modem_n" "get_firmware"
+        exec_ubus_call "$MODEM_N" "get_firmware"
         MODEM_FW=$(parse_from_ubus_rsp "firmware")
         case "$MODEM_FW" in
             *$VERSION* )
@@ -493,7 +538,7 @@ common_validation() {
         esac
         #Quectel
         if [ "$DEVICE" = "Quectel" ]; then
-            exec_ubus_call "$modem_n" "get_firmware"
+            exec_ubus_call "$MODEM_N" "get_firmware"
             DEV_MOD=$(parse_from_ubus_rsp "firmware" | cut -c 1-8)
             if [ "$DEV_MODULE" != "$DEV_MOD" ]; then
                 [ "$(echo "$DEV_MODULE" | cut -c 1-4)" != "$(echo "$DEV_MOD" | cut -c 1-4)" ] ||
@@ -510,7 +555,7 @@ common_validation() {
         fi
         #Meiglink
         if [ "$DEVICE" = "Meiglink" ]; then
-            exec_ubus_call "$modem_n" "get_firmware"
+            exec_ubus_call "$MODEM_N" "get_firmware"
             DEV_MOD=$(parse_from_ubus_rsp "firmware" | head -c 6)
             DEV_MODULE=$(echo "$VERSION" | cut -c 1-6 | tr -d _)
             if [ "$DEV_MODULE" != "$DEV_MOD" ]; then
@@ -520,32 +565,28 @@ common_validation() {
             fi
         fi
     fi
-
 }
 
-confirm_modem_usb_id() {
-    local match_in_path="$1"
-    local match_id="$2"
-    case "$match_in_path" in
-        *"$match_id"*)
-            confirm_modem_usb_id_result="1"
-            ;;
-        *)
-            confirm_modem_usb_id_result="0"
-            ;;
-    esac
-    
-}
+##############################################################################
+
+### Generic methods (Mainly for Qualcomm devices)
 
 generic_validation()  {
+    #User has specified tty port for non legacy mode (it will not be used)
     if [ "$TTY_PORT" != "" ] &&
     [ "$LEGACY_MODE" = "0" ]; then
         echo "[WARN] Warning you specified ttyUSB port but it will not be used for non legacy(fastboot) flash!"
     fi
-      
+    
+    #Legacy mode is only for Quectel modems
     if [ "$LEGACY_MODE" = "1" ] && [ "$DEVICE" != "Quectel" ]; then
         echo "[ERROR] Legacy mode only supported for Quectel routers."
         graceful_exit
+    fi
+
+    #Legacy mode requires specified ttyUSB port
+    if [ "$LEGACY_MODE" = "1" ] && [ "$DEVICE" = "Quectel" ] && [ "$TTY_PORT" = "" ]; then
+        echo "[ERROR] ttyUSB port not specified. The detection will be done by QFlash."
     fi
     
     setFlasherPath
@@ -557,27 +598,12 @@ generic_validation()  {
     fi
 }
 
-start_services() {
-    echo "[INFO] Starting services:"
-    /etc/init.d/gsmd start
-    /etc/init.d/modem_trackd start
-    /etc/init.d/ledman start
-}
-
-stop_services() {
-    echo "[INFO] Stopping services.."
-    /etc/init.d/gsmd stop
-    /etc/init.d/modem_trackd stop
-    /etc/init.d/ledman stop
-    NEED_SERVICE_RESTART="1"
-}
-
 generic_prep()  {
     /etc/init.d/modem_trackd stop
     NEED_SERVICE_RESTART="1"
     
     #backup NVRAM
-    #its in the flasher now, but just in case..
+    #it is done in the flasher now, but just in case..
     if [ "$DEVICE" = "Meiglink" ] && [ "$SKIP_VALIDATION" = "0" ]; then
         backupnvr
     fi
@@ -585,12 +611,12 @@ generic_prep()  {
     #go into edl/disable mobile connection.
     if [ $LEGACY_MODE = "0" ]; then
         if [ "$DEVICE" = "Quectel" ]; then
-            $FLASHER_PATH qfirehose -x ${modem_usb_id:+-s /sys/bus/usb/devices/"$modem_usb_id"}
+            $FLASHER_PATH qfirehose -x ${MODEM_USB_ID:+-s /sys/bus/usb/devices/"$MODEM_USB_ID"}
         elif [ "$DEVICE" = "Meiglink" ]; then
-            $FLASHER_PATH -x ${modem_usb_id:+-s /sys/bus/usb/devices/"$modem_usb_id"}
+            $FLASHER_PATH -x ${MODEM_USB_ID:+-s /sys/bus/usb/devices/"$MODEM_USB_ID"}
         fi
     else
-        gsmctl ${modem_n:+-N "$modem_n"} -A "AT+CFUN=0"
+        gsmctl ${MODEM_N:+-N "$MODEM_N"} -A "AT+CFUN=0"
     fi
     NEED_MODEM_RESTART="1"
 
@@ -617,7 +643,7 @@ generic_prep()  {
     if [ "$DEVICE" = "Quectel" ] &&
     [ $LEGACY_MODE = "0" ] &&
     [ -z "$(ls -A $FW_PATH/update/firehose/)" ]; then
-        echo "[ERROR] No firehose folder found. Either the firmware is not right or you must use legacy(fastboot) mode"  
+        echo "[ERROR] No firehose folder found. Either the firmware is not right or you must use legacy mode (-l option)"  
         if [ "$USER_PATH" = "0" ]; then
             umount "$FW_PATH"
         fi
@@ -630,21 +656,21 @@ generic_prep()  {
 
 generic_flash()  {
     if [ "$DEVICE" = "Meiglink" ]; then
-        $FLASHER_PATH -d -f "$FW_PATH" ${modem_usb_id:+-s /sys/bus/usb/devices/"$modem_usb_id"}
+        $FLASHER_PATH -d -f "$FW_PATH" ${MODEM_USB_ID:+-s /sys/bus/usb/devices/"$MODEM_USB_ID"}
     fi
     
     if [ "$DEVICE" = "Quectel" ]; then
         if [ $LEGACY_MODE = "1" ]; then
             #fastboot
-            $FLASHER_PATH -v -m2 -f "$FW_PATH" ${TTY_PORT:+-p "$TTY_PORT"}
+            $FLASHER_PATH -v -m1 -f "$FW_PATH" ${TTY_PORT:+-p "$TTY_PORT"}
         else
             #firehose
             find_modem_edl_device
-            [ "$sys_path" != "" ] && confirm_modem_usb_id "$sys_path" "$modem_usb_id"            
+            [ "$sys_path" != "" ] && confirm_modem_usb_id "$sys_path" "$MODEM_USB_ID"            
             if [ "$confirm_modem_usb_id_result" == "0" ]; then
                 $FLASHER_PATH qfirehose -n -f "$FW_PATH/update/firehose/" ${sys_path:+-s $sys_path}
             else #"" and "1"
-                $FLASHER_PATH qfirehose -n -f "$FW_PATH/update/firehose/" ${modem_usb_id:+-s /sys/bus/usb/devices/"$modem_usb_id"}
+                $FLASHER_PATH qfirehose -n -f "$FW_PATH/update/firehose/" ${MODEM_USB_ID:+-s /sys/bus/usb/devices/"$MODEM_USB_ID"}
             fi
         fi
     fi
@@ -668,6 +694,10 @@ generic_start()  {
     echo "Starting flasher..."
     generic_flash
 }
+
+##############################################################################
+
+### TRB modem specific flashing functions
 
 trb_validation()  {
     if [ "$USER_PATH" = "1" ]; then
@@ -719,6 +749,10 @@ trb_start()  {
     echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
     trb_flash
 }
+
+##############################################################################
+
+### ASR modem flashing function
 
 ASR_validation() {
     if [ "$TTY_PORT" != "" ] &&
@@ -780,7 +814,7 @@ ASR_prep() {
 
     #We need to turn on EDL mode via AT command
     if [ "$DEVICE" = "MeiglinkASR" ]; then
-        gsmctl ${modem_n:+-N "$modem_n"} -A "AT+MEIGEDL"
+        gsmctl ${MODEM_N:+-N "$MODEM_N"} -A "AT+MEIGEDL"
         NEED_MODEM_RESTART="1" 
     fi
 
@@ -801,6 +835,31 @@ ASR_start() {
     ASR_flash
 }
 
+##############################################################################
+
+helpFunction() {
+    echo ""
+    echo "Usage: $0 -v <version> <options>."
+    printf "\t-g \t List all available modems and versions available for them.\n"
+    printf "\t-v \t <version> Modem firmware version to install.\n"
+    printf "\t-p \t <path> Specify a custom firmware path. Remote mounting with sshfs will not be used by the script.\n"
+    printf "\t-r \t <fwver> Install missing dependencies into tmp folder. (Deprecated)\n"
+    printf "\t-s \t Search for EDL devices.\n"
+    printf "\t \t Use \"-r show\" to show available versions on the server.\n"
+    printf "\t-h \t Print help.\n"
+
+    echo "auxiliary options:"
+    printf "\t-n \t <MODEM_N> Modem ID(number). eg.: 0, 1, 2...\n"
+    printf "\t-i \t <MODEM_N> Modem USB ID. eg.: 1-1 3-1 etc.\n"
+    printf "\t-f \t Force upgrade start without extra validation. USE AT YOUR OWN RISK.\n"
+    printf "\t-l \t Legacy mode for quectel modems(Fastboot).\n"
+    printf "\t-d \t <name> Manually set device Vendor (Quectel, QuectelASR, QuectelUNISOC or Meiglink, MeiglinkASR).\n"
+    printf "\t-t \t <ttyUSBx> ttyUSBx port(for legacy mode).\n"
+    printf "\t-D \t debug\n"
+}
+
+### Entry point
+
 while [ -n "$1" ]; do
 	case "$1" in
 		-h) helpFunction
@@ -820,9 +879,9 @@ while [ -n "$1" ]; do
         ;;
 		-n) shift
             if [ "$1" != "" ]; then
-                modem_n="$1"
+                MODEM_N="$1"
             else
-                echo "[ERROR] modem_n not specified."
+                echo "[ERROR] MODEM_N not specified."
                 helpFunction
                 graceful_exit
             fi
@@ -873,10 +932,10 @@ while [ -n "$1" ]; do
         ;;
         -i) shift
             if [ "$1" != "" ]; then
-                modem_usb_id="$1"
-                usb_id_to_modem_n
+                MODEM_USB_ID="$1"
+                usb_id_to_MODEM_N
             else
-                echo "[ERROR] modem_usb_id option used but modem_usb_id not specified?"
+                echo "[ERROR] MODEM_USB_ID option used but MODEM_USB_ID not specified?"
                 helpFunction
                 graceful_exit
             fi
@@ -898,8 +957,8 @@ while [ -n "$1" ]; do
 	shift;
 done
 
-if [ "$modem_n" = "" ]; then
-    find_modem_n
+if [ "$MODEM_N" = "" ]; then
+    [ "$SKIP_VALIDATION" = "0" ] && find_modem_n
 fi
 
 if [ "$JUST_REQUIREMENTS" = "1" ]; then

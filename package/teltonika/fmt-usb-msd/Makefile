@@ -24,9 +24,8 @@ endef
 
 
 define Package/$(PKG_NAME)/install
-	$(INSTALL_DIR) $(1)/bin $(1)/etc/hotplug.d/block
+	$(INSTALL_DIR) $(1)/bin
 	$(INSTALL_BIN) ./files/$(PKG_NAME).sh $(1)/bin/
-	$(INSTALL_BIN) ./files/$(PKG_NAME)_last.sh $(1)/etc/hotplug.d/block/
 endef
 
 $(eval $(call BuildPackage,$(PKG_NAME)))

@@ -6,10 +6,10 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=log_rotation
-PKG_VERSION:=2023-08-31
+PKG_VERSION:=2023-11-10
 PKG_RELEASE:=1
 
-PKG_SOURCE_VERSION:=1.2
+PKG_SOURCE_VERSION:=1.3
 
 include $(INCLUDE_DIR)/package.mk
 

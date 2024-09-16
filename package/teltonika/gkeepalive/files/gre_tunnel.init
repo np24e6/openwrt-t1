@@ -6,6 +6,13 @@ STOP=01
 
 . /lib/functions.sh
 . /lib/functions/network.sh
+. /usr/share/libubox/jshn.sh
+
+check_tunlink_up() {
+	json_load "$(ifstatus "$1")"
+	json_get_var up up
+	[ "$up" == 1 ]
+}
 
 start_tunnel(){
 	local enabled proto peeraddr keep_alive keep_alive_interval dev localIP
@@ -15,31 +22,47 @@ start_tunnel(){
 
 	[ "$disabled" != 1 -a "$proto" = "gre" ] && {
 
-		config_get peeraddr "$1" "peeraddr" ""
-		config_get keep_alive "$1" "keep_alive" "0"
-		[ "$keep_alive" = "0" ] && return 1
-		config_get keep_alive_interval "$1" "keep_alive_interval" "10"
-		dev="gre4-$1"
 		config_get ipaddr_tunlink "$1" "tunlink"
-
+		check_tunlink_up $ipaddr_tunlink || return 0
 		network_get_device t_source_interface $ipaddr_tunlink
+		[ -z "$t_source_interface" ] && return 0
+
+		config_get peeraddr "$1" "peeraddr" ""
+		[ -z "$peeraddr" ] && return 0
+		config_get keep_alive "$1" "keep_alive" "0"
+		config_get keep_alive_interval "$1" "keep_alive_interval" "10"
+		config_get keep_alive_fail_count "$1" "keep_alive_retries" "3"
 
 		procd_open_instance "$1"
 		
+		procd_set_param command gkeepalive --bind_interface "$t_source_interface"
 		if [ "$keep_alive" = "1" ]; then
-			procd_set_param command gkeepalive $t_source_interface send $peeraddr $keep_alive_interval
-		else
-			procd_set_param command gkeepalive $t_source_interface
+			procd_append_param command --remote_ip "$peeraddr"
+			procd_append_param command --send
+			procd_append_param command --gre_interface "$1"
+			procd_append_param command --interval "$keep_alive_interval"
+			procd_append_param command --fail_count "$keep_alive_fail_count"
 		fi
-
+		procd_set_param term_timeout 0
 		procd_set_param respawn
 		procd_close_instance
+	}
+}
+
+tunnel_triggers()
+{
+	local proto tunlink
+	config_get proto "$1" "proto" ""
+	config_get tunlink "$1" "tunlink" ""
+	[ "$proto" = "gre" ] && {
+		procd_add_reload_interface_trigger "$tunlink"
 	}
 }
 
 service_triggers()
 {
 	procd_add_reload_trigger "network"
+	config_foreach tunnel_triggers 'interface'
 }
 
 start_service() {

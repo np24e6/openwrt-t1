@@ -1,8 +1,11 @@
-Index: linux-5.10.185/drivers/net/usb/qmi_wwan.c
-===================================================================
---- linux-5.10.185.orig/drivers/net/usb/qmi_wwan.c
-+++ linux-5.10.185/drivers/net/usb/qmi_wwan.c
-@@ -693,7 +693,7 @@ static int qmi_wwan_rx_fixup(struct usbn
+qmi_wwan driver, when in qmux mode, tries to rx aggregate skbs through wwan* usb_interface,
+this appears as constant increase in rx errors on wwan* and a slight performance penalty.
+Ideally, we could just add FLAG_MULTI_PACKET flag to qmi_wwan, but since the subdriver basically
+2 different drivers in one, some usbnet hacking is required.
+
+--- a/drivers/net/usb/qmi_wwan.c
++++ b/drivers/net/usb/qmi_wwan.c
+@@ -903,7 +903,7 @@ static int qmi_wwan_rx_fixup(struct usbn
  		if (rawip)
  			return 0;
  		if (is_multicast_ether_addr(skb->data))
@@ -11,7 +14,7 @@ Index: linux-5.10.185/drivers/net/usb/qmi_wwan.c
  		/* possibly bogus destination - rewrite just in case */
  		skb_reset_mac_header(skb);
  		goto fix_dest;
-@@ -701,13 +701,13 @@ static int qmi_wwan_rx_fixup(struct usbn
+@@ -911,13 +911,13 @@ static int qmi_wwan_rx_fixup(struct usbn
  		if (rawip)
  			return 0;
  		/* pass along other packets without modifications */
@@ -27,7 +30,7 @@ Index: linux-5.10.185/drivers/net/usb/qmi_wwan.c
  	}
  
  	if (skb_headroom(skb) < ETH_HLEN)
-@@ -718,7 +718,9 @@ static int qmi_wwan_rx_fixup(struct usbn
+@@ -928,7 +928,9 @@ static int qmi_wwan_rx_fixup(struct usbn
  	eth_zero_addr(eth_hdr(skb)->h_source);
  fix_dest:
  	memcpy(eth_hdr(skb)->h_dest, dev->net->dev_addr, ETH_ALEN);
@@ -38,7 +41,7 @@ Index: linux-5.10.185/drivers/net/usb/qmi_wwan.c
  }
  
  /* very simplistic detection of IPv4 or IPv6 headers */
-@@ -1037,7 +1039,7 @@ err:
+@@ -1264,7 +1266,7 @@ err:
  
  static const struct driver_info	qmi_wwan_info = {
  	.description	= "WWAN/QMI device",
@@ -47,7 +50,7 @@ Index: linux-5.10.185/drivers/net/usb/qmi_wwan.c
  	.bind		= qmi_wwan_bind,
  	.unbind		= qmi_wwan_unbind,
  	.manage_power	= qmi_wwan_manage_power,
-@@ -1046,7 +1048,7 @@ static const struct driver_info	qmi_wwan
+@@ -1273,7 +1275,7 @@ static const struct driver_info	qmi_wwan
  
  static const struct driver_info	qmi_wwan_info_quirk_dtr = {
  	.description	= "WWAN/QMI device",
@@ -56,7 +59,7 @@ Index: linux-5.10.185/drivers/net/usb/qmi_wwan.c
  	.bind		= qmi_wwan_bind,
  	.unbind		= qmi_wwan_unbind,
  	.manage_power	= qmi_wwan_manage_power,
-@@ -1056,7 +1058,7 @@ static const struct driver_info	qmi_wwan
+@@ -1283,7 +1285,7 @@ static const struct driver_info	qmi_wwan
  
  static const struct driver_info qmi_wwan_info_quirk_dtr_sdx55 = {
  	.description    = "WWAN/QMI device",
@@ -65,10 +68,8 @@ Index: linux-5.10.185/drivers/net/usb/qmi_wwan.c
  	.bind           = qmi_wwan_bind,
  	.unbind         = qmi_wwan_unbind,
  	.manage_power   = qmi_wwan_manage_power,
-Index: linux-5.10.185/drivers/net/usb/usbnet.c
-===================================================================
---- linux-5.10.185.orig/drivers/net/usb/usbnet.c
-+++ linux-5.10.185/drivers/net/usb/usbnet.c
+--- a/drivers/net/usb/usbnet.c
++++ b/drivers/net/usb/usbnet.c
 @@ -542,8 +542,10 @@ static int rx_submit (struct usbnet *dev
  
  static inline int rx_process(struct usbnet *dev, struct sk_buff *skb)

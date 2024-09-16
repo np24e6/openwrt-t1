@@ -1,7 +1,7 @@
-Index: linux-5.10.191/drivers/net/usb/qmi_wwan.c
+Index: linux-5.10.198/drivers/net/usb/qmi_wwan.c
 ===================================================================
---- linux-5.10.191.orig/drivers/net/usb/qmi_wwan.c
-+++ linux-5.10.191/drivers/net/usb/qmi_wwan.c
+--- linux-5.10.198.orig/drivers/net/usb/qmi_wwan.c
++++ linux-5.10.198/drivers/net/usb/qmi_wwan.c
 @@ -47,6 +47,15 @@
   * commands on a serial interface
   */
@@ -195,7 +195,7 @@ Index: linux-5.10.191/drivers/net/usb/qmi_wwan.c
  }
  
  static struct net_device *qmimux_find_dev(struct usbnet *dev, u8 mux_id)
-@@ -412,6 +535,25 @@ static struct attribute_group qmi_wwan_s
+@@ -401,6 +527,25 @@ static struct attribute_group qmi_wwan_s
  	.attrs = qmi_wwan_sysfs_qmimux_attrs,
  };
  
@@ -221,7 +221,7 @@ Index: linux-5.10.191/drivers/net/usb/qmi_wwan.c
  static int qmimux_register_device(struct net_device *real_dev, u8 mux_id, int qmap_v5)
  {
  	struct net_device *new_dev;
-@@ -639,14 +781,82 @@ err:
+@@ -628,14 +773,82 @@ err:
  	return ret;
  }
  
@@ -304,7 +304,7 @@ Index: linux-5.10.191/drivers/net/usb/qmi_wwan.c
  	NULL,
  };
  
-@@ -869,10 +1079,16 @@ static int qmi_wwan_bind(struct usbnet *
+@@ -856,10 +1069,16 @@ static int qmi_wwan_bind(struct usbnet *
  	struct usb_driver *driver = driver_of(intf);
  	struct qmi_wwan_state *info = (void *)&dev->data;
  	struct usb_cdc_parsed_header hdr;
@@ -321,7 +321,7 @@ Index: linux-5.10.191/drivers/net/usb/qmi_wwan.c
  	/* set up initial state */
  	info->control = intf;
  	info->data = intf;
-@@ -941,6 +1157,13 @@ static int qmi_wwan_bind(struct usbnet *
+@@ -928,6 +1147,13 @@ static int qmi_wwan_bind(struct usbnet *
  		qmi_wwan_change_dtr(dev, true);
  	}
  
@@ -335,7 +335,7 @@ Index: linux-5.10.191/drivers/net/usb/qmi_wwan.c
  	/* Never use the same address on both ends of the link, even if the
  	 * buggy firmware told us to. Or, if device is assigned the well-known
  	 * buggy firmware MAC address, replace it with a random address,
-@@ -972,6 +1195,10 @@ static void qmi_wwan_unbind(struct usbne
+@@ -959,6 +1185,10 @@ static void qmi_wwan_unbind(struct usbne
  	struct qmi_wwan_state *info = (void *)&dev->data;
  	struct usb_driver *driver = driver_of(intf);
  	struct usb_interface *other;

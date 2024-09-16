@@ -20,12 +20,9 @@
 
 #include "chilli.h"
 #include "bstrlib.h"
-#include "ubus.h"
 #ifdef ENABLE_MODULES
 #include "chilli_module.h"
 #endif
-
-
 
 struct tun_t *tun;                /* TUN instance            */
 struct ippool_t *ippool;          /* Pool of IP addresses */
@@ -44,9 +41,6 @@ struct app_conn_t *lastfreeconn=0;  /* Last free in linked list */
 struct app_conn_t *firstusedconn=0; /* First used in linked list */
 struct app_conn_t *lastusedconn=0;  /* Last used in linked list */
 struct app_conn_t admin_session;
-
-struct ubus_context *g_ubus_event_ctx; /* Ubus for sending events
-                                          about connected/disconnected clients */
 
 struct timespec mainclock;
 time_t checktime;
@@ -85,8 +79,6 @@ static pid_t radsec_pid = 0;
 #ifdef ENABLE_CHILLIREDIR
 static pid_t redir_pid = 0;
 #endif
-
-
 
 typedef struct child {
   pid_t pid;
@@ -471,7 +463,7 @@ time_t mainclock_tick() {
 #ifdef HAVE_LIBRT
   struct timespec ts;
 #if defined(CLOCK_MONOTONIC)
-  clockid_t cid = _options.testtime ? CLOCK_REALTIME : CLOCK_MONOTONIC;
+  clockid_t cid = CLOCK_MONOTONIC;
 #else
   clockid_t cid = CLOCK_REALTIME;
 #endif
@@ -826,7 +818,6 @@ int runscript(struct app_conn_t *appconn, char* script,
   set_env("COOVACHILLI_MAX_INPUT_OCTETS", VAL_ULONG64, &appconn->s_params.maxinputoctets, 0);
   set_env("COOVACHILLI_MAX_OUTPUT_OCTETS", VAL_ULONG64, &appconn->s_params.maxoutputoctets, 0);
   set_env("COOVACHILLI_MAX_TOTAL_OCTETS", VAL_ULONG64, &appconn->s_params.maxtotaloctets, 0);
-  set_env("COOVACHILLI_WARNING_OCTETS", VAL_ULONG64, &appconn->s_params.warningoctets, 0);
   set_env("INPUT_OCTETS", VAL_ULONG64, &appconn->s_state.input_octets, 0);
   set_env("OUTPUT_OCTETS", VAL_ULONG64, &appconn->s_state.output_octets, 0);
   set_env("INPUT_PACKETS", VAL_ULONG64, &appconn->s_state.input_packets, 0);
@@ -1046,7 +1037,6 @@ int chilli_getconn(struct app_conn_t **conn, uint32_t ip,
 
 static int dnprot_terminate(struct app_conn_t *appconn) {
   appconn->s_state.authenticated = 0;
-  send_ubus_event(g_ubus_event_ctx, CHILLI_EVENT_DISCONNECT, appconn, NULL);
 #ifdef ENABLE_SESSIONSTATE
   appconn->s_state.session_state = 0;
 #endif
@@ -1095,25 +1085,7 @@ static int dnprot_terminate(struct app_conn_t *appconn) {
   return 0;
 }
 
-#ifdef ENABLE_GSM
-int send_warning_sms(uint64_t used, uint64_t warning, uint64_t limit, char *direction, char *phone)
-{
-	if (!limit || used < warning) {
-		// Only return 0 on successful SMS send.
-		return -1;
-	}
 
-	char sms_text[256] = { 0 };
-	float left	   = (used > limit) ? 0 : (float)(limit - used) / 1000000.f;
-
-	sprintf(sms_text, WARNING_FMT, direction, left, "MB");
-	syslog(LOG_INFO, "%s(%d): Sending SMS: %s\n", __FUNCTION__, __LINE__, sms_text);
-
-	chilli_send_sms_async(phone, sms_text, _options.modemid);
-
-	return 0;
-}
-#endif
 
 /* Check for:
  * - Session-Timeout
@@ -1132,50 +1104,12 @@ void session_interval(struct app_conn_t *conn) {
   interimtime = mainclock_diffu(conn->s_state.interim_time);
 
   if (conn->s_state.authenticated == 1) {
-#ifdef ENABLE_GSM
-#if(_debug_ > 1)
-	  if (conn->s_params.maxinputoctets > conn->s_state.input_octets)
-		  syslog(LOG_INFO, "warning_sent_download %d | download used %.1f left %.1f",
-			 conn->s_state.warning_sent_download, (float)conn->s_state.input_octets / 1000000.f,
-			 (float)(conn->s_params.maxinputoctets - conn->s_state.input_octets) / 1000000.f);
-	  if (conn->s_params.maxoutputoctets > conn->s_state.output_octets)
-		  syslog(LOG_INFO, "  warning_sent_upload %d |   upload used %.1f left %.1f",
-			 conn->s_state.warning_sent_upload, (float)conn->s_state.output_octets / 1000000.f,
-			 (float)(conn->s_params.maxoutputoctets - conn->s_state.output_octets) / 1000000.f);
-#endif
-
-	  if (conn->s_params.warningoctets > 0 && !conn->s_state.warning_sent_download &&
-	      !send_warning_sms(conn->s_state.input_octets, conn->s_params.warningoctets,
-				 conn->s_params.maxinputoctets, "download", conn->s_state.redir.phone)) {
-		  conn->s_state.warning_sent_download = 1;
-	  }
-
-	  if (conn->s_params.warningoctets > 0 && !conn->s_state.warning_sent_upload &&
-	      !send_warning_sms(conn->s_state.output_octets, conn->s_params.warningoctets,
-				 conn->s_params.maxoutputoctets, "upload", conn->s_state.redir.phone)) {
-		  conn->s_state.warning_sent_upload = 1;
-	  }
-#endif
-
     if ((conn->s_params.sessiontimeout) &&
 	(sessiontime > conn->s_params.sessiontimeout)) {
 #ifdef ENABLE_SESSIONSTATE
       conn->s_state.session_state =
           RADIUS_VALUE_COOVACHILLI_SESSION_TIMEOUT_REACHED;
 #endif
-      conn->s_state.terminate_cause_ui = RADIUS_VALUE_COOVACHILLI_SESSION_TIMEOUT_REACHED;
-      terminate_appconn(conn, RADIUS_TERMINATE_CAUSE_SESSION_TIMEOUT);
-    }
-    else if (conn->s_params.expiration &&
-			 (conn->s_state.redir.auth_mode == AUTH_DYN_USER ||
-			  conn->s_state.redir.auth_mode == AUTH_SMS_USER) &&
-			 (sessiontime + conn->s_state.redir.user_time > conn->s_params.expiration))
-    {
-#ifdef ENABLE_SESSIONSTATE
-      conn->s_state.session_state =
-          RADIUS_VALUE_COOVACHILLI_SESSION_TIMEOUT_REACHED;
-#endif
-      conn->s_state.terminate_cause_ui = RADIUS_VALUE_COOVACHILLI_SESSION_USER_EXPIRED;
       terminate_appconn(conn, RADIUS_TERMINATE_CAUSE_SESSION_TIMEOUT);
     }
     else if ((conn->s_params.sessionterminatetime) &&
@@ -1184,8 +1118,6 @@ void session_interval(struct app_conn_t *conn) {
       conn->s_state.session_state =
           RADIUS_VALUE_COOVACHILLI_SESSION_LOGOUT_TIME_REACHED;
 #endif
-      conn->s_state.terminate_cause_ui =
-              RADIUS_VALUE_COOVACHILLI_SESSION_LOGOUT_TIME_REACHED;
       terminate_appconn(conn, RADIUS_TERMINATE_CAUSE_SESSION_TIMEOUT);
     }
     else if ((conn->s_params.idletimeout) &&
@@ -1194,8 +1126,6 @@ void session_interval(struct app_conn_t *conn) {
       conn->s_state.session_state =
           RADIUS_VALUE_COOVACHILLI_SESSION_IDLE_TIMEOUT_REACHED;
 #endif
-      conn->s_state.terminate_cause_ui =
-              RADIUS_VALUE_COOVACHILLI_SESSION_IDLE_TIMEOUT_REACHED;
       terminate_appconn(conn, RADIUS_TERMINATE_CAUSE_IDLE_TIMEOUT);
     }
     else if ((conn->s_params.maxinputoctets) &&
@@ -1204,8 +1134,6 @@ void session_interval(struct app_conn_t *conn) {
       conn->s_state.session_state =
           RADIUS_VALUE_COOVACHILLI_SESSION_IN_DATALIMIT_REACHED;
 #endif
-      conn->s_state.terminate_cause_ui =
-              RADIUS_VALUE_COOVACHILLI_SESSION_IN_DATALIMIT_REACHED;
       terminate_appconn(conn, RADIUS_TERMINATE_CAUSE_SESSION_TIMEOUT);
     }
     else if ((conn->s_params.maxoutputoctets) &&
@@ -1214,8 +1142,6 @@ void session_interval(struct app_conn_t *conn) {
       conn->s_state.session_state =
           RADIUS_VALUE_COOVACHILLI_SESSION_OUT_DATALIMIT_REACHED;
 #endif
-      conn->s_state.terminate_cause_ui =
-              RADIUS_VALUE_COOVACHILLI_SESSION_OUT_DATALIMIT_REACHED;
       terminate_appconn(conn, RADIUS_TERMINATE_CAUSE_SESSION_TIMEOUT);
     }
     else if ((conn->s_params.maxtotaloctets) &&
@@ -1225,8 +1151,6 @@ void session_interval(struct app_conn_t *conn) {
       conn->s_state.session_state =
           RADIUS_VALUE_COOVACHILLI_SESSION_TOTAL_DATALIMIT_REACHED;
 #endif
-      conn->s_state.terminate_cause_ui =
-              RADIUS_VALUE_COOVACHILLI_SESSION_TOTAL_DATALIMIT_REACHED;
       terminate_appconn(conn, RADIUS_TERMINATE_CAUSE_SESSION_TIMEOUT);
     }
     else if ((conn->s_params.interim_interval) &&
@@ -1248,57 +1172,7 @@ void session_interval(struct app_conn_t *conn) {
 
       acct_req(ACCT_USER, conn, RADIUS_STATUS_TYPE_INTERIM_UPDATE);
     }
-#ifdef ENABLE_DATABASE
-      if (conn->s_params.sessiontimeout) {
-          uint32_t sessiontime_total = conn->s_history.sessiontime + sessiontime;
-
-          if (sessiontime_total > conn->s_params.sessiontimeout){
-#ifdef ENABLE_SESSIONSTATE
-              conn->s_state.session_state =
-            RADIUS_VALUE_COOVACHILLI_SESSION_TIMEOUT_REACHED;
-#endif
-               conn->s_state.terminate_cause_ui =
-            	RADIUS_VALUE_COOVACHILLI_SESSION_TIMEOUT_REACHED;
-              terminate_appconn(conn, RADIUS_TERMINATE_CAUSE_SESSION_TIMEOUT);
-              return;
-          }
-
-      }
-      if (conn->s_params.maxinputoctets) {
-          uint64_t maxinputoctets_total = conn->s_state.input_octets + conn->s_history.input_octets;
-
-          if (maxinputoctets_total > conn->s_params.maxinputoctets) {
-#ifdef ENABLE_SESSIONSTATE
-              conn->s_state.session_state =
-                RADIUS_VALUE_COOVACHILLI_SESSION_IN_DATALIMIT_REACHED;
-#endif
-              conn->s_state.terminate_cause_ui =
-                RADIUS_VALUE_COOVACHILLI_SESSION_IN_DATALIMIT_REACHED;
-              terminate_appconn(conn, RADIUS_TERMINATE_CAUSE_SESSION_TIMEOUT);
-              return;
-          }
-      }
-      if (conn->s_params.maxoutputoctets){
-          uint64_t maxoutputoctets_total = conn->s_state.output_octets + conn->s_history.output_octets;
-
-          if (maxoutputoctets_total > conn->s_params.maxoutputoctets) {
-#ifdef ENABLE_SESSIONSTATE
-              conn->s_state.session_state =
-                RADIUS_VALUE_COOVACHILLI_SESSION_OUT_DATALIMIT_REACHED;
-#endif
-              conn->s_state.terminate_cause_ui =
-                RADIUS_VALUE_COOVACHILLI_SESSION_OUT_DATALIMIT_REACHED;
-              terminate_appconn(conn, RADIUS_TERMINATE_CAUSE_SESSION_TIMEOUT);
-              return;
-          }
-      }
-#endif //ENABLE_DATABASE
   }
-#if(_debug_ > 1)
-  else {
-  	syslog(LOG_INFO, "Not authenticated");
-  }
-#endif
 #ifdef ENABLE_GARDENACCOUNTING
   interimtime = mainclock_diffu(conn->s_state.garden_interim_time);
   if (_options.uamgardendata &&
@@ -1332,11 +1206,6 @@ static int checkconn() {
     session_interval(&admin_session);
   }
 
-#ifdef ENABLE_DATABASE
-  sqlite3 *db;
-  db = dbopen();
-#endif
-
   for (conn = firstusedconn; conn; conn=conn->next) {
     if (conn->inuse != 0) {
       if (
@@ -1347,10 +1216,6 @@ static int checkconn() {
 	syslog(LOG_WARNING, "No downlink protocol");
 	continue;
       }
-#ifdef ENABLE_DATABASE
-      if (db && conn->s_state.authenticated)
-        dbupdate(db, conn);
-#endif
       session_interval(conn);
     }
   }
@@ -1363,10 +1228,6 @@ static int checkconn() {
       do_interval = 1;
     }
   }
-
-#ifdef ENABLE_DATABASE
-    dbclose(db);
-#endif
 
   return 0;
 }
@@ -1935,7 +1796,6 @@ static int acct_req(acct_type type,
       switch(type) {
 #ifdef ENABLE_GARDENACCOUNTING
         case ACCT_GARDEN:
-             syslog(LOG_INFO, "ACCT_GARDEN set to zeros");
           snprintf(conn->s_state.garden_sessionid,
                         sizeof(conn->s_state.garden_sessionid),
                         "UAM-%s-%.8x%.8x", inet_ntoa(conn->hisip),
@@ -1953,9 +1813,6 @@ static int acct_req(acct_type type,
           conn->s_state.output_packets = 0;
           conn->s_state.input_octets = 0;
           conn->s_state.output_octets = 0;
-#ifdef ENABLE_DATABASE
-          dbsession_state(conn);
-#endif
           break;
       }
       break;
@@ -2467,8 +2324,6 @@ int dnprot_accept(struct app_conn_t *appconn) {
   if (!(appconn->s_params.flags & REQUIRE_UAM_AUTH)) {
     /* This is the one and only place state is switched to authenticated */
     appconn->s_state.authenticated = 1;
-    appconn->s_state.terminate_cause_ui = 0;
-    send_ubus_event(g_ubus_event_ctx, CHILLI_EVENT_CONNECT, appconn, dhcpconn);
 
 #ifdef ENABLE_SESSIONSTATE
     appconn->s_state.session_state =
@@ -2497,15 +2352,12 @@ int dnprot_accept(struct app_conn_t *appconn) {
 
     /* if (!(appconn->s_params.flags & IS_UAM_REAUTH))*/
     acct_req(ACCT_USER, appconn, RADIUS_STATUS_TYPE_START);
-#ifdef ENABLE_DATABASE
-      dbconup(appconn);
-#endif
+
     /* Run connection up script */
     if (_options.conup && !(appconn->s_params.flags & NO_SCRIPT)) {
-        if (_options.debug)
-            syslog(LOG_DEBUG, "%s(%d): Calling connection up script: %s\n",
-                   __FUNCTION__, __LINE__, _options.conup);
-        runscript(appconn, _options.conup, 0, 0);
+ if (_options.debug)
+     syslog(LOG_DEBUG, "%s(%d): Calling connection up script: %s\n", __FUNCTION__, __LINE__, _options.conup);
+      runscript(appconn, _options.conup, 0, 0);
     }
   }
 
@@ -3198,7 +3050,6 @@ chilli_learn_location(uint8_t *loc, int loclen,
     appconn->s_state.input_octets = 0;
     appconn->s_state.output_packets = 0;
     appconn->s_state.output_octets = 0;
-     syslog(LOG_INFO, "location set to zeros");
 
     acct_req(ACCT_USER, appconn, RADIUS_STATUS_TYPE_START);
   }
@@ -4075,6 +3926,7 @@ upprot_getip(struct app_conn_t *appconn,
 }
 
 void session_param_defaults(struct session_params *params) {
+
   if (_options.defsessiontimeout && !params->sessiontimeout)
     params->sessiontimeout = _options.defsessiontimeout;
 
@@ -4089,52 +3941,6 @@ void session_param_defaults(struct session_params *params) {
 
   if (_options.definteriminterval && !params->interim_interval)
     params->interim_interval = _options.definteriminterval;
-
-  if (_options.defmaxdownload && !params->maxinputoctets)
-    params->maxinputoctets = _options.defmaxdownload;
-
-  if (_options.defmaxupload && !params->maxoutputoctets)
-    params->maxoutputoctets = _options.defmaxupload;
-
-  if (_options.defwarning && !params->warningoctets)
-    params->warningoctets = _options.defwarning;
-
-  if (_options.deflimitperiod && !params->period)
-    params->period = _options.deflimitperiod;
-
-  if (_options.deflimitstart && !params->start)
-    params->start = _options.deflimitstart;
-
-  if (_options.defexpirationtime && !params->expiration)
-    params->expiration = _options.defexpirationtime;
-}
-
-void session_params_dyn(struct session_params *params) {
-    params->sessiontimeout = _options.dynsessiontimeout;
-    params->idletimeout = _options.dynidletimeout;
-    params->bandwidthmaxdown = _options.dynbandwidthmaxdown;
-    params->bandwidthmaxup = _options.dynbandwidthmaxup;
-    params->interim_interval = _options.dyninteriminterval;
-    params->maxinputoctets = _options.dynmaxdownload;
-    params->maxoutputoctets = _options.dynmaxupload;
-    params->warningoctets = _options.dynwarning;
-    params->period = _options.dynlimitperiod;
-    params->start = _options.dynlimitstart;
-    params->expiration = _options.dynexpirationtime;
-}
-
-void session_params_trial(struct session_params *params) {
-  params->sessiontimeout = _options.trialsessiontimeout;
-  params->idletimeout = _options.trialidletimeout;
-  params->bandwidthmaxdown = _options.trialbandwidthmaxdown;
-  params->bandwidthmaxup = _options.trialbandwidthmaxup;
-  params->interim_interval = _options.trialinteriminterval;
-  params->maxinputoctets = _options.trialmaxdownload;
-  params->maxoutputoctets = _options.trialmaxupload;
-  params->warningoctets = _options.trialwarning;
-  params->period = _options.triallimitperiod;
-  params->start = _options.triallimitstart;
-  params->expiration = _options.trialexpirationtime;
 }
 
 void
@@ -4237,14 +4043,6 @@ config_radius_session(struct session_params *params,
     params->maxtotaloctets = ntohl(attr->v.i);
   else if (!reconfig)
     params->maxtotaloctets = 0;
-
-  /* Warning octets */
-  if (!radius_getattr(pack, &attr, RADIUS_ATTR_VENDOR_SPECIFIC,
-		      RADIUS_VENDOR_COOVACHILLI,
-		      RADIUS_ATTR_COOVACHILLI_WARNING_OCTETS, 0))
-    params->warningoctets = ntohl(attr->v.i);
-  else if (!reconfig)
-    params->warningoctets = 0;
 
 
   /* Max input gigawords */
@@ -5481,23 +5279,20 @@ struct app_conn_t * chilli_connect_layer3(struct in_addr *src, struct dhcp_conn_
 }
 #endif
 
-#if defined(ENABLE_CHILLIQUERY) || defined(ENABLE_UBUS)
-char *state2name(int authstate) {
-	switch(authstate) {
-	case DHCP_AUTH_NONE:   return "none";
-	case DHCP_AUTH_DROP:   return "drop";
-	case DHCP_AUTH_PASS:   return "pass";
-	case DHCP_AUTH_DNAT:   return "dnat";
-	case DHCP_AUTH_SPLASH: return "splash";
-#ifdef ENABLE_LAYER3
-	case DHCP_AUTH_ROUTER: return "layer2";
-#endif
-	default:               return "unknown";
-	}
-}
-#endif
-
 #ifdef ENABLE_CHILLIQUERY
+static char *state2name(int authstate) {
+  switch(authstate) {
+    case DHCP_AUTH_NONE:   return "none";
+    case DHCP_AUTH_DROP:   return "drop";
+    case DHCP_AUTH_PASS:   return "pass";
+    case DHCP_AUTH_DNAT:   return "dnat";
+    case DHCP_AUTH_SPLASH: return "splash";
+#ifdef ENABLE_LAYER3
+    case DHCP_AUTH_ROUTER: return "layer2";
+#endif
+    default:               return "unknown";
+  }
+}
 
 int chilli_getinfo(struct app_conn_t *appconn, bstring b, int fmt) {
   uint32_t sessiontime = 0;
@@ -5577,11 +5372,6 @@ int chilli_getinfo(struct app_conn_t *appconn, bstring b, int fmt) {
         /* adding: max-total-octets option-swapoctets */
         bassignformat(tmp, " %lld %d",
                       appconn->s_params.maxtotaloctets, _options.swapoctets);
-        bconcat(b, tmp);
-
-        /* adding: warning-octets */
-        bassignformat(tmp, " %lld",
-                      appconn->s_params.warningoctets);
         bconcat(b, tmp);
 
 #ifdef ENABLE_LEAKYBUCKET
@@ -5763,12 +5553,10 @@ clear_appconn(struct app_conn_t *appconn) {
       appconn->s_params.maxinputoctets =
       appconn->s_params.maxoutputoctets =
       appconn->s_params.maxtotaloctets =
-      appconn->s_params.warningoctets =
       appconn->s_params.sessiontimeout = 0;
   appconn->s_params.idletimeout = 0;
   appconn->s_params.interim_interval = 0;
   appconn->s_params.sessionterminatetime = 0;
-  appconn->s_params.expiration = 0;
 }
 
 int terminate_appconn(struct app_conn_t *appconn, int terminate_cause) {
@@ -5792,14 +5580,10 @@ int terminate_appconn(struct app_conn_t *appconn, int terminate_cause) {
       }
     }
 #endif
-#ifdef  ENABLE_DATABASE
-      dbconupdate(appconn);
-#endif
 
     if (_options.condown && !(appconn->s_params.flags & NO_SCRIPT)) {
       if (_options.debug)
         syslog(LOG_DEBUG, "%s(%d): Calling connection down script: %s\n", __FUNCTION__, __LINE__, _options.condown);
-
       runscript(appconn, _options.condown, 0, 0);
     }
 
@@ -5837,8 +5621,6 @@ int cb_dhcp_disconnect(struct dhcp_conn_t *conn, int term_cause) {
   }
 
   appconn = (struct app_conn_t*) conn->peer;
-
-  send_ubus_event(g_ubus_event_ctx, CHILLI_EVENT_DISCONNECT, appconn, NULL);
 
   return session_disconnect(appconn, conn, term_cause);
 }
@@ -6361,12 +6143,9 @@ int static uam_msg(struct redir_msg_t *msg) {
         appconn->s_state.session_state =
             RADIUS_VALUE_COOVACHILLI_SESSION_USER_LOGOUT_URL;
 #endif
-        appconn->s_state.terminate_cause_ui =
-                RADIUS_VALUE_COOVACHILLI_SESSION_USER_LOGOUT_URL;
         terminate_appconn(appconn, RADIUS_TERMINATE_CAUSE_USER_REQUEST);
         appconn->s_params.sessiontimeout = 0;
         appconn->s_params.idletimeout = 0;
-        appconn->s_params.expiration = 0;
       }
 
       appconn->uamabort = 0;
@@ -6412,75 +6191,57 @@ int static uam_msg(struct redir_msg_t *msg) {
   return 0;
 }
 
-#if defined(ENABLE_CHILLIQUERY) || defined(ENABLE_CLUSTER) || defined(ENABLE_UBUS)
-struct app_conn_t * find_app_conn(struct cmdsock_request *req,
-								  int *has_criteria) {
-	struct app_conn_t *appconn = 0;
-	struct dhcp_conn_t *dhcpconn = 0;
-
-	if (req->ip.s_addr) {
-		appconn = dhcp_get_appconn_ip(0, &req->ip);
-		if (has_criteria)
-			*has_criteria = 1;
-	} 
-
-	if (!appconn) {
-#ifdef ENABLE_LAYER3
-		if (!_options.layer3)
-#endif
-		if (req->mac[0]||req->mac[1]||req->mac[2]||
-			req->mac[3]||req->mac[4]||req->mac[5]) {
-			dhcp_hashget(dhcp, &dhcpconn, req->mac);
-			if (has_criteria)
-				*has_criteria = 1;
-		}
-	}
-
-	if (!appconn && dhcpconn
-#ifdef ENABLE_LAYER3
-		&& !_options.layer3
-#endif
-			)
-		appconn = (struct app_conn_t *) dhcpconn->peer;
-
-	if (!appconn && req->d.sess.sessionid[0] != 0) {
-		struct app_conn_t *aconn = firstusedconn;
-		if (has_criteria)
-			*has_criteria = 1;
-		while (aconn) {
-			if (!strcmp(aconn->s_state.sessionid, req->d.sess.sessionid)) {
-				appconn = aconn;
-				break;
-			}
-			aconn = aconn->next;
-		}
-	}
-
-	if (appconn && !appconn->inuse) {
-		if (_options.debug)
-			syslog(LOG_DEBUG, "%s(%d): appconn not in use!", __FUNCTION__, __LINE__);
-		return 0;
-	}
-
-	return appconn;
-}
-#endif
-
-int find_active_user(char *username)
-{
-  struct app_conn_t *appconn = firstusedconn;
-  int match = 0;
-  while (appconn) { 
-    if (strcmp(appconn->s_state.redir.username, username) == 0 && appconn->s_state.authenticated == 1) {
-      match = 1;
-      break;
-    }
-    appconn = appconn->next;
-  }
-  return match;
-} 
-
 #if defined(ENABLE_CHILLIQUERY) || defined(ENABLE_CLUSTER)
+static struct app_conn_t * find_app_conn(struct cmdsock_request *req,
+                                         int *has_criteria) {
+  struct app_conn_t *appconn = 0;
+  struct dhcp_conn_t *dhcpconn = 0;
+
+  if (req->ip.s_addr) {
+    appconn = dhcp_get_appconn_ip(0, &req->ip);
+    if (has_criteria)
+      *has_criteria = 1;
+  } else {
+#ifdef ENABLE_LAYER3
+    if (!_options.layer3)
+#endif
+      if (req->mac[0]||req->mac[1]||req->mac[2]||
+	  req->mac[3]||req->mac[4]||req->mac[5]) {
+	dhcp_hashget(dhcp, &dhcpconn, req->mac);
+	if (has_criteria)
+	  *has_criteria = 1;
+      }
+  }
+
+  if (!appconn && dhcpconn
+#ifdef ENABLE_LAYER3
+      && !_options.layer3
+#endif
+      )
+    appconn = (struct app_conn_t *) dhcpconn->peer;
+
+  if (!appconn && req->d.sess.sessionid[0] != 0) {
+    struct app_conn_t *aconn = firstusedconn;
+    if (has_criteria)
+      *has_criteria = 1;
+    while (aconn) {
+      if (!strcmp(aconn->s_state.sessionid, req->d.sess.sessionid)) {
+	appconn = aconn;
+	break;
+      }
+      aconn = aconn->next;
+    }
+  }
+
+  if (appconn && !appconn->inuse) {
+    if (_options.debug)
+      syslog(LOG_DEBUG, "%s(%d): appconn not in use!", __FUNCTION__, __LINE__);
+    return 0;
+  }
+
+  return appconn;
+}
+
 int chilli_cmd(struct cmdsock_request *req, bstring s, int sock) {
 
 #ifdef HAVE_NETFILTER_COOVA
@@ -6718,14 +6479,6 @@ int chilli_cmd(struct cmdsock_request *req, bstring s, int sock) {
                           "%20s: %lld\n",
                           "max octets in",
                           appconn->s_params.maxinputoctets);
-            bconcat(s, tmp);
-          }
-
-          if (appconn->s_params.warningoctets) {
-            bassignformat(tmp,
-                          "%20s: %lld\n",
-                          "warning octets in",
-                          appconn->s_params.warningoctets);
             bconcat(s, tmp);
           }
 
@@ -7317,17 +7070,6 @@ static int cmdsock_accept(void *nullData, int sock) {
 }
 #endif
 
-#ifdef ENABLE_UBUS
-static int ubus_sock_accept(void *ctx, int sock)
-{
-  struct ubus_context *uctx = (struct ubus_context *)ctx;
-
-  ubus_handle_event(uctx);
-
-  return 0;
-}
-#endif
-
 #if XXX_IO_DAEMON
 int chilli_io(int fd_ctrl_r, int fd_ctrl_w, int fd_pkt_r, int fd_pkt_w) {
   int maxfd = 0;
@@ -7725,11 +7467,6 @@ int chilli_main(int argc, char **argv) {
       exit(1);
     }
 
-    g_ubus_event_ctx = ubus_connect(NULL);
-    if (!g_ubus_event_ctx) {
-      syslog(LOG_ERR, "Failed to set up ubus for event sending");
-    }
-
     dhcp_set_cb_request(dhcp, cb_dhcp_request);
     dhcp_set_cb_connect(dhcp, cb_dhcp_connect);
     dhcp_set_cb_disconnect(dhcp, cb_dhcp_disconnect);
@@ -7810,14 +7547,6 @@ int chilli_main(int argc, char **argv) {
       return -1;
     }
 #endif
-#ifdef ENABLE_UBUS
-    ubus_ctx = ubus_connect(NULL);
-	if (!ubus_ctx) {
-		syslog(LOG_ERR, "Failed to connect to ubus, exiting...");
-	}
-#endif
-
-
 
     if (_options.radsec) {
 #ifdef ENABLE_CHILLIRADSEC
@@ -7985,25 +7714,10 @@ int chilli_main(int argc, char **argv) {
 #ifdef ENABLE_CHILLIQUERY
     net_select_reg(&sctx, cmdsock, SELECT_READ,
                    (select_callback)cmdsock_accept, 0, cmdsock);
-
-#endif
-#ifdef ENABLE_UBUS
-    net_select_reg(&sctx, ubus_ctx->sock.fd, SELECT_READ,
-                   (select_callback)ubus_sock_accept, ubus_ctx, ubus_ctx->sock.fd);
-    chilli_ubus_add_obj(ubus_ctx);
-    
-    /* subscribe to hostapd to listen for dissasoc calls. */
-    chilli_ubus_subscribe_hostapd(ubus_ctx, _options);
-
 #endif
 
     mainclock_tick();
-#ifdef ENABLE_DATABASE
-    syslog(LOG_INFO, "[%s] Checking data base %s", __FUNCTION__, sqlite3_libversion());
-    dbcheck_table();
-#endif
-
-  while (keep_going) {
+    while (keep_going) {
 
       if (reload_config) {
 
@@ -8107,10 +7821,6 @@ int chilli_main(int argc, char **argv) {
 
     syslog(LOG_INFO, "CoovaChilli shutting down");
 
-    if (g_ubus_event_ctx) {
-      ubus_free(g_ubus_event_ctx);
-    }
-
     if (_options.seskeepalive) {
 #ifdef ENABLE_BINSTATFILE
       if (printstatus() != 0)
@@ -8152,10 +7862,6 @@ int chilli_main(int argc, char **argv) {
 
 #ifdef ENABLE_CHILLIQUERY
     cmdsock_shutdown();
-#endif
-#ifdef ENABLE_UBUS
-	chilli_ubus_remove_obj(ubus_ctx);	//Workaround (?) Protection from Huawei
-    ubus_free(ubus_ctx);
 #endif
 
 #ifdef ENABLE_CHILLIREDIR

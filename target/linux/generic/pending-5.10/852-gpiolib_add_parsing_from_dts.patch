@@ -1,0 +1,101 @@
+--- a/drivers/gpio/gpiolib.c
++++ b/drivers/gpio/gpiolib.c
+@@ -404,6 +404,67 @@ static int devprop_gpiochip_set_names(st
+ 	return 0;
+ }
+ 
++int tlt_gpio_set_line_name(struct gpio_chip *chip, char *line_name, int index)
++{
++	struct gpio_device *gdev;
++
++	if (!chip || !line_name) {
++		return 1;
++	}
++
++	gdev = chip->gpiodev;
++	if (gdev->ngpio < index) {
++		return 1;
++	}
++
++	if (gdev->descs[index].name) {
++		return 1;
++	}
++	gdev->descs[index].name = line_name;
++
++	return 0;
++}
++EXPORT_SYMBOL_GPL(tlt_gpio_set_line_name);
++
++int tlt_gpio_set_active_low(struct gpio_chip *chip, int index)
++{
++	struct gpio_device *gdev;
++
++	if (!chip) {
++		return 1;
++	}
++
++	gdev = chip->gpiodev;
++	if (gdev->ngpio < index) {
++		return 1;
++	}
++	set_bit(FLAG_ACTIVE_LOW, &gdev->descs[index].flags);
++
++	return 0;
++}
++
++EXPORT_SYMBOL_GPL(tlt_gpio_set_active_low);
++
++struct gpio_chip *gpiochip_find_by_id(int id)
++{
++	struct gpio_device *gdev;
++	struct gpio_chip *chip = NULL;
++	unsigned long flags;
++
++	spin_lock_irqsave(&gpio_lock, flags);
++	list_for_each_entry(gdev, &gpio_devices, list){
++		if (gdev->id == id) {
++			chip = gdev->chip;
++			break;
++		}
++	}
++
++	spin_unlock_irqrestore(&gpio_lock, flags);
++
++	return chip;
++}
++EXPORT_SYMBOL_GPL(gpiochip_find_by_id);
++
+ static unsigned long *gpiochip_allocate_mask(struct gpio_chip *gc)
+ {
+ 	unsigned long *p;
+@@ -691,12 +752,13 @@ int gpiochip_add_data_with_key(struct gp
+ 	INIT_LIST_HEAD(&gdev->pin_ranges);
+ #endif
+ 
+-	if (gc->names)
+-		ret = gpiochip_set_desc_names(gc);
+-	else
+-		ret = devprop_gpiochip_set_names(gc);
+-	if (ret)
+-		goto err_remove_from_list;
++	/* Names are set by tlt-gpio kmod */
++//	if (gc->names)
++//		ret = gpiochip_set_desc_names(gc);
++//	else
++//		ret = devprop_gpiochip_set_names(gc);
++//	if (ret)
++//		goto err_remove_from_list;
+ 
+ 	ret = gpiochip_alloc_valid_mask(gc);
+ 	if (ret)
+--- a/include/linux/gpio/driver.h
++++ b/include/linux/gpio/driver.h
+@@ -833,4 +833,8 @@ static inline void gpiochip_unlock_as_ir
+ }
+ #endif /* CONFIG_GPIOLIB */
+ 
++int tlt_gpio_set_line_name(struct gpio_chip *chip, char *line_name, int index);
++int tlt_gpio_set_active_low(struct gpio_chip *chip, int index);
++struct gpio_chip *gpiochip_find_by_id(int id);
++
+ #endif /* __LINUX_GPIO_DRIVER_H */

@@ -1,0 +1,13 @@
+Index: vrrpd-1.15/vrrpd.c
+===================================================================
+--- vrrpd-1.15.orig/vrrpd.c
++++ vrrpd-1.15/vrrpd.c
+@@ -1216,7 +1216,7 @@ static int parse_cmdline(vrrp_rt *vsrv,
+ 			goto err;
+ 		}
+ 	}
+-	return optind - ret;
++	return optind;
+ err:;
+ 	usage();
+ 	return -1;

@@ -1,0 +1,2732 @@
+diff --recursive --unified --new-file --no-dereference orig/.gitlab-ci.yml src/.gitlab-ci.yml
+--- orig/.gitlab-ci.yml	1970-01-01 00:00:00.000000000 +0000
++++ src/.gitlab-ci.yml	2023-11-06 05:25:51.000000000 +0000
+@@ -0,0 +1,20 @@
++include:
++  - project: teltonika/ci-templates
++    file:
++      - /templates/semgrep.yml
++
++workflow:
++  rules:
++    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
++    - if: $CI_PIPELINE_SOURCE == "web"
++    - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
++      when: never
++    - if: $CI_COMMIT_BRANCH
++
++semgrep_errors:
++  extends: .semgrep_errors
++
++semgrep_info:
++  extends: .semgrep_info
++  needs:
++    - job: semgrep_errors
+\ No newline at end of file
+diff --recursive --unified --new-file --no-dereference orig/ext/openwrt/config/easycwmp src/ext/openwrt/config/easycwmp
+--- orig/ext/openwrt/config/easycwmp	2019-09-26 14:27:06.000000000 +0000
++++ src/ext/openwrt/config/easycwmp	2023-11-06 05:25:51.000000000 +0000
+@@ -22,6 +22,7 @@
+ 	option periodic_enable '1'
+ 	option periodic_interval '100'
+ 	option periodic_time '0001-01-01T00:00:00Z'
++	option enabled '0'
+ 
+ config device
+ 	option manufacturer easycwmp
+diff --recursive --unified --new-file --no-dereference orig/ext/openwrt/init.d/easycwmpd src/ext/openwrt/init.d/easycwmpd
+--- orig/ext/openwrt/init.d/easycwmpd	2019-09-26 14:27:06.000000000 +0000
++++ src/ext/openwrt/init.d/easycwmpd	2023-11-06 05:25:51.000000000 +0000
+@@ -2,6 +2,7 @@
+ # Copyright (C) 2012-2014 OpenWrt.org
+ 
+ START=90
++STOP=90
+ 
+ USE_PROCD=1
+ PROG="/usr/sbin/easycwmpd"
+@@ -13,48 +14,63 @@
+ 	local val oval
+ 	local change=0
+ 
+-	val=`cat "/etc/device_info" | grep "DEVICE_MANUFACTURER" | cut -f 2 -d '=' | sed -e "s/['\"]//g" -e "s'[]:@/?#[!$&()*+,;=]'_'g"`
++	val=`$UCI_GET network.wan.ifname`
++	oval=`$UCI_GET easycwmp.@local[0].interface`
++	[ -n "$val" -a "$val" != "$oval" ] && { $UCI_SET easycwmp.@local[0].interface="$val"; change=1; }
++
++	if [ `which brand` ]; then
++		val=`brand 2`
++	else
++		val="Teltonika"
++	fi
++
+ 	oval=`$UCI_GET easycwmp.@device[0].manufacturer`
+ 	[ -n "$val" -a "$val" != "$oval" ] && { $UCI_SET easycwmp.@device[0].manufacturer="$val"; change=1; }
+ 
+-	val=`cat "/etc/device_info" | grep "DEVICE_PRODUCT" | cut -f 2 -d '=' | sed -e "s/['\"]//g" -e "s'[]:@/?#[!$&()*+,;=]'_'g"`
++	val=`mnf_info -n | cut -c1-6`
+ 	oval=`$UCI_GET easycwmp.@device[0].product_class`
+ 	[ -n "$val" -a "$val" != "$oval" ] && { $UCI_SET easycwmp.@device[0].product_class="$val"; change=1; }
+ 
+-	val=`cat "/etc/device_info" | grep "DEVICE_REVISION" | cut -f 2 -d '=' | sed -e "s/['\"]//g" -e "s'[]:@/?#[!$&()*+,;=]'_'g"`
++	val=`mnf_info -H`
+ 	oval=`$UCI_GET easycwmp.@device[0].hardware_version`
+ 	[ -n "$val" -a "$val" != "$oval" ] && { $UCI_SET easycwmp.@device[0].hardware_version="$val"; change=1; }
+ 
+-	val=`cat "/etc/openwrt_version"`
++	val=`cat "/etc/version"`
+ 	oval=`$UCI_GET easycwmp.@device[0].software_version`
+ 	[ -n "$val" -a "$val" != "$oval" ] && { $UCI_SET easycwmp.@device[0].software_version="$val"; change=1; }
+-	
++
++	val="001E42"
++	oval=`$UCI_GET easycwmp.@device[0].oui`
++	[ -n "$val" -a "$val" != "$oval" ] && { $UCI_SET easycwmp.@device[0].oui="$val"; change=1; }
++
++	val=`mnf_info -s`
++	oval=`$UCI_GET easycwmp.@device[0].serial_number`
++	[ -n "$val" -a "$val" != "$oval" ] && { $UCI_SET easycwmp.@device[0].serial_number="$val"; change=1; }
++
+ 	#The same thing here for OUI and SerialNumber
+ 
+ 	[ "$change" = "1" ] && $UCI_COMMIT easycwmp
+ }
+ 
+ start_service() {
+-	local enable=`uci -q get easycwmp.@local[0].enable`
+-	if [ "$enable" == "1" ]; then
++	if [ "`uci get easycwmp.@acs[0].enabled`" == "1" ]; then
+ 		init_device_info
+ 		procd_open_instance
+ 		procd_set_param command "$PROG" -f
+-		if [ "$1" = "--boot" ];then
+-			procd_append_param command --boot
+-		else
+-			procd_append_param command --getrpcmethod
+-		fi
++		procd_append_param command --boot
++		procd_append_param command --getrpcmethod
+ 		procd_set_param respawn "3" "7" "0"
+ 		procd_close_instance
+ 	fi
+ }
+ 
+-boot() {
+-	start --boot
+-}
+-
+ service_triggers()
+ {
+ 	procd_add_reload_trigger easycwmp
+ }
++
++
++reload_service() {
++	stop
++	start
++}
+diff --recursive --unified --new-file --no-dereference orig/ext/openwrt/scripts/easycwmp.sh src/ext/openwrt/scripts/easycwmp.sh
+--- orig/ext/openwrt/scripts/easycwmp.sh	2019-09-26 14:27:06.000000000 +0000
++++ src/ext/openwrt/scripts/easycwmp.sh	2023-11-06 05:25:51.000000000 +0000
+@@ -8,6 +8,7 @@
+ . /lib/functions.sh
+ . /usr/share/libubox/jshn.sh
+ . /usr/share/easycwmp/defaults
++. /lib/functions/network.sh
+ 
+ UCI_GET="/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get"
+ UCI_SET="/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set"
+@@ -21,7 +22,7 @@
+ UCI_CHANGES="/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} changes"
+ UCI_BATCH="/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} batch"
+ 
+-DOWNLOAD_DIR="/tmp/easycwmp_download"
++DOWNLOAD_FILE="/tmp/easycwmp_download"
+ EASYCWMP_PROMPT="easycwmp>"
+ set_fault_tmp_file="/tmp/.easycwmp_set_fault_tmp"
+ apply_service_tmp_file="/tmp/.easycwmp_apply_service"
+@@ -72,7 +73,6 @@
+   add [object]
+   delete [object]
+   download
+-  upload
+   factory_reset
+   reboot
+   inform [parameter|device_id]
+@@ -108,13 +108,6 @@
+ 			json_get_var __arg4 user_name
+ 			json_get_var __arg5 password
+ 			;;
+-		upload)
+-			action="upload"
+-			json_get_var __arg1 url
+-			json_get_var __arg2 file_type
+-			json_get_var __arg3 user_name
+-			json_get_var __arg4 password
+-			;;
+ 		factory_reset|reboot)
+ 			action="$command"
+ 			;;
+@@ -171,13 +164,6 @@
+ 		__arg4="$5"
+ 		__arg5="$6"
+ 		;;
+-	upload)
+-		action="upload"
+-		__arg1="$2"
+-		__arg2="$3"
+-		__arg3="$4"
+-		__arg4="$5"
+-		;;
+ 	factory_reset|reboot)
+ 		action="$1"
+ 		;;
+@@ -286,14 +272,12 @@
+ 			let fault_code=9000+$E_DOWNLOAD_FAILURE
+ 			common_json_output_fault "" "$fault_code"
+ 		else 
+-			rm -rf $DOWNLOAD_DIR 2> /dev/null
+-			mkdir -p $DOWNLOAD_DIR
++			rm -f $DOWNLOAD_FILE 2> /dev/null
+ 			local dw_url="$__arg1"
+ 			[ "$__arg4" != "" -o "$__arg5" != "" ] && dw_url=`echo "$__arg1" | sed -e "s@://@://$__arg4:$__arg5\@@g"`
+-			wget -P $DOWNLOAD_DIR "$dw_url"
++			wget -O $DOWNLOAD_FILE "$dw_url"
+ 			fault_code="$?"
+ 			if [ "$fault_code" != "0" ]; then
+-				rm -rf $DOWNLOAD_DIR 2> /dev/null
+ 				let fault_code=9000+$E_DOWNLOAD_FAILURE
+ 				common_json_output_fault "" "$fault_code"
+ 			else
+@@ -302,108 +286,37 @@
+ 		fi
+ 		return
+ 	fi
+-
+-	if [ "$action" = "upload" ]; then 
+-
+-		local up_url="$__arg1"
+-		SERIAL_NUMBER=`$UCI_GET easycwmp.@device[0].serial_number`
+-
+-		[ "$__arg3" != "" -o "$__arg4" != "" ] && up_url=`echo "$__arg1" | sed -e "s@://@://$__arg3:$__arg4\@@g"`
+-
+-		case "$__arg2" in
+-		*"Vendor Log File"*)
+-			logread > "/tmp/log$SERIAL_NUMBER.log"
+-			if [ "$__arg3" != "" ]; then
+-				curl --user $__arg3:$__arg4 --connect-timeout 30 --upload-file /tmp/log$SERIAL_NUMBER.log $up_url
+-			else
+-				curl -T --connect-timeout 30 "/tmp/log$SERIAL_NUMBER.log" "$up_url"
+-			fi
+-			
+-			
+-			fault_code="$?"
+-		rm -f "/tmp/log$SERIAL_NUMBER.log"
+-		;;
+-		*"Vendor Configuration File"*)
+-			
+-			sysupgrade --create-backup "/tmp/config$SERIAL_NUMBER.tar.gz"
+-			if [ "$__arg3" != "" ]; then
+-				curl --user $__arg3:$__arg4 --connect-timeout 30 --upload-file /tmp/config$SERIAL_NUMBER.tar.gz $up_url
+-			else
+-				curl -T --connect-timeout 30 "/tmp/config$SERIAL_NUMBER.tar.gz" "$up_url"
+-			fi	
+-			fault_code="$?"
+-		rm -f "/tmp/config$SERIAL_NUMBER.tar.gz"
+-		;;
+-		*)
+-			common_json_output_fault "" "$(($E_INVALID_ARGUMENTS+9000))"
+-			return
+-		;;
+-		esac
+-		
+-		if [ "$fault_code" != "0" ]; then
+-			let fault_code=9000+$E_UPLOAD_FAILURE
+-			common_json_output_fault "" "$fault_code"
+-		else
+-			common_json_output_status "1"
+-		fi
+-		return
+-	fi
+-		
+ 	if [ "$action" = "apply_download" ]; then
+ 		if [ "$__arg1" = "3 Vendor Configuration File" ]; then 
+-			dwfile=`ls $DOWNLOAD_DIR`
+-			if [ "$dwfile" != "" ]; then
+-				dwfile="$DOWNLOAD_DIR/$dwfile"
+-				if [ ${dwfile%.gz} != $dwfile -o ${dwfile%.bz2} != $dwfile ]; then
+-					sysupgrade --restore-backup $dwfile
+-					fault_code="$?"
+-				else
+-					/sbin/uci import < $dwfile
+-					fault_code="$?"
+-					[ "$fault_code" = "0" ] && $UCI_COMMIT
+-				fi
+-				if [ "$fault_code" != "0" ]; then
+-					let fault_code=$E_DOWNLOAD_FAIL_FILE_CORRUPTED+9000
+-					common_json_output_fault "" "$fault_code"
+-				else
+-					sync
+-					reboot
+-					common_json_output_status "1"
+-				fi
+-			else
+-				let fault_code=$E_DOWNLOAD_FAILURE+9000
++			/sbin/uci import < $DOWNLOAD_FILE  
++			fault_code="$?"
++			if [ "$fault_code" != "0" ]; then
++				let fault_code=$E_DOWNLOAD_FAIL_FILE_CORRUPTED+9000
+ 				common_json_output_fault "" "$fault_code"
++			else
++				$UCI_COMMIT
++				sync
++				/sbin/reload_config
++				common_json_output_status "1"
+ 			fi
+ 		elif [ "$__arg1" = "1 Firmware Upgrade Image" ]; then
+ 			local gr_backup=`grep "^/etc/easycwmp/\.backup\.xml" /etc/sysupgrade.conf`
+ 			[ -z $gr_backup ] && echo "/etc/easycwmp/.backup.xml" >> /etc/sysupgrade.conf
+-			dwfile=`ls $DOWNLOAD_DIR`
+-			if [ "$dwfile" != "" ]; then
+-				dwfile="$DOWNLOAD_DIR/$dwfile"
+-				/sbin/sysupgrade $dwfile
+-				fault_code="$?"
+-				if [ "$fault_code" != "0" ]; then
+-					let fault_code=$E_DOWNLOAD_FAIL_FILE_CORRUPTED+9000
+-					common_json_output_fault "" "$fault_code"
+-				else
+-					common_json_output_status "1"
+-				fi
+-			else
+-				let fault_code=$E_DOWNLOAD_FAILURE+9000
++			/sbin/sysupgrade $DOWNLOAD_FILE 
++			fault_code="$?"
++			if [ "$fault_code" != "0" ]; then
++				let fault_code=$E_DOWNLOAD_FAIL_FILE_CORRUPTED+9000
+ 				common_json_output_fault "" "$fault_code"
++			else
++				common_json_output_status "1"
+ 			fi
+ 		else
+ 			common_json_output_fault "" "$(($E_INVALID_ARGUMENTS+9000))"
+ 		fi
+-		rm -rf $DOWNLOAD_DIR 2> /dev/null
+ 		return
+ 	fi
+ 	if [ "$action" = "factory_reset" ]; then
+-		if [ "`which jffs2_mark_erase`" != "" ]; then
+-			jffs2_mark_erase "rootfs_data"
+-		else
+-			/sbin/jffs2mark -y
+-		fi
++		printf 'y' | ./sbin/firstboot
+ 		sync
+ 		reboot
+ 	fi
+@@ -473,7 +386,7 @@
+ 		return
+ 	fi
+ 	if [ "$action" = "apply_service" ]; then
+-		common_restart_services
++		common_uci_track_restart_services		
+ 		if [ -f "$apply_service_tmp_file" ]; then
+ 			chmod +x "$apply_service_tmp_file"
+ 			/bin/sh "$apply_service_tmp_file"
+diff --recursive --unified --new-file --no-dereference orig/ext/openwrt/scripts/functions/common/common src/ext/openwrt/scripts/functions/common/common
+--- orig/ext/openwrt/scripts/functions/common/common	2019-09-26 14:27:06.000000000 +0000
++++ src/ext/openwrt/scripts/functions/common/common	2023-11-06 05:25:51.000000000 +0000
+@@ -192,23 +192,21 @@
+ 	
+ }
+ 
+-common_restart_services() {
+-	local package service
+-	if [ -f /etc/config/ucitrack ]; then
+-		uci_change_services=""
+-		for package in $uci_change_packages; do
+-			common_rec_append_uci_track_services $package
+-		done
+-		for service in $uci_change_services; do
+-			[ "$service" = "easycwmpd" ] && continue
+-			/etc/init.d/$service restart
+-		done
+-	else
+-		for package in $uci_change_packages; do
+-			[ "$package" = "easycwmp" ] && continue
+-			ubus call uci commit "{\"config\": \"$package\"}"
+-		done
++common_uci_track_restart_services() {
++	local package service changed_bool="0"
++	uci_change_services=""
++	for package in $uci_change_packages; do
++		common_rec_append_uci_track_services $package
++	done
++	for service in $uci_change_services; do
++		[ "$service" = "easycwmpd" ] && continue
++		changed_bool="1"
++	#	/etc/init.d/$service restart
++	done
++	if [ "$changed_bool" = "1" ]; then
++		`/sbin/luci-reload > /dev/null 2>&1`
+ 	fi
++	
+ }
+ 
+ ##### common entries called by easycwmp.sh #####
+@@ -470,11 +468,6 @@
+ }
+ 
+ common_get_value_inparam_isobj_check_obj() {
+-	local arg="$1"
+-	local inparam="$2"
+-	local refparam="$3"
+-	local permission="$4"
+-
+ 	case "$refparam" in "$inparam"*)
+ 		g_fault_code=0
+ 		return 0
+@@ -658,10 +651,6 @@
+ }
+ 
+ common_get_notification_inparam_isobj_check_obj() {
+-	local arg="$1"
+-	local inparam="$2"
+-	local refparam="$3"
+-	local permission="$4"
+ 	case "$refparam" in "$inparam"*)
+ 		g_fault_code=0
+ 		return 0
+@@ -932,34 +921,3 @@
+ 	[ $1 -gt 1 ] && shift $1 || shift
+ 	echo ${1-0}.${2-0}.${3-0}.${4-0}
+ }
+-ipstr2int()
+-{
+-	local n ip 
+-	local ipint=0
+-	local pw=16777216
+-	ip=${1//./ }
+-	for n in $ip; do
+-		ipint=$((ipint+n*pw))
+-		let pw/=256
+-	done
+-	echo $ipint
+-}
+-
+-int2ipstr()
+-{
+-	local ip1 ip2 ip3 ip4 
+-	local pw=16777216
+-	local ipint=$1
+-
+-	ip1=$((ipint/pw))
+-	ipint=$((ipint%pw))
+-	pw=$((pw/256))
+-	ip2=$((ipint/pw))
+-	ipint=$((ipint%pw))
+-	pw=$((pw/256))
+-	ip3=$((ipint/pw))
+-	ipint=$((ipint%pw))
+-	pw=$((pw/256))
+-	ip4=$ipint
+-	echo $ip1.$ip2.$ip3.$ip4
+-}
+diff --recursive --unified --new-file --no-dereference orig/ext/openwrt/scripts/functions/common/device_info src/ext/openwrt/scripts/functions/common/device_info
+--- orig/ext/openwrt/scripts/functions/common/device_info	2019-09-26 14:27:06.000000000 +0000
++++ src/ext/openwrt/scripts/functions/common/device_info	2023-11-06 05:25:51.000000000 +0000
+@@ -14,17 +14,18 @@
+ entry_execute_method_list="$entry_execute_method_list entry_execute_method_root_DeviceInfo"
+ entry_execute_method_list_forcedinform="$entry_execute_method_list_forcedinform  entry_execute_method_root_DeviceInfo"
+ 
++
+ entry_execute_method_root_DeviceInfo() {
+ 	case "$1" in ""|"$DMROOT."|"$DMROOT.DeviceInfo."*)
+ 		common_execute_method_obj "$DMROOT.DeviceInfo." "0"
+ 		common_execute_method_param "$DMROOT.DeviceInfo.SpecVersion" "0" "echo 1.0" "" "" "1"
+ 		common_execute_method_param "$DMROOT.DeviceInfo.ProvisioningCode" "1" "$UCI_GET easycwmp.@local[0].provisioning_code" "device_info_set_provisioningcode" "" "1"
+-		common_execute_method_param "$DMROOT.DeviceInfo.Manufacturer" "0" "$UCI_GET easycwmp.@device[0].manufacturer" "" "" "1"
+-		common_execute_method_param "$DMROOT.DeviceInfo.ManufacturerOUI" "0" "$UCI_GET easycwmp.@device[0].oui" "" "" "1"
+-		common_execute_method_param "$DMROOT.DeviceInfo.ProductClass" "0" "$UCI_GET easycwmp.@device[0].product_class" "" "" "1"
+-		common_execute_method_param "$DMROOT.DeviceInfo.SerialNumber" "0" "$UCI_GET easycwmp.@device[0].serial_number" "" "" "1"
+-		common_execute_method_param "$DMROOT.DeviceInfo.HardwareVersion" "0" "$UCI_GET easycwmp.@device[0].hardware_version" "" "" "1"
+-		common_execute_method_param "$DMROOT.DeviceInfo.SoftwareVersion" "0" "$UCI_GET easycwmp.@device[0].software_version" "" "" "1"
++		common_execute_method_param "$DMROOT.DeviceInfo.Manufacturer" "0" "echo Teltonika" "" "" "1"
++		common_execute_method_param "$DMROOT.DeviceInfo.ManufacturerOUI" "0" "echo 001E42" "" "" "1"
++		common_execute_method_param "$DMROOT.DeviceInfo.ProductClass" "0" "device_info_get_product_class" "" "" "1"
++		common_execute_method_param "$DMROOT.DeviceInfo.SerialNumber" "0" "mnf_info -s" "" "" "1"
++		common_execute_method_param "$DMROOT.DeviceInfo.HardwareVersion" "0" "mnf_info --hwver" "" "" "1"
++		common_execute_method_param "$DMROOT.DeviceInfo.SoftwareVersion" "0" "cat /etc/version" "" "" "1"
+ 		common_execute_method_param "$DMROOT.DeviceInfo.UpTime" "0" "device_info_get_uptime" "" "xsd:unsignedInt"
+ 		common_execute_method_param "$DMROOT.DeviceInfo.DeviceLog" "0" "dmesg | tail -n1"
+ 		common_execute_method_obj "$DMROOT.DeviceInfo.MemoryStatus." "0"
+@@ -57,3 +58,8 @@
+ device_info_get_uptime() {
+ 	awk -F '.' '{ print $1 }' /proc/uptime
+ }
++
++device_info_get_product_class() {
++	local val=`mnf_info -n | cut -c1-6`
++	echo "$val"
++}
+diff --recursive --unified --new-file --no-dereference orig/ext/openwrt/scripts/functions/common/ipping_launch src/ext/openwrt/scripts/functions/common/ipping_launch
+--- orig/ext/openwrt/scripts/functions/common/ipping_launch	2019-09-26 14:27:06.000000000 +0000
++++ src/ext/openwrt/scripts/functions/common/ipping_launch	2023-11-06 05:25:51.000000000 +0000
+@@ -1,172 +1,72 @@
+ #!/bin/sh
+ # Copyright (C) 2015 PIVA Software <www.pivasoftware.com>
+ # 	Author: MOHAMED Kallel <mohamed.kallel@pivasoftware.com>
+-# 	Author: AHMED Sahnoun <ahmed.sahnoun@pivasoftware.com>
+-
+ 
+ [ "$1" != "run" -a "$1" != "stop" ] && return
+ 
+ UCI_GET_VARSTATE="/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} -P /var/state get"
+ UCI_SET_VARSTATE="/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} -P /var/state set"
+-DEFAULTIMEMIN=9999999
+-DEFAULTIMEMIND=9999999999
+ 
+ ipping_get() {
+ 	local val=`$UCI_GET_VARSTATE $1`
+ 	echo ${val:-$2}
+ }
+ 
+-
+-ipping_run() {
+-	[ "`$UCI_GET_VARSTATE easycwmp.@local[0].DiagnosticsState`" = "Requested" ] && ipping_initiation
+-	[ "`$UCI_GET_VARSTATE easycwmp.@local[0].ServerSelectionDiagnosticsState`" = "Requested" ] && ipping_Selection_initiation
+-}
+-
+-ipping_Selection_initiation() {
+-	local i res ba stc times sc1 success_count failure_count min_time avg_time max_time avg_time_sum min max State
+-	local Selection_avg_time Selection_max_time Selection_min_time FastestHost host
+-	[ "`$UCI_GET_VARSTATE easycwmp.@local[0].ServerSelectionProtocol`" != "ICMP" ] && return
+-	local hostList=`ipping_get easycwmp.@local[0].SelectionDiagnosticsHostList`
+-	[ "$hostList" = "" ] && return
+-	local cnt=`ipping_get easycwmp.@local[0].ServerSelectionNumberOfRepetitions 1`
+-	local dsize=24
+-	local timeout=`ipping_get easycwmp.@local[0].ServerSelectionTimeout 1000`
+-	local Interface=`ipping_get easycwmp.@local[0].ServerSelectionInterface`
+-	local ProtocolVersion=`ipping_get easycwmp.@local[0].ServerSelectionProtocolVersion`
+-	
+-	ind=1;
+-	while [ $ind != "0" ]; do
+-		ind=$(expr index "$hostList" ",")
+-		host=${hostList:0:$ind}
+-		hostList=${hostList:$ind}
+-		[ "$ind" = "0" ] && host=$hostList
+-		host=${host//,/}
+-		ipping_launch
+-		[ -n "$State" ] && { $UCI_SET_VARSTATE easycwmp.@local[0].ServerSelectionDiagnosticsState=$State; event_dignostic; return; }
+-		[ "$min_time" = "$DEFAULTIMEMIN" ] && continue
+-		[ "$Selection_avg_time" -gt "$avg_time" ]  ||  [ -z "$FastestHost" ] && {
+-			FastestHost=$host
+-			Selection_avg_time=$avg_time
+-			Selection_min_time=$min_time
+-			Selection_max_time=$max_time
+-		}
+-	done
+-
+-	[ -z "$FastestHost" ] && { $UCI_SET_VARSTATE easycwmp.@local[0].ServerSelectionDiagnosticsState=Error_CannotResolveHostName; event_dignostic; return; }
+-	$UCI_SET_VARSTATE easycwmp.@local[0].ServerSelectionDiagnosticsState=Complete
+-	$UCI_SET_VARSTATE easycwmp.@local[0].ServerSelectionFastestHost=$FastestHost
+-	$UCI_SET_VARSTATE easycwmp.@local[0].ServerSelectionAverageResponseTime=$Selection_avg_time
+-	$UCI_SET_VARSTATE easycwmp.@local[0].ServerSelectionMinimumResponseTime=$Selection_min_time
+-	$UCI_SET_VARSTATE easycwmp.@local[0].ServerSelectionMaximumResponseTime=$Selection_max_time
+-	event_dignostic
+-}
+-
+-ipping_initiation() {
+-	local i res ba stc times sc1 success_count failure_count min_time avg_time max_time avg_time_sum min max State
+-	local avg_time_d min_time_d max_time_d
++ipping_launch() {
++	local i res ba stc times sc1 success_count failure_count min_time avg_time max_time avg_time_sum min max
++	[ "`$UCI_GET_VARSTATE easycwmp.@local[0].DiagnosticsState`" != "Requested" ] && return
+ 	local host=`ipping_get easycwmp.@local[0].Host`
+ 	local cnt=`ipping_get easycwmp.@local[0].NumberOfRepetitions 3`
+ 	local dsize=`ipping_get easycwmp.@local[0].DataBlockSize 64`
+ 	local timeout=`ipping_get easycwmp.@local[0].Timeout 1000`
+-	local Interface=`ipping_get easycwmp.@local[0].Interface`
+-	local ProtocolVersion=`ipping_get easycwmp.@local[0].ProtocolVersion`
+-	[ "$host" = "" ] && return
+-	ipping_launch
+-	[ -n "$State" ] && { $UCI_SET_VARSTATE easycwmp.@local[0].DiagnosticsState=$State; event_dignostic; return; }
+-
+-	$UCI_SET_VARSTATE easycwmp.@local[0].DiagnosticsState=Complete
+-	$UCI_SET_VARSTATE easycwmp.@local[0].SuccessCount=$success_count
+-	$UCI_SET_VARSTATE easycwmp.@local[0].FailureCount=$failure_count
+-	$UCI_SET_VARSTATE easycwmp.@local[0].AverageResponseTime=$avg_time
+-	$UCI_SET_VARSTATE easycwmp.@local[0].MinimumResponseTime=$min_time
+-	$UCI_SET_VARSTATE easycwmp.@local[0].MaximumResponseTime=$max_time
+-
+-	$UCI_SET_VARSTATE easycwmp.@local[0].AverageResponseTimed=$avg_time_d
+-	$UCI_SET_VARSTATE easycwmp.@local[0].MinimumResponseTimed=$min_time_d
+-	$UCI_SET_VARSTATE easycwmp.@local[0].MaximumResponseTimed=$max_time_d
+-
+-
+-	event_dignostic
+-}
+-
+-ipping_launch() {
+ 	[ "$host" = "" ] && return
+ 	timeout=$((timeout/1000))
+-	[ "$timeout" = "0" ] && timeout="1"
++	[ "$timeout" = "0" ] && timeout = "1"
+ 	success_count=0
+ 	avg_time_sum=0
+-	avg_time_sum_d=0
+-	min=$DEFAULTIMEMIN
+-	min_d=$DEFAULTIMEMIND
++	min=9999999
+ 	max=0
+-	max_d=0
+ 	i=0
+-	if [ "$ProtocolVersion" = "IPv6" ]
+-	then
+-		ProtocolVersion="ping6"
+-	else
+-		ProtocolVersion="ping"
+-	fi
+-	[ "$Interface" != "" ] && { 
+-		ubusInterface=`echo {\"interface\":\"$Interface\"}`
+-		iface=`ubus call "network.interface" "status" $ubusInterface`
+-	}
+-	[ "$iface" != "" ] && {
+-		json_init
+-		json_load "$iface" >&2
+-		json_get_var device device >&2
+-		if [ "$device" != "" ] 
+-			then
+-				Device=`echo -I $device`
+-			else
+-				Device=""
+-			fi
+-		}
+ 	
+ 	while [ $i -lt $cnt ]; do
+ 		let i++
+-		res=$($ProtocolVersion -q -c 1 $Device -s $dsize -W $timeout $host 2>&1)
++		res=$(ping -q -c 1 -s $dsize -W $timeout $host 2>&1)
+ 		ba=`echo "$res" | grep "bad address"`
+-		[ -n "$ba" ] && { State=Error_CannotResolveHostName; return; }
++		[ -n "$ba" ] && { $UCI_SET_VARSTATE easycwmp.@local[0].DiagnosticsState=Error_CannotResolveHostName; return; }
+ 		ba=`echo "$res" | grep "unknown host"`
+-		[ -n "$ba" ] && { State=Error_CannotResolveHostName; return; }
++		[ -n "$ba" ] && { $UCI_SET_VARSTATE easycwmp.@local[0].DiagnosticsState=Error_CannotResolveHostName; return; }
+ 		stc=`echo "$res" | grep "received"`
+-		[ -z "$stc" ] && { State=Error_Other; return; }
++		[ -z "$stc" ] && { $UCI_SET_VARSTATE easycwmp.@local[0].DiagnosticsState=Error_Other; return; }
+ 		times=`echo "$res" | grep "min/avg/max"`
+ 		[ -z "$times" ] && continue
+ 		sc1=`echo $stc | awk '{print $4}'`
+ 		sc1=${sc1:-0}
+ 		success_count=$((success_count+sc1))
+ 		times=`echo $times | awk -F'=' '{ print $2 }'`
+-		min_time=`echo $times | awk -F'[=/ ]' '{ print $1 }'`
++		min_time=`echo $times | awk -F'[=/ ]' '{ print $1 }'`	
+ 		avg_time=`echo $times | awk -F'[=/ ]' '{ print $2 }'`
+ 		max_time=`echo $times | awk -F'[=/ ]' '{ print $3 }'`
+ 		min_time=${min_time:-0}
+ 		avg_time=${avg_time:-0}
+ 		max_time=${max_time:-0}
+-		min_time_d=`echo "$min_time * 1000" | bc -l`
+-		avg_time_d=`echo "$avg_time * 1000" | bc -l`
+-		max_time_d=`echo "$max_time * 1000" | bc -l`
+-		min_time_d=${min_time_d%.*}
+-		avg_time_d=${avg_time_d%.*}
+-		max_time_d=${max_time_d%.*}
+-		min_time=${min_time%.*}
+-		avg_time=${avg_time%.*}
+-		max_time=${max_time%.*}
+-		[ $min_time_d -lt $min_d ] && min_d=$min_time_d
+-		[ $max_time_d -gt $max_d ] && max_d=$max_time_d
+-		avg_time_sum_d=$((avg_time_sum_d+avg_time_d))
+-
++		min_time=$(awk "BEGIN{print $min_time * 1000}")
++		avg_time=$(awk "BEGIN{print $avg_time * 1000}")
++		max_time=$(awk "BEGIN{print $max_time * 1000}")
+ 		[ $min_time -lt $min ] && min=$min_time
+ 		[ $max_time -gt $max ] && max=$max_time
+ 		avg_time_sum=$((avg_time_sum+avg_time))
+ 	done
+ 	failure_count=$((cnt-success_count))
+-	[ $success_count -gt 0 ] && avg_time=$((avg_time_sum/success_count)) && avg_time_d=$((avg_time_sum_d/success_count)) || avg_time=0
++	[ $success_count -gt 0 ] && avg_time=$((avg_time_sum/success_count)) || avg_time=0
+ 	min_time=$min
+ 	max_time=$max
+-	min_time_d=$min_d
+-	max_time_d=$max_d
++	$UCI_SET_VARSTATE easycwmp.@local[0].DiagnosticsState=Complete
++	$UCI_SET_VARSTATE easycwmp.@local[0].SuccessCount=$success_count
++	$UCI_SET_VARSTATE easycwmp.@local[0].FailureCount=$failure_count
++	$UCI_SET_VARSTATE easycwmp.@local[0].AverageResponseTime=$avg_time
++	$UCI_SET_VARSTATE easycwmp.@local[0].MinimumResponseTime=$min_time
++	$UCI_SET_VARSTATE easycwmp.@local[0].MaximumResponseTime=$max_time
++	event_dignostic
+ }
+ 
+ event_dignostic() {
+@@ -182,13 +82,11 @@
+ 
+ ipping_stop() {
+ 	local pids=`ps aux | grep ipping_launch | grep -v grep | grep -v stop | awk '{print $2}'`
+-	[ -z "$pids" ] && pids=`ps | grep ipping_launch | grep -v grep | grep -v stop | awk '{print $2}'`
+ 	if [ -n "$pids" ]; then
+ 		kill -9 $pids 2>/dev/null
+ 		$UCI_SET_VARSTATE easycwmp.@local[0].DiagnosticsState=None
+ 	fi
+ }
+ 
+-[ "$1" == "run" ] && { ipping_run 2>/dev/null; exit 0; }
+-[ "$1" == "stop" ] && ipping_stop 2>/dev/null
+-
++[ "$1" == "run" ] && { ipping_launch; exit 0; }
++[ "$1" == "stop" ] && ipping_stop
+diff --recursive --unified --new-file --no-dereference orig/ext/openwrt/scripts/functions/common/management_server src/ext/openwrt/scripts/functions/common/management_server
+--- orig/ext/openwrt/scripts/functions/common/management_server	2019-09-26 14:27:06.000000000 +0000
++++ src/ext/openwrt/scripts/functions/common/management_server	2023-11-06 05:25:51.000000000 +0000
+@@ -15,13 +15,13 @@
+ 		common_execute_method_obj "$DMROOT.ManagementServer." "0"
+ 		common_execute_method_param "$DMROOT.ManagementServer.URL" "1" "$UCI_GET easycwmp.@acs[0].url" "management_server_set_url"
+ 		common_execute_method_param "$DMROOT.ManagementServer.Username" "1" "$UCI_GET easycwmp.@acs[0].username" "management_server_set easycwmp.@acs[0].username"
+-		common_execute_method_param "$DMROOT.ManagementServer.Password" "1" "" "management_server_set easycwmp.@acs[0].password"
+-		common_execute_method_param "$DMROOT.ManagementServer.PeriodicInformEnable" "1" "$UCI_GET easycwmp.@acs[0].periodic_enable" "management_server_set_periodic_enable" "xsd:boolean"
++		common_execute_method_param "$DMROOT.ManagementServer.Password" "1" "$UCI_GET easycwmp.@acs[0].password" "management_server_set easycwmp.@acs[0].password"
++		common_execute_method_param "$DMROOT.ManagementServer.PeriodicInformEnable" "1" "$UCI_GET easycwmp.@acs[0].periodic_enable" "management_server_set easycwmp.@acs[0].periodic_enable" "xsd:boolean"
+ 		common_execute_method_param "$DMROOT.ManagementServer.PeriodicInformInterval" "1" "$UCI_GET easycwmp.@acs[0].periodic_interval" "management_server_set easycwmp.@acs[0].periodic_interval" "xsd:unsignedInt"
+ 		common_execute_method_param "$DMROOT.ManagementServer.PeriodicInformTime" "1" "$UCI_GET easycwmp.@acs[0].periodic_time" "management_server_set easycwmp.@acs[0].periodic_time" "xsd:dateTime" 
+ 		common_execute_method_param "$DMROOT.ManagementServer.ConnectionRequestURL" "0" "management_server_get_connection_request_url" "" "" "1"
+ 		common_execute_method_param "$DMROOT.ManagementServer.ConnectionRequestUsername" "1" "$UCI_GET easycwmp.@local[0].username" "management_server_set easycwmp.@local[0].username"
+-		common_execute_method_param "$DMROOT.ManagementServer.ConnectionRequestPassword" "1" "" "management_server_set easycwmp.@local[0].password"
++		common_execute_method_param "$DMROOT.ManagementServer.ConnectionRequestPassword" "1" "$UCI_GET easycwmp.@local[0].password" "management_server_set easycwmp.@local[0].password"
+ 		common_execute_method_param "$DMROOT.ManagementServer.ParameterKey" "0" "$UCI_GET easycwmp.@acs[0].parameter_key" "" "" "1"
+ 		return 0;
+ 		;;
+@@ -49,16 +49,10 @@
+ 	return 0
+ }
+ 
+-management_server_set_periodic_enable() {
+-	local val=$1
+-	common_set_bool "easycwmp.@acs[0].periodic_enable" "$val" "1" "0"
+-	return 0
+-}
+-
+ management_server_get_connection_request_url() {
+ 	local val
+ 	if [ -z "$default_management_server_connection_request_url" ]; then
+-		local intf=`$UCI_GET easycwmp.@local[0].interface 2> /dev/null`
++		local intf=`/sbin/wan_info interface 2> /dev/null`
+ 		local ip=`ifconfig "$intf" | grep inet | sed 's/^ *//g' | cut -f 2 -d ' '|cut -f 2 -d ':'`
+ 		local port=`$UCI_GET easycwmp.@local[0].port 2> /dev/null`
+ 
+diff --recursive --unified --new-file --no-dereference orig/ext/openwrt/scripts/functions/custom/mobile_information src/ext/openwrt/scripts/functions/custom/mobile_information
+--- orig/ext/openwrt/scripts/functions/custom/mobile_information	1970-01-01 00:00:00.000000000 +0000
++++ src/ext/openwrt/scripts/functions/custom/mobile_information	2023-11-06 05:25:51.000000000 +0000
+@@ -0,0 +1,255 @@
++#!/bin/sh
++# Copyright (C) 2015 PIVA Software <www.pivasoftware.com>
++# 	Author: MOHAMED Kallel <mohamed.kallel@pivasoftware.com>
++
++#common_execute_method_param "$parameter" "$permission" "$get_cmd" "$set_cmd" "xsd:$type" "$forcedinform"
++#  $forcedinform should be set to 1 if the parameter is included in the inform message otherwise empty
++#  Default of $type = string
++
++#############################
++#   Entry point functuons   #
++#############################
++
++prefix_list="$prefix_list $DMROOT.MobileInfo."
++entry_execute_method_list="$entry_execute_method_list entry_execute_method_root_MobileInfo"
++entry_execute_method_list_forcedinform="$entry_execute_method_list_forcedinform  entry_execute_method_root_MobileInfo"
++MDCOLLECTCTL_BIN=/usr/bin/mdcollectdctl
++current_sim="1"
++# Structure --- <Value name represented in easycwmp log;ubus method name;lookup value from method response>
++PARAM_LIST="RSSI;get_signal_query;rssi ConnState;info;usb_id NetState;get_net_reg_stat_all;status ICCID;get_iccid;iccid \
++IMSI;get_imsi;imsi RSCP;get_signal_query;rscp ECIO;get_signal_query;ecio RSRP;get_signal_query;rsrp SINR;get_signal_query;sinr RSRQ;get_signal_query;rsrq \
++Operator;get_service_provider;full_name OperatorNum;get_network_info;opernum ConnType;get_network_info;net_mode \
++Model;info;model Manufacturer;info;manuf Serial;get_serial;serial Revision;get_firmware;firmware IMEI;info;imei SimState;get_pin_state;state_id \
++PinState;get_pin_state;state Temperature;get_temperature;temperature_value"
++
++MODEMS=""
++
++get_modems(){
++
++	local modem_objs=$(ubus list gsm.*)
++	for i in $modem_objs
++	do
++		MODEMS=${MODEMS:+$MODEMS }"${i//[!0-9]/}"
++	done
++
++}
++
++get_usb_id() {
++
++	local modem_num="$1"
++	local usb_id="$(ubus call gsm.modem$modem_num info 2>/dev/null | grep usb_id | sed 's/.* //g')"
++
++	echo "${usb_id:1:-2}"
++
++}
++
++get_conn_state() {
++
++	local modem_id=$1
++
++	json_init
++	json_load "$(ubus call network.interface dump)"
++
++	json_is_a interface array || {
++		return 5
++	}
++
++	json_select interface
++	json_get_keys keys
++
++	for var in $keys; do
++		json_select "$var"
++		json_get_var interface interface
++		json_get_var data data
++		json_get_var up up
++		json_get_var modem_main modem
++
++		[ -z "$data" ] || [ -z "$up" ] || [ "$up" -eq 0 ] && {
++			json_select ..
++			continue
++		}
++
++		json_select data
++		json_get_var modem_data modem
++		json_select ..
++
++		[ "$modem_main" != "$modem_id" ] && [ "$modem_data" != "$modem_id" ] && {
++			json_select ..
++			continue
++		}
++
++		json_get_var method method
++		json_select ipv4-address
++		json_select 1 >/dev/null 2>&1
++		json_get_var ipv4 address
++		json_select ..
++
++		[ -n "$method" -a "$method" = "bridge" ] || [ "$ipv4" ] && {
++			return 1
++		}
++
++		json_select ..
++	done
++
++	return 0
++}
++
++
++get_modem_value() {
++
++	local modem_num="$1"
++	local method="$2"
++	local value="$3"
++	local parameter_name="$4"
++
++	local found_value=$(ubus call gsm.modem$modem_num $method 2>/dev/null | grep -w $value | sed 's/[^ ]* *//; s/["]//g; s/,$//g')
++
++	case "$parameter_name" in
++		"SimState")
++			case "$found_value" in
++				"1"|"3"|"4"|"5"|"6"|"7"|"8"|"11")
++					found_value="Inserted"
++				;;
++				*)
++					found_value="Not inserted"
++				;;
++			esac
++		;;
++		"ConnState")
++			get_conn_state "$found_value"
++			found_value=$?
++			case "$found_value" in
++				1)
++					found_value="Connected"
++					;;
++				0)
++					found_value="Not connected"
++					;;
++				*)
++					found_value="Unknown"
++					;;
++			esac
++		;;
++	esac
++
++	echo "$found_value"
++
++}
++
++list_foreach(){
++	[ "$#" -ge 2 ] || return 0
++	local list=$1; shift
++	local callback=$1; shift
++
++	for element in $list
++	do
++		$callback $element $@
++	done
++}
++
++entry_execute_method_root_MobileInfo() {
++	case "$1" in ""|"$DMROOT."|"$DMROOT.MobileInfo."*)
++		common_execute_method_obj "$DMROOT.MobileInfo." "0"
++		common_execute_method_obj "$DMROOT.MobileInfo.Modem." "0" "" "" "mobileinfo_browse_modems $1"
++
++		return 0;
++		;;
++	esac
++	return $E_INVALID_PARAMETER_NAME;
++}
++
++sub_entry_modem_info(){
++	name=$(echo $1 | awk 'BEGIN { FS = ";" }; {print $1}')
++	method=$(echo $1 | awk 'BEGIN { FS = ";" }; {print $2}')
++	value=$(echo $1 | awk 'BEGIN { FS = ";" }; {print $3}')
++
++	local usb_id="$2"
++	local modem_num="$3"
++
++	local modem_value=$(get_modem_value "$modem_num" "$method" "$value" "$name")
++
++	[ -n "$name" -a -n "$method" ] && {
++		common_execute_method_param "$DMROOT.MobileInfo.Modem.$usb_id.$name" "0"\
++		 	"echo $modem_value" "" "" "1"
++	}
++}
++
++sub_entry_modem() {
++	local modem sim=1
++	local modem_num="$1"
++
++	modem=$(get_usb_id "$modem_num")
++
++	case_param "$2" belongto "$DMROOT.MobileInfo.Modem.$modem." && {
++		common_execute_method_obj "$DMROOT.MobileInfo.Modem.$modem." "0"
++		list_foreach "$PARAM_LIST" sub_entry_modem_info $modem $modem_num
++		common_execute_method_param "$DMROOT.MobileInfo.Modem.$modem.CellID" "0" \
++			"get_cell_id $modem_num" "" "" "1"
++		common_execute_method_param "$DMROOT.MobileInfo.Modem.$modem.SentToday" "0" \
++			"get_sent_today $modem $sim" "" "" "1"
++		common_execute_method_param "$DMROOT.MobileInfo.Modem.$modem.ReceivedToday" "0" \
++			"get_received_today $modem $sim" "" "" "1"
++		common_execute_method_param "$DMROOT.MobileInfo.Modem.$modem.SentThisMonth" "0" \
++			"get_sent_month $modem $sim" "" "" "1"
++		common_execute_method_param "$DMROOT.MobileInfo.Modem.$modem.ReceivedThisMonth" "0" \
++			"get_received_month $modem $sim" "" "" "1"
++
++		return 0
++	}
++	return "$E_INVALID_PARAMETER_NAME"
++}
++
++mobileinfo_browse_modems() {
++	#We're not using json_for_each_item here, cus json is overwrited by system.
++	[ -n "$MODEMS" ] || get_modems
++
++	list_foreach "$MODEMS" sub_entry_modem "$1"
++}
++
++get_cell_id() {
++	json_load "$(ubus call gsm.modem$1 get_net_reg_stat)"
++	json_get_var cell_id ci
++
++	[ -z "$cell_id" ] && {
++		json_load "$(ubus call gsm.modem$1 get_net_reg_stat_all)"
++		json_get_var cell_id ci
++	}
++
++	echo "$cell_id"
++}
++
++get_sent_today() {
++	json_load "$(ubus call mdcollect get \
++		 '{"modem": "'$1'", "sim": '$2', "period": "day", "current": false}')"
++	json_get_var sent_today tx
++
++	echo "$sent_today"
++}
++
++get_received_today() {
++	json_load "$(ubus call mdcollect get \
++		'{"modem": "'$1'", "sim": '$2', "period": "day", "current": false}')"
++	json_get_var received_today rx
++
++	echo "$received_today"
++}
++
++get_sent_month() {
++	json_load "$(ubus call mdcollect get \
++		'{"modem": "'$1'", "sim": '$2', "period": "month", "current": false}')"
++	json_get_var sent_month tx 
++
++	echo "$sent_month"
++}
++
++get_received_month() {
++	json_load "$(ubus call mdcollect get \
++		'{"modem": "'$1'", "sim": '$2', "period": "month", "current": false}')"
++	json_get_var received_month rx
++
++	echo "$received_month"
++}
++
++#######################################
++#   Data model parameters functions   #
++#######################################
+diff --recursive --unified --new-file --no-dereference orig/ext/openwrt/scripts/functions/gps/gps_information src/ext/openwrt/scripts/functions/gps/gps_information
+--- orig/ext/openwrt/scripts/functions/gps/gps_information	1970-01-01 00:00:00.000000000 +0000
++++ src/ext/openwrt/scripts/functions/gps/gps_information	2023-11-06 05:25:51.000000000 +0000
+@@ -0,0 +1,46 @@
++#!/bin/sh
++# Copyright (C) 2015 PIVA Software <www.pivasoftware.com>
++# 	Author: MOHAMED Kallel <mohamed.kallel@pivasoftware.com>
++
++#common_execute_method_param "$parameter" "$permission" "$get_cmd" "$set_cmd" "xsd:$type" "$forcedinform"
++#  $forcedinform should be set to 1 if the parameter is included in the inform message otherwise empty
++#  Default of $type = string
++
++#############################
++#   Entry point functuons   #
++#############################
++
++prefix_list="$prefix_list $DMROOT.GPSInfo."
++entry_execute_method_list="$entry_execute_method_list entry_execute_method_root_GPSInfo"
++entry_execute_method_list_forcedinform="$entry_execute_method_list_forcedinform  entry_execute_method_root_GPSInfo"
++
++entry_execute_method_root_GPSInfo() {
++	case "$1" in ""|"$DMROOT."|"$DMROOT.GPSInfo."*)
++                common_execute_method_obj "$DMROOT.GPSInfo." "0"
++		common_execute_method_param "$DMROOT.GPSInfo.Latitude" "0" "get_latitude" "" "" "1"
++		common_execute_method_param "$DMROOT.GPSInfo.Longitude" "0" "get_longitude" "" "" "1"
++		return 0;
++		;;
++	esac
++	return $E_INVALID_PARAMETER_NAME;
++}
++
++#######################################
++#   Data model parameters functions   #
++#######################################
++
++get_latitude()
++{
++        json_load "$(ubus call gpsd position)"
++        json_get_var received_latitude latitude
++
++        echo "$received_latitude"
++}
++
++get_longitude()
++{
++        json_load "$(ubus call gpsd position)"
++        json_get_var received_longitude longitude
++
++        echo "$received_longitude"
++}
+diff --recursive --unified --new-file --no-dereference orig/ext/openwrt/scripts/functions/hotspot/hotspot src/ext/openwrt/scripts/functions/hotspot/hotspot
+--- orig/ext/openwrt/scripts/functions/hotspot/hotspot	1970-01-01 00:00:00.000000000 +0000
++++ src/ext/openwrt/scripts/functions/hotspot/hotspot	2023-11-06 05:25:51.000000000 +0000
+@@ -0,0 +1,90 @@
++#!/bin/sh
++# Copyright (C) 2015 PIVA Software <www.pivasoftware.com>
++# 	Author: MOHAMED Kallel <mohamed.kallel@pivasoftware.com>
++
++#common_execute_method_param "$parameter" "$permission" "$get_cmd" "$set_cmd" "xsd:$type" "$forcedinform"
++#  $forcedinform should be set to 1 if the parameter is included in the inform message otherwise empty
++#  Default of $type = string
++
++#############################
++#   Entry point functuons   #
++#############################
++. /lib/functions.sh
++
++prefix_list="$prefix_list $DMROOT.Hotspot."
++entry_execute_method_list="$entry_execute_method_list entry_execute_method_root_Hotpsot"
++entry_execute_method_list_forcedinform="$entry_execute_method_list_forcedinform  entry_execute_method_root_Hotpsot"
++OPTION_LIST="IPP;uamlisten AuthMode;_mode LogoutIP;uamlogoutip Network;network \
++DNS1;dns1 DNS2;dns2 UAMPort;uamport LandingPage;_landingpage"
++
++config_load chilli
++
++list_foreach(){
++	[ "$#" -ge 2 ] || return 0
++	local list=$1; shift
++	local callback=$1; shift
++
++	for element in $list
++	do
++		$callback $element $@
++	done
++}
++
++entry_execute_method_root_Hotpsot() {
++	case "$1" in ""|"$DMROOT."|"$DMROOT.Hotspot."*)
++		common_execute_method_obj "$DMROOT.Hotspot." "0"
++		common_execute_method_obj "$DMROOT.Hotspot.General." "0" "" "" "hotspot_browse_instances $1"
++
++		return 0;
++		;;
++	esac
++	return $E_INVALID_PARAMETER_NAME;
++}
++
++#$1 - section name, $2 - option, $3 - true value, $4 - false value
++Hotspot_Get_Bool() {
++	local val=`$UCI_GET chilli.$1.$2`
++
++	[ "$val" = "1" ] && echo "$3" || echo "$4"
++}
++#$1 - section name, $2 - option, $3 - true value, $4 - false value, $5 - value
++Hotspot_Set_Bool() {
++	common_set_bool "chilli.$1" "$4" "$2" "$3"
++	return $?
++}
++#$1 - section name, $2 - option
++Hotspot_Get() {
++	echo `$UCI_GET chilli.$1.$2`
++}
++#$1 - section name, $2 - option, $3 - value
++Hotspot_Set() {
++	$UCI_SET chilli.$1.$2=$3
++	return $?
++}
++
++
++hotspot_entry(){
++	name=$(echo $1 | awk 'BEGIN { FS = ";" }; {print $1}')
++	param=$(echo $1 | awk 'BEGIN { FS = ";" }; {print $2}')
++	common_execute_method_param "$DMROOT.Hotspot.General.$2.$name" "0" \
++				"Hotspot_Get $2 $param" "" "" "1"
++}
++
++sub_entry_hotpsot_general(){
++	case "$2" in ""|"$DMROOT."|"$DMROOT.MobileInfo.General.$1"*)
++		common_execute_method_obj "$DMROOT.Hotspot.General.$1" "0"
++		common_execute_method_param "$DMROOT.Hotspot.General.$1.Enabled" "1" \
++				"Hotspot_Get_Bool $1 enabled enabled disabled" \
++				"Hotspot_Set_Bool $1.enabled 1 0" "xsd:boolean" "1"
++		common_execute_method_param "$DMROOT.Hotspot.General.$1.Signup" "1" \
++				"Hotspot_Get_Bool $1 registerusers enabled disabled" "" "xsd:boolean" "1"
++		list_foreach "$OPTION_LIST" hotspot_entry $1
++		return 0
++		;;
++	esac
++	return $E_INVALID_PARAMETER_NAME;
++}
++
++hotspot_browse_instances(){
++	config_foreach sub_entry_hotpsot_general chilli $1
++}
+diff --recursive --unified --new-file --no-dereference orig/ext/openwrt/scripts/functions/tr098/wan_device src/ext/openwrt/scripts/functions/tr098/wan_device
+--- orig/ext/openwrt/scripts/functions/tr098/wan_device	2019-09-26 14:27:06.000000000 +0000
++++ src/ext/openwrt/scripts/functions/tr098/wan_device	2023-11-06 05:25:51.000000000 +0000
+@@ -25,7 +25,7 @@
+ sub_entry_wandevice_wanconnectiondevice() {
+ 	local j="$2"
+ 	local iface="$3"
+-	local protocol="$4"
++ 	local protocol="$4"
+ 	local default="$5"
+ 	case_param "$1" belongto "$DMROOT.WANDevice.1.WANConnectionDevice.$j." && {
+ 		common_execute_method_obj "$DMROOT.WANDevice.1.WANConnectionDevice.$j." "0"
+@@ -38,11 +38,12 @@
+ 			common_execute_method_param "$DMROOT.WANDevice.1.WANConnectionDevice.$j.WANIPConnection.1.MACAddress" "0" "wan_device_get_ipcx_macaddr $iface"
+ 			;;
+ 			PPP)
++			local ifname=`$UCI_GET network.$iface.ifname`
+ 			common_execute_method_obj "$DMROOT.WANDevice.1.WANConnectionDevice.$j.WANPPPConnection." "0"
+ 			common_execute_method_obj "$DMROOT.WANDevice.1.WANConnectionDevice.$j.WANPPPConnection.1." "0"
+-			common_execute_method_param "$DMROOT.WANDevice.1.WANConnectionDevice.$j.WANPPPConnection.1.Enable" "1" "wan_device_get_ipcx_macaddr $iface" "wan_device_set_wan_ppp_enable $iface" "xsd:boolean"
+-			common_execute_method_param "$DMROOT.WANDevice.1.WANConnectionDevice.$j.WANPPPConnection.1.Username" "1" "$UCI_GET network.$iface.username" "wan_device_set_wan_ppp_cfg network.$iface.username"
+-			common_execute_method_param "$DMROOT.WANDevice.1.WANConnectionDevice.$j.WANPPPConnection.1.Password" "1" "" "wan_device_set_wan_ppp_cfg network.$iface.password"
++			common_execute_method_param "$DMROOT.WANDevice.1.WANConnectionDevice.$j.WANPPPConnection.1.Enable" "0" "wan_device_get_wan_ppp_enable $iface" "" "xsd:boolean"
++			common_execute_method_param "$DMROOT.WANDevice.1.WANConnectionDevice.$j.WANPPPConnection.1.APN" "0" "$UCI_GET network.ppp.apn" ""
++			common_execute_method_param "$DMROOT.WANDevice.1.WANConnectionDevice.$j.WANPPPConnection.1.ExternalIPAddress" "0" "gsmctl -p $ifname " ""
+ 			;;
+ 		esac
+ 		return 0
+@@ -74,7 +75,16 @@
+ 
+ wan_device_get_interface_maps() {
+ 	#should return a list like this: "<interface1>:<instance1>:<protocol>:<default interface? 1 : 0> <interface2>:<instance>:<protocol>:<default interface? 1 : 0>"
+-	echo "mng:1:IP:1 wan:2:PPP:0"
++	local ifname=`$UCI_GET network.wan.ifname`
++	if [ -n "$ifname" ]; then
++		if [ "$ifname" == "wwan0" ]; then
++			echo "wan:1:PPP:1"
++		else
++			echo "wan:1:IP:1"
++		fi
++	else
++		echo "wan:1:PPP:1"
++	fi
+ }
+ 
+ wan_device_get_ipcx_status() {
+@@ -89,8 +99,9 @@
+ 
+ wan_device_get_ipcx_macaddr() {
+ 	local val iface="$1"
+-	if [ -z "$default_wan_device_mng_interface_mac" ]; then
+-		val=`$UCI_GET network.$iface.macaddr`
++	local ifname=`$UCI_GET network.$iface.ifname`
++	if [ -z "$default_wan_device_mng_interface_mac" -a -n "$ifname" ]; then
++		val=`cat /sys/class/net/$ifname/address`
+ 	else
+ 		val=$default_wan_device_mng_interface_mac
+ 	fi
+@@ -98,8 +109,8 @@
+ }
+ 
+ wan_device_get_wan_ppp_enable() {
+-	local iface="$1"
+-	local val=`$UCI_GET network.$iface.auto`
++	local ifname=`$UCI_GET network.$1.ifname`
++	local val=`$UCI_GET network.$ifname.enabled`
+ 	echo ${val:-1}
+ }
+ 
+diff --recursive --unified --new-file --no-dereference orig/ext/openwrt/scripts/functions/tr181/ip src/ext/openwrt/scripts/functions/tr181/ip
+--- orig/ext/openwrt/scripts/functions/tr181/ip	2019-09-26 14:27:06.000000000 +0000
++++ src/ext/openwrt/scripts/functions/tr181/ip	2023-11-06 05:25:51.000000000 +0000
+@@ -12,9 +12,10 @@
+ 
+ prefix_list="$prefix_list $DMROOT.IP."
+ entry_execute_method_list="$entry_execute_method_list entry_execute_method_root_IP"
++entry_execute_method_list_forcedinform="$entry_execute_method_list_forcedinform  entry_execute_method_root_IP"
+ 
+ entry_execute_method_root_IP() {
+-	case "$1" in ""|"$DMROOT."|"$DMROOT.IP."*)
++	case "$1" in ""|"$DMROOT."|"$DMROOT.IP."|"$DMROOT.IP.Interface."*)
+ 		common_execute_method_obj "$DMROOT.IP." "0"
+ 		common_execute_method_obj "$DMROOT.IP.Interface." "1" "add_ip_iface" "" "ip_device_browse_instances $1"
+ 		common_execute_method_obj "$DMROOT.IP.Diagnostics." "0"
+@@ -30,8 +31,8 @@
+ 	local ip_int="$3"
+ 	case_param "$1" belongto "$DMROOT.IP.Interface.$j." && {
+ 		common_execute_method_obj "$DMROOT.IP.Interface.$j." "1" "" "del_ip_iface $ip_int"
+-		common_execute_method_param  "$DMROOT.IP.Interface.$j.Enable" "0" "ip_iface_get_ip_enable" "" "xsd:boolean"
+-		common_execute_method_param  "$DMROOT.IP.Interface.$j.Name" "0" "ip_get_iface_name $ip_int"
++		common_execute_method_param  "$DMROOT.IP.Interface.$j.Enable" "0" "ip_iface_get_ip_enable" "" "xsd:boolean" "1"
++		common_execute_method_param  "$DMROOT.IP.Interface.$j.Name" "0" "ip_get_iface_name $ip_int" "" "" "1"
+ 		common_execute_method_param  "$DMROOT.IP.Interface.$j.Type" "0" "ip_iface_get_ip_type $ip_int"
+ 		common_execute_method_param  "$DMROOT.IP.Interface.$j.IPv4AddressNumberOfEntries" "0" "echo 1" "" "xsd:unsignedInt"
+ 		common_execute_method_obj "$DMROOT.IP.Interface.$j.IPv4Address." "1" "" "" "ipv4_browse_instances $j $ip_int"
+@@ -45,9 +46,9 @@
+ 	local j="$1"
+ 	local ip_int="$2"
+ 	case_param "$1" belongto "$DMROOT.IP.Interface.$j.IPv4Address.1." && {
+-		common_execute_method_param  "$DMROOT.IP.Interface.$j.IPv4Address.1.IPAddress" "1" "ipv4address_iface_get_ip_adress $ip_int" "ipv4address_iface_set_ip_adress $ip_int"
++		common_execute_method_param  "$DMROOT.IP.Interface.$j.IPv4Address.1.IPAddress" "1" "ipv4address_iface_get_ip_adress $ip_int" "ipv4address_iface_set_ip_adress $ip_int" "" "1"
+ 		common_execute_method_param  "$DMROOT.IP.Interface.$j.IPv4Address.1.AddressingType" "0" "ipv4address_iface_get_type_adress $ip_int"
+-		common_execute_method_param  "$DMROOT.IP.Interface.$j.IPv4Address.1.Enable" "0" "echo 1" "" "xsd:boolean"
++		common_execute_method_param  "$DMROOT.IP.Interface.$j.IPv4Address.1.Enable" "0" "echo 1" "" "" "1"
+ 		common_execute_method_param "$DMROOT.IP.Interface.$j.IPv4Address.1.SubnetMask" "0" "get_net_mask $ip_int"
+ 		return 0
+ 	}
+@@ -94,8 +95,8 @@
+ ip_device_browse_instances() {
+ 	local ip_int ip_ints=`$UCI_SHOW network |grep interface | cut -d "=" -f 1`
+ 	for ip_int in $ip_ints; do
+-		local type=`$UCI_GET $ip_int.type`
+-		if [ "$type" != "alias" ]; then
++		local proto=`$UCI_GET $ip_int.proto`
++		if [ "$proto" = "static" ] || [ "$proto" = "dhcp" ] || [ "$proto" = "wwan" ]; then
+ 			local j=`ip_device_update_instance $ip_int`
+ 			sub_entry_ip_interface  "$1" "$j" "$ip_int"
+ 		fi
+@@ -110,30 +111,23 @@
+ 	get_stat $2
+ 	sub_entry_ip_stat $1 $2
+ }
+-
+ #######################################
+-#   ADD & DEL obj                     #
++#   Data model parameters functions   #
+ #######################################
+ 
+-add_ip_iface() {
+-	local instance=`ip_get_max_instance`
+-	$UCI_SET  network.ip_interface_$instance=interface
+-	$UCI_SET  network.ip_interface_$instance.proto=dhcp
+-	$UCI_SET  network.ip_interface_$instance.ip_int_instance=$((++instance))
+-	$UCI_COMMIT
+-	echo $instance
+-}
++IP_iface_set_IP_enable() {
+ 
+-del_ip_iface() {
+-	local iface="$1"
+-	$UCI_DELETE $iface
+-	$UCI_COMMIT
+ 	return 0
+ }
+ 
+ #######################################
+-#   GET & SET Values                  #
++#   get max num interfaces            #
+ #######################################
++		
++ip_Interface_get_max_interface() {
++	local max=`cat /etc/config/network |grep -i "interface" | wc -l`
++	echo $(($max+1))
++}
+ 
+ ip_get_iface_name() {
+ 	local interface=`echo $1 |cut -d "." -f 2`
+@@ -154,40 +148,27 @@
+ }
+ 
+ ipv4address_iface_get_ip_adress() {
+-	local name=$(echo $1 |cut -d "." -f 2)
+-	local address=""
+-	local res
+-	res=`ubus call network.interface.$name status`
+-	if [ "$?" = 0 ]; then
+-		json_init
+-		json_load "$res" >/dev/null
+-		json_select "ipv4-address" >/dev/null
+-		if [ "$?" = 0 ]; then
+-			json_select 1 >/dev/null
+-			json_get_var address address >/dev/null
+-			echo "$address"
+-			return
+-		fi
++	local interface=`echo $1 |cut -d "." -f 2`
++	network_get_protocol proto "$interface"
++
++	if [ "$proto" = "wwan" ]; then
++		network_get_ipaddr ip_addr "${interface}_4"
++	else
++		network_get_ipaddr ip_addr "$interface"
+ 	fi
+-	$UCI_GET $1.ipaddr
++
++	echo "$ip_addr"
+ }
+ 
+ ipv4address_iface_set_ip_adress() {
+ 	$UCI_SET $1.ipaddr="$2"
+-	$UCI_SET $1.proto="static"
++	common_delay_service_restart_in_apply_service "network" "1"
+ 	return 0
+ }
+ 
+ ipv4address_iface_get_type_adress() {
+ 	local val=`$UCI_GET $1.proto`
+-	case $val in
+-		dhcp*|ppp*)
+-			echo "DHCP"
+-			;;
+-		*)
+-			echo "Static"
+-			;;
+-	esac
++	echo "$val"
+ }
+ 
+ get_net_mask() {
+@@ -195,19 +176,21 @@
+ 	local mask=""
+ 	local res
+ 	res=`ubus call network.interface.$name status`
+-	if [ "$?" = 0 ]; then
+-		json_init
+-		json_load "$res" >/dev/null
+-		json_select "ipv4-address" >/dev/null
+-		if [ "$?" = 0 ]; then
+-			json_select 1 >/dev/null
+-			json_get_var mask mask >/dev/null
+-			mask=`cdr2mask $mask` 
+-			echo "$mask"
+-			return
+-		fi
++	if [ "$?" != 0 ]; then
++		echo "$mask"
++		return
+ 	fi
+-	$UCI_GET $1.netmask
++	json_init
++	json_load "$res" &> /dev/null
++	json_select "ipv4-address" &> /dev/null
++	if [ "$?" != 0 ]; then
++		echo "$mask"
++		return
++	fi
++	json_select 1
++	json_get_var mask mask
++	mask=`cdr2mask $mask` 
++	echo "$mask"
+ }
+ 
+ #######################################
+@@ -267,3 +250,22 @@
+ get_tx_discard_stats() {
+ 	echo ${tx_dropped:-0}
+ }
++#######################################
++#   ADD & DEL obj                     #
++#######################################
++
++add_ip_iface() {
++	local instance=`ip_get_max_instance`
++	$UCI_SET  network.ip_interface_$instance=interface
++	$UCI_SET  network.ip_interface_$instance.proto=dhcp
++	$UCI_SET  network.ip_interface_$instance.ip_int_instance=$((++instance))
++	$UCI_COMMIT
++	echo $instance
++}
++
++del_ip_iface() {
++	local iface="$1"
++	$UCI_DELETE $iface
++	$UCI_COMMIT
++	return 0
++}
+diff --recursive --unified --new-file --no-dereference orig/ext/openwrt/scripts/functions/tr181/wifi src/ext/openwrt/scripts/functions/tr181/wifi
+--- orig/ext/openwrt/scripts/functions/tr181/wifi	2019-09-26 14:27:06.000000000 +0000
++++ src/ext/openwrt/scripts/functions/tr181/wifi	2023-11-06 05:25:51.000000000 +0000
+@@ -12,6 +12,8 @@
+ prefix_list="$prefix_list $DMROOT.WiFi."
+ entry_execute_method_list="$entry_execute_method_list entry_execute_method_root_WiFi"
+ 
++UCI_SHOW_X="/sbin/uci -qX ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} show"
++
+ entry_execute_method_root_WiFi() {
+ 	case "$1" in ""|"$DMROOT."|"$DMROOT.WiFi."*)
+ 		common_execute_method_obj "$DMROOT.WiFi." "0"
+@@ -41,7 +43,7 @@
+ 		common_execute_method_param  "$DMROOT.WiFi.Radio.$j.OperatingStandards" "1" "wifi_radio_get_OperatingStandards $radio" "wifi_radio_set_OperatingStandards $radio"
+ 		return 0
+ 	}
+-	return $E_INVALID_PARAMETER_NAME;		
++	return $E_INVALID_PARAMETER_NAME;
+ }
+ 
+ sub_entry_WiFi_SSID() {
+@@ -57,7 +59,7 @@
+ 		common_execute_method_param  "$DMROOT.WiFi.SSID.$j.X_IPInterface" "1" "wifi_ssid_get_X_IPInterface $iface" "wifi_ssid_set_X_IPInterface $iface"
+ 		return 0
+ 	}
+-	return $E_INVALID_PARAMETER_NAME;		
++	return $E_INVALID_PARAMETER_NAME;
+ }
+ 
+ sub_entry_WiFi_AccessPoint() {
+@@ -76,17 +78,17 @@
+ 		common_execute_method_param  "$DMROOT.WiFi.AccessPoint.$j.Security.KeyPassphrase" "1" "wifi_get_secret" "wifi_ap_set_KeyPassphrase $iface"
+ 		return 0
+ 	}
+-	return $E_INVALID_PARAMETER_NAME;		
++	return $E_INVALID_PARAMETER_NAME;
+ }
+ 
+ 
+ wifi_radio_get_max_instance() {
+-	local max=`$UCI_SHOW -X wireless | grep "wifi_radio_instance" | cut -d'=' -f2 | sed 's/[^0-9]*//g' | sort -nru | head -1`
++	local max=`$UCI_SHOW_X wireless | grep "wifi_radio_instance" | cut -d'=' -f2 | sed 's/[^0-9]*//g' | sort -nru | head -1`
+ 	echo ${max:-0}
+ }
+ 
+ wifi_iface_get_max_instance() {
+-	local max=`$UCI_SHOW -X wireless | grep "wifi_iface_instance" | cut -d'=' -f2 | sed 's/[^0-9]*//g' | sort -nru | head -1`
++	local max=`$UCI_SHOW_X wireless | grep "wifi_iface_instance" | cut -d'=' -f2 | sed 's/[^0-9]*//g' | sort -nru | head -1`
+ 	echo ${max:-0}
+ }
+ 
+@@ -113,7 +115,7 @@
+ }
+ 
+ wifi_radio_browse_instances() {
+-	local radio radios=`$UCI_SHOW -X wireless | grep "wireless\..*=wifi-device" | cut -d "=" -f 1`
++	local radio radios=`$UCI_SHOW_X wireless | grep "wireless\..*=wifi-device" | cut -d "=" -f 1`
+ 	for radio in $radios; do
+ 		local j=`wifi_radio_update_instance $radio`
+ 		sub_entry_WiFi_Radio  "$1" "$j" "$radio"
+@@ -121,7 +123,7 @@
+ }
+ 
+ wifi_ssid_browse_instances() {
+-	local iface ifaces=`$UCI_SHOW -X wireless | grep "wireless\..*=wifi-iface" | cut -d "=" -f 1`
++	local iface ifaces=`$UCI_SHOW_X wireless | grep "wireless\..*=wifi-iface" | cut -d "=" -f 1`
+ 	for iface in $ifaces; do
+ 		local j=`wifi_iface_update_instance $iface`
+ 		sub_entry_WiFi_SSID  "$1" "$j" "$iface"
+@@ -129,7 +131,7 @@
+ }
+ 
+ wifi_ap_browse_instances() {
+-	local iface ifaces=`$UCI_SHOW -X wireless | grep "wireless\..*=wifi-iface" | cut -d "=" -f 1`
++	local iface ifaces=`$UCI_SHOW_X wireless | grep "wireless\..*=wifi-iface" | cut -d "=" -f 1`
+ 	for iface in $ifaces; do
+ 		local j=`wifi_iface_update_instance $iface`
+ 		sub_entry_WiFi_AccessPoint  "$1" "$j" "$iface"
+@@ -200,10 +202,10 @@
+ 
+ 	phy="phy${1#*radio}"
+ 	freq=`iw phy $phy info | grep  "MHz.*dBm" | head -1 | awk '{print $2}'`
+-	if [ "${freq#24}" != "$freq" ]; then 
++	if [ "${freq#24}" != "$freq" ]; then
+ 		channel=`iw dev | grep "channel.*(24.*MHz)" | head -1 | awk '{print $2}'`
+ 	else
+-		channel=`iw dev | grep "channel" | grep -v "channel.*(24.*MHz)" | head -1 | awk '{print $2}'`		
++		channel=`iw dev | grep "channel" | grep -v "channel.*(24.*MHz)" | head -1 | awk '{print $2}'`
+ 	fi
+ 	echo $channel
+ }
+@@ -224,7 +226,7 @@
+ 	else
+ 		local channel=`wifi_radio_get_Channel $1`
+ 		$UCI_SET $1.channel=$channel
+-	fi	
++	fi
+ }
+ 
+ wifi_radio_get_OperatingStandards() {
+@@ -289,7 +291,7 @@
+ 	[ "$tmp" = "$2" ] && return
+ 	local instance=${tmp%.}
+ 	[ "$tmp" = "$instance" ] && return
+-	local device=`$UCI_SHOW -X wireless | grep "wifi_radio_instance=$instance" | cut -d'.' -f2`
++	local device=`$UCI_SHOW_X wireless | grep "wifi_radio_instance=$instance" | cut -d'.' -f2`
+ 	$UCI_SET $1.device=$device
+ }
+ 
+@@ -313,7 +315,7 @@
+ 	[ "$tmp" = "$2" ] && return
+ 	local instance=${tmp%.}
+ 	[ "$tmp" = "$instance" ] && return
+-	local network=`$UCI_SHOW -X network | grep "ip_int_instance=$instance" | cut -d'.' -f2`
++	local network=`$UCI_SHOW_X network | grep "ip_int_instance=$instance" | cut -d'.' -f2`
+ 	$UCI_SET $1.network=$network
+ }
+ 
+@@ -341,7 +343,7 @@
+ wifi_ap_get_ModeEnabled() {
+ 	local key
+ 	local encryption=`$UCI_GET $1.encryption`
+-	
++
+ 	case "$encryption" in
+ 		"psk2"*)
+ 			echo "WPA2-Personal"
+@@ -376,7 +378,7 @@
+ 	local key
+ 	local encryption=`wifi_ap_get_ModeEnabled $1`
+ 	[ "$encryption" = "$2" ] && return 0
+-	
++
+ 	case "$2" in
+ 		"WPA2-Personal")
+ 			$UCI_SET $1.encryption="psk2"
+@@ -433,4 +435,3 @@
+ 	$UCI_SET $1.key=$2
+ 	return 0
+ }
+-
+diff --recursive --unified --new-file --no-dereference orig/ext/openwrt/scripts/unused/device_hosts src/ext/openwrt/scripts/unused/device_hosts
+--- orig/ext/openwrt/scripts/unused/device_hosts	1970-01-01 00:00:00.000000000 +0000
++++ src/ext/openwrt/scripts/unused/device_hosts	2023-11-06 05:25:51.000000000 +0000
+@@ -0,0 +1,205 @@
++#!/bin/sh
++# Copyright (C) 2012 Luka Perkov <freecwmp@lukaperkov.net>
++
++get_device_hosts_number_of_leases() {
++	local _static=`/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} show dhcp 2> /dev/null | fgrep 'dhcp.' | fgrep '.mac=' | wc -l`
++	local _dynamic=`wc -l /var/dhcp.leases  | awk '{ print $1 }'`
++	eval "export -- \"$2=\"\"$_static\"\"\""
++	eval "export -- \"$3=\"\"$_dynamic\"\"\""
++}
++
++get_device_hosts_ip_address() {
++	local _leases_file=$1
++	local _num=$2
++	local _num_static_leases=$3
++	local _num_dynamic_leases=$4
++	local _ip
++	if [ $_num -le $_num_static_leases ]; then
++		let local _uci_num=$_num-1
++		_ip=`/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get dhcp.@host[$_uci_num].ip 2> /dev/null`
++	fi
++	let _num=$_num-$_num_static_leases
++	if [ $_num -gt 0 -a $_num -le $_num_dynamic_leases ]; then
++		local _sed_cmd=`echo -n \'$_num; echo p\'`
++		_ip=`eval sed -n $_sed_cmd $_leases_file | awk '{ print $3 }'`
++	fi
++	eval "export -- \"$5=\"\"$_ip\"\"\""
++}
++# TODO: When getting Device. as parameter name we should return all parameter path belong to this script
++get_device_hosts() {
++local leases_file
++if [ -z "$default_dnsmasq_leases_file" ]; then
++        leases_file="/var/dhcp.leases"
++else
++        leases_file=$default_dnsmasq_leases_file
++fi
++
++local num_static_leases
++local num_dynamic_leases
++get_device_hosts_number_of_leases "$leases_file" "num_static_leases" "num_dynamic_leases"
++
++# internal TR-069 to TR-181 parameter transformation
++local parameter=`echo -n $1 | sed "s/InternetGatewayDevice\.LANDevice\.1\./Device\./g"`
++
++case "$parameter" in
++	Device.Hosts.HostNumberOfEntries)
++	let local val=$num_static_leases+$num_dynamic_leases
++	easycwmp_output "$parameter" "$val"
++	return
++	;;
++esac
++
++local rc
++local num
++
++# TODO: Device.Hosts.Host.{i}.Alias (alias support does not exist)
++
++easycwmp_parse_formated_parameter "$parameter" "Device.Hosts.Host.{i}.PhysAddress" "rc" "num"
++if [ $rc -eq 0 ]; then
++	local val
++	if [ $num -le $num_static_leases ]; then
++		let local uci_num=$num-1
++		val=`/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get dhcp.@host[$uci_num].mac 2> /dev/null`
++	fi
++	let num=$num-$num_static_leases
++	if [ $num -gt 0 -a $num -le $num_dynamic_leases ]; then
++		local sed_cmd=`echo -n \'$num; echo p\'`
++		val=`eval sed -n $sed_cmd $leases_file | awk '{ print $2 }'`
++	fi
++	easycwmp_value_output "$parameter" "$val"
++	return
++fi
++
++easycwmp_parse_formated_parameter "$parameter" "Device.Hosts.Host.{i}.IPAddress" "rc" "num"
++if [ $rc -eq 0 ]; then
++	local val
++	get_device_hosts_ip_address "$leases_file" "$num" "$num_static_leases" "$num_dynamic_leases" "val"
++	easycwmp_value_output "$parameter" "$val"
++	return
++fi
++
++easycwmp_parse_formated_parameter "$parameter" "Device.Hosts.Host.{i}.AddressSource" "rc" "num"
++if [ $rc -eq 0 ]; then
++	local val
++	if [ $num -le $num_static_leases ]; then
++		val="Static"
++	fi
++	let num=$num-$num_static_leases
++	if [ $num -gt 0 -a $num -le $num_dynamic_leases ]; then
++		val="DHCP"
++	fi
++	easycwmp_value_output "$parameter" "$val"
++	return
++fi
++
++# TODO: Device.Hosts.Host.{i}.DHCPClient (easycwmp needs to support other parameters first)
++
++easycwmp_parse_formated_parameter "$parameter" "Device.Hosts.Host.{i}.LeaseTimeRemaining" "rc" "num"
++if [ $rc -eq 0 ]; then
++	local val
++	if [ $num -le $num_static_leases ]; then
++		val="-1"
++	fi
++	let num=$num-$num_static_leases
++	if [ $num -gt 0 -a $num -le $num_dynamic_leases ]; then
++		local sed_cmd=`echo -n \'$num; echo p\'`
++		local t1=`eval sed -n $sed_cmd $leases_file | awk '{ print $1 }'`
++		local t2=`date +%s`
++		let val=$t1-$t2
++	fi
++	easycwmp_value_output "$parameter" "$val"
++	return
++fi
++
++# TODO: Device.Hosts.Host.{i}.AssociatedDevice (easycwmp needs to support other parameters first)
++# TODO: Device.Hosts.Host.{i}.Layer1Interface (easycwmp needs to support other parameters first)
++# TODO: Device.Hosts.Host.{i}.Layer3Interface (easycwmp needs to support other parameters first)
++# TODO: Device.Hosts.Host.{i}.VendorClassID (DHCP option 60 not supported with dnsmasq)
++# TODO: Device.Hosts.Host.{i}.ClientID (DHCP option 61 not supported with dnsmasq)
++# TODO: Device.Hosts.Host.{i}.UserClassID (DHCP option 77 not supported with dnsmasq)
++
++easycwmp_parse_formated_parameter "$parameter" "Device.Hosts.Host.{i}.HostName" "rc" "num"
++if [ $rc -eq 0 ]; then
++	local val
++	if [ $num -le $num_static_leases ]; then
++		let local uci_num=$num-1
++		val=`/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get dhcp.@host[$uci_num].name 2> /dev/null`
++	fi
++	let num=$num-$num_static_leases
++	if [ $num -gt 0 -a $num -le $num_dynamic_leases ]; then
++		local sed_cmd=`echo -n \'$num; echo p\'`
++		val=`eval sed -n $sed_cmd $leases_file | awk '{ print $4 }'`
++		if [ "x$val" == "x*" ]; then val=""; fi
++	fi
++	easycwmp_value_output "$parameter" "$val"
++	return
++fi
++
++# TODO: Device.Hosts.Host.{i}.ClientID (DHCP option 61 not supported with dnsmasq)
++
++easycwmp_parse_formated_parameter "$parameter" "Device.Hosts.Host.{i}.Active" "rc" "num"
++if [ $rc -eq 0 ]; then
++	local val
++	local ip
++	get_device_hosts_ip_address "$leases_file" "$num" "$num_static_leases" "$num_dynamic_leases" "ip"
++	val=`ping -c 1 $ip 2>&1 > /dev/null ; echo $?`
++	let val=!$val
++	easycwmp_value_output "$parameter" "$val"
++	return
++fi
++
++# TODO: we support only one IPv4 address per host
++easycwmp_parse_formated_parameter "$parameter" "Device.Hosts.Host.{i}.IPv4AddressNumberOfEntries" "rc" "num"
++if [ $rc -eq 0 ]; then
++	local val
++	let local n=$num_static_leases+$num_dynamic_leases
++	if [ $num -le $n ]; then
++		val=1
++	fi
++	easycwmp_value_output "$parameter" "$val"
++	return
++fi
++
++# TODO: we do not support IPv6 address
++easycwmp_parse_formated_parameter "$parameter" "Device.Hosts.Host.{i}.IPv6AddressNumberOfEntries" "rc" "num"
++if [ $rc -eq 0 ]; then
++	local val
++	let local n=$num_static_leases+$num_dynamic_leases
++	if [ $num -le $n ]; then
++		val=0
++	fi
++	easycwmp_value_output "$parameter" "$val"
++	return
++fi
++
++# TODO: we support only one IPv4 address per host
++easycwmp_parse_formated_parameter "$parameter" "Device.Hosts.Host.{i}.IPv4Address.{i}.IPAddress" "rc" "num"
++if [ $rc -eq 0 ]; then
++	local val
++	local num1=`echo $num | awk '{ print $1 }'`
++	local num2=`echo $num | awk '{ print $2 }'`
++	let local n=$num_static_leases+$num_dynamic_leases
++	if [ $num2 -eq 1 ]; then
++		get_device_hosts_ip_address "$leases_file" "$num1" "$num_static_leases" "$num_dynamic_leases" "val"
++	fi
++	easycwmp_value_output "$parameter" "$val"
++	return
++fi
++
++# TODO: Device.Hosts.Host.{i}.IPv6Address.{i}.IPAddress (no IPv6 support yet)
++return $E_INVALID_PARAMETER_NAME
++}
++
++get_device_hosts_name() { return $E_INVALID_PARAMETER_NAME; }
++
++get_device_hosts_notification() { return $E_INVALID_PARAMETER_NAME; }
++
++set_device_hosts() { return $E_INVALID_PARAMETER_NAME; }
++
++set_device_hosts_notification() { return $E_INVALID_PARAMETER_NAME; }
++
++build_instances_device_hosts() { return 0; }
++
++add_object_device_hosts() { return $E_INVALID_PARAMETER_NAME; }
++
++delete_object_device_hosts() { return $E_INVALID_PARAMETER_NAME; }
+diff --recursive --unified --new-file --no-dereference orig/ext/openwrt/scripts/unused/device_ip src/ext/openwrt/scripts/unused/device_ip
+--- orig/ext/openwrt/scripts/unused/device_ip	1970-01-01 00:00:00.000000000 +0000
++++ src/ext/openwrt/scripts/unused/device_ip	2023-11-06 05:25:51.000000000 +0000
+@@ -0,0 +1,139 @@
++#!/bin/sh
++# Copyright (C) 2012 Luka Perkov <freecwmp@lukaperkov.net>
++
++# TODO: When getting Device. as parameter name we should return all parameter path belong to this script
++get_device_ip() {
++local parameter="$1"
++
++case "$parameter" in
++	Device.IP.IPv4Capable)
++	easycwmp_output "$parameter" "1"
++	return
++	;;
++	Device.IP.IPv4Status)
++	easycwmp_output "$parameter" "Enabled"
++	return
++	;;
++	Device.IP.IPv6Capable)
++	easycwmp_output "$parameter" "0"
++	return
++	;;
++	Device.IP.IPv6Status)
++	easycwmp_output "$parameter" "Disabled"
++	return
++	;;
++	Device.IP.InterfaceNumberOfEntries)
++	local val=`/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} show network 2> /dev/null | grep '=interface$' | wc -l`
++	easycwmp_output "$parameter" "$val"
++	return
++	;;
++	Device.IP.ActivePortNumberOfEntries)
++	easycwmp_output "$parameter" "0"
++	return
++	;;
++esac
++
++local _static=`/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} show network 2> /dev/null | grep '=route$' | wc -l`
++
++local rc
++local num
++
++easycwmp_parse_formated_parameter "$parameter" "Device.IP.Interface.{i}.Enable" "rc" "num"
++if [ $rc -eq 0 ]; then
++	local val
++	let local uci_num=$num-1
++	val=`/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get network.@interface[$uci_num].proto 2> /dev/null`
++	if [ "x$val" == "xnone" ]; then
++		val=0
++	else
++		val=1
++	fi
++	easycwmp_value_output "$parameter" "$val"
++	return
++fi
++
++# TODO: Device.IP.Interface.{i}.IPv4Enable
++# TODO: Device.IP.Interface.{i}.IPv6Enable
++# TODO: Device.IP.Interface.{i}.ULAEnable
++
++easycwmp_parse_formated_parameter "$parameter" "Device.IP.Interface.{i}.Status" "rc" "num"
++if [ $rc -eq 0 ]; then
++	local val
++	local _interface
++	local _status
++	let local uci_num=$num-1
++	_interface=`/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} show network.@interface[$uci_num] 2> /dev/null | awk -F"[.,=]" '/=interface$/ {print $2}'`
++	_status=`ubus -S call network.interface.$_interface status 2> /dev/null`
++	json_load "$_status" 2> /dev/null
++	json_get_var val up || return
++	easycwmp_value_output "$parameter" "$val"
++	return
++fi
++
++# TODO: Device.IP.Interface.{i}.Alias (alias support does not exist)
++
++easycwmp_parse_formated_parameter "$parameter" "Device.IP.Interface.{i}.Name" "rc" "num"
++if [ $rc -eq 0 ]; then
++	local val
++	local _interface
++	local _status
++	let local uci_num=$num-1
++	_interface=`/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} show network.@interface[$uci_num] 2> /dev/null | awk -F"[.,=]" '/=interface$/ {print $2}'`
++	_status=`ubus -S call network.interface.$_interface status 2> /dev/null`
++	json_load "$_status"
++	json_get_var val device || return
++	easycwmp_value_output "$parameter" "$val"
++	return
++fi
++
++easycwmp_parse_formated_parameter "$parameter" "Device.IP.Interface.{i}.LastChange" "rc" "num"
++if [ $rc -eq 0 ]; then
++	local val
++	local _interface
++	local _status
++	let local uci_num=$num-1
++	_interface=`/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} show network.@interface[$uci_num] 2> /dev/null | awk -F"[.,=]" '/=interface$/ {print $2}'`
++	_status=`ubus -S call network.interface.$_interface status 2> /dev/null`
++	json_load "$_status"
++	json_get_var val uptime || return
++	easycwmp_value_output "$parameter" "$val"
++	return
++fi
++
++# TODO: Device.IP.Interface.{i}.LowerLayers
++# TODO: Device.IP.Interface.{i}.Router
++# TODO: Device.IP.Interface.{i}.Reset
++# TODO: Device.IP.Interface.{i}.MaxMTUSize
++# TODO: Device.IP.Interface.{i}.Type
++# TODO: Device.IP.Interface.{i}.Loopback
++# TODO: Device.IP.Interface.{i}.IPv4AddressNumberOfEntries
++# TODO: Device.IP.Interface.{i}.IPv6AddressNumberOfEntries
++# TODO: Device.IP.Interface.{i}.IPv6PrefixNumberOfEntries
++# TODO: Device.IP.Interface.{i}.AutoIPEnable
++# TODO: Device.IP.Interface.{i}.IPv4Address.{i}.Enable
++# TODO: Device.IP.Interface.{i}.IPv4Address.{i}.Status
++# TODO: Device.IP.Interface.{i}.IPv4Address.{i}.Alias
++# TODO: Device.IP.Interface.{i}.IPv4Address.{i}.IPAddress
++# TODO: Device.IP.Interface.{i}.IPv4Address.{i}.SubnetMask
++# TODO: Device.IP.Interface.{i}.IPv4Address.{i}.AddressingType
++# TODO: Device.IP.Interface.{i}.IPv6Address.{i}.Status
++# TODO: Device.IP.Interface.{i}.IPv6Address.{i}.Status
++# TODO: Device.IP.Interface.{i}.IPv6Prefix.{i}.Status
++# TODO: Device.IP.Interface.{i}.Stats.
++return $E_INVALID_PARAMETER_NAME;
++}
++
++get_device_ip_name() { return $E_INVALID_PARAMETER_NAME; }
++
++get_device_ip_notification() { return $E_INVALID_PARAMETER_NAME; }
++
++set_device_ip() { return $E_INVALID_PARAMETER_NAME; }
++
++set_device_ip_notification() { return $E_INVALID_PARAMETER_NAME; }
++
++build_instances_device_ip() { return 0; }
++
++add_object_device_ip() { return $E_INVALID_PARAMETER_NAME; }
++
++delete_object_device_ip() { return $E_INVALID_PARAMETER_NAME; }
++
+diff --recursive --unified --new-file --no-dereference orig/ext/openwrt/scripts/unused/device_routing src/ext/openwrt/scripts/unused/device_routing
+--- orig/ext/openwrt/scripts/unused/device_routing	1970-01-01 00:00:00.000000000 +0000
++++ src/ext/openwrt/scripts/unused/device_routing	2023-11-06 05:25:51.000000000 +0000
+@@ -0,0 +1,368 @@
++#!/bin/sh
++# Copyright (C) 2012 Luka Perkov <freecwmp@lukaperkov.net>
++
++# TODO: LIMITATIONS: we only handle one device router at the moment
++
++# ordering of routes:
++#  1) inactive routes found in uci network config file
++#  2) active routes found in uci network config file
++#  3) active routes but not found in uci network config file
++
++EASYCWMP_DEVICE_ROUTES="/tmp/easycwmp_routes"
++EASYCWMP_DEVICE_ROUTES_STATIC="/tmp/easycwmp_routes_static"
++EASYCWMP_DEVICE_ROUTES_DYNAMIC="/tmp/easycwmp_routes_dynamic"
++
++get_device_routing_ipv4_check_route() {
++	local __uci_target=$1
++	local __uci_gateway=$2
++	local __uci_netmask=$3
++
++	local __active=0
++
++	# TODO: remove this file
++	echo -n > $EASYCWMP_DEVICE_ROUTES_DYNAMIC
++
++	local __route_target
++	local __route_gateway
++	local __route_netmask
++	local line
++	while read line
++	do
++		__route_target=`echo -n $line | awk '{ print $1 }'`
++		__route_gateway=`echo -n $line | awk '{ print $2 }'`
++		__route_netmask=`echo -n $line | awk '{ print $3 }'`
++		if [ "x$__uci_target" != "x$__route_target" ]; then
++			echo $line >> $EASYCWMP_DEVICE_ROUTES_DYNAMIC
++			continue
++		fi
++		if [ "x$__uci_gateway" != "x$__route_gateway" ]; then
++			echo $line >> $EASYCWMP_DEVICE_ROUTES_DYNAMIC
++			continue
++		fi
++		if [ "x$__uci_netmask" != "x$__route_netmask" ]; then
++			echo $line >> $EASYCWMP_DEVICE_ROUTES_DYNAMIC
++			continue
++		fi
++		echo $line >> $EASYCWMP_DEVICE_ROUTES_STATIC
++		__active=1
++	done < $EASYCWMP_DEVICE_ROUTES
++
++	eval "export -- \"$4=\"\"$__active\"\"\""
++}
++
++get_device_routing_ipv4_ordering_information() {
++	local _static=`/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} show network 2> /dev/null | grep '=route$' | wc -l`
++	local _active=`cat $EASYCWMP_DEVICE_ROUTES | wc -l`
++	local _inactive=0
++
++	local _uci_target
++	local _uci_gateway
++	local _uci_netmask
++	local _route_active
++
++	local i
++	let local _count=$_static-1
++	for i in `seq 0 $_count`
++	do
++		_uci_target=`/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get network.@route[$i].target 2> /dev/null`
++		_uci_gateway=`/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get network.@route[$i].gateway 2> /dev/null`
++		_uci_netmask=`/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get network.@route[$i].netmask 2> /dev/null`
++		get_device_routing_ipv4_check_route "$_uci_target" "$_uci_gateway" "$_uci_netmask" "_route_active"
++		if [ $_route_active -ne 1 ]; then
++			let _inactive=$_inactive+1
++		fi
++	done
++
++	let local _total=$_active+$_inactive
++	eval "export -- \"$1=\"\"$_total\"\"\""
++	eval "export -- \"$2=\"\"$_active\"\"\""
++	eval "export -- \"$3=\"\"$_inactive\"\"\""
++	eval "export -- \"$4=\"\"$_static\"\"\""
++}
++
++# TODO: When getting Device. as parameter name we should return all parameter path belong to this script
++get_device_routing() {
++local parameter=$1
++
++case "$parameter" in
++	Device.Routing.RouterNumberOfEntries)
++	easycwmp_output "$parameter" "1"
++	return
++	;;
++esac
++
++local rc
++local num
++
++easycwmp_parse_formated_parameter "$parameter" "Device.Routing.Router.{i}.Enable" "rc" "num"
++if [ $rc -eq 0 ]; then
++	local val
++	if [ $num -eq 1 ]; then
++		val="1"
++	else
++		val="0"
++	fi
++	easycwmp_output "$parameter" "$val"
++	return
++fi
++
++easycwmp_parse_formated_parameter "$parameter" "Device.Routing.Router.{i}.Status" "rc" "num"
++if [ $rc -eq 0 ]; then
++	local val
++	if [ $num -eq 1 ]; then
++		val="Enabled"
++	else
++		val="Disabled"
++	fi
++	easycwmp_output "$parameter" "$val"
++	return
++fi
++
++# TODO: Device.Routing.Router.{i}.Alias (alias support does not exist)
++
++# TODO: remove this file
++route -n | grep -v '^Kernel ' | grep -v '^Destination ' > $EASYCWMP_DEVICE_ROUTES
++
++local total
++local active
++local inactive
++local static
++
++easycwmp_parse_formated_parameter "$parameter" "Device.Routing.Router.{i}.IPv4ForwardingNumberOfEntries" "rc" "num"
++if [ $rc -eq 0 ]; then
++	if [ "x$num" == "x1" ]; then
++		get_device_routing_ipv4_ordering_information "total" "active" "inactive" "static"
++	else
++		return
++	fi
++	easycwmp_output "$parameter" "$total"
++	return
++fi
++
++easycwmp_parse_formated_parameter "$parameter" "Device.Routing.Router.{i}.IPv6ForwardingNumberOfEntries" "rc" "num"
++if [ $rc -eq 0 ]; then
++	local val
++	if [ $num -eq 1 ]; then
++		val=0
++	else
++		return
++	fi
++	easycwmp_output "$parameter" "$val"
++	return
++fi
++
++# TODO: Device.Routing.Router.{i}.IPv4Forwarding.{i}.Enable
++
++# TODO: routes can not be disabled, they should be disabled by default
++easycwmp_parse_formated_parameter "$parameter" "Device.Routing.Router.{i}.IPv4Forwarding.{i}.Status" "rc" "num"
++if [ $rc -eq 0 ]; then
++	local num1=`echo $num | awk '{ print $1 }'`
++	local num2=`echo $num | awk '{ print $2 }'`
++	if [ $num1 -eq 1 ]; then
++		get_device_routing_ipv4_ordering_information "total" "active" "inactive" "static"
++		if [ $num2 -le 0 ]; then
++			return
++		fi
++		if [ $num2 -gt $total ]; then
++			return
++		fi
++		if [ $num2 -gt $static ]; then
++			easycwmp_output "$parameter" "Enabled"
++			return
++		fi
++		if [ $num2 -le $inactive ]; then
++			easycwmp_output "$parameter" "Error: not active but enabled"
++			return
++		fi
++		if [ $num2 -le $static ]; then
++			easycwmp_output "$parameter" "Enabled"
++			return
++		fi
++	else
++		return
++	fi
++fi
++
++# TODO: Device.Routing.Router.{i}.IPv4Forwarding.{i}.Alias (alias support does not exist)
++
++easycwmp_parse_formated_parameter "$parameter" "Device.Routing.Router.{i}.IPv4Forwarding.{i}.StaticRoute" "rc" "num"
++if [ $rc -eq 0 ]; then
++	local num1=`echo $num | awk '{ print $1 }'`
++	local num2=`echo $num | awk '{ print $2 }'`
++	if [ $num1 -eq 1 ]; then
++		get_device_routing_ipv4_ordering_information "total" "active" "inactive" "static"
++		if [ $num2 -le 0 ]; then
++			return
++		fi
++		if [ $num2 -gt $total ]; then
++			return
++		fi
++		if [ $num2 -gt $static ]; then
++			easycwmp_output "$parameter" "0"
++			return
++		fi
++		if [ $num2 -le $static ]; then
++			easycwmp_output "$parameter" "1"
++			return
++		fi
++	else
++		return
++	fi
++fi
++
++easycwmp_parse_formated_parameter "$parameter" "Device.Routing.Router.{i}.IPv4Forwarding.{i}.DestIPAddress" "rc" "num"
++if [ $rc -eq 0 ]; then
++	local target
++	local num1=`echo $num | awk '{ print $1 }'`
++	local num2=`echo $num | awk '{ print $2 }'`
++	if [ $num1 -eq 1 ]; then
++		get_device_routing_ipv4_ordering_information "total" "active" "inactive" "static"
++		if [ $num2 -le 0 ]; then
++			return
++		fi
++		if [ $num2 -gt $total ]; then
++			return
++		fi
++		if [ $num2 -gt $static ]; then
++			let local _num=$num2-$static
++			local _sed_cmd=`echo -n \'$_num; echo p\'`
++			target=`eval sed -n $_sed_cmd $EASYCWMP_DEVICE_ROUTES_DYNAMIC | awk '{ print $1 }'`
++		elif [ $num2 -le $static ]; then
++			let local i=$static-$num2
++			target=`/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get network.@route[$i].target 2> /dev/null`
++		fi
++		easycwmp_output "$parameter" "$target"
++		return
++	else
++		return
++	fi
++fi
++
++easycwmp_parse_formated_parameter "$parameter" "Device.Routing.Router.{i}.IPv4Forwarding.{i}.DestSubnetMask" "rc" "num"
++if [ $rc -eq 0 ]; then
++	local netmask
++	local num1=`echo $num | awk '{ print $1 }'`
++	local num2=`echo $num | awk '{ print $2 }'`
++	if [ $num1 -eq 1 ]; then
++		get_device_routing_ipv4_ordering_information "total" "active" "inactive" "static"
++		if [ $num2 -le 0 ]; then
++			return
++		fi
++		if [ $num2 -gt $total ]; then
++			return
++		fi
++		if [ $num2 -gt $static ]; then
++			let local _num=$num2-$static
++			local _sed_cmd=`echo -n \'$_num; echo p\'`
++			netmask=`eval sed -n $_sed_cmd $EASYCWMP_DEVICE_ROUTES_DYNAMIC | awk '{ print $3 }'`
++		elif [ $num2 -le $static ]; then
++			let local i=$static-$num2
++			netmask=`/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get network.@route[$i].netmask 2> /dev/null`
++		fi
++		easycwmp_output "$parameter" "$netmask"
++		return
++	else
++		return
++	fi
++fi
++
++# TODO: Device.Routing.Router.{i}.IPv4Forwarding.{i}.ForwardingPolicy
++
++easycwmp_parse_formated_parameter "$parameter" "Device.Routing.Router.{i}.IPv4Forwarding.{i}.GatewayIPAddress" "rc" "num"
++if [ $rc -eq 0 ]; then
++	local gateway
++	local num1=`echo $num | awk '{ print $1 }'`
++	local num2=`echo $num | awk '{ print $2 }'`
++	if [ $num1 -eq 1 ]; then
++		get_device_routing_ipv4_ordering_information "total" "active" "inactive" "static"
++		if [ $num2 -le 0 ]; then
++			return
++		fi
++		if [ $num2 -gt $total ]; then
++			return
++		fi
++		if [ $num2 -gt $static ]; then
++			let local _num=$num2-$static
++			local _sed_cmd=`echo -n \'$_num; echo p\'`
++			gateway=`eval sed -n $_sed_cmd $EASYCWMP_DEVICE_ROUTES_DYNAMIC | awk '{ print $2 }'`
++		elif [ $num2 -le $static ]; then
++			let local i=$static-$num2
++			gateway=`/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get network.@route[$i].gateway 2> /dev/null`
++		fi
++		easycwmp_output "$parameter" "$gateway"
++		return
++	else
++		return
++	fi
++fi
++
++# TODO: Device.Routing.Router.{i}.IPv4Forwarding.{i}.Interface
++
++easycwmp_parse_formated_parameter "$parameter" "Device.Routing.Router.{i}.IPv4Forwarding.{i}.Origin" "rc" "num"
++if [ $rc -eq 0 ]; then
++	local val
++	local num1=`echo $num | awk '{ print $1 }'`
++	local num2=`echo $num | awk '{ print $2 }'`
++	if [ $num1 -eq 1 ]; then
++		get_device_routing_ipv4_ordering_information "total" "active" "inactive" "static"
++		if [ $num2 -le 0 ]; then
++			return
++		fi
++		if [ $num2 -gt $total ]; then
++			return
++		fi
++		if [ $num2 -gt $static ]; then
++			val="Unknown"
++		elif [ $num2 -le $static ]; then
++			val="Static"
++		fi
++		easycwmp_output "$parameter" "$val"
++		return
++	else
++		return
++	fi
++fi
++
++easycwmp_parse_formated_parameter "$parameter" "Device.Routing.Router.{i}.IPv4Forwarding.{i}.ForwardingMetric" "rc" "num"
++if [ $rc -eq 0 ]; then
++	local metric
++	local num1=`echo $num | awk '{ print $1 }'`
++	local num2=`echo $num | awk '{ print $2 }'`
++	if [ $num1 -eq 1 ]; then
++		get_device_routing_ipv4_ordering_information "total" "active" "inactive" "static"
++		if [ $num2 -le 0 ]; then
++			return
++		fi
++		if [ $num2 -gt $total ]; then
++			return
++		fi
++		if [ $num2 -gt $static ]; then
++			let local _num=$num2-$static
++			local _sed_cmd=`echo -n \'$_num; echo p\'`
++			metric=`eval sed -n $_sed_cmd $EASYCWMP_DEVICE_ROUTES_DYNAMIC | awk '{ print $5 }'`
++		elif [ $num2 -le $static ]; then
++			let local i=$static-$num2
++			metric=`/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get network.@route[$i].metric 2> /dev/null`
++		fi
++		easycwmp_output "$parameter" "$metric"
++		return
++	else
++		return
++	fi
++fi
++return $E_INVALID_PARAMETER_NAME
++}
++
++get_device_routing_name() { return $E_INVALID_PARAMETER_NAME; }
++
++get_device_routing_notification() { return $E_INVALID_PARAMETER_NAME; }
++
++set_device_routing() { return $E_INVALID_PARAMETER_NAME; }
++
++set_device_routing_notification() { return $E_INVALID_PARAMETER_NAME; }
++
++build_instances_device_routing() { return 0; }
++
++add_object_device_routing() { return $E_INVALID_PARAMETER_NAME; }
++
++delete_object_device_routing() { return $E_INVALID_PARAMETER_NAME; }
+diff --recursive --unified --new-file --no-dereference orig/ext/openwrt/scripts/unused/device_users src/ext/openwrt/scripts/unused/device_users
+--- orig/ext/openwrt/scripts/unused/device_users	1970-01-01 00:00:00.000000000 +0000
++++ src/ext/openwrt/scripts/unused/device_users	2023-11-06 05:25:51.000000000 +0000
+@@ -0,0 +1,142 @@
++#!/bin/sh
++# Copyright (C) 2012 Luka Perkov <freecwmp@lukaperkov.net>
++
++# TODO: When getting Device. as parameter name we should return all parameter path belong to this script
++get_device_users() {
++local parameter="$1"
++case "$parameter" in
++	Device.Users.UserNumberOfEntries)
++	local val=`wc -l /etc/passwd | awk '{ print $1 }'`
++	easycwmp_value_output "$parameter" "$val"
++	return
++	;;
++esac
++
++local rc
++local num
++
++# TODO: Device.Users.User.{i}.Alias (alias support does not exist)
++
++easycwmp_parse_formated_parameter "$parameter" "Device.Users.User.{i}.Enable" "rc" "num"
++if [ $rc -eq 0 ]; then
++	# TODO: this is very system dependent, for now just look at users shell
++	local sed_cmd=`echo -n \'$num; echo p\'`
++	local val=`eval sed -n $sed_cmd /etc/passwd | grep -v '/bin/false' | wc -l`
++	easycwmp_value_output "$parameter" "$val"
++	return
++fi
++
++easycwmp_parse_formated_parameter "$parameter" "Device.Users.User.{i}.RemoteAccessCapable" "rc" "num"
++if [ $rc -eq 0 ]; then
++	# TODO: this is very system dependent, for now just look at users shell
++	local sed_cmd=`echo -n \'$num; echo p\'`
++	local val=`eval sed -n $sed_cmd /etc/passwd | grep -v '/bin/false' | wc -l`
++	easycwmp_value_output "$parameter" "$val"
++	return
++fi
++
++easycwmp_parse_formated_parameter "$parameter" "Device.Users.User.{i}.Username" "rc" "num"
++if [ $rc -eq 0 ]; then
++	local sed_cmd=`echo -n \'$num; echo p\'`
++	local val=`eval sed -n $sed_cmd /etc/passwd | awk -F ':' '{ print $1 }'`
++	easycwmp_value_output "$parameter" "$val"
++	return
++fi
++
++easycwmp_parse_formated_parameter "$parameter" "Device.Users.User.{i}.Password" "rc" "num"
++if [ $rc -eq 0 ]; then
++	# if we *really* wanted to get the password we could do it like this
++	#   local sed_cmd=`echo -n \'$num; echo p\'`
++	#   local val=`eval sed -n $sed_cmd /etc/shadow | awk -F ':' '{ print $2 }'`
++	#   easycwmp_value_output "$parameter" "$val"
++	easycwmp_value_output "$parameter" ""
++	return
++fi
++
++easycwmp_parse_formated_parameter "$parameter" "Device.Users.User.{i}.Language" "rc" "num"
++if [ $rc -eq 0 ]; then
++	easycwmp_value_output "$parameter" ""
++	return
++fi
++return $E_INVALID_PARAMETER_NAME
++}
++
++set_device_users() {
++local parameter="$1"
++local value="$2"
++
++local rc
++local num
++
++# TODO: Device.Users.User.{i}.Alias (alias support does not exist)
++
++easycwmp_parse_formated_parameter "$parameter" "Device.Users.User.{i}.Enable" "rc" "num"
++if [ $rc -eq 0 ]; then
++	# TODO: this is very system dependent, for now just look at users shell
++	local val
++	if [ "$value" = "1" ]; then
++		val="/bin/ash"
++	else
++		val="/bin/false"
++	fi
++	local sed_cmd
++	sed_cmd=`echo -n \'$num; echo p\'`
++	local orig=`eval sed -n $sed_cmd /etc/passwd | awk -F ':' '{ print $7 }'`
++	sed_cmd=`echo -n \'$num; echo s%:$orig%:$val%\'`
++	eval sed -i $sed_cmd /etc/passwd
++	return
++fi
++
++easycwmp_parse_formated_parameter "$parameter" "Device.Users.User.{i}.RemoteAccessCapable" "rc" "num"
++if [ $rc -eq 0 ]; then
++	# TODO: this is very system dependent, for now just look at users shell
++	local val
++	if [ "$value" = "1" ]; then
++		val="/bin/ash"
++	else
++		val="/bin/false"
++	fi
++	local sed_cmd
++	sed_cmd=`echo -n \'$num; echo p\'`
++	local orig=`eval sed -n $sed_cmd /etc/passwd | awk -F ':' '{ print $7 }'`
++	sed_cmd=`echo -n \'$num; echo s%:$orig%:$val%\'`
++	eval sed -i $sed_cmd /etc/passwd
++	return
++fi
++
++easycwmp_parse_formated_parameter "$parameter" "Device.Users.User.{i}.Username" "rc" "num"
++if [ $rc -eq 0 ]; then
++	local sed_cmd
++	sed_cmd=`echo -n \'$num; echo p\'`
++	local orig=`eval sed -n $sed_cmd /etc/passwd | awk -F ':' '{ print $1 }'`
++	sed_cmd=`echo -n \'$num; echo s%$orig:%$value:%\'`
++	eval sed -i $sed_cmd /etc/passwd
++	return
++fi
++
++easycwmp_parse_formated_parameter "$parameter" "Device.Users.User.{i}.Password" "rc" "num"
++if [ $rc -eq 0 ]; then
++	local sed_cmd
++	sed_cmd=`echo -n \'$num; echo p\'`
++	local orig=`eval sed -n $sed_cmd /etc/shadow | awk -F ':' '{ print $2 }'`
++	sed_cmd=`echo -n \'$num; echo s%:$orig:%:$value:%\'`
++	eval sed -i $sed_cmd /etc/shadow
++	return
++fi
++
++# TODO: Device.Users.User.{i}.Language (why? look at the get value function for this parameter)
++}
++
++get_device_users_name() { return $E_INVALID_PARAMETER_NAME; }
++
++get_device_users_notification() { return $E_INVALID_PARAMETER_NAME; }
++
++set_device_users() { return $E_INVALID_PARAMETER_NAME; }
++
++set_device_users_notification() { return $E_INVALID_PARAMETER_NAME; }
++
++build_instances_device_users() { return 0; }
++
++add_object_device_users() { return $E_INVALID_PARAMETER_NAME; }
++
++delete_object_device_users() { return $E_INVALID_PARAMETER_NAME; }
+diff --recursive --unified --new-file --no-dereference orig/ext/openwrt/scripts/unused/misc src/ext/openwrt/scripts/unused/misc
+--- orig/ext/openwrt/scripts/unused/misc	1970-01-01 00:00:00.000000000 +0000
++++ src/ext/openwrt/scripts/unused/misc	2023-11-06 05:25:51.000000000 +0000
+@@ -0,0 +1,42 @@
++#!/bin/sh
++# Copyright (C) 2012 Luka Perkov <freecwmp@lukaperkov.net>
++
++get_misc_cpu_usage() {
++local val=`uptime | awk -F'average: ' '{ print $2 }' | awk -F',' '{ print $1 }' | awk -F'.' '{ print $2 }'`
++easycwmp_output "Device.DeviceInfo.ProcessStatus.CPUUsage" "$val"
++}
++
++get_misc_process_number() {
++local val=`ps | grep -v COMMAND | wc -l`
++local type="xsd:unsignedInt"
++easycwmp_output "Device.DeviceInfo.ProcessStatus.ProcessNumberOfEntries" "$val" "" "$type"
++}
++
++# TODO: When getting Device. as parameter name we should return all parameter path belong to this script
++get_misc() {
++case "$1" in
++	Device.DeviceInfo.ProcessStatus.CPUUsage)
++	get_misc_cpu_usage
++	return 0
++	;;
++	Device.DeviceInfo.ProcessStatus.ProcessNumberOfEntries)
++	get_misc_process_number
++	return 0
++	;;
++esac
++return $E_INVALID_PARAMETER_NAME
++}
++
++get_misc_name () { return $E_INVALID_PARAMETER_NAME; }
++
++get_misc_notification () { return $E_INVALID_PARAMETER_NAME; }
++
++set_misc() { return $E_INVALID_PARAMETER_NAME; }
++
++set_misc_notification () { return $E_INVALID_PARAMETER_NAME; }
++
++build_instances_misc() { return 0; }
++
++add_object_misc() { return $E_INVALID_PARAMETER_NAME; }
++
++delete_object_misc() { return $E_INVALID_PARAMETER_NAME; }
+diff --recursive --unified --new-file --no-dereference orig/ext/openwrt/scripts/unused/owsip_voice_service src/ext/openwrt/scripts/unused/owsip_voice_service
+--- orig/ext/openwrt/scripts/unused/owsip_voice_service	1970-01-01 00:00:00.000000000 +0000
++++ src/ext/openwrt/scripts/unused/owsip_voice_service	2023-11-06 05:25:51.000000000 +0000
+@@ -0,0 +1,262 @@
++#!/bin/sh
++# Copyright (C) 2012 Luka Perkov <freecwmp@lukaperkov.net>
++
++# OPTIONAL: InternetGatewayDevice.Services.VoiceService.1.VoiceProfile.1.SIP.ProxyServer
++# OPTIONAL: InternetGatewayDevice.Services.VoiceService.1.VoiceProfile.1.SIP.ProxyServerPort
++# OPTIONAL: InternetGatewayDevice.Services.VoiceService.1.VoiceProfile.1.SIP.ProxyServerTransport
++# OPTIONAL: InternetGatewayDevice.Services.VoiceService.1.VoiceProfile.1.SIP.RegistrarServer
++# OPTIONAL: InternetGatewayDevice.Services.VoiceService.1.VoiceProfile.1.SIP.RegistrarServerPort
++# OPTIONAL: InternetGatewayDevice.Services.VoiceService.1.VoiceProfile.1.SIP.RegistrarServerTransport
++# OPTIONAL: InternetGatewayDevice.Services.VoiceService.1.VoiceProfile.1.SIP.UserAgentDomain
++# OPTIONAL: InternetGatewayDevice.Services.VoiceService.1.VoiceProfile.1.SIP.UserAgentTransport
++# OPTIONAL: InternetGatewayDevice.Services.VoiceService.1.VoiceProfile.1.SIP.OutbandProxy
++# OPTIONAL: InternetGatewayDevice.Services.VoiceService.1.VoiceProfile.1.SIP.OutbandProxyPort
++
++get_line_enable() {
++local num="$1"
++local val=`/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get telephony.@account[$num].disabled 2> /dev/null`
++let num=$num+1
++if [ -n "$val" -a "$val" != "0" -o "$val" = "1" ]; then
++	val="Disabled"
++else
++	val="Enabled"
++fi
++easycwmp_output "InternetGatewayDevice.Services.VoiceService.1.VoiceProfile.1.Line.$num.Enable" "$val"
++}
++
++set_line_enable() {
++local num="$1"
++local val="$2"
++if [ "$val" = "Enabled" ]; then
++	val="0"
++else
++	val="1"
++fi
++delay_service_restart_in_apply_service "telephony" "45"
++/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set telephony.@account[$num].disabled="$val"
++}
++
++get_line_sip_username() {
++local num="$1"
++local val=`/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get telephony.@account[$num].username 2> /dev/null`
++let num=$num+1
++easycwmp_output "InternetGatewayDevice.Services.VoiceService.1.VoiceProfile.1.Line.$num.SIP.AuthUserName" "$val"
++}
++
++set_line_sip_username() {
++local num="$1"
++local val="$2"
++/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set telephony.@account[$num].username="$val"
++}
++
++get_line_sip_password() {
++local num="$1"
++local val=`/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get telephony.@account[$num].password 2> /dev/null`
++let num=$num+1
++easycwmp_output "InternetGatewayDevice.Services.VoiceService.1.VoiceProfile.1.Line.$num.SIP.AuthPassword" "$val"
++}
++
++set_line_sip_password() {
++local num="$1"
++local val="$2"
++/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set telephony.@account[$num].password="$val"
++}
++
++get_line_sip_uri() {
++local num="$1"
++local val=`/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get telephony.@account[$num].realm 2> /dev/null`
++let num=$num+1
++easycwmp_output "InternetGatewayDevice.Services.VoiceService.1.VoiceProfile.1.Line.$num.SIP.URI" "$val"
++}
++
++set_line_sip_uri() {
++local num="$1"
++local val="$2"
++/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set telephony.@account[$num].realm="$val"
++}
++
++get_voice_service() {
++case "$1" in
++	InternetGatewayDevice.)
++	get_line_enable 0
++	get_line_enable 1
++	get_line_sip_username 0
++	get_line_sip_username 1
++	get_line_sip_password 0
++	get_line_sip_password 1
++	get_line_sip_uri 0
++	get_line_sip_uri 1
++	;;
++	InternetGatewayDevice.Services.)
++	get_line_enable 0
++	get_line_enable 1
++	get_line_sip_username 0
++	get_line_sip_username 1
++	get_line_sip_password 0
++	get_line_sip_password 1
++	get_line_sip_uri 0
++	get_line_sip_uri 1
++	;;
++	InternetGatewayDevice.Services.VoiceService.)
++	get_line_enable 0
++	get_line_enable 1
++	get_line_sip_username 0
++	get_line_sip_username 1
++	get_line_sip_password 0
++	get_line_sip_password 1
++	;;
++	InternetGatewayDevice.Services.VoiceService.1.)
++	get_line_enable 0
++	get_line_enable 1
++	get_line_sip_username 0
++	get_line_sip_username 1
++	get_line_sip_password 0
++	get_line_sip_password 1
++	get_line_sip_uri 0
++	get_line_sip_uri 1
++	;;
++	InternetGatewayDevice.Services.VoiceService.1.VoiceProfile.)
++	get_line_enable 0
++	get_line_enable 1
++	get_line_sip_username 0
++	get_line_sip_username 1
++	get_line_sip_password 0
++	get_line_sip_password 1
++	get_line_sip_uri 0
++	get_line_sip_uri 1
++	;;
++	InternetGatewayDevice.Services.VoiceService.1.VoiceProfile.1.)
++	get_line_enable 0
++	get_line_enable 1
++	get_line_sip_username 0
++	get_line_sip_username 1
++	get_line_sip_password 0
++	get_line_sip_password 1
++	get_line_sip_uri 0
++	get_line_sip_uri 1
++	;;
++	InternetGatewayDevice.Services.VoiceService.1.VoiceProfile.1.SIP.)
++	get_line_enable 0
++	get_line_enable 1
++	get_line_sip_username 0
++	get_line_sip_username 1
++	get_line_sip_password 0
++	get_line_sip_password 1
++	get_line_sip_uri 0
++	get_line_sip_uri 1
++	;;
++	InternetGatewayDevice.Services.VoiceService.1.VoiceProfile.1.SIP.ProxyServer)
++	;;
++	InternetGatewayDevice.Services.VoiceService.1.VoiceProfile.1.SIP.ProxyServerTransport)
++	;;
++	InternetGatewayDevice.Services.VoiceService.1.VoiceProfile.1.SIP.RegistrarServer)
++	;;
++	InternetGatewayDevice.Services.VoiceService.1.VoiceProfile.1.SIP.RegistrarServerPort)
++	;;
++	InternetGatewayDevice.Services.VoiceService.1.VoiceProfile.1.SIP.RegistrarServerTransport)
++	;;
++	InternetGatewayDevice.Services.VoiceService.1.VoiceProfile.1.SIP.UserAgentDomain)
++	;;
++	InternetGatewayDevice.Services.VoiceService.1.VoiceProfile.1.SIP.UserAgentTransport)
++	;;
++	InternetGatewayDevice.Services.VoiceService.1.VoiceProfile.1.SIP.OutbandProxy)
++	;;
++	InternetGatewayDevice.Services.VoiceService.1.VoiceProfile.1.SIP.OutbandProxyPort)
++	;;
++	InternetGatewayDevice.Services.VoiceService.1.VoiceProfile.1.Line.)
++	get_line_enable 0
++	get_line_enable 1
++	get_line_sip_username 0
++	get_line_sip_username 1
++	get_line_sip_password 0
++	get_line_sip_password 1
++	get_line_sip_uri 0
++	get_line_sip_uri 1
++	;;
++	InternetGatewayDevice.Services.VoiceService.1.VoiceProfile.1.Line.1.)
++	get_line_enable 0
++	get_line_sip_username 0
++	get_line_sip_password 0
++	get_line_sip_uri 0
++	;;
++	InternetGatewayDevice.Services.VoiceService.1.VoiceProfile.1.Line.1.Enable)
++	get_line_enable 0
++	;;
++	InternetGatewayDevice.Services.VoiceService.1.VoiceProfile.1.Line.1.SIP.AuthUserName)
++	get_line_sip_username 0
++	;;
++	InternetGatewayDevice.Services.VoiceService.1.VoiceProfile.1.Line.1.SIP.AuthPassword)
++	get_line_sip_password 0
++	;;
++	InternetGatewayDevice.Services.VoiceService.1.VoiceProfile.1.Line.1.SIP.URI)
++	get_line_sip_uri 0
++	;;
++	InternetGatewayDevice.Services.VoiceService.1.VoiceProfile.1.Line.2.)
++	get_line_sip_username 1
++	get_line_sip_password 1
++	get_line_sip_uri 1
++	;;
++	InternetGatewayDevice.Services.VoiceService.1.VoiceProfile.1.Line.2.Enable)
++	get_line_enable 1
++	;;
++	InternetGatewayDevice.Services.VoiceService.1.VoiceProfile.1.Line.2.SIP.AuthUserName)
++	get_line_sip_username 1
++	;;
++	InternetGatewayDevice.Services.VoiceService.1.VoiceProfile.1.Line.2.SIP.AuthPassword)
++	get_line_sip_password 1
++	;;
++	InternetGatewayDevice.Services.VoiceService.1.VoiceProfile.1.Line.2.SIP.URI)
++	get_line_sip_uri 1
++	;;
++esac
++}
++
++set_voice_service() {
++case "$1" in
++	InternetGatewayDevice.Services.VoiceService.1.VoiceProfile.1.SIP.ProxyServer)
++	;;
++	InternetGatewayDevice.Services.VoiceService.1.VoiceProfile.1.SIP.ProxyServerPort)
++	;;
++	InternetGatewayDevice.Services.VoiceService.1.VoiceProfile.1.SIP.ProxyServerTransport)
++	;;
++	InternetGatewayDevice.Services.VoiceService.1.VoiceProfile.1.SIP.RegistrarServer)
++	;;
++	InternetGatewayDevice.Services.VoiceService.1.VoiceProfile.1.SIP.RegistrarServerPort)
++	;;
++	InternetGatewayDevice.Services.VoiceService.1.VoiceProfile.1.SIP.RegistrarServerTransport)
++	;;
++	InternetGatewayDevice.Services.VoiceService.1.VoiceProfile.1.SIP.UserAgentDomain)
++	;;
++	InternetGatewayDevice.Services.VoiceService.1.VoiceProfile.1.SIP.UserAgentTransport)
++	;;
++	InternetGatewayDevice.Services.VoiceService.1.VoiceProfile.1.SIP.OutbandProxy)
++	;;
++	InternetGatewayDevice.Services.VoiceService.1.VoiceProfile.1.SIP.OutbandProxyPort)
++	;;
++	InternetGatewayDevice.Services.VoiceService.1.VoiceProfile.1.Line.1.Enable)
++	set_line_enable 0 "$2"
++	;;
++	InternetGatewayDevice.Services.VoiceService.1.VoiceProfile.1.Line.1.SIP.AuthUserName)
++	set_line_sip_username 0 "$2"
++	;;
++	InternetGatewayDevice.Services.VoiceService.1.VoiceProfile.1.Line.1.SIP.AuthPassword)
++	set_line_sip_password 0 "$2"
++	;;
++	InternetGatewayDevice.Services.VoiceService.1.VoiceProfile.1.Line.1.SIP.URI)
++	set_line_sip_uri 0 "$2"
++	;;
++	InternetGatewayDevice.Services.VoiceService.1.VoiceProfile.1.Line.2.Enable)
++	set_line_enable 1 "$2"
++	;;
++	InternetGatewayDevice.Services.VoiceService.1.VoiceProfile.1.Line.2.SIP.AuthUserName)
++	set_line_sip_username 1 "$2"
++	;;
++	InternetGatewayDevice.Services.VoiceService.1.VoiceProfile.1.Line.2.SIP.AuthPassword)
++	set_line_sip_password 1 "$2"
++	;;
++	InternetGatewayDevice.Services.VoiceService.1.VoiceProfile.1.Line.2.SIP.URI)
++	set_line_sip_uri 1 "$2"
++	;;
++esac
++/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} commit
++}
+diff --recursive --unified --new-file --no-dereference orig/ext/openwrt/scripts/unused/x_easycwmp_org src/ext/openwrt/scripts/unused/x_easycwmp_org
+--- orig/ext/openwrt/scripts/unused/x_easycwmp_org	1970-01-01 00:00:00.000000000 +0000
++++ src/ext/openwrt/scripts/unused/x_easycwmp_org	2023-11-06 05:25:51.000000000 +0000
+@@ -0,0 +1,3 @@
++#!/bin/sh
++# Copyright (C) 2011 Luka Perkov <freecwmp@lukaperkov.net>
++
+diff --recursive --unified --new-file --no-dereference orig/src/cwmp.h src/src/cwmp.h
+--- orig/src/cwmp.h	2019-09-26 14:27:06.000000000 +0000
++++ src/src/cwmp.h	2023-11-06 05:25:51.000000000 +0000
+@@ -142,7 +142,7 @@
+ };
+ 
+ extern struct cwmp_internal *cwmp;
+-struct event_code event_code_array[__EVENT_MAX];
++extern struct event_code event_code_array[__EVENT_MAX];
+ 
+ static void cwmp_periodic_inform(struct uloop_timeout *timeout);
+ static void cwmp_do_inform(struct uloop_timeout *timeout);

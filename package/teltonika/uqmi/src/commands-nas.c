@@ -924,18 +924,6 @@ cmd_nas_get_serving_system_cb(struct qmi_dev *qmi, struct qmi_request *req, stru
 		[QMI_NAS_REGISTRATION_STATE_REGISTRATION_DENIED] = "registering_denied",
 		[QMI_NAS_REGISTRATION_STATE_UNKNOWN] = "unknown",
 	};
-	static const char *ext_serv_system[] = {
-		[QMI_NAS_SERVICE_STATUS_NONE] = "none",
-		[QMI_NAS_SERVICE_STATUS_LIMITED] = "limited",
-		[QMI_NAS_SERVICE_STATUS_AVAILABLE] = "available",
-		[QMI_NAS_SERVICE_STATUS_LIMITED_REGIONAL] = "limited_regional",
-		[QMI_NAS_SERVICE_STATUS_POWER_SAVE] = "power_save",
-	};
-	static const char *attach_states[] = {
-		[QMI_NAS_ATTACH_STATE_UNKNOWN] = "unknown",
-		[QMI_NAS_ATTACH_STATE_ATTACHED] = "attached",
-		[QMI_NAS_ATTACH_STATE_DETACHED] = "detached",
-	};
 	void *c;
 
 	qmi_parse_nas_get_serving_system_response(msg, &res);
@@ -943,15 +931,11 @@ cmd_nas_get_serving_system_cb(struct qmi_dev *qmi, struct qmi_request *req, stru
 	c = blobmsg_open_table(&status, NULL);
 	if (res.set.serving_system) {
 		int state = res.data.serving_system.registration_state;
-		int cs_state = res.data.serving_system.cs_attach_state;
-		int ps_state = res.data.serving_system.ps_attach_state;
 
 		if (state > QMI_NAS_REGISTRATION_STATE_UNKNOWN)
 			state = QMI_NAS_REGISTRATION_STATE_UNKNOWN;
 
 		blobmsg_add_string(&status, "registration", reg_states[state]);
-		blobmsg_add_string(&status, "CS", attach_states[cs_state]);
-		blobmsg_add_string(&status, "PS", attach_states[ps_state]);
 	}
 	if (res.set.current_plmn) {
 		blobmsg_add_u32(&status, "plmn_mcc", res.data.current_plmn.mcc);
@@ -962,12 +946,6 @@ cmd_nas_get_serving_system_cb(struct qmi_dev *qmi, struct qmi_request *req, stru
 
 	if (res.set.roaming_indicator)
 		blobmsg_add_u8(&status, "roaming", !res.data.roaming_indicator);
-
-	if (res.set.detailed_service_status) {
-		int ext_status = res.data.detailed_service_status.status;
-
-		blobmsg_add_string(&status, "status", ext_serv_system[ext_status]);
-	}
 
 	blobmsg_close_table(&status, c);
 }

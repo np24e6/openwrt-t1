@@ -120,4 +120,103 @@
 			};
 		};
 	};
+
+	tlt_gpios { // Modify according to wiki page "DTS syntax with Libgpiod changes"
+		gpiochip_info {
+			hw_0 {
+				hwver = <0>;
+				gpiochip_count = <2>;
+
+				gpiochip_0 = <100>; // Built-in
+				gpiochip_1 = <37>;  // STM32 expander
+			};
+		};
+
+		ioman {
+			GPIO_123 {
+				compatible_versions = <0 8>;
+				line_name = "GPIO_OUT_1";
+			};
+			GPIO_124 {
+				compatible_versions = <0 8>;
+				line_name = "GPIO_IN_1";
+				active_low;
+			};
+		};
+
+		ledman {
+			GPIO_100 {
+				compatible_versions = <0 8>;
+				line_name = "LED_SIM_1";
+			};
+			GPIO_101 {
+				compatible_versions = <0 8>;
+				line_name = "LED_SIM_2";
+			};
+			GPIO_102 {
+				compatible_versions = <0 8>;
+				line_name = "LED_WAN_WIFI";
+			};
+			GPIO_103 {
+				compatible_versions = <0 8>;
+				line_name = "LED_WAN_ETH";
+			};
+			GPIO_104 {
+				compatible_versions = <0 8>;
+				line_name = "LED_TECH_GEN_2";
+			};
+			GPIO_105 {
+				compatible_versions = <0 8>;
+				line_name = "LED_TECH_GEN_3";
+			};
+			GPIO_106 {
+				compatible_versions = <0 8>;
+				line_name = "LED_TECH_GEN_4";
+			};
+			GPIO_107 {
+				compatible_versions = <0 8>;
+				line_name = "LED_SSID_1";
+			};
+			GPIO_108 {
+				compatible_versions = <0 8>;
+				line_name = "LED_SSID_2";
+			};
+			GPIO_109 {
+				compatible_versions = <0 8>;
+				line_name = "LED_SSID_3";
+			};
+			GPIO_110 {
+				compatible_versions = <0 8>;
+				line_name = "LED_SSID_4";
+			};
+			GPIO_111 {
+				compatible_versions = <0 8>;
+				line_name = "LED_SSID_5";
+			};
+			GPIO_119 {
+				compatible_versions = <0 8>;
+				line_name = "LED_WIFI_24";
+			};
+			GPIO_118 {
+				compatible_versions = <0 8>;
+				line_name = "LED_WIFI_50";
+			};
+		};
+
+		misc {
+			GPIO_120 {
+				compatible_versions = <0 8>;
+				line_name = "GPIO_MODEM_POWER_1";
+			};
+			GPIO_121 {
+				compatible_versions = <0 8>;
+				line_name = "GPIO_MODEM_RESET_1";
+			};
+			GPIO_122 {
+				compatible_versions = <0 8>;
+				line_name = "GPIO_SIM_SELECT";
+				active_low;
+			};
+		};
+	};
 };

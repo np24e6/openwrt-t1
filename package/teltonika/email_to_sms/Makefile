@@ -6,7 +6,7 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=email_to_sms
-PKG_VERSION:=2023-09-04
+PKG_VERSION:=2023-12-06
 PKG_RELEASE:=1
 
 PKG_SOURCE_VERSION:=2.8

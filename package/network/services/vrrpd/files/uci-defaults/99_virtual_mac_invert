@@ -1,0 +1,17 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+invert_virtual_mac() {
+	local virtual_mac
+
+	config_get virtual_mac "$1" virtual_mac "0"
+
+	[ "$virtual_mac" -eq 1 ] && virtual_mac=0 || virtual_mac=1
+
+	uci_set "vrrpd" "$1" "virtual_mac" "$virtual_mac"
+}
+
+config_load vrrpd
+config_foreach invert_virtual_mac vrrpd
+uci_commit vrrpd

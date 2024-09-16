@@ -177,7 +177,6 @@ typedef struct {
   struct pollfd pfds[MAX_SELECT];
 #endif
 #else
-  char padding[2]; // add padding to separate src and prot
   int maxfd;
   fd_set rfds, wfds, efds;
   struct timeval idleTime;
@@ -192,7 +191,6 @@ typedef struct _net_interface {
   uint8_t hwtype;
   uint8_t hwaddr[PKT_ETH_ALEN];
   char devname[IFNAMSIZ+1];
-  char padding[2]; // add padding to separate src and prot
   int devflags;
   int ifindex;
   int mtu;
@@ -253,7 +251,6 @@ typedef struct _net_interface {
   nat_t *nat;
 #endif
 
-  char padding2[2]; // add padding to separate src and prot
   select_ctx *sctx;
 
   uint8_t flags;

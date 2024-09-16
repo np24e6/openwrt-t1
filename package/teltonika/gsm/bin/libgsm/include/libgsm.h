@@ -59,6 +59,8 @@ typedef enum {
 	LGSM_INFO_FEATURE_AUTO_IMS,
 	LGSM_INFO_FEATURE_EXTENDED_TIMEOUT,
 	LGSM_INFO_FEATURE_DHCP_FILTER,
+	LGSM_INFO_BUILTIN,
+	LGSM_INFO_FEATURE_CSD,
 	LGSM_INFO_MAX,
 } lgsm_info_t;
 
@@ -82,6 +84,7 @@ typedef enum {
 	LGSM_CACHE_REG_ACT,
 	LGSM_CACHE_SIM_PIN1,
 	LGSM_CACHE_SIM_PUK1,
+	LGSM_CACHE_TEMPERATURE,
 	LGSM_CACHE_MAX,
 } lgsm_cache_t;
 
@@ -429,6 +432,11 @@ typedef enum {
 } lgsm_set_ims_attrs_t;
 
 typedef enum {
+	LGSM_SET_ROAM_RELOAD,
+	LGSM_SET_ROAM_MAX,
+} lgsm_set_roam_attrs_t;
+
+typedef enum {
 	LGSM_VOLTE_MODE_ID,
 	LGSM_VOLTE_MAN_MODE,
 	LGSM_VOLTE_MAN_MAX,
@@ -559,6 +567,12 @@ typedef enum {
 } lgsm_lte_nas_back_timer_attrs_t;
 
 typedef enum {
+	LGSM_MTU_INFO_VALUE,
+	LGSM_MTU_INFO_IS_DEFAULT,
+	LGSM_MTU_INFO_MAX,
+} lgsm_mtu_info_attrs_t;
+
+typedef enum {
 	LGSM_MODEM_FUNC_ID,
 	LGSM_MODEM_FUNC_TYPE,
 	LGSM_MODEM_FUNC_MAX,
@@ -602,6 +616,11 @@ typedef enum {
 	LGSM_SIM_TWO,
 	LGSM_SIM_MAX,
 } lgsm_sim_t;
+
+typedef enum {
+	LGSM_GEA_ALGO_STAT,
+	LGSM_GEA_ALGO_MAX,
+} lgsm_gea_algo_attrs_t;
 
 typedef enum {
 	LGSM_UBUS_INFO,
@@ -705,6 +724,8 @@ typedef enum {
 	LGSM_UBUS_GET_VOLTE_READY,
 	LGSM_UBUS_SET_LTE_NAS_BACK_TIMER,
 	LGSM_UBUS_GET_LTE_NAS_BACK_TIMER,
+	LGSM_UBUS_SET_MTU_INFO,
+	LGSM_UBUS_GET_MTU_INFO,
 	LGSM_UBUS_GET_MOD_STATUS,
 	LGSM_UBUS_SET_SIM_INITDELAY,
 	LGSM_UBUS_GET_SIM_INITDELAY,
@@ -771,6 +792,8 @@ typedef enum {
 	LGSM_UBUS_SET_DPO_MODE,
 	LGSM_UBUS_GET_NR5G_DISABLE_MODE,
 	LGSM_UBUS_SET_NR5G_DISABLE_MODE,
+	LGSM_UBUS_GET_GEA_ALGORYTHM,
+	LGSM_UBUS_DISABLE_GEA_1_2_ALGORYTHM,
 	//------
 	__LGSM_UBUS_MAX,
 } lgsm_method_t;
@@ -1013,6 +1036,8 @@ typedef struct {
 	bool auto_ims_support;
 	bool extended_timeout;
 	bool dhcp_filter_support;
+	bool builtin;
+	bool csd_support;
 	lgsm_net_info_t net_info;
 	lgsm_op_slc_mode_t op_slc;
 	lgsm_net_reg_info_t net_reg_info;
@@ -1199,6 +1224,11 @@ typedef struct {
 } lgsm_lte_nas_back_timer_t;
 
 typedef struct {
+	char value[32];
+	bool is_default;
+} lgsm_mtu_info_t;
+
+typedef struct {
 	int restore_cnt;
 	enum cefs_restore_state_id restore_state;
 } lgsm_flash_state_t;
@@ -1225,6 +1255,10 @@ typedef struct {
 	int detect_period;
 	int detect_count;
 } lgsm_sim_soft_hotplug_t;
+
+typedef struct {
+	int stat_id;
+} lgsm_gea_algo_t;
 
 typedef enum {
 	LGSM_LABEL_STRING,
@@ -1294,6 +1328,7 @@ typedef enum {
 	LGSM_LABEL_MODEM_DEFAULT_FUNC_T,
 	LGSM_LABEL_UPDATE_MODEM_FUNC_T,
 	LGSM_LABEL_GET_FLASH_STATE_T,
+	LGSM_LABEL_GET_MTU_INFO_T,
 	LGSM_LABEL_GET_PDP_PROFILE_REGISTRY,
 	LGSM_LABEL_LTESMS_FORMAT,
 	LGSM_LABEL_SIM_SOFT_HOTPLUG_T,
@@ -1301,6 +1336,7 @@ typedef enum {
 	LGSM_LABEL_GNSS_OPER_MODE_T,
 	LGSM_LABEL_DPO_MODE_T,
 	LGSM_LABEL_DISABLE_5G_MODE_T,
+	LGSM_LABEL_GEA_ALGO_T,
 	LGSM_LABEL_ERROR,
 } lgsm_resp_label_t;
 
@@ -1350,6 +1386,7 @@ typedef union {
 	lgsm_volte_t volte;
 	lgsm_volte_rdy_t volte_rdy;
 	bool restart;
+	bool reload;
 	enum mod_act_stat_id mod_status;
 	lgsm_ps_att_t ps_att;
 	enum net_cat_t net_cat;
@@ -1367,12 +1404,14 @@ typedef union {
 	lgsm_srvc_provider_t srvc_provider;
 	lgsm_urc_ind_cfg_t urc_ind_cfg;
 	lgsm_lte_nas_back_timer_t lte_nas_back_timer;
+	lgsm_mtu_info_t mtu_info;
 	lgsm_modem_func_t modem_func;
 	lgsm_flash_state_t flash_state;
 	lgsm_pdp_registry_info_arr_t pdp_reg_info_arr;
 	lgsm_ltesms_formar_arr_t ltesms_format;
 	lgsm_sim_soft_hotplug_t sim_soft_hotplug;
 	lgsm_urc_port_t urc_port;
+	lgsm_gea_algo_t gea_algo;
 	enum gnss_operation_mode_id gnss_oper_mode;
 	enum dpo_mode_id dpo_mode;
 	enum disable_nr5g_mode_id disable_5g_mode;
@@ -2026,13 +2065,13 @@ lgsm_err_t lgsm_set_net_mode(struct ubus_context *ctx, enum net_mode_id id, func
  * Set modem roaming service mode
  * @param[ptr]  ctx   	    Ubus ctx.
  * @param[in]   id   	    Roaming service mode id.
- * @param[in]   resp   	    Status code for modem setting configuration.
+ * @param[in]   data   	    Structed restart information.
  * @param[in]   modem_num   Modem identification number.
  * @param[in]   timeout     Time to wait for the response from the modem.
  * @return lgsm_err_t. Return function status code.
  */
-lgsm_err_t lgsm_set_roam_svc(struct ubus_context *ctx, enum roaming_svc_id id, uint8_t effect, func_t *resp,
-			     uint32_t modem_num);
+lgsm_err_t lgsm_set_roam_svc(struct ubus_context *ctx, enum roaming_svc_id id, uint8_t effect,
+			     lgsm_structed_info_t *data, uint32_t modem_num);
 /**
  * Set modem operator selection mode
  * @param[ptr]  ctx   	    Ubus ctx.
@@ -2145,6 +2184,17 @@ lgsm_err_t lgsm_set_puk_code(struct ubus_context *ctx, const char *puk, const ch
  */
 lgsm_err_t lgsm_set_sms_mode(struct ubus_context *ctx, enum sms_format_id id, func_t *resp,
 			     uint32_t modem_num);
+
+/**
+ * Send voice call
+ * @param[ptr]  ctx   	    Ubus ctx.
+ * @param[char] number 	    Nubmer to which the voice call has to be made.
+ * @param[ptr]  resp	    Status code for modem setting configuration.
+ * @param[in]   modem_num   Modem identification number.
+ * @return lgsm_err_t. Return function status code.
+ */
+lgsm_err_t lgsm_send_voice_call(struct ubus_context *ctx, const char *number, func_t *resp,
+				uint32_t modem_num);
 /**
  * Send sms
  * @param[ptr]  ctx   	    Ubus ctx.
@@ -2349,6 +2399,16 @@ lgsm_err_t lgsm_set_apn_auth(struct ubus_context *ctx, func_t *resp, lgsm_apn_au
  */
 lgsm_err_t lgsm_get_apn_auth(struct ubus_context *ctx, int32_t index, uint32_t modem_num,
 			     lgsm_structed_info_t *data);
+
+/**
+ * Set MTU info
+ * @param[ptr]  ctx   	    Ubus ctx.
+ * @param[in]   value    	MTU value in little endian.
+ * @param[char] resp   	    Response from modem for the executed AT command.
+ * @param[in]   modem_num   Modem identification number.
+ * @return lgsm_err_t. Return function status code.
+ */
+lgsm_err_t lgsm_set_mtu_info(struct ubus_context *ctx, char *value, func_t *resp, uint32_t modem_num);
 
 /**
  * Set PDP context
@@ -2893,6 +2953,15 @@ lgsm_err_t lgsm_set_dpo_mode(struct ubus_context *ctx, func_t *resp, enum dpo_mo
 lgsm_err_t lgsm_quectel_set_nr5g_disable_mode(struct ubus_context *ctx, func_t *resp,
 					      enum disable_nr5g_mode_id mode, uint32_t modem_num);
 
+/**
+ * Disable GEA1 and GEA2 algorithms
+ * @param[ptr]  ctx   	    Ubus ctx.
+ * @param[char] resp   	    Response from modem for the executed AT command.
+ * @param[in]   modem_num   Modem identification number.
+ * @return lgsm_err_t. Return function status code.
+ */
+lgsm_err_t lgsm_disable_gea1_2_algo(struct ubus_context *ctx, func_t *resp, uint32_t modem_num);
+
 /******************
 *  GET HANDLERS  *
 ******************/
@@ -3192,6 +3261,13 @@ void handle_get_ims_state_rsp(struct blob_attr *info, lgsm_structed_info_t *pars
 void handle_set_ims_state_rsp(struct blob_attr *info, lgsm_structed_info_t *parsed);
 
 /**
+   * Parse roaming state set method response
+   * @param[ptr]   info      Blob from gsmd.
+   * @param[ptr]   parsed    Parsed union readable information.
+   */
+void handle_set_roaming_state_rsp(struct blob_attr *info, lgsm_structed_info_t *parsed);
+
+/**
    * Parse VoLTE state retrival method response
    * @param[ptr]   info      Blob from gsmd.
    * @param[ptr]   parsed    Parsed union readable information.
@@ -3260,6 +3336,13 @@ void handle_get_inc_voice_calls_rsp(struct blob_attr *info, lgsm_structed_info_t
    * @param[ptr]   parsed    Parsed union readable information.
    */
 void handle_get_lte_nas_backoff_timer_rsp(struct blob_attr *info, lgsm_structed_info_t *parsed);
+
+/**
+   * Parse MTU INFO method response
+   * @param[ptr]   info      Blob from gsmd.
+   * @param[ptr]   parsed    Parsed union readable information.
+   */
+void handle_get_mtu_info_rsp(struct blob_attr *info, lgsm_structed_info_t *parsed);
 
 /**
    * Parse module status retrival method response
@@ -3463,6 +3546,13 @@ void handle_get_dpo_mode_rsp(struct blob_attr *info, lgsm_structed_info_t *parse
    * @param[ptr]   parsed    Parsed union readable information.
    */
 void handle_get_disable_5g_mode_rsp(struct blob_attr *info, lgsm_structed_info_t *parsed);
+
+/**
+   * Parse GEA algorythm method response
+   * @param[ptr]   info      Blob from gsmd.
+   * @param[ptr]   parsed    Parsed union readable information.
+   */
+void handle_get_gea_algo(struct blob_attr *info, lgsm_structed_info_t *parsed);
 
 /*********************
 *  STRUCT HANDLERS  *

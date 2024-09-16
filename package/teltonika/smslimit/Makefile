@@ -7,7 +7,7 @@ include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=smslimit
 
-PKG_SOURCE_VERSION:=4.0
+PKG_SOURCE_VERSION:=5.0
 
 GPL_INCLUDE_HEADERS:=1
 

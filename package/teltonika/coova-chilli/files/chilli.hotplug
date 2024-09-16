@@ -1,22 +1,30 @@
 #!/bin/sh
 
 #There is no other way to add wifi interface dependancy to service.
-[ "$DEVTYPE" = "wlan" -a "$ACTION" == "add" ] || exit 0
-[ -z "$INTERFACE" -o -n "${INTERFACE##wlan*}" ] && exit 0
-
+[[ "$INTERFACE" = "wlan"* || "$INTERFACE" = "ra"* ]] && [ "$ACTION" == "add" ] || exit 0
 . /lib/functions.sh
 
+restart_chilli(){
+  local network="$1"
+  [[ "$network" = "wifi"* ]] && {
+    local ifname="$(cat /var/run/${network}.wifi_id)"
+    if [ -n "$ifname" ] && [ "$INTERFACE" = "$ifname" ]; then
+      /etc/init.d/chilli restart
+      exit 0
+    fi
+  }
+}
+
 get_network(){
-    local sid=$1 network ifname
+    local sid=$1 network moreif
 
     config_get network ${sid} network
-    if [ -n "${network#wlan}" ]; then
-    	ifname="$(cat /var/run/${network}.wifi_id)"
-      if [ -z "$ifname" -o "$INTERFACE" == "$ifname" ]; then
-            /etc/init.d/chilli restart
-            exit 0
-		  fi
-    fi
+    restart_chilli "$network"
+
+    config_get moreif ${sid} moreif
+    for interface in $moreif; do
+      restart_chilli "$interface"
+    done
 }
 
 config_load chilli

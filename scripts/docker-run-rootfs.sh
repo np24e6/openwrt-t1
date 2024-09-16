@@ -20,12 +20,14 @@ Usage: $SELF [-h|--help]
        $SELF
          [--rootfs <rootfs>]
          [-n|--network]
-		 [-p|--prebuild]
+         [-p|--prebuild]
+         [-m|--nat]
 
 <rootfs> allows to specifiy a different path for the rootfs.
 <network> enables network access based on <NETWORK_PREFIX>
 <prebuild> uses the official docker images openwrtorg/rootfs:latest
 	-> changes to <NETWORK_PREFIX> are ignored
+<nat> masquerades traffic into the container, so that it can be accessed from outside the host
 EOF
 }
 
@@ -35,6 +37,7 @@ parse_args() {
 			--rootfs) ROOTFS_PATH="$2"; shift 2 ;;
 			--network|-n) NETWORK_ENABLE=1; shift ;;
 			--prebuild|-p) PREBUILD=1; shift ;;
+			--nat|-m) NAT_MASQUERADE=1; shift ;;
 			--help|-h)
 				usage
 				exit 0
@@ -72,24 +75,49 @@ fi
 echo "[*] Build: $ROOTFS_PATH"
 
 if [ "$NETWORK_ENABLE" = 1 ]; then
-	NETWORK_NAME="openwrt-lan-$NETWORK_PREFIX"
+	NETWORK_NAME="rutos-lan-$NETWORK_PREFIX"
 	LAN_IP="$NETWORK_PREFIX.1"
 	if [ -z "$(docker network ls | grep $NETWORK_NAME)" ]; then
 		docker network create \
+		  -o "com.docker.network.bridge.name"="br-rutos-docker" \
 		  --driver=bridge \
 		  --subnet="$NETWORK_PREFIX.0/24" \
 		  --ip-range="$NETWORK_PREFIX.0/24" \
 		  --gateway="$NETWORK_PREFIX.2" \
 		  "$NETWORK_NAME"
 		echo "[*] Created $NETWORK_NAME network "
+
+		cleanup() {
+			while docker network inspect "$NETWORK_NAME" &>/dev/null; do
+				docker network rm "$NETWORK_NAME" && break
+				sleep 1
+			done
+			echo '[*] Cleaned up network'
+		}
+		trap cleanup EXIT
+	fi
+
+	if [ "$NAT_MASQUERADE" = 1 ]; then
+		NAT_MASQUERADE_RULE_FORWARD='FORWARD -j ACCEPT'
+		NAT_MASQUERADE_RULE_POSTROUTING='POSTROUTING -o br-rutos-docker -j MASQUERADE -tnat'
+
+		scf="$(sysctl net.ipv4.ip_forward)"
+		scf="${scf##*= }"
+
+		sudo sh -c "
+			sysctl -w net.ipv4.ip_forward=1
+			iptables -I $NAT_MASQUERADE_RULE_FORWARD
+			iptables -I $NAT_MASQUERADE_RULE_POSTROUTING
+			{
+				exec </dev/null
+				wait $$
+				iptables -D $NAT_MASQUERADE_RULE_FORWARD
+				iptables -D $NAT_MASQUERADE_RULE_POSTROUTING
+				sysctl -w net.ipv4.ip_forward=$scf
+			} &
+		"
 	fi
 fi
 
-docker run --privileged -it --rm --network="$NETWORK_NAME" --ip="$LAN_IP" \
+docker run --privileged --interactive --tty --rm --network="$NETWORK_NAME" --ip="$LAN_IP" \
 	--name openwrt-docker $DOCKER_EXTRA "$IMAGE_NAME"
-echo "[*] Created $IMAGE_NAME"
-
-if [ "$NETWORK_ENABLE" = 1 ]; then
-	docker network rm "$NETWORK_NAME"
-	echo "[*] Cleaned up network"
-fi

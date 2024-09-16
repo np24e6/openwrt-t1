@@ -46,7 +46,7 @@ define Package/busybox/Default
   MAINTAINER:=Felix Fietkau <nbd@nbd.name>
   TITLE:=Core utilities for embedded Linux
   URL:=http://busybox.net/
-  DEPENDS:=+BUSYBOX_CONFIG_PAM:libpam +BUSYBOX_CONFIG_NTPD:jsonfilter +libubus +libubox +libuci +BUSYBOX_CONFIG_FEATURE_IP_BLOCKD:liblog +BUSYBOX_CONFIG_PASSWD:liblog +BUSYBOX_CONFIG_FEATURE_IP_BLOCKD:libtlt_utils
+  DEPENDS:=+BUSYBOX_CONFIG_PAM:libpam +BUSYBOX_CONFIG_NTPD:jsonfilter +libubus +libubox +libuci +BUSYBOX_CONFIG_FEATURE_IP_BLOCKD:liblog +BUSYBOX_CONFIG_PASSWD:liblog +BUSYBOX_CONFIG_FEATURE_IP_BLOCKD:libtlt_utils +BUSYBOX_CONFIG_FEATURE_NETIFD:libnetifd
   USERID:=ntp=123:ntp=123
 endef
 
@@ -82,6 +82,10 @@ endif
 
 ifdef CONFIG_BUSYBOX_CONFIG_FEATURE_IP_BLOCKD
 LDLIBS += -ltlt_utils
+endif
+
+ifdef BUSYBOX_CONFIG_FEATURE_NETIFD
+LDLIBS += -lnetifd
 endif
 
 TARGET_CFLAGS += -flto
@@ -127,7 +131,6 @@ ifneq ($(CONFIG_BUSYBOX_$(BUSYBOX_SYM)_CROND),)
 	$(INSTALL_BIN) ./files/cron $(1)/etc/init.d/cron
 endif
 ifneq ($(CONFIG_BUSYBOX_$(BUSYBOX_SYM)_NTPD),)
-	$(INSTALL_BIN) ./files/sysntpd $(1)/etc/init.d/sysntpd
 	$(INSTALL_BIN) ./files/ntpd-hotplug $(1)/usr/sbin/ntpd-hotplug
 	$(INSTALL_DIR) $(1)/etc/capabilities $(1)/usr/share/acl.d
 	$(INSTALL_DATA) ./files/ntpd.capabilities $(1)/etc/capabilities/ntpd.json

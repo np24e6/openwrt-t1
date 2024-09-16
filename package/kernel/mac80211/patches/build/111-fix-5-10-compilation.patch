@@ -1,0 +1,13 @@
+Index: backports-6.1.24/backport-include/linux/etherdevice.h
+===================================================================
+--- backports-6.1.24.orig/backport-include/linux/etherdevice.h	2023-04-17 17:56:40.000000000 +0300
++++ backports-6.1.24/backport-include/linux/etherdevice.h	2023-11-07 11:24:12.489278504 +0200
+@@ -39,7 +39,7 @@
+ }
+ #endif /* LINUX_VERSION_IS_LESS(4,11,0) */
+ 
+-#if LINUX_VERSION_IS_LESS(5,15,0)
++#if LINUX_VERSION_IS_LESS(5,10,0)
+ /**
+  * eth_hw_addr_set - Assign Ethernet address to a net_device
+  * @dev: pointer to net_device structure

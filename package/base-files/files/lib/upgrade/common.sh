@@ -303,3 +303,21 @@ default_do_upgrade() {
 	fi
 	[ $? -ne 0 ] && exit 1
 }
+
+prepare_metadata_hw_mods () {
+	local metadata="/tmp/sysupgrade.meta"
+
+	[ -e "$metadata" ] || { fwtool -q -i $metadata "$1"; } && {
+		json_load_file "$metadata"
+		json_select hw_mods 1> /dev/null && {
+			json_get_values hw_mods
+		}
+		return 0
+	}
+	return 1
+}
+
+find_hw_mod() {
+	echo "$hw_mods" | grep -q "$1"
+}
+

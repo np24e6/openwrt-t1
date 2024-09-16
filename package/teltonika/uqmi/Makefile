@@ -6,10 +6,14 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=uqmi
-PKG_SOURCE_VERSION:=1.0
+PKG_SOURCE_VERSION:=2.0
 PKG_MAINTAINER:=Mindaugas Antanavicius <mindaugas.antanavicius@teltonika.lt>
 
 GPL_INCLUDE_HEADERS:=1
+
+PKG_UPSTREAM_VERSION:=56cb2d4056fef132ccf78dfb6f3074ae5d109992
+PKG_UPSTREAM_URL:=https://git.teltonika.lt/api/v4/projects/352/packages/generic/uqmi/$(PKG_UPSTREAM_VERSION)
+PKG_UPSTREAM_FILE:=uqmi-$(PKG_UPSTREAM_VERSION).tar.gz
 
 PKG_LICENSE:=GPL-2.0
 PKG_LICENSE_FILES:=

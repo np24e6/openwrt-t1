@@ -6,10 +6,10 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=libtlt-logger
-PKG_VERSION:=2023-08-31
+PKG_VERSION:=2023-12-08
 PKG_RELEASE:=1
 
-PKG_SOURCE_VERSION:=2.3
+PKG_SOURCE_VERSION:=2.5
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_SOURCE_VERSION)-$(PKG_VERSION)
 PKG_SOURCE:=$(PKG_SOURCE_SUBDIR).tar.gz
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_SOURCE_SUBDIR)
@@ -33,7 +33,7 @@ endef
 
 define Package/libtlt-logger/install
 	$(INSTALL_DIR) $(1)/usr/lib
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/libtlt_logger.so $(1)/usr/lib/libtlt_logger.so
+	$(CP) $(PKG_BUILD_DIR)/libtlt_logger.so $(1)/usr/lib/
 endef
 
 $(eval $(call BuildPackage,libtlt-logger))

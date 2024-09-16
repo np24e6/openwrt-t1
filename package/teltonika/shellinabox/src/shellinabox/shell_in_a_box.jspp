@@ -92,7 +92,7 @@ function extend(subClass, baseClass) {
 function ShellInABox(url, container) {
   if (url == undefined) {
     this.rooturl    = document.location.href;
-    this.url        = document.location.href;
+    this.url        = document.location.href.replace(/[?#].*/, '');
   } else {
     this.rooturl    = url;
     this.url        = url;
@@ -146,15 +146,12 @@ ShellInABox.prototype.sessionClosed = function() {
 ShellInABox.prototype.reconnect = function() {
   this.showReconnect(false);
   if (!this.session) {
-    var is_rms = document.location.hostname.match(/.*\.teltonika\.lt$/)
-    if (is_rms !== null) {
-      window.postMessage('reconnect', '*');
-    } else if (document.location.hash != '') {
+    if (document.location.hash != '') {
       // A shellinaboxd daemon launched from a CGI only allows a single
       // session. In order to reconnect, we must reload the frame definition
       // and obtain a new port number. As this is a different origin, we
       // need to get enclosing page to help us.
-      window.parent.postMessage('reconnect', '*');
+      parent.location        = this.nextUrl;
     } else {
       if (this.url != this.nextUrl) {
         document.location.replace(this.nextUrl);
@@ -173,7 +170,7 @@ ShellInABox.prototype.sendRequest = function(request) {
   if (request == undefined) {
     request                  = new XMLHttpRequest();
   }
-  request.open('POST', this.url, true);
+  request.open('POST', this.url + '?', true);
   request.timeout = 30000; // Don't leave POST pending forever: force 30s timeout to prevent HTTP Proxy thread hijack
   request.setRequestHeader('Cache-Control', 'no-cache');
   request.setRequestHeader('Content-Type',
@@ -242,7 +239,7 @@ ShellInABox.prototype.sendKeys = function(keys) {
     keys                       = this.pendingKeys + keys;
     this.pendingKeys           = '';
     var request                = new XMLHttpRequest();
-    request.open('POST', this.url, true);
+    request.open('POST', this.url + '?', true);
     request.setRequestHeader('Cache-Control', 'no-cache');
     request.setRequestHeader('Content-Type',
                            'application/x-www-form-urlencoded; charset=utf-8');

@@ -79,45 +79,33 @@ strstr() {
 }
 
 manage_serial() {
-	local usb_jack path serial_type
-	local file="/etc/board.json"
+	local usb_jack path modem_id idx usb_jack dev_type dev_path
+	local file="/tmp/board.json"
 
 	kinfo "New device $DEVICENAME at $DEVPATH appeared!"
 
-	[ -f "$file" ] || file="/tmp/board.json"
+	[ -f "$file" ] || file="/etc/board.json"
 
-	. /usr/share/libubox/jshn.sh
+	# skip modems
+	modem_id="$(jsonfilter -i $file -e '@.modem[0].id')"
+	strstr "$DEVPATH" "$modem_id" && exit 0
 
-	json_init
-	json_load_file "$file"
-
-	json_select serial
-	[ "$?" -eq 0 ] && {
-		json_get_keys keys
-
-		for k in $keys; do
-			json_select "$k"
-			json_get_var path path
-
-			json_select devices
-			json_get_var serial_type 1
-			json_select ..
-
-			json_select ..
-
-			# built-in chip
-			strstr "$DEVPATH" "$path" && handle_symlink "/dev/$serial_type"
-		done
-
-		json_select ..
-	}
-
-	json_get_var usb_jack usb_jack
+	idx=0
+	while [ "$idx" -lt 2 ]
+	do
+		dev_type="$(jsonfilter -i $file -e '@.serial['$idx'].devices[0]')"
+		dev_path="$(jsonfilter -i $file -e '@.serial['$idx'].path')"
+		strstr "$DEVPATH" "$dev_path" && {
+			handle_symlink "/dev/$dev_type"
+			exit 0
+		}
+		idx=$((idx+1))
+	done
 
 	# usb-to-serial adapter
-	[ -n "$usb_jack" ] && \
-		strstr "$DEVPATH" "$usb_jack" && \
-			handle_multi_symlink "$usb_serial"
+	usb_jack="$(jsonfilter -i $file -e '@.usb_jack')"
+	strstr "$DEVPATH" "$usb_jack" && \
+		handle_multi_symlink "$usb_serial"
 }
 
 manage_serial

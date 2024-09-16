@@ -22,7 +22,6 @@
 #include "chilli.h"
 #ifdef ENABLE_MODULES
 #include "chilli_module.h"
-#include "chilli_module.h"
 #endif
 #ifdef ENABLE_EWTAPI
 #include "ewt.h"
@@ -33,7 +32,7 @@ static int optionsdebug = 0; /* TODO: Should be changed to instance */
 
 static int termstate = REDIR_TERM_INIT;    /* When we were terminated */
 
-const char credits[] =
+char credits[] =
     "<H1>CoovaChilli " VERSION "</H1>"
     "<p>Copyright 2002-2005 Mondru AB</p>"
     "<p>Copyright 2006-2012 David Bird (Coova Technologies)</p>"
@@ -201,6 +200,16 @@ static void redir_http(bstring s, char *code) {
 	   "Expires: Fri, 01 Jan 1971 00:00:00 GMT\r\n"
 	   "Cache-Control: no-cache, must-revalidate\r\n");
   bcatcstr(s, "P3P: CP=\"IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT\"\r\n");
+}
+
+static int bstrtocstr(bstring src, char *dst, unsigned int len) {
+  if (!src || src->slen == 0) {
+    dst[0] = 0;
+    return 0;
+  }
+
+  strlcpy(dst, (char*)src->data, len);
+  return 0;
 }
 
 /* Encode src as urlencoded and place null terminated result in dst */
@@ -403,22 +412,21 @@ static int base64decoder (char * eapstr, struct eapmsg_t * eapmsg)
 }
 
 static void bstring_buildurl(bstring str, struct redir_conn_t *conn,
-			     struct redir_t *redir, char *redir_url, const char *resp,
+			     struct redir_t *redir, char *redir_url, char *resp,
 			     long int timeleft, char* hexchal, char* uid,
 			     char* userurl, char* reply, char* redirurl,
 			     uint8_t *hismac, struct in_addr *hisip, char *amp) {
   bstring bt = bfromcstr("");
   bstring bt2 = bfromcstr("");
 
-  bassignformat(str, "%s%sres=%s%s%s=%s%s%s=%d",
-                redir_url, strchr(redir_url, '?') ? amp : "?", resp, amp,
-                _options.paramuamip ? _options.paramuamip : "uamip", inet_ntoa(redir->addr),
-                amp, _options.paramuamport ? _options.paramuamport : "uamport", redir->port);
+  bassignformat(str, "%s%sres=%s%suamip=%s%suamport=%d",
+		redir_url, strchr(redir_url, '?') ? amp : "?", resp, amp,
+		inet_ntoa(redir->addr), amp,
+		redir->port);
 
   if (!_options.nochallenge && hexchal) {
     bcatcstr(str, amp);
-    bassignformat(bt, "%s=%s", _options.paramchallenge ? _options.paramchallenge : "challenge",
-                  hexchal);
+    bassignformat(bt, "challenge=%s", hexchal);
     bconcat(str, bt);
     bassigncstr(bt,"");
   }
@@ -452,48 +460,8 @@ static void bstring_buildurl(bstring str, struct redir_conn_t *conn,
     }
   }
 
-  if (conn->type == REDIR_TRIAL || conn->type == REDIR_LOGIN || conn->type == REDIR_STATUS){
-    if (conn->s_params.maxinputoctets) {
-      bcatcstr(str, amp);
-      bassignformat(bt, "maxinputoctets=%lld", conn->s_params.maxinputoctets);
-      bconcat(str, bt);
-    }
-
-    if (conn->s_params.maxoutputoctets) {
-      bcatcstr(str, amp);
-      bassignformat(bt, "maxoutputoctets=%lld", conn->s_params.maxoutputoctets);
-      bconcat(str, bt);
-    }
-
-    if (conn->s_params.warningoctets) {
-      bcatcstr(str, amp);
-      bassignformat(bt, "warningoctets=%lld", conn->s_params.warningoctets);
-      bconcat(str, bt);
-    }
-
-    if (conn->s_params.bandwidthmaxup) {
-      bcatcstr(str, amp);
-      bassignformat(bt, "bandwidthmaxup=%lld", conn->s_params.bandwidthmaxup);
-      bconcat(str, bt);
-    }
-
-    if (conn->s_params.bandwidthmaxdown) {
-	  bcatcstr(str, amp);
-	  bassignformat(bt, "bandwidthmaxdown=%lld", conn->s_params.bandwidthmaxdown);
-	  bconcat(str, bt);
-	}
-
-    if (conn->s_params.expiration &&
-        conn->s_state.redir.auth_mode != AUTH_TRIAL_USER) {
-      bcatcstr(str, amp);
-      bassignformat(bt, "expiration=%lld", conn->s_params.expiration);
-      bconcat(str, bt);
-    }
-  }
-
   bcatcstr(str, amp);
-  bcatcstr(str, _options.paramcalled ? _options.paramcalled : "called");
-  bcatcstr(str, "=");
+  bcatcstr(str, "called=");
   if (_options.nasmac)
     bassigncstr(bt, _options.nasmac);
   else
@@ -520,8 +488,7 @@ static void bstring_buildurl(bstring str, struct redir_conn_t *conn,
 
   if (hismac) {
     bcatcstr(str, amp);
-    bcatcstr(str, _options.parammac ? _options.parammac : "mac");
-    bcatcstr(str, "=");
+    bcatcstr(str, "mac=");
     bassignformat(bt, "%.2X-%.2X-%.2X-%.2X-%.2X-%.2X",
 		  hismac[0], hismac[1],
 		  hismac[2], hismac[3],
@@ -532,7 +499,7 @@ static void bstring_buildurl(bstring str, struct redir_conn_t *conn,
 
   if (hisip) {
     bcatcstr(str, amp);
-    bassignformat(bt, "%s=%s", _options.paramip ? _options.paramip : "ip", inet_ntoa(*hisip));
+    bassignformat(bt, "ip=%s", inet_ntoa(*hisip));
     bconcat(str, bt);
   }
 
@@ -554,38 +521,12 @@ static void bstring_buildurl(bstring str, struct redir_conn_t *conn,
 
   if (_options.radiusnasid) {
     bcatcstr(str, amp);
-    bcatcstr(str, _options.paramnasid ? _options.paramnasid : "nasid");
-    bcatcstr(str, "=");
+    bcatcstr(str, "nasid=");
     bassigncstr(bt, _options.radiusnasid);
     redir_urlencode(bt, bt2);
     bconcat(str, bt2);
   }
 
-	if (_options.tos) {
-		bcatcstr(str, amp);
-		bcatcstr(str, "tos=1");
-	}
-
-    if (_options.macpass) {
-      bcatcstr(str, amp);
-      bcatcstr(str, "macpass=1");
-    }
-    
-    if (_options.registerusers) {
-        bcatcstr(str, amp);
-        bcatcstr(str, "signup=1"); 
-    }
-
-  if (_options.trialusers) {
-    bcatcstr(str, amp);
-    bcatcstr(str, "trial=1");
-  }
-
-    if (conn->s_state.terminate_cause_ui){
-		bcatcstr(str, amp);
-		bassignformat(bt, "termcause=%d", (long) conn->s_state.terminate_cause_ui);
-		bconcat(str, bt);
-  	}
 #ifdef ENABLE_IEEE8021Q
   if (_options.ieee8021q && conn->s_state.tag8021q) {
     bcatcstr(str, amp);
@@ -639,8 +580,8 @@ static void bstring_buildurl(bstring str, struct redir_conn_t *conn,
   }
 
   if (conn->s_state.sessionid[0]) {
-    bassignformat(bt, "%s%s=", amp, _options.paramsessionid ? _options.paramsessionid : "sessionid");
-    bconcat(str, bt);
+    bcatcstr(str, amp);
+    bcatcstr(str, "sessionid=");
     bassigncstr(bt, conn->s_state.sessionid);
     redir_urlencode(bt, bt2);
     bconcat(str, bt2);
@@ -679,21 +620,11 @@ static void bstring_buildurl(bstring str, struct redir_conn_t *conn,
   }
 
   if (userurl) {
-    bassignformat(bt, "%s%s=", amp, _options.paramuserurl ? _options.paramuserurl : "userurl");
-    bconcat(str, bt);
+    bcatcstr(str, amp);
+    bcatcstr(str, "userurl=");
     bassigncstr(bt, userurl);
     redir_urlencode(bt, bt2);
     bconcat(str, bt2);
-  }
-
-  if (_options.param1 && _options.param1value){
-    bassignformat(bt, "%s%s=%s", amp, _options.param1, _options.param1value);
-    bconcat(str, bt);
-  }
-
-  if (_options.param2 && _options.param2value){
-    bassignformat(bt, "%s%s=%s", amp, _options.param2, _options.param2value);
-    bconcat(str, bt);
   }
 
   if (redir->secret && *redir->secret) {
@@ -786,10 +717,6 @@ static void redir_xmlchilli_reply (struct redir_t *redir, struct redir_conn_t *c
         bassignformat(bt, "<MaxTotalOctets>%d</MaxTotalOctets>\r\n",
                       conn->s_params.maxtotaloctets);
         bconcat(b, bt);
-
-        bassignformat(bt, "<WarningOctets>%d</WarningOctets>\r\n",
-                      conn->s_params.warningoctets);
-        bconcat(b, bt);
       }
       else {
         bcatcstr(b, "<State>0</State>\r\n");
@@ -806,10 +733,7 @@ static void redir_xmlchilli_reply (struct redir_t *redir, struct redir_conn_t *c
     case REDIR_FAILED_MTU:
     case REDIR_FAILED_TIMEOUT:
     case REDIR_FAILED_REJECT:
-    case REDIR_FAILED_DATA:
-    case REDIR_FAILED_TIME:
     case REDIR_FAILED_OTHER:
-    case REDIR_FAILED_TOS:
       if (reply) {
         bassignformat(bt, "<ReplyMessage>%s</ReplyMessage>\r\n", reply);
         bconcat(b, bt);
@@ -836,12 +760,7 @@ static void redir_xmlchilli_reply (struct redir_t *redir, struct redir_conn_t *c
 
     case REDIR_REQERROR:
       break;
-    case REDIR_SMSSIGNUP_SUCCESS:
-    case REDIR_SMSSIGNUP_FAILED:
-    case REDIR_SMSSIGNUP_ALREADY:
-    case REDIR_SMSSIGNUP_SMS_FAIL:
-    case REDIR_SIGNUP_SUCCESS:
-    	break;
+
     default:
       syslog(LOG_ERR, "redir_wispr1_reply: Unhandled response code in switch: %d", res);
   }
@@ -859,6 +778,9 @@ void redir_wispr1_reply (struct redir_t *redir, struct redir_conn_t *conn,
 			 int res, long int timeleft, char* hexchal,
 			 char* reply, char* redirurl, bstring b) {
   bstring bt = bfromcstr("");;
+
+  if (_options.debug)
+    syslog(LOG_DEBUG, "%s(%d):", __FUNCTION__, __LINE__);
 
   bcatcstr(b,
 	   "<!--\r\n"
@@ -894,12 +816,10 @@ void redir_wispr1_reply (struct redir_t *redir, struct redir_conn_t *conn,
         bconcat(b, bt);
       }
 
-      bassignformat(bt, "<LoginURL>%s%sres=wispr&amp;&s=%s&amp;%s=%d&amp;%s=%s</LoginURL>\r\n",
+      bassignformat(bt, "<LoginURL>%s%sres=wispr&amp;uamip=%s&amp;uamport=%d&amp;challenge=%s</LoginURL>\r\n",
                     _options.wisprlogin ? _options.wisprlogin : redir->url,
                     strchr(_options.wisprlogin ? _options.wisprlogin : redir->url, '?') ? "&amp;" : "?",
-                    _options.paramuamip ? _options.paramuamip : "uamip", inet_ntoa(redir->addr),
-                    _options.paramuamport ? _options.paramuamport : "uamport", redir->port,
-                    _options.paramchallenge ? _options.paramchallenge : "challenge", hexchal);
+                    inet_ntoa(redir->addr), redir->port, hexchal);
       bconcat(b, bt);
 
       bassignformat(bt, "<AbortLoginURL>http://%s:%d/abort</AbortLoginURL>\r\n",
@@ -940,10 +860,7 @@ void redir_wispr1_reply (struct redir_t *redir, struct redir_conn_t *conn,
     case REDIR_ERROR_PROTOCOL:
     case REDIR_FAILED_MTU:
     case REDIR_FAILED_TIMEOUT:
-    case REDIR_FAILED_DATA:
-    case REDIR_FAILED_TIME:
     case REDIR_FAILED_OTHER:
-    case REDIR_FAILED_TOS:
       bcatcstr(b,
                "<AuthenticationPollReply>\r\n"
                "<MessageType>140</MessageType>\r\n" /* response to authentication notification */
@@ -1036,26 +953,6 @@ void redir_wispr1_reply (struct redir_t *redir, struct redir_conn_t *conn,
     case REDIR_REQERROR:
       break;
 
-    case REDIR_SMSSIGNUP_SUCCESS:
-    case REDIR_SMSSIGNUP_FAILED:
-    case REDIR_SMSSIGNUP_ALREADY:
-    case REDIR_SMSSIGNUP_SMS_FAIL:
-    case REDIR_SIGNUP_SUCCESS:
-    	break;
-    case REDIR_FAILED_USER_DUPLICATE:
-      bcatcstr(b,
-                "<AuthenticationPollReply>\r\n"
-                "<MessageType>170</MessageType>\r\n"  /* response to notification */
-                "<ResponseCode>110</ResponseCode>\r\n");  /* login failed (Users duplicate) */
-
-      if (reply) {
-        bassignformat(bt, "<ReplyMessage>%s</ReplyMessage>\r\n", reply);
-        bconcat(b, bt);
-      } else {
-        bcatcstr(b, "<ReplyMessage>A user with the entered password already exists!</ReplyMessage>\r\n");
-      }
-      bcatcstr(b, "</AuthenticationPollReply>\r\n");
-      break;
     default:
       syslog(LOG_ERR, "redir_wispr1_reply: Unhandled response code in switch: %d", res);
   }
@@ -1092,6 +989,9 @@ void redir_wispr2_reply (struct redir_t *redir, struct redir_conn_t *conn,
 			 char* reply, char* redirurl, bstring b) {
   bstring bt = bfromcstr("");
   char eap64str [MAX_EAP_LEN*2];
+
+  if (_options.debug)
+    syslog(LOG_DEBUG, "%s(%d):", __FUNCTION__, __LINE__);
 
   bcatcstr(b,
 	   "<!--\r\n"
@@ -1137,12 +1037,10 @@ void redir_wispr2_reply (struct redir_t *redir, struct redir_conn_t *conn,
         bconcat(b, bt);
       }
 
-      bassignformat(bt, "<LoginURL>%s%sres=wispr&amp;u%s=%s&amp;%s=%d&amp;%s=%s</LoginURL>\r\n",
+      bassignformat(bt, "<LoginURL>%s%sres=wispr&amp;uamip=%s&amp;uamport=%d&amp;challenge=%s</LoginURL>\r\n",
                     _options.wisprlogin ? _options.wisprlogin : redir->url,
                     strchr(_options.wisprlogin ? _options.wisprlogin : redir->url, '?') ? "&amp;" : "?",
-                    _options.paramuamip ? _options.paramuamip : "uamip", inet_ntoa(redir->addr),
-                    _options.paramuamport ? _options.paramuamport : "uamport", redir->port,
-                    _options.paramchallenge ? _options.paramchallenge : "challenge", hexchal);
+                    inet_ntoa(redir->addr), redir->port, hexchal);
       bconcat(b, bt);
 
       bassignformat(bt, "<AbortLoginURL>http://%s:%d/abort</AbortLoginURL>\r\n",
@@ -1236,10 +1134,7 @@ void redir_wispr2_reply (struct redir_t *redir, struct redir_conn_t *conn,
       write_authentication_msg_footer(conn,b);
       break;
 
-    case REDIR_FAILED_DATA:
-    case REDIR_FAILED_TIME:
     case REDIR_FAILED_OTHER:
-    case REDIR_FAILED_TOS:
       write_authentication_msg_header(conn,b);
 
       bcatcstr(b,
@@ -1271,12 +1166,10 @@ void redir_wispr2_reply (struct redir_t *redir, struct redir_conn_t *conn,
           syslog(LOG_DEBUG, "%s(%d): Base64 encoding of radius eap message failed", __FUNCTION__, __LINE__);
       }
 
-      bassignformat(bt, "<LoginURL>%s%sres=wispr&amp;%s=%s&amp;continue=1&amp;%s=%d&amp;%s=%s</LoginURL>\r\n",
+      bassignformat(bt, "<LoginURL>%s%sres=wispr&amp;uamip=%s&amp;continue=1&amp;uamport=%d&amp;challenge=%s</LoginURL>\r\n",
                     _options.wisprlogin ? _options.wisprlogin : redir->url,
                     strchr(_options.wisprlogin ? _options.wisprlogin : redir->url, '?') ? "&amp;" : "?",
-                    _options.paramuamip ? _options.paramuamip : "uamip", inet_ntoa(redir->addr),
-                    _options.paramuamport ? _options.paramuamport : "uamport", redir->port,
-                    _options.paramchallenge ? _options.paramchallenge : "challenge", hexchal);
+                    inet_ntoa(redir->addr), redir->port, hexchal);
       bconcat(b, bt);
 
       bcatcstr(b, "</EAPAuthenticationReply>\r\n");
@@ -1366,22 +1259,6 @@ void redir_wispr2_reply (struct redir_t *redir, struct redir_conn_t *conn,
     case REDIR_REQERROR:
       break;
 
-    case REDIR_SMSSIGNUP_SUCCESS:
-    case REDIR_SMSSIGNUP_FAILED:
-    case REDIR_SMSSIGNUP_ALREADY:
-    case REDIR_SMSSIGNUP_SMS_FAIL:
-    case REDIR_SIGNUP_SUCCESS:
-    	break;
-    case REDIR_FAILED_USER_DUPLICATE:
-      write_authentication_msg_header(conn,b);
-      bcatcstr(b, "<ResponseCode>110</ResponseCode>\r\n");  /* login failed (Users duplicate) */
-      if (reply) {
-        bassignformat(bt, "<ReplyMessage>%s</ReplyMessage>\r\n", reply);
-        bconcat(b, bt);
-      } else {
-        bcatcstr(b, "<ReplyMessage>A user with the entered password already exists!</ReplyMessage>\r\n");
-      }
-      write_authentication_msg_footer(conn, b);
     default:
       syslog(LOG_ERR, "redir_wispr1_reply: Unhandled response code in switch: %d", res);
   }
@@ -1423,8 +1300,6 @@ static int redir_json_reply(struct redir_t *redir, int res, struct redir_conn_t 
       break;
 
     case REDIR_FAILED_REJECT:
-    case REDIR_FAILED_DATA:
-    case REDIR_FAILED_TIME:
     case REDIR_FAILED_OTHER:
       flg |= FLG_chlg;
       flg |= FLG_redir;
@@ -1548,7 +1423,7 @@ static int redir_json_reply(struct redir_t *redir, int res, struct redir_conn_t 
 #endif
 
 static void redir_buildurl(struct redir_conn_t *conn, bstring str,
-			   struct redir_t *redir, const char *resp,
+			   struct redir_t *redir, char *resp,
 			   long int timeleft, char* hexchal, char* uid,
 			   char* userurl, char* reply, char* redirurl,
 			   uint8_t *hismac, struct in_addr *hisip) {
@@ -1625,7 +1500,7 @@ int redir_reply(struct redir_t *redir, struct redir_socket_t *sock,
 		char* userurl, char* reply, char* redirurl,
 		uint8_t *hismac, struct in_addr *hisip, char *qs) {
 
-  const char *resp = NULL;
+  char *resp = NULL;
   bstring buffer;
 
   switch (res) {
@@ -1633,7 +1508,7 @@ int redir_reply(struct redir_t *redir, struct redir_socket_t *sock,
       resp = "already";
       break;
     case REDIR_FAILED_REJECT:
-        resp = "failed&reason=reject";
+      resp = "failed&reason=reject";
       break;
     case REDIR_FAILED_TIMEOUT:
       resp = "failed&reason=timeout";
@@ -1641,18 +1516,9 @@ int redir_reply(struct redir_t *redir, struct redir_socket_t *sock,
     case REDIR_FAILED_MTU:
       resp = "failed&reason=mtu";
       break;
-    case REDIR_FAILED_DATA:
-      resp = "failed&reason=data_limit";
-      break;
-    case REDIR_FAILED_TIME:
-      resp = "failed&reason=time_limit";
-        break;
     case REDIR_FAILED_OTHER:
     case REDIR_ERROR_PROTOCOL:
       resp = "failed&reason=other";
-      break;
-    case REDIR_FAILED_TOS:
-      resp = "failed&reason=tos";
       break;
     case REDIR_REQERROR:
       resp = "failed";
@@ -1664,7 +1530,7 @@ int redir_reply(struct redir_t *redir, struct redir_socket_t *sock,
       resp = "logoff";
       break;
     case REDIR_NOTYET:
-      resp = (_options.smsusers && conn->s_state.redir.otp_state == 1) ? "notyet&otpstate=active" : "notyet";
+      resp = "notyet";
       break;
     case REDIR_SPLASH:
       resp = "splash";
@@ -1683,48 +1549,6 @@ int redir_reply(struct redir_t *redir, struct redir_socket_t *sock,
       break;
     case REDIR_CHALLENGE:
       resp = "challenge";
-      break;
-    case REDIR_SMSSIGNUP_FAILED:
-      resp = "smssignup_fail&reason=err";
-      break;
-  	case REDIR_SMSSIGNUP_ALREADY:
-      resp = "smssignup_fail&reason=already";
-      break;
-    case REDIR_SMSSIGNUP_SMS_FAIL:
-      resp = "smssignup_fail&reason=sms";
-      break;
-  	case REDIR_SMSSIGNUP_DENIED:
-      resp = "smssignup_fail&reason=denied";
-      break;
-    case REDIR_SMSSIGNUP_SUCCESS:
-      resp = "smssuccess";
-      break;
-  	case REDIR_SIGNUP_SUCCESS:
-      resp = "signup_success";
-      break;
-  	case REDIR_SIGNUP_FAILED:
-      resp = "signup_fail&reason=err";
-      break;
-  	case REDIR_SIGNUP_ALREADY:
-      resp = "signup_fail&reason=already";
-      break;
-    case REDIR_SIGNUP_DENIED:
-      resp = "signup_fail&reason=denied";
-      break;
-    case REDIR_TRIALLOGIN_DENIED:
-      resp = "failed&reason=trial_denied";
-      break;
-    case REDIR_TRIALLOGIN_FAILED:
-      resp = "failed&reason=trial_fail";
-      break;
-    case REDIR_TRIAL_FAILED_DATA:
-      resp = "failed&reason=data_limit_trial";
-          break;
-    case REDIR_TRIAL_FAILED_TIME:
-      resp = "failed&reason=time_limit_trial";
-          break;
-    case REDIR_FAILED_USER_DUPLICATE:
-      resp = "failed&reason=user_duplicate";
       break;
     default:
       syslog(LOG_ERR, "Unknown res in switch");
@@ -1753,10 +1577,12 @@ int redir_reply(struct redir_t *redir, struct redir_socket_t *sock,
       bcatcstr(buffer, "Location: ");
 
       if (url) {
-          bconcat(buffer, url);
-      }else if (!_options.redirurl && redirurl && *redirurl)
-	    bcatcstr(buffer, redirurl);
-      else {
+
+        bconcat(buffer, url);
+
+      } else if (!_options.redirurl && redirurl && *redirurl) {
+	bcatcstr(buffer, redirurl);
+      } else {
         bt = bfromcstralloc(1024,"");
         redir_buildurl(conn, bt, redir, resp, timeleft, hexchal,
                        uid, userurl, reply, redirurl, hismac, hisip);
@@ -2345,12 +2171,6 @@ static int redir_getreq(struct redir_t *redir, struct redir_socket_t *sock,
 	  conn->type = REDIR_LOGIN;
 	else if ((!strcmp(path, "logoff")) || (!strcmp(path, "logout")))
 	  conn->type = REDIR_LOGOUT;
-	else if (!strcmp(path, "trial"))
-	  conn->type = REDIR_TRIAL;
-    else if ((!strcmp(path, "signup")) || (!strcmp(path, "register")))
-      conn->type = REDIR_SIGNUP;
-    else if ((!strcmp(path, "smssignup")) || (!strcmp(path, "smsregister")))
-      conn->type = REDIR_SMSSIGNUP;
 	else if (!strncmp(path, "www/", 4) && strlen(path) > 4)
 	  conn->type = REDIR_WWW;
 	else if (!strcmp(path, "status"))
@@ -2414,16 +2234,7 @@ static int redir_getreq(struct redir_t *redir, struct redir_socket_t *sock,
 	  p = buffer + 15;
 	  while (*p && isspace((int) *p)) p++;
 	  len = strlen(p);
-	  if (len > 0) {
-		  char *endptr;
-		  long int clen = strtol(p, &endptr, 10);
-      if(p != endptr && *endptr != '\0')
-      {
-	      httpreq->clen = clen;
-      } else {
-        syslog(LOG_DEBUG, "%s(%d): Bad Content-Length: %s", __FUNCTION__, __LINE__, p);
-      }
-	  }
+	  if (len > 0) httpreq->clen = atoi(p);
 #if(_debug_ > 1)
           if (_options.debug)
             syslog(LOG_DEBUG, "%s(%d): Content-Length: %s", __FUNCTION__, __LINE__, p);
@@ -2469,7 +2280,7 @@ static int redir_getreq(struct redir_t *redir, struct redir_socket_t *sock,
       for (i = 0; i < (int)(buflen - linelen); i++)
 	buffer[i] = buffer[(int)linelen + i];
 
-
+      /*syslog(LOG_DEBUG, "linelen=%d buflen=%d", linelen, buflen);*/
       buflen -= linelen;
     }
 
@@ -2506,18 +2317,6 @@ static int redir_getreq(struct redir_t *redir, struct redir_socket_t *sock,
         if (!redir_getparam(redir, httpreq->qs, "lang", bt))
           bstrtocstr(bt, conn->lang, sizeof(conn->lang));
 
-	  	if (_options.tos){
-		  if (redir_getparam(redir, httpreq->qs, "agreetos", bt)){
-		      if (_options.debug)
-			    syslog(LOG_ERR, "No agreetos found in login request");
-
-			  conn->response = REDIR_FAILED_TOS;
-			  bdestroy(bt);
-			  return 0;
-		  }
-		  conn->s_state.redir.tos = 1;
-	  	}
-
         if (redir_getparam(redir, httpreq->qs, "username", bt)) {
           syslog(LOG_ERR, "No username found in login request");
           conn->response = REDIR_ERROR_PROTOCOL;
@@ -2525,7 +2324,8 @@ static int redir_getreq(struct redir_t *redir, struct redir_socket_t *sock,
           return -1;
         }
 
-        besc_strtocstr(bt, conn->s_state.redir.username, sizeof(conn->s_state.redir.username));
+        bstrtocstr(bt, conn->s_state.redir.username,
+                   sizeof(conn->s_state.redir.username));
 
         if (_options.debug)
           syslog(LOG_DEBUG, "%s(%d): -->> Setting username=[%s]", __FUNCTION__, __LINE__, conn->s_state.redir.username);
@@ -2576,16 +2376,11 @@ static int redir_getreq(struct redir_t *redir, struct redir_socket_t *sock,
                           conn->authdata.v.chapmsg.password,
                           RADIUS_CHAPSIZE);
 
-          if (!redir_getparam(redir, httpreq->qs, "ident", bt) && bt->slen) {
-            char *endptr;
-            unsigned long value = strtoul((char *)bt->data, &endptr, 10);
-            if(*endptr == '\0' && value <= UINT8_MAX) {
-              conn->authdata.v.chapmsg.identity = (uint8_t)value;
-            }
-          } else {
+          if (!redir_getparam(redir, httpreq->qs, "ident", bt) && bt->slen)
+            conn->authdata.v.chapmsg.identity = atoi((char*)bt->data);
+          else
             conn->authdata.v.chapmsg.identity = 0;
-          }
-	}
+        }
         else if (!redir_getparam(redir, httpreq->qs, "password", bt)) {
           conn->authdata.type = REDIR_AUTH_PAP;
           if (_options.nochallenge) {
@@ -2676,102 +2471,7 @@ static int redir_getreq(struct redir_t *redir, struct redir_socket_t *sock,
         bdestroy(bt);
       }
       break;
-    case REDIR_SIGNUP:
-      {
-      	if (!_options.registerusers){
-      	  if (_options.debug)
-			syslog(LOG_ERR, "Signup method is not allowed");
 
-          conn->response = REDIR_SIGNUP_DENIED;
-          return 0;
-      	}
-
-        bstring bt = bfromcstr("");
-        if (redir_getparam(redir, httpreq->qs, "email", bt)) {
-          if (_options.debug)
-            syslog(LOG_ERR, "No email found in signup request");
-
-          conn->response = REDIR_SIGNUP_FAILED;
-          bdestroy(bt);
-          return -1;
-        }
-
-        besc_strtocstr(bt, conn->s_state.redir.email,
-                       sizeof(conn->s_state.redir.email));
-        if (redir_getparam(redir, httpreq->qs, "phone", bt)) {
-          if (_options.debug)
-            syslog(LOG_ERR, "No phone found in signup request");
-
-          conn->response = REDIR_SIGNUP_FAILED;
-          bdestroy(bt);
-          return -1;
-        }
-
-	  	besc_strtocstr(bt, conn->s_state.redir.phone,
-                       sizeof(conn->s_state.redir.phone));
-        if (redir_getparam(redir, httpreq->qs, "password", bt)) {
-          if (_options.debug)
-            syslog(LOG_ERR, "No password found in signup request");
-
-          conn->response = REDIR_SIGNUP_FAILED;
-          bdestroy(bt);
-          return -1;
-        }
-
-	  	besc_strtocstr(bt, conn->s_state.redir.signup_password,
-                       sizeof(conn->s_state.redir.signup_password));
-        bdestroy(bt);
-      }
-      break;
-    case REDIR_SMSSIGNUP:
-    {
-		if (!_options.smsusers){
-			syslog(LOG_ERR, "SMSsignup method not allowed");
-			conn->response = REDIR_SMSSIGNUP_DENIED;
-			return 0;
-		}
-
-		bstring bt = bfromcstr("");
-		if (redir_getparam(redir, httpreq->qs, "phone", bt)){
-		syslog(LOG_ERR, "No phone found in smssignup request");
-		conn->response = REDIR_SMSSIGNUP_FAILED;
-		bdestroy(bt);
-		return -1;
-		}
-
-		besc_strtocstr(bt, conn->s_state.redir.phone,
-					 sizeof(conn->s_state.redir.phone));
-		bdestroy(bt);
-    }
-    break;
-    case REDIR_TRIAL:
-    {
-		if (!_options.trialusers){
-			syslog(LOG_ERR, "Trial login is not allowed");
-			conn->response = REDIR_TRIALLOGIN_DENIED;
-			return 0;
-		}
-
-      bstring bt = bfromcstr("");
-
-      //if (!redir_getparam(redir, httpreq->qs, "lang", bt))
-        //bstrtocstr(bt, conn->lang, sizeof(conn->lang));
-
-      if (_options.tos){
-        if (redir_getparam(redir, httpreq->qs, "agreetos", bt)){
-          if (_options.debug)
-            syslog(LOG_ERR, "No agreetos found in login request");
-
-          conn->response = REDIR_FAILED_TOS;
-          bdestroy(bt);
-          return 0;
-        }
-        conn->s_state.redir.tos = 1;
-      }
-
-      bdestroy(bt);
-    }
-    break;
     case REDIR_WWW:
       {
         bstring bt = bfromcstr(path+4);
@@ -3261,229 +2961,32 @@ static int redir_radius(struct redir_t *redir, struct in_addr *addr,
   return 0;
 }
 
-void session_param_local(struct session_params *params, char *line) {
-  uint64_t timeout = 0, dw = 0, up = 0, dw_bandwidth = 0, up_bandwidth =0;
-  uint32_t idle = 0;
-  int period = 0, start = 0;
-//"$timeout:$idle:$dw_max:$up_max:$dw_bwidth:$upl_bwidth:$period:$start"
-  sscanf(line, "%lld:%d:%lld:%lld:%lld:%lld:%d:%d",
-         &timeout, &idle, &dw, &up, &dw_bandwidth, &up_bandwidth, &period, &start);
-  if (_options.debug)
-    syslog(LOG_INFO, "line %s, timeout - %llu, idel - %d, dw - %llu, up - %llu, bdw - %llu, bup - %llu, period - %d, start - %d",
-          line, timeout, idle, dw, up, dw_bandwidth, up_bandwidth, period, start);
-
-  params->sessiontimeout = timeout ? timeout : 0;
-  params->idletimeout = idle ? idle : 0;
-  params->maxinputoctets = dw ? dw : 0;
-  params->maxoutputoctets = up ? up : 0;
-  params->bandwidthmaxdown = dw_bandwidth ? dw_bandwidth : 0;
-  params->bandwidthmaxup = up_bandwidth ? up_bandwidth : 0;
-  params->period = period ? period : 3;
-  params->start = start ? start : 1;
-}
-
-int auth_chap(struct redir_conn_t *conn, MD5_CTX *context, uint8_t *chap_challenge,
-		uint8_t *user_password, char *password)
-{
-    uint8_t tmp[REDIR_MD5LEN];
-    MD5Init(context);
-    MD5Update(context, (uint8_t*)&conn->authdata.v.chapmsg.identity, 1);
-    MD5Update(context, (uint8_t*)password, strlen(password));
-    MD5Update(context, chap_challenge, REDIR_MD5LEN);
-    MD5Final(tmp, context);
-
-    if (!memcmp(user_password, tmp,  REDIR_MD5LEN)) {
-		return ACCESS_ACCEPTED;
-	}
-    else {
-      if (_options.debug)
-		syslog(LOG_INFO, "%s(%d): bad password", __FUNCTION__, __LINE__);
-	}
-
-	return ACCESS_DENIED;
-}
-
-void mac_block_invoke(const char *command, struct redir_conn_t *conn)
-{
-  uint32_t tmp_id = 0;
-  struct blob_buf b = { 0 };
-  char mac[MACSTRLEN+1];
-
-  snprintf(mac, sizeof(mac), MAC_FMT, MAC_ARG(conn->hismac));
-  ubus_ctx = ubus_connect(NULL);
-  if (!ubus_ctx) {
-    syslog(LOG_WARNING, "Warning: Failed to connect to ubus.");
-    return;
-  }
-
-  int ret = ubus_lookup_id(ubus_ctx, "ip_block", &tmp_id);
-  if (ret) {
-    syslog(LOG_WARNING, "Warning: Failed to find 'ip_block' object.");
-    goto end;
-  }
-
-  blob_buf_init(&b, 0);
-  blobmsg_add_string(&b, "mac", mac);
-  void *r = blobmsg_open_array(&b, "interface");
-  if(_options.dhcpif)
-    blobmsg_add_string(&b, NULL, _options.dhcpif);
-  for (int i = 0; i < MAX_MOREIF; i++) {
-    if(!_options.moreif[i].dhcpif)
-	    continue;
-    blobmsg_add_string(&b, NULL, _options.moreif[i].dhcpif);
-	}
-  blobmsg_close_array(&b, r);
-
-  ubus_invoke(ubus_ctx, tmp_id, command, b.head, NULL, NULL, 1000);
-  blob_buf_free(&b);
-
-end:
-  ubus_free(ubus_ctx);
-}
-
-int authenticator(struct redir_t *redir, struct redir_conn_t *conn, MD5_CTX *context,
-			  uint8_t *user_password, uint8_t *chap_challenge)
-{
-  FILE *f;
-  int match = ACCESS_DENIED;
-  char *line = 0;
-  char u[256]; char p[256];
-  ssize_t len;
-  size_t usernamelen, sz=1024;
-
-  if (_options.debug)
-    syslog(LOG_INFO, "%s(%d): checking %s for user %s", __FUNCTION__, __LINE__,
-      _options.localusers, conn->s_state.redir.username);
-
-  if (!(f = fopen(_options.localusers, "r"))) {
-    syslog(LOG_INFO, "%s: fopen() failed opening %s!", strerror(errno), _options.localusers);
-    return ACCESS_DENIED;
-  }
-
-  if (_options.debug)
-    syslog(LOG_INFO, "%s(%d): looking for %s", __FUNCTION__, __LINE__, conn->s_state.redir.username);
-  usernamelen = strlen(conn->s_state.redir.username);
-
-  line=(char*)malloc(sz);
-  while ((len = getline(&line, &sz, f)) > 0) {
-    if (len > 3 && len < sizeof(u) && line[0] != '#') {
-      char *pl=line,  /* pointer to current line */
-        *pu=u,     /* pointer to username     */
-        *pp=p;     /* pointer to password     */
-
-      /* username until the first ':' */
-      while (*pl && *pl != ':')	*pu++ = *pl++;
-
-      /* skip over ':' otherwise error */
-      if (*pl == ':') pl++;
-      else {
-        syslog(LOG_INFO, "not a valid localusers line: %s", line);
-        continue;
-      }
-
-      /* password until the next ':' */
-      while (*pl && *pl != ':' && *pl != '\n') *pp++ = *pl++;
-
-      *pu = 0; /* null terminate */
-      *pp = 0;
-
-      if (usernamelen == strlen(u) &&
-          !strncmp(conn->s_state.redir.username, u, usernamelen)) {
-
-        if (_options.debug)
-          syslog(LOG_INFO, "%s(%d): found %s, checking password", __FUNCTION__, __LINE__, u);
-
-        if (conn->authdata.type == REDIR_AUTH_PAP) {
-#ifdef HAVE_OPENSSL
-          char *salt = extract_salt(p);
-          char *plain_password = strndup((char *)user_password, strlen(p));
-          if (salt) {
-            user_password = (uint8_t *)hash_sha512_with_salt(plain_password, salt);
-
-            if (!user_password) {
-              syslog(LOG_INFO,
-                "%s(%d): failed to compute password hash for user %s",
-                __FUNCTION__, __LINE__, u);
-              // When hashing fails, make sure password check fails too
-              user_password = (uint8_t *)strdup("");
-            }
-
-            // Check for hash match, if hashes do not match, try again with MD5 hash
-            if (strncmp((char *)user_password, p, strlen(p))) {
-              user_password = (uint8_t *)hash_md5_with_salt(plain_password, salt);
-              if (!user_password) {
-                syslog(LOG_INFO,
-                  "%s(%d): failed to compute password hash for user %s",
-                  __FUNCTION__, __LINE__, u);
-                // When hashing fails, make sure password check fails too
-                user_password = (uint8_t *)strdup("");
-              }
-            }
-          }
-#endif
-                // Check for password math from UCI config
-          if (!strncmp((char *)user_password, p, strlen(p))) {
-#ifdef HAVE_OPENSSL
-            if (get_hash_type(p) == HASH_MD5) {
-              // If stored password is MD5 hash, rehash it to SHA-512 using the plain password
-              uint8_t *user_password_rehashed = (uint8_t *)hash_sha512(plain_password);
-              usr_update_user_pwd_uci(u, p, (char *)user_password_rehashed);
-              free(user_password_rehashed);
-            }
-#endif
-            match = ACCESS_ACCEPTED;
-          }
-
-#ifdef HAVE_OPENSSL
-          // If salt is not NULL that means that user_password was changed to point to newly allocated memory and we need to free it.
-          if (salt) {
-            free(user_password);
-            free(salt);
-          }
-          free(plain_password);
-#endif
-        }
-        else if (conn->authdata.type == REDIR_AUTH_CHAP) {
-          match = auth_chap(conn, context, chap_challenge, user_password, p);
-        }
-
-				if (match == ACCESS_ACCEPTED) {
-          mac_block_invoke("unblock_mac", conn);
-				  conn->s_state.redir.auth_mode = AUTH_LOCAL_USER;
-                  if (*pl == ':') pl++; //Skip ':'
-                    session_param_local(&conn->s_params, pl);
-                }
-
-        break;
-      }
-    }
-  }
-
-  if (_options.debug)
-    syslog(LOG_DEBUG, "%s(%d): user %s %s", __FUNCTION__, __LINE__,
-      conn->s_state.redir.username,
-      match ? "found" : "not found");
-
-  fclose(f);
-  free(line);
-
-  return match;
-}
-
-int is_local_user(struct redir_t *redir, struct redir_conn_t *conn,
-				  int (*cb_validator) (struct redir_t *, struct redir_conn_t *,
-				  		MD5_CTX *, uint8_t *, uint8_t *))
-{
+int is_local_user(struct redir_t *redir, struct redir_conn_t *conn) {
   uint8_t user_password[RADIUS_PWSIZE+1];
   uint8_t chap_challenge[REDIR_MD5LEN];
-  int match=ACCESS_DENIED;
+  char u[256]; char p[256];
+  size_t usernamelen, sz=1024;
+  ssize_t len;
+  int match=0;
+  char *line=0;
   MD5_CTX context;
+  FILE *f;
+
+  if (!_options.localusers) return 0;
+
+  if (_options.debug)
+    syslog(LOG_DEBUG, "%s(%d): checking %s for user %s", __FUNCTION__, __LINE__, _options.localusers, conn->s_state.redir.username);
+
+  if (!(f = fopen(_options.localusers, "r"))) {
+    syslog(LOG_ERR, "%s: fopen() failed opening %s!", strerror(errno), _options.localusers);
+    return 0;
+  }
 
   if (_options.debug) {/*debug*/
     char buffer[64];
     redir_chartohex(conn->s_state.redir.uamchal, buffer, REDIR_MD5LEN);
     if (_options.debug)
-      syslog(LOG_INFO, "%s(%d): challenge: %s", __FUNCTION__, __LINE__, buffer);
+      syslog(LOG_DEBUG, "%s(%d): challenge: %s", __FUNCTION__, __LINE__, buffer);
   }/**/
 
   if (redir->secret && *redir->secret) {
@@ -3500,7 +3003,7 @@ int is_local_user(struct redir_t *redir, struct redir_conn_t *conn,
     char buffer[64];
     redir_chartohex(chap_challenge, buffer, REDIR_MD5LEN);
     if (_options.debug)
-      syslog(LOG_INFO, "%s(%d): chap challenge: %s", __FUNCTION__, __LINE__, buffer);
+      syslog(LOG_DEBUG, "%s(%d): chap challenge: %s", __FUNCTION__, __LINE__, buffer);
   }/**/
 
   switch (conn->authdata.type){
@@ -3516,269 +3019,86 @@ int is_local_user(struct redir_t *redir, struct redir_conn_t *conn,
             user_password[m] =
                 conn->authdata.v.papmsg.password[m] ^ chap_challenge[n];
       }
-      // Correctly NUL terminate password string
-      size_t len = strlen((const char *)conn->authdata.v.papmsg.password);
-      if (len >= sizeof(user_password))
-        len = sizeof(user_password) - 1;
-      user_password[len] = 0;
       break;
     case REDIR_AUTH_CHAP:
       memcpy(user_password, conn->authdata.v.chapmsg.password, REDIR_MD5LEN);
       break;
     default:
-      syslog(LOG_INFO, "Authentication method not supported for locally authenticated users: %d",
+      syslog(LOG_ERR, "Authentication method not supported for locally authenticated users: %d",
              conn->authdata.type);
-      conn->response = REDIR_FAILED_REJECT;
-      return ACCESS_DENIED;
+      fclose(f);
+      return 0;
   }
 
   user_password[RADIUS_PWSIZE] = 0;
-  if ((match = cb_validator(redir, conn, &context, user_password, chap_challenge))
-  		== ACCESS_ACCEPTED) {
-  	conn->response = REDIR_SUCCESS;
-  }
-  else if ((match = cb_validator(redir, conn, &context, user_password, chap_challenge))
-  		== ACCESS_DENIED_UDUPCLICATE) {
-  	conn->response = REDIR_FAILED_USER_DUPLICATE;
-  }
-  else{
-    mac_block_invoke("push_mac", conn);
-  	conn->response = REDIR_FAILED_REJECT;
-  }
 
-#ifdef ENABLE_DATABASE
-	if (match == ACCESS_ACCEPTED){
-		if (conn->s_params.maxinputoctets || conn->s_params.maxoutputoctets ||
-				conn->s_params.sessiontimeout) {
-		  match = dbcheck_session(conn);
-		  switch (match){
-			case ACCESS_DENIED_DATA:
-			  conn->response = REDIR_FAILED_DATA;
-			  break;
-			case ACCESS_DENIED_TIME:
-			  conn->response = REDIR_FAILED_TIME;
-			  break;
-			case ACCESS_DENIED_UDUPCLICATE:
-			  conn->response = REDIR_FAILED_USER_DUPLICATE;
-			  break;
-		  }
-		}
+  if (_options.debug)
+    syslog(LOG_DEBUG, "%s(%d): looking for %s", __FUNCTION__, __LINE__, conn->s_state.redir.username);
+  usernamelen = strlen(conn->s_state.redir.username);
+
+  line=(char*)malloc(sz);
+  while ((len = getline(&line, &sz, f)) > 0) {
+    if (len > 3 && len < sizeof(u) && line[0] != '#') {
+      char *pl=line,  /* pointer to current line */
+          *pu=u,     /* pointer to username     */
+          *pp=p;     /* pointer to password     */
+
+      /* username until the first ':' */
+      while (*pl && *pl != ':')	*pu++ = *pl++;
+
+      /* skip over ':' otherwise error */
+      if (*pl == ':') pl++;
+      else {
+	syslog(LOG_WARNING, "not a valid localusers line: %s", line);
+	continue;
+      }
+
+      /* password until the next ':' */
+      while (*pl && *pl != ':' && *pl != '\n') *pp++ = *pl++;
+
+      *pu = 0; /* null terminate */
+      *pp = 0;
+
+      if (usernamelen == strlen(u) &&
+	  !strncmp(conn->s_state.redir.username, u, usernamelen)) {
+
+        if (_options.debug)
+          syslog(LOG_DEBUG, "%s(%d): found %s, checking password", __FUNCTION__, __LINE__, u);
+
+	if (conn->authdata.type == REDIR_AUTH_PAP) {
+	  if (!strcmp((char*)user_password, p))
+	    match = 1;
 	}
-#endif
+	else if (conn->authdata.type == REDIR_AUTH_CHAP) {
+	  uint8_t tmp[REDIR_MD5LEN];
+	  MD5Init(&context);
+	  MD5Update(&context, (uint8_t*)&conn->authdata.v.chapmsg.identity, 1);
+	  MD5Update(&context, (uint8_t*)p, strlen(p));
+	  MD5Update(&context, chap_challenge, REDIR_MD5LEN);
+	  MD5Final(tmp, &context);
 
-  return match;
-}
+	  if (!memcmp(user_password, tmp,  REDIR_MD5LEN))
+	    match = 1;
+	  else {
+            if (_options.debug)
+              syslog(LOG_DEBUG, "%s(%d): bad password for %s", __FUNCTION__, __LINE__, u);
+	  }
+	}
 
-int dynamic_user_authenticator(struct redir_t *redir, struct redir_conn_t *conn,
-		MD5_CTX *context, uint8_t *user_password, uint8_t *chap_challenge)
-{
-  char email_escaped[REDIR_USERNAMESIZE + 1];
-  int match = ACCESS_DENIED;
-	struct str_user user;
-  sqlite3 *db;
-
-  if (!_options.usersdbpath)
-    return ACCESS_DENIED;
-
-  if (_options.debug)
-    syslog(LOG_INFO, "%s(%d): checking %s for user %s", __FUNCTION__, __LINE__,
-      _options.usersdbpath, conn->s_state.redir.username);
-
-  if (!(db = sqlopen(_options.usersdbpath))) {
-    syslog(LOG_INFO, "%s: sqlopen() failed opening %s!", strerror(errno), _options.usersdbpath);
-    return ACCESS_DENIED;
-  }
-
-  escape_cstr(conn->s_state.redir.username, email_escaped);
-  if (_options.debug)
-    syslog(LOG_INFO, "%s(%d): looking for %s", __FUNCTION__, __LINE__, conn->s_state.redir.username);
-
-  if (!usr_get_user(db, &user, email_escaped) &&
-	    !strncmp(user.email, email_escaped, USER_EMAILSIZE)) {
-
-    if (conn->authdata.type == REDIR_AUTH_PAP) {
-#ifdef HAVE_OPENSSL
-    char *salt = extract_salt(user.password);
-    char *plain_password = strndup((char *)user_password, strlen(user.password));
-
-    if (salt) {
-      user_password	 = (uint8_t *)hash_sha512_with_salt(plain_password, salt);
-
-      if (!user_password) {
-        syslog(LOG_INFO, "%s(%d): failed to compute password hash for user %s",
-          __FUNCTION__, __LINE__, user.username);
-        // When hashing fails, make sure password check fails too
-        user_password = (uint8_t *)strdup("");
+	break;
       }
-
-      // Check for hash match, if hashes do not match, try again with MD5 hash
-      if (strncmp((char *)user_password, user.password, strlen(user.password))) {
-        user_password = (uint8_t *)hash_md5_with_salt(plain_password, salt);
-        if (!user_password) {
-          syslog(LOG_INFO, "%s(%d): failed to compute password hash for user %s",
-            __FUNCTION__, __LINE__, user.username);
-          // When hashing fails, make sure password check fails too
-          user_password = (uint8_t *)strdup("");
-        }
-      }
-}
-#endif
-      if (!strncmp((char *)user_password, user.password, strlen(user.password))) {
-#ifdef HAVE_OPENSSL
-        // Update password hash on the database
-        if(get_hash_type(user.password) == HASH_MD5) {
-          syslog(LOG_INFO, "%s(%d): updating user MD5 hash to SHA-512",
-            __FUNCTION__, __LINE__);
-          // If stored password is MD5 hash, rehash it to SHA-512 using the plain password
-          usr_update_user_pwd(db, &user, email_escaped, plain_password);
-        }
-#endif
-        match = ACCESS_ACCEPTED;
-      }
-
-#ifdef HAVE_OPENSSL
-      // If salt is not NULL that means that user_password was changed to point to newly allocated memory and we need to free it.
-      if (salt) {
-        free(user_password);
-        free(salt);
-      }
-      free(plain_password);
-#endif
-    }
-    else if (conn->authdata.type == REDIR_AUTH_CHAP) {
-      match = auth_chap(conn, context, chap_challenge, user_password, user.password);
-    }
-
-    if (match == ACCESS_ACCEPTED) {
-      conn->s_state.redir.user_time = user.user_time;
-      conn->s_state.redir.auth_mode = AUTH_DYN_USER;
-      session_params_dyn(&conn->s_params);
-      strlcpy(conn->s_state.redir.username, user.username, USER_USERNAMENAMESIZE);
     }
   }
 
   if (_options.debug)
     syslog(LOG_DEBUG, "%s(%d): user %s %s", __FUNCTION__, __LINE__,
-      conn->s_state.redir.username, match ? "found" : "not found");
+           conn->s_state.redir.username,
+           match ? "found" : "not found");
 
-  sqlclose(db);
-
+  fclose(f);
+  free(line);
   return match;
 }
-
-int sms_user_authenticator(struct redir_t *redir, struct redir_conn_t *conn,
-						   MD5_CTX *context, uint8_t *user_password, uint8_t *chap_challenge) {
-	char user_pass_escaped[RADIUS_PWSIZE + 1];
-	int match = ACCESS_DENIED;
-	struct str_sms_user user;
-	sqlite3 *db;
-
-	if (!_options.usersdbpath)
-		return ACCESS_DENIED;
-
-	if (_options.debug)
-		syslog(LOG_INFO, "%s(%d): checking %s for user %s", __FUNCTION__, __LINE__,
-			   _options.usersdbpath, conn->s_state.redir.username);
-
-	if (!(db = sqlopen(_options.usersdbpath))) {
-		syslog(LOG_INFO, "%s: sqlopen() failed opening %s!", strerror(errno), _options.usersdbpath);
-		return ACCESS_DENIED;
-	}
-  
-	user_password[USER_RAND_PASSWORD_LEN] = 0;
-	escape_cstr((char *) user_password, user_pass_escaped);
-    if (_options.debug)
-      syslog(LOG_INFO, "%s(%d): looking for %s (%s)", __FUNCTION__, __LINE__,
-             conn->s_state.redir.username, user_pass_escaped);
-
-	if (!usr_get_sms_user(db, &user, user_pass_escaped)) {
-    if (_options.duplicateusers && find_active_user(user.username)) {
-      syslog(LOG_INFO, "%s(%d): Found duplication on username: %s", __FUNCTION__, __LINE__, user.username);
-      match = ACCESS_DENIED_UDUPCLICATE;
-    }
-    else {
-      if (_options.duplicateusers) {
-        syslog(LOG_INFO, "%s(%d): Duplication on username %s was not found", __FUNCTION__, __LINE__, user.username);
-      }
-      if (_options.debug)
-        syslog(LOG_INFO, "%s(%d): found %s ", __FUNCTION__, __LINE__, user.username);
-
-      if (conn->authdata.type == REDIR_AUTH_PAP) {
-          if (!strncmp((char *) user_password, user.password, USER_RAND_PASSWORD_LEN))
-              match = ACCESS_ACCEPTED;
-      } else if (conn->authdata.type == REDIR_AUTH_CHAP) {
-          match = auth_chap(conn, context, chap_challenge, user_password, user.password);
-      }
-
-      if (match == ACCESS_ACCEPTED) {
-        conn->s_state.redir.user_time = user.user_time;
-        conn->s_state.redir.auth_mode = AUTH_SMS_USER;
-        strncpy(conn->s_state.redir.username, user.username, USER_RAND_USERNAME_LEN);
-        strlcpy(conn->s_state.redir.phone, user.phone, sizeof(conn->s_state.redir.phone));
-        session_params_dyn(&conn->s_params);
-      }
-    }
-	}
-
-	if (_options.debug)
-		syslog(LOG_DEBUG, "%s(%d): user %s %s", __FUNCTION__, __LINE__,
-			   conn->s_state.redir.username, match ? "found" : "not found");
-
-	sqlclose(db);
-
-	return match;
-}
-
-int mac_user_authenticator(struct redir_t *redir, struct redir_conn_t *conn,
-                           MD5_CTX *context, uint8_t *user_password, uint8_t *chap_challenge) {
-  int match = ACCESS_DENIED;
-  char mac[MACSTRLEN+1];
-
-  snprintf(mac, sizeof(mac), MAC_FMT, MAC_ARG(conn->hismac));
-  strlcpy(conn->s_state.redir.username, mac, USERNAMESIZE);
-
-  if (_options.macpass) {
-    if (_options.debug)
-      syslog(LOG_INFO, "%s(%d): looking for %s (%s)", __FUNCTION__, __LINE__,
-             conn->s_state.redir.username, _options.macpass);
-
-    if (conn->authdata.type == REDIR_AUTH_PAP) {
-      if (!strcmp((char *) user_password, _options.macpass))
-        match = ACCESS_ACCEPTED;
-    } else if (conn->authdata.type == REDIR_AUTH_CHAP) {
-      match = auth_chap(conn, context, chap_challenge, user_password, _options.macpass);
-    }
-
-    if (match == ACCESS_ACCEPTED) {
-      conn->s_state.redir.auth_mode = AUTH_MAC_USER;
-      session_params_dyn(&conn->s_params);
-    }
-
-    if (_options.debug)
-      syslog(LOG_DEBUG, "%s(%d): user %s %s", __FUNCTION__, __LINE__,
-             conn->s_state.redir.username, match ? "found" : "not found");
-  }
-  else {
-    conn->s_state.redir.auth_mode = AUTH_MAC_USER;
-    session_params_dyn(&conn->s_params);
-    match = ACCESS_ACCEPTED;
-  }
-
-  return match;
-}
-
-int trial_user_authenticator(struct redir_conn_t *conn) {
-  char mac[MACSTRLEN+7];
-
-  snprintf(mac, sizeof(mac), "trial-"MAC_FMT, MAC_ARG(conn->hismac));
-  strlcpy(conn->s_state.redir.username, mac, USERNAMESIZE);
-
-  conn->s_state.redir.auth_mode = AUTH_TRIAL_USER;
-  session_params_trial(&conn->s_params);
-
-  return ACCESS_ACCEPTED;
-}
-
 
 /* redir_accept() does the following:
    1) forks a child process
@@ -4025,7 +3345,7 @@ int redir_main(struct redir_t *redir,
 
   /* We are forked when the redir_request is null */
   int forked = (rreq == 0);
-  int err, ret;
+  int err;
 
 
   memset(&httpreq,0,sizeof(httpreq));
@@ -4077,7 +3397,6 @@ int redir_main(struct redir_t *redir,
   memset(hexchal, 0, sizeof(hexchal));
   memset(&conn, 0, sizeof(conn));
   memset(&msg, 0, sizeof(msg));
-  conn.s_state.redir.tos = 0;
 
   socket.fd[0] = infd;
   socket.fd[1] = outfd;
@@ -4242,8 +3561,8 @@ int redir_main(struct redir_t *redir,
                                 || isWPAD
 #endif
                                 )) {
-          const char *ctype = "text/plain";
-          const char *filename = conn.wwwfile;
+          char *ctype = "text/plain";
+          char *filename = conn.wwwfile;
           size_t namelen = strlen(filename);
           int parse = 0;
 
@@ -4263,7 +3582,7 @@ int redir_main(struct redir_t *redir,
             } else
 #endif
             {
-              const char *p;
+              char *p;
               int cnt = 0;
               for (p=filename; *p; p++) {
                 if (*p == '.' || *p == '_'|| *p == '-' || *p == '/') {
@@ -4570,15 +3889,6 @@ int redir_main(struct redir_t *redir,
 
   /* default hexchal for use in replies */
   redir_chartohex(conn.s_state.redir.uamchal, hexchal, REDIR_MD5LEN);
-  if (_options.smsusers && _options.usersdbpath){
-    sqlite3 *db;
-    conn.s_state.redir.otp_state = 0;
-    if ((db = sqlopen(_options.usersdbpath)))
-      if (usr_sms_user_exists(db, NULL, conn.hismac) == USER_RET_ALREADY) {
-        conn.s_state.redir.otp_state = 1;
-        sqlclose(db);
-      }
-  }
 
   switch (conn.type) {
 
@@ -4587,17 +3897,21 @@ int redir_main(struct redir_t *redir,
 
       /* Was client was already logged on? */
       if (state == 1) {
+
         if (splash) {
+
           if (_options.debug)
-              syslog(LOG_DEBUG, "%s(%d): redir_accept: SPLASH reauth", __FUNCTION__, __LINE__);
+            syslog(LOG_DEBUG, "%s(%d): redir_accept: SPLASH reauth", __FUNCTION__, __LINE__);
           reauth = 1;
+
         } else {
+
           if (_options.debug)
-              syslog(LOG_DEBUG, "%s(%d): redir_accept: already logged on", __FUNCTION__, __LINE__);
+            syslog(LOG_DEBUG, "%s(%d): redir_accept: already logged on", __FUNCTION__, __LINE__);
 
           redir_reply(redir, &socket, &conn, REDIR_ALREADY, NULL, 0,
                       NULL, NULL, conn.s_state.redir.userurl, NULL,
-                      (char *) conn.s_params.url, conn.hismac,
+                      (char *)conn.s_params.url, conn.hismac,
                       &conn.hisip, httpreq.qs);
 
           return redir_main_exit(&socket, forked, rreq);
@@ -4606,11 +3920,11 @@ int redir_main(struct redir_t *redir,
 
       /* Did the challenge expire? */
       if (_options.challengetimeout2 &&
-        (conn.s_state.uamtime + _options.challengetimeout2) <
-        mainclock_now()) {
+          (conn.s_state.uamtime + _options.challengetimeout2) <
+          mainclock_now()) {
         if (_options.debug)
-            syslog(LOG_DEBUG, "%s(%d): redir_accept: challenge expired: %ld : %ld", __FUNCTION__, __LINE__,
-                   (long) conn.s_state.uamtime, (long) mainclock_now());
+          syslog(LOG_DEBUG, "%s(%d): redir_accept: challenge expired: %ld : %ld", __FUNCTION__, __LINE__,
+                 (long) conn.s_state.uamtime, (long) mainclock_now());
 
         redir_memcopy(REDIR_CHALLENGE);
         redir_msg_send(REDIR_MSG_OPT_REDIR);
@@ -4622,85 +3936,74 @@ int redir_main(struct redir_t *redir,
         return redir_main_exit(&socket, forked, rreq);
       }
 
-	  if (!_options.tos || (_options.tos && conn.response != REDIR_FAILED_TOS)) {
-		if (_options.localusers) {
-			if ((ret = is_local_user(redir, &conn, authenticator)) == ACCESS_ACCEPTED) {
-              session_param_defaults(&conn.s_params);
-            }
-			else if (_options.registerusers && conn.response == REDIR_FAILED_REJECT) {
-				ret = is_local_user(redir, &conn, dynamic_user_authenticator);
-			}
-
-		} else if (_options.smsusers) {
-		    if (is_local_user(redir, &conn, sms_user_authenticator) == ACCESS_ACCEPTED) {
-		      session_param_defaults(&conn.s_params);
-		    }
-    } else if (_options.macusers) {
-      is_local_user(redir, &conn, mac_user_authenticator);
-		} else {
+      if (is_local_user(redir, &conn)) {
+        session_param_defaults(&conn.s_params);
+        conn.response = REDIR_SUCCESS;
+      }
+      else {
 
 #ifdef ENABLE_MODULES
-			int i;
-			int flags = 0;
+        int i;
+        int flags = 0;
 #endif
 
-			if (!forked) {
-				/*
-				 *  When waiting for RADIUS, we need to be forked.
-				 *  TODO: make redir_radius asynchronous.
-				 */
-				pid_t forkpid = redir_fork(infd, outfd);
-				if (forkpid) { /* parent or error */
-					return redir_main_exit(&socket, forked, rreq);
-				}
-			}
+        if (!forked) {
+          /*
+           *  When waiting for RADIUS, we need to be forked.
+           *  TODO: make redir_radius asynchronous.
+           */
+          pid_t forkpid = redir_fork(infd, outfd);
+          if (forkpid) { /* parent or error */
+            return redir_main_exit(&socket, forked, rreq);
+          }
+        }
 
 #ifdef ENABLE_MODULES
-            if (_options.debug)
-              syslog(LOG_DEBUG, "%s(%d): checking modules...", __FUNCTION__, __LINE__);
-            for (i=0; i < MAX_MODULES; i++) {
-              if (!_options.modules[i].name[0]) break;
-              if (_options.modules[i].ctx) {
-                struct chilli_module *m =
-                    (struct chilli_module *)_options.modules[i].ctx;
-                if (m->redir_login) {
-                  int modresult = m->redir_login(redir, &conn, &socket);
-                  flags |= modresult;
-                  switch(chilli_mod_state(modresult)) {
-                    case CHILLI_MOD_ERROR:
-                      return redir_main_exit(&socket, forked, rreq);
-                    default:
-                      break;
-                  }
-                }
+        if (_options.debug)
+          syslog(LOG_DEBUG, "%s(%d): checking modules...", __FUNCTION__, __LINE__);
+        for (i=0; i < MAX_MODULES; i++) {
+          if (!_options.modules[i].name[0]) break;
+          if (_options.modules[i].ctx) {
+            struct chilli_module *m =
+                (struct chilli_module *)_options.modules[i].ctx;
+            if (m->redir_login) {
+              int modresult = m->redir_login(redir, &conn, &socket);
+              flags |= modresult;
+              switch(chilli_mod_state(modresult)) {
+                case CHILLI_MOD_ERROR:
+                  return redir_main_exit(&socket, forked, rreq);
+                default:
+                  break;
               }
             }
-			if (flags & CHILLI_MOD_REDIR_SKIP_RADIUS) {
-			  if (_options.debug)
-				syslog(LOG_DEBUG, "%s(%d): Skipping RADIUS authentication", __FUNCTION__, __LINE__);
-			} else {
+          }
+        }
+        if (flags & CHILLI_MOD_REDIR_SKIP_RADIUS) {
+          if (_options.debug)
+            syslog(LOG_DEBUG, "%s(%d): Skipping RADIUS authentication", __FUNCTION__, __LINE__);
+        } else {
 #endif
 
-			termstate = REDIR_TERM_RADIUS;
+          termstate = REDIR_TERM_RADIUS;
 
-			if (optionsdebug)
-				syslog(LOG_DEBUG, "%s(%d): redir_accept: Sending RADIUS request", __FUNCTION__, __LINE__);
+          if (optionsdebug)
+            syslog(LOG_DEBUG, "%s(%d): redir_accept: Sending RADIUS request", __FUNCTION__, __LINE__);
 
-			redir_radius(redir, &address->sin_addr, &conn, reauth);
-			termstate = REDIR_TERM_REPLY;
+          redir_radius(redir, &address->sin_addr, &conn, reauth);
+          termstate = REDIR_TERM_REPLY;
 
 #ifdef ENABLE_MODULES
-			}
+        }
 #endif
 
 #if(_debug_ > 1)
-			if (_options.debug)
-			  syslog(LOG_DEBUG, "%s(%d): Received RADIUS reply", __FUNCTION__, __LINE__);
+        if (_options.debug)
+          syslog(LOG_DEBUG, "%s(%d): Received RADIUS reply", __FUNCTION__, __LINE__);
 #endif
-		}
-	  }
+      }
 
       if (conn.response == REDIR_SUCCESS) { /* Accept-Accept */
+
         conn.s_params.flags &= ~REQUIRE_UAM_SPLASH;
 
         if (reauth) {
@@ -4712,36 +4015,18 @@ int redir_main(struct redir_t *redir,
         if (_options.debug)
           syslog(LOG_DEBUG, "%s(%d): handling Access-Accept", __FUNCTION__, __LINE__);
 
-//        if (_options.successuserurl || _options.successurlcustom){
-            bstring successurl;
-            successurl = bfromcstralloc(1024,"");
-            if (_options.successuserurl)
-                bcatcstr(successurl, conn.s_state.redir.userurl);
-            else if (_options.successurlcustom)
-                bcatcstr(successurl, _options.successurlcustom);
-            else
-                successurl = NULL;
-
-            redir_reply(redir, &socket, &conn, REDIR_SUCCESS, successurl,
-                        conn.s_params.sessiontimeout, NULL,
-                        conn.s_state.redir.username,
-                        conn.s_state.redir.userurl, conn.reply,
-                        (char *)conn.s_params.url,
-                        conn.hismac, &conn.hisip, httpreq.qs);
-            bdestroy(successurl);
-//        } else {
-//            redir_reply(redir, &socket, &conn, REDIR_SUCCESS, NULL,
-//                        conn.s_params.sessiontimeout, NULL,
-//                        conn.s_state.redir.username,
-//                        conn.s_state.redir.userurl, conn.reply,
-//                        (char *)conn.s_params.url,
-//                        conn.hismac, &conn.hisip, httpreq.qs);
-//        }
+        redir_reply(redir, &socket, &conn, REDIR_SUCCESS, NULL,
+                    conn.s_params.sessiontimeout, NULL,
+                    conn.s_state.redir.username,
+                    conn.s_state.redir.userurl, conn.reply,
+                    (char *)conn.s_params.url,
+                    conn.hismac, &conn.hisip, httpreq.qs);
 
         /* set params and redir data */
         redir_msg_send(REDIR_MSG_OPT_REDIR | REDIR_MSG_OPT_PARAMS);
 
       } else { /* Access-Reject */
+
         int hasnexturl = (strlen((char *)conn.s_params.url) > 5);
 
         if (_options.debug)
@@ -4752,110 +4037,6 @@ int redir_main(struct redir_t *redir,
             redir_memcopy(REDIR_CHALLENGE);
         } else {
           msg.mtype = REDIR_NOTYET;
-        }
-
-        redir_reply(redir, &socket, &conn, conn.response,
-                    NULL,
-                    0, hexchal, NULL, conn.s_state.redir.userurl, conn.reply,
-                    (char *)conn.s_params.url, conn.hismac,
-                    &conn.hisip, httpreq.qs);
-
-        /* set params, redir data, and reset session-id */
-        redir_msg_send(REDIR_MSG_OPT_REDIR | REDIR_MSG_OPT_PARAMS |
-                       (conn.response == REDIR_CHALLENGE ? 0 : REDIR_MSG_NSESSIONID));
-      }
-
-      if (_options.debug)
-        syslog(LOG_DEBUG, "%s(%d): -->> Msg userurl=[%s]\n", __FUNCTION__, __LINE__, conn.s_state.redir.userurl);
-      return redir_main_exit(&socket, forked, rreq);
-    }
-
-    case REDIR_TRIAL: {
-      char reauth = 0;
-
-      /* Was client was already logged on? */
-      if (state == 1) {
-        if (splash) {
-          if (_options.debug)
-            syslog(LOG_DEBUG, "%s(%d): redir_accept: SPLASH reauth", __FUNCTION__, __LINE__);
-          reauth = 1;
-        } else {
-          if (_options.debug)
-            syslog(LOG_DEBUG, "%s(%d): redir_accept: already logged on", __FUNCTION__, __LINE__);
-
-          redir_reply(redir, &socket, &conn, REDIR_ALREADY, NULL, 0,
-                      NULL, NULL, conn.s_state.redir.userurl, NULL,
-                      (char *) conn.s_params.url, conn.hismac,
-                      &conn.hisip, httpreq.qs);
-
-          return redir_main_exit(&socket, forked, rreq);
-        }
-      }
-
-      //Setting conn.response here.
-      if (!_options.tos || (_options.tos && conn.response != REDIR_FAILED_TOS)) {
-		  if (_options.trialusers && trial_user_authenticator(&conn)) {
-			  conn.response = REDIR_SUCCESS;
-#ifdef ENABLE_DATABASE
-			  if (conn.s_params.maxinputoctets || conn.s_params.maxoutputoctets ||
-					  conn.s_params.sessiontimeout) {
-				switch (dbcheck_session(&conn)){
-				  case ACCESS_DENIED_DATA:
-					conn.response = REDIR_TRIAL_FAILED_DATA;
-					break;
-				  case ACCESS_DENIED_TIME:
-					conn.response = REDIR_TRIAL_FAILED_TIME;
-					break;
-				}
-			  }
-#endif
-		  }
-	  }
-
-      if (conn.response == REDIR_SUCCESS) { /* Accept-Accept */
-        conn.s_params.flags &= ~REQUIRE_UAM_SPLASH;
-
-        if (reauth) {
-          conn.s_params.flags |= IS_UAM_REAUTH;
-        }
-
-        msg.mtype = REDIR_LOGIN;
-
-        if (_options.debug)
-          syslog(LOG_DEBUG, "%s(%d): handling Access-Accept", __FUNCTION__, __LINE__);
-
-//        if (_options.successuserurl || _options.successurlcustom){
-        bstring successurl;
-        successurl = bfromcstralloc(1024,"");
-        if (_options.successuserurl)
-          bcatcstr(successurl, conn.s_state.redir.userurl);
-        else if (_options.successurlcustom)
-          bcatcstr(successurl, _options.successurlcustom);
-        else
-          successurl = NULL;
-
-        redir_reply(redir, &socket, &conn, REDIR_SUCCESS, successurl,
-                    conn.s_params.sessiontimeout, NULL,
-                    conn.s_state.redir.username,
-                    conn.s_state.redir.userurl, conn.reply,
-                    (char *)conn.s_params.url,
-                    conn.hismac, &conn.hisip, httpreq.qs);
-        bdestroy(successurl);
-
-        /* set params and redir data */
-        redir_msg_send(REDIR_MSG_OPT_REDIR | REDIR_MSG_OPT_PARAMS);
-
-      } else { /* Access-Reject */
-        int hasnexturl = (strlen((char *)conn.s_params.url) > 5);
-
-        if (_options.debug)
-          syslog(LOG_DEBUG, "%s(%d): handling Access-Reject", __FUNCTION__, __LINE__);
-
-        if (!hasnexturl) {
-          if (_options.challengetimeout)
-          redir_memcopy(REDIR_CHALLENGE);
-        } else {
-          msg.mtype = REDIR_TRIALLOGIN_FAILED;
         }
 
         redir_reply(redir, &socket, &conn, conn.response,
@@ -4967,40 +4148,6 @@ int redir_main(struct redir_t *redir,
         return redir_main_exit(&socket, forked, rreq);
       }
 
-    case REDIR_SIGNUP:
-		if (_options.registerusers)
-			usr_add_user(&conn);
-
-		redir_reply(redir, &socket, &conn, conn.response, NULL, 0,
-			  hexchal, NULL, conn.s_state.redir.userurl, NULL,
-			  NULL, conn.hismac, &conn.hisip, httpreq.qs);
-
-      return redir_main_exit(&socket, forked, rreq);
-    case REDIR_SMSSIGNUP:
-    	{
-    		if (_options.smsusers) {
-				int ret;
-
-				if (strlen(conn.s_state.redir.phone) < USER_MIN_PHONE_LEN) {
-					conn.response = REDIR_SMSSIGNUP_FAILED;
-				} else if ((ret = usr_add_sms_user(&conn, conn.s_state.redir.phone, hexchal))) {
-					if (ret == USER_RET_ALREADY)
-						conn.response = REDIR_SMSSIGNUP_ALREADY;
-					else if (ret == USER_RET_SMS_ERR)
-						conn.response = REDIR_SMSSIGNUP_SMS_FAIL;
-					else
-						conn.response = REDIR_SMSSIGNUP_FAILED;
-				} else {
-					conn.response = REDIR_SMSSIGNUP_SUCCESS;
-				}
-			}
-
-			redir_reply(redir, &socket, &conn, conn.response, NULL, 0,
-						hexchal, NULL, conn.s_state.redir.userurl, NULL,
-						NULL, conn.hismac, &conn.hisip, httpreq.qs);
-
-			return redir_main_exit(&socket, forked, rreq);
-		}
     case REDIR_MSDOWNLOAD:
       snprintf(buffer, bufsize, "HTTP/1.0 403 Forbidden\r\n\r\n");
       redir_write(&socket, buffer, strlen(buffer));

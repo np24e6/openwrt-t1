@@ -1,7 +1,6 @@
 {
-   "api": {
-      "bulk": false
-   },
+   
+   "bulk": false,
    "jwt_login": false,
    "refresh": false,
    "firewall": {
@@ -12,8 +11,8 @@
          "config": false
       }
    },
-   "mobile": {
-      "modems": {
+   "modems": {
+      "*": {
          "actions": {
             "exec_at": false
          }
@@ -23,69 +22,70 @@
       "config": false
    },
    "hotspot": {
-      "user_management": {
+      "general": {
+         "options": false
+      },
+      "user": {
          "config": false
       }
    },
    "io": {
       "juggler": {
-         "config": {
-            "general": {
-               "actions": false
-            }
+         "operations": {
+            "config": false
          }
       }
    },
    "modbus": {
-      "serial": {
-         "slaves": {
-            "actions": {
-               "*": {
-                  "requests": {
+      "client" : {
+         "tcp": {
+            "*": {
+               "requests": {
+                  "actions": {
                      "test_request": false
                   }
                }
             }
-         }
-      },
-      "tcp": {
-         "actions": {
-            "*": {
-               "requests": {
-                  "test_request": false
+         },
+         "serial": {
+            "servers": {
+               "*": {
+                  "requests": {
+                     "actions": {
+                        "test_request": false
+                     }
+                  }
                }
             }
          }
       }
    },
-   "packages": {
+   "package_manager": {
       "actions": {
          "delete_install_files": false,
-         "install_package": false
-      }
+         "install_package": false,
+         "update_package": false
+      },
+      "restore": false
    },
    "usb_tools": {
-      "general": {
          "actions": {
             "format": false,
             "safe_remove": false
          }
-      }
    },
    "wireguard": {
       "actions": {
          "generate_keys": false
       }
    },
-   "mobile_utilities": {
-      "sms_rules": {
+   "sms_utilities": {
+      "rules": {
          "config": false
       }
    },
    "topology": {
-      "devices": false,
-      "devices_lan": false,
-      "devices_wan": false
+      "status": false
    },
    "access_control": {
       "device_pairing": {
@@ -99,48 +99,39 @@
       }
    },
    "backup": {
-      "actions": {
-         "remove_backup": false,
-         "remove_default": false
-      },
-      "config": false,
-      "files": false
+      "actions": false
    },
-   "base": {
+   "system": {
       "actions": {
          "change_password_firstlogin": false
       }
    },
-   "certificates": {
-      "config": false,
-      "files": false
-   },
+   "certificates": false,
    "firmware": {
       "device": false,
-      "modem": false
+      "modem": false,
+      "actions": false
    },
    "logging": {
       "actions": {
          "delete_log": false
       }
    },
-   "root_ca": {
-      "actions": {
-         "reset": false
-      },
-      "config": false
-   },
    "troubleshoot": {
-      "files": {
-         "troubleshoot": false
+      "actions": {
+         "download": false
       },
-      "kernel_log": false,
-      "system_log": false
+      "kernel": {
+         "status": false
+      }
    },
    "users": {
-      "config": false
+      "config": false,
+      "groups": {
+         "config": false
+      }
    },
    "events_log": {
-      "log": false
+      "config": false
    }
 }

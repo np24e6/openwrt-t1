@@ -413,7 +413,6 @@ create_config() {
 	if [ "$config" = "c" ]; then
 		uci add openvpn openvpn &>/dev/null
 		uci rename openvpn.@openvpn[-1]="${client}"
-		uci set openvpn.${client}._name="$client"
 		uci set openvpn.${client}.nobind='1'
 		uci set openvpn.${client}.persist_key='1'
 		uci set openvpn.${client}.persist_tun='1'
@@ -449,53 +448,53 @@ create_config() {
 		[ -z "$REMOTE_IP" ] && REMOTE_IP="172.40.0.1"				
 		case "$auth" in                                                         
 			1)
-				uci set openvpn.${client}._auth='skey'
+				uci set openvpn.${client}.auth_mode='skey'
 				uci set openvpn.${client}.secret="$skey"
-				uci set openvpn.${client}._tls_auth='none'
+				uci set openvpn.${client}.tls_security='none'
 				[ -z "$LOCAL_IP" ] && LOCAL_IP="172.40.0.2"
 				uci set openvpn.${client}.local_ip='172.40.0.2' 
 				uci set openvpn.${client}.remote_ip="$REMOTE_IP"
 				;;
 
 			2)
-				uci set openvpn.${client}._auth='tls'
+				uci set openvpn.${client}.auth_mode='tls'
 				uci set openvpn.${client}.ca="$ca_crt"
 				uci set openvpn.${client}.cert="$client_crt"
 				uci set openvpn.${client}.key="$client_key"
 				uci set openvpn.${client}.use_pkcs='0'
-				uci set openvpn.${client}._tls_auth='tls-auth'
+				uci set openvpn.${client}.tls_security='tls-auth'
 				uci set openvpn.${client}.tls_auth="$skey"
 				uci set openvpn.${client}.tls_client='1'
 				uci set openvpn.${client}.mode='p2p'
-				uci set openvpn.${client}._device_files='0'
+				uci set openvpn.${client}.device_files='0'
 				uci set openvpn.${client}.key_direction='1'
-				uci set openvpn.${client}._tls_cipher='all'
+				uci set openvpn.${client}.tls_cipher_list='all'
 				uci set openvpn.${client}.client='1'
 				;;
 			3)
-				uci set openvpn.${client}._auth='tls/pass'  
+				uci set openvpn.${client}.auth_mode='tls/pass'  
 				uci set openvpn.${client}.ca="$ca_crt"
 				uci set openvpn.${client}.cert="$client_crt"
 				uci set openvpn.${client}.key="$client_key"               
 				uci set openvpn.${client}.use_pkcs='0'     
-				uci set openvpn.${client}._tls_auth='tls-auth'
+				uci set openvpn.${client}.tls_security='tls-auth'
 				uci set openvpn.${client}.tls_auth="$skey"                                                  
 				uci set openvpn.${client}.tls_client='1'  
 				uci set openvpn.${client}.mode='p2p'                                            
-				uci set openvpn.${client}._device_files='0'             
+				uci set openvpn.${client}.device_files='0'             
 				uci set openvpn.${client}.key_direction='1'                                       
-				uci set openvpn.${client}._tls_cipher='all'
+				uci set openvpn.${client}.tls_cipher_list='all'
 				uci set openvpn.${client}.pull='1'
 				uci set openvpn.${client}.auth_user_pass="$user_pass"
 				uci set openvpn.${client}.client='1'
 				;;
 			4)
-				uci set openvpn.${client}._auth='pass'                                                            
+				uci set openvpn.${client}.auth_mode='pass'                                                            
 				uci set openvpn.${client}.ca="$ca_crt"                                                                
 				uci set openvpn.${client}.use_pkcs='0'                                                                
-				uci set openvpn.${client}._tls_auth='tls-auth'         
+				uci set openvpn.${client}.tls_security='tls-auth'         
 				uci set openvpn.${client}.tls_auth="$skey"            
-				uci set openvpn.${client}._device_files='0'                                                 
+				uci set openvpn.${client}.device_files='0'                                                 
 				uci set openvpn.${client}.key_direction='1'                          
 				uci set openvpn.${client}.pull='1'
 				uci set openvpn.${client}.client='1'                                                                    
@@ -513,7 +512,6 @@ create_config() {
 	elif [ "$config" = "s" ]; then
 		uci add openvpn openvpn &>/dev/null                                    
 		uci rename openvpn.@openvpn[-1]="${server}"    
-		uci set openvpn.${server}._name="$server"
 		uci set openvpn.${server}.persist_key='1'
 		uci set openvpn.${server}.port='1194'
 		uci set openvpn.${server}.persist_tun='1'
@@ -528,9 +526,9 @@ create_config() {
 		[ -z "$REMOTE_IP" ] && REMOTE_IP="172.40.0.2"
 		case "$auth" in                                   
 			1)
-				uci set openvpn.${server}._auth='skey'
+				uci set openvpn.${server}.auth_mode='skey'
 				uci set openvpn.${server}.secret="$skey"
-				uci set openvpn.${server}._tls_auth='none'
+				uci set openvpn.${server}.tls_security='none'
 				[ -z "$LOCAL_IP" ] && LOCAL_IP="172.40.0.1"                                                  
 				[ -z "$NETWORK_IP" ] && {
 					read -p "Enter remote LAN network(network_ip) [192.168.1.0]:" NETWORK_IP                                    
@@ -546,8 +544,8 @@ create_config() {
 				uci set openvpn.${server}.remote_ip="$REMOTE_IP"
 				;;
 			2)
-				uci set openvpn.${server}._auth='tls'
-				uci set openvpn.${server}._tls_auth='tls-auth'
+				uci set openvpn.${server}.auth_mode='tls'
+				uci set openvpn.${server}.tls_security='tls-auth'
 				uci set openvpn.${server}.ca="$ca_crt"
 				uci set openvpn.${server}.cert="$server_crt"
 				uci set openvpn.${server}.key="$server_key"
@@ -555,10 +553,10 @@ create_config() {
 				uci set openvpn.${server}.tls_auth="$skey"
 				uci set openvpn.${server}.use_pkcs='0'
 				uci set openvpn.${server}.client_to_client='0'
-				uci set openvpn.${server}._device_files='0'
+				uci set openvpn.${server}.device_files='0'
 				uci set openvpn.${server}.key_direction='0'
-				uci set openvpn.${server}._tls_cipher='all'
-				uci set openvpn.${server}._keepalive_tls='10 120'
+				uci set openvpn.${server}.tls_cipher_list='all'
+				uci set openvpn.${server}.keepalive='10 120'
 				uci set openvpn.${server}.auth='sha1'
 				uci set openvpn.${server}.use_pkcs='0'      
 				uci set openvpn.${server}.server_ip='172.40.0.0'                 
@@ -566,10 +564,10 @@ create_config() {
 				uci set openvpn.${server}.duplicate_cn='1'
 				;;
 			3)
-				uci set openvpn.${server}._auth='tls/pass'
-				uci set openvpn.${server}._keepalive_tls='10 120'
-				uci set openvpn.${server}._tls_cipher='all'                                
-				uci set openvpn.${server}._tls_auth='tls-auth'       
+				uci set openvpn.${server}.auth_mode='tls/pass'
+				uci set openvpn.${server}.keepalive='10 120'
+				uci set openvpn.${server}.tls_cipher_list='all'                                
+				uci set openvpn.${server}.tls_security='tls-auth'       
 				uci set openvpn.${server}.ca="$ca_crt"               
 				uci set openvpn.${server}.cert="$server_crt"                                                          
 				uci set openvpn.${server}.key="$server_key"                                                           
@@ -578,7 +576,7 @@ create_config() {
 				uci set openvpn.${server}.userpass="$user_pass"                                   
 				uci set openvpn.${server}.use_pkcs='0'                               
 				uci set openvpn.${server}.client_to_client='0'                       
-				uci set openvpn.${server}._device_files='0'                                                           
+				uci set openvpn.${server}.device_files='0'                                                           
 				uci set openvpn.${server}.key_direction='0'
 				uci set openvpn.${server}.mode='server'
 				uci set openvpn.${server}.duplicate_cn='1'
@@ -587,9 +585,9 @@ create_config() {
 				uci set openvpn.${server}.server_netmask='255.255.255.0'
 				;;
 			4)
-				uci set openvpn.${server}._auth='pass'
-				uci set openvpn.${server}._keepalive_tls='10 120'
-				uci set openvpn.${server}._tls_auth='tls-auth'
+				uci set openvpn.${server}.auth_mode='pass'
+				uci set openvpn.${server}.keepalive='10 120'
+				uci set openvpn.${server}.tls_security='tls-auth'
 				uci set openvpn.${server}.ca="$ca_crt"                               
 				uci set openvpn.${server}.cert="$server_crt"              
 				uci set openvpn.${server}.key="$server_key"     
@@ -599,7 +597,7 @@ create_config() {
 				uci set openvpn.${server}.use_pkcs='0'
 				uci set openvpn.${server}.duplicate_cn='1'
 				uci set openvpn.${server}.client_to_client='0'      
-				uci set openvpn.${server}._device_files='0'                                     
+				uci set openvpn.${server}.device_files='0'                                     
 				uci set openvpn.${server}.key_direction='0'                                                 
 				uci set openvpn.${server}.mode='server'
 				uci set openvpn.${server}.verify_client_cert='none'
@@ -623,8 +621,7 @@ create_config() {
 config_handler() {                         
 	local section="$1"                 
 	config_get type "$section" "type"  
-	config_get _name "$section" "_name"
-	echo "[$j] $_name ($type)"    
+	echo "[$j] $section ($type)"    
 	j=$((j+1))                   
 }                                     
 									  
@@ -724,7 +721,9 @@ else
 
 	case "$input" in
 		[0-9])
-			config_name=$(uci get openvpn.@openvpn["$input"]._name 2>/dev/null)
+			config_name=$(uci show openvpn.@openvpn["$input"] | head -n1)
+			config_name="${config_name%%=*}"
+			config_name="${config_name##*.}"
 			type=$(uci get openvpn.@openvpn["$input"].type 2>/dev/null)
 			type=$(printf '%s' "$type" | cut -c 1)
 			REMOTE_IP="$(uci get openvpn.@openvpn["$input"].remote_ip 2>/dev/null)"

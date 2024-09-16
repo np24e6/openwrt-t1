@@ -20,20 +20,15 @@
 			pinctrl-0 = <&mdio_pins>;
 			pinctrl-names = "default";
 			reset-gpios = <&tlmm 62 GPIO_ACTIVE_LOW>;
-			reset-delay-us = <2000>;
-
-			ethphy4: ethernet-phy@4 {
-				qcom,fiber-enable;
-			};
 		};
 
 		ess-switch@c000000 {
-			resets = <&gcc ESS_RESET>, <&gcc ESS_MAC1_ARES>,
-					 <&gcc ESS_MAC2_ARES>, <&gcc ESS_MAC3_ARES>,
-					 <&gcc ESS_MAC4_ARES>, <&gcc ESS_MAC5_ARES>;
-			reset-names = "ess_rst", "ess_mac1_rst",
-						  "ess_mac2_rst", "ess_mac3_rst",
-						  "ess_mac4_rst", "ess_mac5_rst";
+				resets = <&gcc ESS_RESET>, <&gcc ESS_MAC1_ARES>,
+						 <&gcc ESS_MAC2_ARES>, <&gcc ESS_MAC3_ARES>,
+						 <&gcc ESS_MAC4_ARES>, <&gcc ESS_MAC5_ARES>;
+				reset-names = "ess_rst", "ess_mac1_rst",
+							  "ess_mac2_rst", "ess_mac3_rst",
+							  "ess_mac4_rst", "ess_mac5_rst";
 		};
 
 		pinctrl@1000000 {
@@ -93,6 +88,111 @@
 			dwc3@6000000 {
 				snps,dis_u2_susphy_quirk;
 			};
+		};
+	};
+
+	boot: boot_partition {
+		label = "0:APPSBL";
+	};
+
+	config: config_partition {
+		label = "0:CONFIG";
+	};
+
+	config_rw: config_rw_partition {
+		label = "0:CONFIG_RW";
+	};
+
+	mnfinfo: mnfinfo {
+		compatible = "sysfs-mnfinfo";
+		status = "okay";
+
+		mac {
+			reg = <&config 0x0 0x6>;
+			min-res-len = <0xc>;
+			type = "mac";
+			default = "001E42013370";
+			log;
+		};
+
+		name {
+			reg = <&config 0x10 0xc>;
+			type = "ascii";
+			default = "UNKNOWNXXXXX";
+			log;
+		};
+
+		wps {
+			reg = <&config 0x20 0x8>;
+			type = "digit";
+		};
+
+		serial {
+			reg = <&config 0x30 0xa>;
+			type = "alnum";
+			default = "0000000000";
+			log;
+		};
+
+		batch {
+			reg = <&config 0x40 0x4>;
+			type = "digit";
+			default = "0000";
+			log;
+		};
+
+		hwver {
+			reg = <&config 0x50 0x4>;
+			type = "digit";
+			default = "0000";
+			log;
+		};
+
+		wpass {
+			reg = <&config 0x90 0x10>;
+			type = "ascii";
+		};
+
+		pass {
+			reg = <&config 0xa0 0x6a>;
+			type = "ascii";
+		};
+
+		blver {
+			reg = <&boot 0xa0000 0xa>;
+			trailling-data;
+			strip-whitespaces;
+			type = "ascii";
+			log;
+		};
+
+		simpin1 {
+			reg = <&config_rw 0x0 0x8>;
+			type = "digit";
+			default = "";
+		};
+
+		simpin2 {
+			reg = <&config_rw 0x10 0x8>;
+			type = "digit";
+			default = "";
+		};
+
+		simpin3 {
+			reg = <&config_rw 0x20 0x8>;
+			type = "digit";
+			default = "";
+		};
+
+		simpin4 {
+			reg = <&config_rw 0x30 0x8>;
+			type = "digit";
+			default = "";
+		};
+		
+		sim_count {
+			default =  "4";
+			log;
 		};
 	};
 };

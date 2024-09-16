@@ -71,6 +71,9 @@ setup_config() {
 }
 
 start_service() {
+	# only run if "service" section exists in config
+	uci -q get pptpd.@service[0] &> /dev/null || return
+
 	local counter=0
 	[ -e "$CHAP_SECRETS" ] && rm -f $CHAP_SECRETS 2>/dev/null
 

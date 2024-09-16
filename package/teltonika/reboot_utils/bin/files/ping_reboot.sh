@@ -214,8 +214,8 @@ is_over_limit() {
 
 	if [ "$STOP_ACTION" -eq 1 ]; then
 		json_init
-		json_load "$(ubus call quota_limit get_quota_status "{\"iface\":\"${ACTIVE_INTERFACE}\"}")"
-		json_get_var over_limit "status"
+		json_load "$(ubus call quota_limit.${ACTIVE_INTERFACE} status)"
+		json_get_var over_limit "event_sent"
 	else
 		over_limit=0
 	fi

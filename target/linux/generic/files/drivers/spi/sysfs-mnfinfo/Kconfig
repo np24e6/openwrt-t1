@@ -1,0 +1,6 @@
+config SYSFS_MNFINFO
+	bool "Mnfinfo via sysfs"
+	default y
+	help
+	  This provides a ability to read device RO metadata via sysfs.
+

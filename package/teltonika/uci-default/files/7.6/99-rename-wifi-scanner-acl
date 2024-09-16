@@ -1,0 +1,3 @@
+#!/bin/sh
+sed 's/network\/wireless\/wifi_scanner/services\/wifi_scanner/g' -i /etc/config/rpcd
+exit 0

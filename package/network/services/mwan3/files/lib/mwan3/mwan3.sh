@@ -444,8 +444,9 @@ mwan3_create_iface_route()
 			# possible that routes are already in the table
 			# if 'connected' was called after 'ifup'
 			[ -n "$tbl" ] && [ -z "${tbl##*$route_line$'\n'*}" ] && continue
-			$IP route add table $id $route_line ||
-				LOG warn "failed to add $route_line to table $id"
+			$IP route show table $id | grep -q "$route_line" || \
+				$IP route add table $id $route_line || \
+					LOG warn "failed to add $route_line to table $id"
 		fi
 
 	done
@@ -835,30 +836,38 @@ mwan3_set_user_iptables_rule()
 				  -j SET --add-set "mwan3_sticky_$rule" src,src
 		policy="mwan3_rule_$1"
 	fi
-	if [ "$global_logging" = "1" ] && [ "$rule_logging" = "1" ]; then
-		mwan3_push_update -A mwan3_rules \
-				  -p "$proto" \
-				  ${src_ip:+-s} $src_ip \
-				  ${src_dev:+-i} $src_dev \
-				  ${dest_ip:+-d} $dest_ip \
-				  $ipset \
-				  ${src_port:+-m} ${src_port:+multiport} ${src_port:+--sports} $src_port \
-				  ${dest_port:+-m} ${dest_port:+multiport} ${dest_port:+--dports} $dest_port \
-				  -m mark --mark 0/$MMX_MASK \
-				  -m comment --comment "$1" \
-				  -j LOG --log-level "$loglevel" --log-prefix "MWAN3($1)"
-	fi
 
-	mwan3_push_update -A mwan3_rules \
-			  -p "$proto" \
-			  ${src_ip:+-s} $src_ip \
-			  ${src_dev:+-i} $src_dev \
-			  ${dest_ip:+-d} $dest_ip \
-			  $ipset \
-			  ${src_port:+-m} ${src_port:+multiport} ${src_port:+--sports} $src_port \
-			  ${dest_port:+-m} ${dest_port:+multiport} ${dest_port:+--dports} $dest_port \
-			  -m mark --mark 0/$MMX_MASK \
-			  -j $policy
+	[ -z "$src_ip" ] && src_ip="0.0.0.0/0"
+	[ -z "$dest_ip" ] && dest_ip="0.0.0.0/0"
+
+	for src in $src_ip; do
+		for dest in $dest_ip; do
+			if [ "$global_logging" = "1" ] && [ "$rule_logging" = "1" ]; then
+				mwan3_push_update -A mwan3_rules \
+						-p "$proto" \
+						${src:+-s} $src \
+						${src_dev:+-i} $src_dev \
+						${dest:+-d} $dest \
+						$ipset \
+						${src_port:+-m} ${src_port:+multiport} ${src_port:+--sports} $src_port \
+						${dest_port:+-m} ${dest_port:+multiport} ${dest_port:+--dports} $dest_port \
+						-m mark --mark 0/$MMX_MASK \
+						-m comment --comment "$1" \
+						-j LOG --log-level "$loglevel" --log-prefix "MWAN3($1)"
+			fi
+
+			mwan3_push_update -A mwan3_rules \
+					-p "$proto" \
+					${src:+-s} $src \
+					${src_dev:+-i} $src_dev \
+					${dest:+-d} $dest \
+					$ipset \
+					${src_port:+-m} ${src_port:+multiport} ${src_port:+--sports} $src_port \
+					${dest_port:+-m} ${dest_port:+multiport} ${dest_port:+--dports} $dest_port \
+					-m mark --mark 0/$MMX_MASK \
+					-j $policy
+		done
+	done
 
 }
 

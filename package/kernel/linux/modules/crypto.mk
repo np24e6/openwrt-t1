@@ -182,6 +182,10 @@ define KernelPackage/crypto-des/sdxprairie
   FILES:=$(LINUX_DIR)/crypto/des_generic.ko
 endef
 
+define KernelPackage/crypto-des/sdxlemur
+  FILES:=$(LINUX_DIR)/crypto/des_generic.ko
+endef
+
 $(eval $(call KernelPackage,crypto-des))
 
 
@@ -895,6 +899,10 @@ define KernelPackage/crypto-sha256
 endef
 
 define KernelPackage/crypto-sha256/sdxprairie
+  FILES:=$(LINUX_DIR)/crypto/sha256_generic.ko
+endef
+
+define KernelPackage/crypto-sha256/sdxlemur
   FILES:=$(LINUX_DIR)/crypto/sha256_generic.ko
 endef
 

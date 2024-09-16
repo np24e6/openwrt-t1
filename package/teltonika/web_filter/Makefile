@@ -22,6 +22,11 @@ define Package/web_filter
 	endif
 endef
 
+define Package/web_filter/description
+	Web Filter package provides you with the possibility to set up
+	lists of wanted or unwanted websites (Blacklists or Whitelists).
+endef
+
 
 
 define Package/web_filter/install

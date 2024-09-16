@@ -44,12 +44,12 @@ static void ubus_reconnect_timeout(void *eloop_data, void *user_ctx)
 		return;
 	}
 
-	eloop_register_read_sock(ctx->sock.fd, ubus_receive, ctx, NULL);
+	ubus_add_uloop(ctx);
 }
 
 static void wpas_ubus_connection_lost(struct ubus_context *ctx)
 {
-	eloop_unregister_read_sock(ctx->sock.fd);
+	uloop_fd_delete(&ctx->sock);
 	eloop_register_timeout(1, 0, ubus_reconnect_timeout, ctx, NULL);
 }
 
@@ -58,12 +58,14 @@ static bool wpas_ubus_init(void)
 	if (ctx)
 		return true;
 
+	eloop_add_uloop();
 	ctx = ubus_connect(NULL);
 	if (!ctx)
 		return false;
 
 	ctx->connection_lost = wpas_ubus_connection_lost;
-	eloop_register_read_sock(ctx->sock.fd, ubus_receive, ctx, NULL);
+	ubus_add_uloop(ctx);
+
 	return true;
 }
 
@@ -81,7 +83,7 @@ static void wpas_ubus_ref_dec(void)
 	if (ctx_ref)
 		return;
 
-	eloop_unregister_read_sock(ctx->sock.fd);
+	uloop_fd_delete(&ctx->sock);
 	ubus_free(ctx);
 	ctx = NULL;
 }
@@ -288,9 +290,9 @@ wpas_config_add(struct ubus_context *ctx, struct ubus_object *obj,
 	if (tb[WPAS_CONFIG_CTRL])
 		iface->ctrl_interface = blobmsg_get_string(tb[WPAS_CONFIG_CTRL]);
 
-	if (tb[WPAS_CONFIG_HOSTAPD_CTRL])
+/*	if (tb[WPAS_CONFIG_HOSTAPD_CTRL])
 		iface->hostapd_ctrl = blobmsg_get_string(tb[WPAS_CONFIG_HOSTAPD_CTRL]);
-
+*/
 	if (!wpa_supplicant_add_iface(global, iface, NULL))
 		return UBUS_STATUS_INVALID_ARGUMENT;
 

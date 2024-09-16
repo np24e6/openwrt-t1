@@ -105,6 +105,11 @@ typedef enum {
 } urc_emm_err_t;
 
 typedef enum {
+	QNETDEVCTL_VAL,
+	QNETDEVCTL_T_MAX,
+} urc_qnetdevctl_t;
+
+typedef enum {
 	ESM_ERR_VAL,
 	ESM_ERR_T_MAX,
 } urc_esm_err_t;
@@ -123,6 +128,11 @@ struct pin_state_t {
 
 struct net_state_t {
 	enum net_reg_stat_id state;
+	const char *modem_id;
+};
+
+struct net_data_state_t {
+	enum net_data_stat_id state;
 	const char *modem_id;
 };
 

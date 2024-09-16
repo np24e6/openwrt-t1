@@ -1,0 +1,76 @@
+#
+# Copyright (C) 2021 CZ.NIC, z. s. p. o. (https://www.nic.cz/)
+#
+# This is free software, licensed under the GNU General Public License v2.
+# See /LICENSE for more information.
+#
+
+include $(TOPDIR)/rules.mk
+
+PKG_NAME:=tailscale
+PKG_VERSION:=1.50.0
+PKG_RELEASE:=1
+
+PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
+PKG_SOURCE_URL:=https://codeload.github.com/tailscale/tailscale/tar.gz/v$(PKG_VERSION)?
+PKG_HASH:=a7e024577854c07b793c4bbd81a497250e6a1b4536e303351a388810f13b7316
+
+PKG_MAINTAINER:=Jan Pavlinec <jan.pavlinec1@gmail.com>
+PKG_LICENSE:=BSD-3-Clause
+PKG_LICENSE_FILES:=LICENSE
+
+PKG_BUILD_DIR:=$(BUILD_DIR)/tailscale-$(PKG_VERSION)
+PKG_BUILD_DEPENDS:=golang/host upx/host
+PKG_BUILD_PARALLEL:=1
+PKG_USE_MIPS16:=0
+
+GO_PKG:=\
+	tailscale.com/cmd/tailscale \
+	tailscale.com/cmd/tailscaled
+GO_PKG_LDFLAGS:=-s -w -X 'tailscale.com/version.longStamp=$(PKG_VERSION)-$(PKG_RELEASE) (OpenWrt)'
+GO_PKG_LDFLAGS_X:=tailscale.com/version.shortStamp=$(PKG_VERSION)
+GO_PKG_TAGS:=ts_include_cli
+
+
+include $(INCLUDE_DIR)/package.mk
+include $(TOPDIR)/feeds/packages/lang/golang/golang-package.mk
+
+define Package/tailscale
+  SECTION:=net
+  CATEGORY:=Network
+  SUBMENU:=VPN
+  TITLE:=Zero config VPN
+  URL:=https://tailscale.com
+  PKG_ROUTER:=$(TLT_PLATFORM_NAME)
+  PKG_TLT_NAME:=Tailscale
+  DEPENDS:=$(GO_ARCH_DEPENDS) +ca-bundle +kmod-tun +vuci-app-tailscale-ui
+endef
+
+define Build/Compile
+	$(call GoPackage/Build/Compile)
+	$(STAGING_DIR_HOST)/bin/upx --lzma --best $(GO_PKG_BUILD_BIN_DIR)/tailscaled
+endef
+
+define Package/tailscale/description
+  It creates a secure network between your servers, computers,
+  and cloud instances. Even when separated by firewalls or subnets.
+endef
+
+define Package/tailscale/conffiles
+/etc/config/tailscale
+/etc/tailscale/
+endef
+
+define Package/tailscale/install
+	$(INSTALL_DIR) $(1)/usr/sbin
+	$(INSTALL_BIN) $(GO_PKG_BUILD_BIN_DIR)/tailscaled $(1)/usr/sbin/tailscale.combined
+	ln -s /usr/sbin/tailscale.combined $(1)/usr/sbin/tailscale
+	ln -s /usr/sbin/tailscale.combined $(1)/usr/sbin/tailscaled
+	$(INSTALL_DIR) $(1)/etc/init.d/
+	$(INSTALL_BIN) ./files/tailscale.init $(1)/etc/init.d/tailscale
+	$(INSTALL_DIR) $(1)/etc/config/
+	$(INSTALL_DATA) ./files/tailscale.conf $(1)/etc/config/tailscale
+endef
+
+$(eval $(call BuildPackage,tailscale))
+

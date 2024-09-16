@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2021 Teltonika
+# Copyright (C) 2023 Teltonika-Networks
 #
 
 PKG_VUCI_BUILD_DIR := $(if $(findstring feeds/vuci,$(shell pwd)),$(GPL_BUILD_DIR)/package/feeds/vuci/$(shell basename $$(pwd)),)
@@ -24,24 +24,32 @@ define gpl_clear_vars
 endef
 
 define gpl_install_mixed
-	(\
+	( \
 		mkdir -p "$(1)"; \
-		case "$(PKG_SOURCE_URL)" in \
-		"$(TLT_GIT)"*) \
-			cp -rf . "$(1)/"; \
-			mkdir -p "$(1)/src"; \
-			tar xf "$(TOPDIR)/dl/$(PKG_SOURCE)" --strip-components=1 -C "$(1)/src"; \
-			sed -i "/^PKG_SOURCE_PROTO:=/d" "$(1)/Makefile"; \
-			sed -i "/^PKG_SOURCE_URL:=/d" "$(1)/Makefile"; \
-			sed -i "/^PKG_MIRROR_HASH:=/d" "$(1)/Makefile"; \
-			;; \
-		*) cp -rf . "$(1)/" ;; \
-		esac; \
+		cp -rf . "$(1)"; \
+		$(if $(PKG_UPSTREAM_URL), \
+			printf "'$(PKG_SOURCE_URL)' '%s/Makefile'\0" "$$(a=$(CURDIR) && echo $${a#$(TOPDIR)/})" >>"$(TOPDIR)/tmp/SOURCE_URLs" && \
+			sed -i'' -E \
+				-e '/ *PKG_SOURCE_URL *[:?]?=.*$$/d' \
+				-e "s#PKG_UPSTREAM_URL( *[:?]?=.*$$)#PKG_SOURCE_URL\1#" \
+				"$(1)/Makefile" \
+		, \
+			$(if $(findstring $(TLT_GIT),$(PKG_SOURCE_URL)), \
+				mkdir -p "$(1)/src"; \
+				tar xf "$(TOPDIR)/dl/$(PKG_SOURCE)" --strip-components=1 -C "$(1)/src"; \
+				sed --in-place='' --regexp-extended \
+					--expression="/^ *PKG_SOURCE_PROTO *[:?]?=/d" \
+					--expression="/^ *PKG_MIRROR_HASH *[:?]?=/d" \
+					--expression="/^ *PKG_SOURCE_URL *[:?]?=/d" "$(1)/Makefile"; \
+			) \
+		) \
 	)
 endef
 
 define gpl_install_feeds
 	(\
+		$(if $(PKG_UPSTREAM_URL), \
+			printf "'$(PKG_SOURCE_URL)' '%s/Makefile'\0" "$$(a=$(CURDIR) && echo $${a#$(TOPDIR)/})" >>"$(TOPDIR)/tmp/SOURCE_URLs";) \
 		name=$$(basename "$(1)"); \
 		rm -rf "$(1)"; \
 		TOPDIR="$(GPL_BUILD_DIR)" "$(GPL_BUILD_DIR)/scripts/feeds" install "$${name}"; \
@@ -90,6 +98,46 @@ define gpl_scan_deps
 	)
 endef
 
+define gpl_install_orig_w_patch
+	$(eval URL_FILE:=$(PKG_UPSTREAM_URL))
+	$(eval HASH:=skip)
+	$(eval FILE:=$(PKG_UPSTREAM_FILE))
+	rm -fr "$(1)/src"
+
+	$(eval OLD_TLT_GIT:=$(TLT_GIT))
+	$(eval TLT_GIT:=)
+	$(call DownloadMethod/$(call dl_method,$(PKG_UPSTREAM_URL),))
+	$(eval TLT_GIT:=$(OLD_TLT_GIT))
+
+	$(eval OLD_PKG_UPSTREAM_URL:=$(PKG_UPSTREAM_URL))
+	$(eval PKG_UPSTREAM_URL:=)
+	$(call gpl_install_mixed,$(1))
+	$(eval PKG_UPSTREAM_URL:=$(OLD_PKG_UPSTREAM_URL))
+(\
+	mkdir -p "$(1)/orig"; \
+	cd "$(1)/orig"; \
+	case $(PKG_UPSTREAM_FILE) in \
+	*.tar.bz2|*.tbz2)	tar xjf "$(DL_DIR)/$(PKG_UPSTREAM_FILE)" --strip-components=1	;; \
+	*.tar.gz|*.tgz)		tar xzf "$(DL_DIR)/$(PKG_UPSTREAM_FILE)" --strip-components=1	;; \
+	*.bz2)			bunzip2 "$(DL_DIR)/$(PKG_UPSTREAM_FILE)"	;; \
+	*.rar)			unrar x "$(DL_DIR)/$(PKG_UPSTREAM_FILE)"	;; \
+	*.gz)			gunzip "$(DL_DIR)/$(PKG_UPSTREAM_FILE)"		;; \
+	*.tar)			tar xf "$(DL_DIR)/$(PKG_UPSTREAM_FILE)"		;; \
+	*.zip)			unzip "$(DL_DIR)/$(PKG_UPSTREAM_FILE)"		;; \
+	*.Z)			uncompress "$(DL_DIR)/$(PKG_UPSTREAM_FILE)"	;; \
+	*.7z)			7z x "$(DL_DIR)/$(PKG_UPSTREAM_FILE)"		;; \
+	esac; \
+	cd "$(1)"; \
+	diff_txt="$$(diff --recursive --unified --new-file --no-dereference orig/ src/)"; \
+	[ -n "$$diff_txt" ] && { \
+		mkdir -p "$(1)/patches"; \
+		echo "$$diff_txt" >"$(1)/patches/000_tlt.patch"; \
+		rm -fr "$(1)/src" && mv "$(1)/orig" "$(1)/src"; \
+	}; \
+	rm -fr "$(1)/orig"; \
+)
+endef
+
 define gpl_install_def
 	$(if $(findstring $(GPL_INCLUDE_SRC),1), \
 		$(call gpl_install_mixed,$(1)) \
@@ -110,7 +158,11 @@ endef
 define Build/InstallGPL/Default
 	$(eval current_dir:=$(shell pwd))
 	$(if $(findstring package/teltonika,$(current_dir)), \
-		$(call gpl_install_def,$(1)) \
+		$(if $(and $(findstring $(GPL_INCLUDE_SRC),1),$(strip $(PKG_UPSTREAM_URL))), \
+			$(call gpl_install_orig_w_patch,$(1)) \
+		, \
+			$(call gpl_install_def,$(1)) \
+		) \
 	, \
 		$(if $(findstring feeds/vuci,$(current_dir)), \
 			$(if $(CONFIG_GPL_INCLUDE_WEB_SOURCES), \

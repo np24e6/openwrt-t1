@@ -37,11 +37,9 @@ Date:   Fri Jan 6 19:49:49 2023 +0900
     Signed-off-by: Leesoo Ahn <lsahn@ooseel.net>
     Signed-off-by: David S. Miller <davem@davemloft.net>
 
-diff --git a/drivers/net/usb/usbnet.c b/drivers/net/usb/usbnet.c
-index 64a9a80b2309..283ffddda821 100644
 --- a/drivers/net/usb/usbnet.c
 +++ b/drivers/net/usb/usbnet.c
-@@ -555,32 +555,30 @@ static int rx_submit (struct usbnet *dev, struct urb *urb, gfp_t flags)
+@@ -539,32 +539,30 @@ static int rx_submit (struct usbnet *dev
  
  /*-------------------------------------------------------------------------*/
  
@@ -80,7 +78,7 @@ index 64a9a80b2309..283ffddda821 100644
  }
  
  /*-------------------------------------------------------------------------*/
-@@ -1514,6 +1512,14 @@ static int rx_alloc_submit(struct usbnet *dev, gfp_t flags)
+@@ -1483,6 +1481,14 @@ err:
  	return ret;
  }
  
@@ -95,7 +93,7 @@ index 64a9a80b2309..283ffddda821 100644
  /*-------------------------------------------------------------------------*/
  
  // tasklet (work deferred from completions, in_irq) or timer
-@@ -1528,15 +1534,14 @@ static void usbnet_bh (struct timer_list *t)
+@@ -1497,15 +1503,14 @@ static void usbnet_bh (struct timer_list
  		entry = (struct skb_data *) skb->cb;
  		switch (entry->state) {
  		case rx_done:

@@ -1,22 +1,42 @@
 #!/bin/sh /etc/rc.common
 
 APP=/usr/bin/opcua_client
+CONFIG="opcua_client"
+
 USE_PROCD=1
 START=99
 STOP=99
 
+GROUPS_ENABLED=0
+
+check_for_enabled_groups() {
+	config_get ENABLED "$1" "enabled" "0"
+
+	[ "$ENABLED" = "0" ] && return
+
+	GROUPS_ENABLED=1
+}
+
 start_service() {
-	config_load opcua_client
-	config_get enabled "main" enabled "0"
-	if [ "$enabled" == "1" ]; then
-		procd_open_instance
-		procd_set_param file /etc/config/opcua_client
-		procd_set_param command /usr/bin/opcua_client
-		procd_set_param respawn ${respawn_threshold:-0} ${respawn_timeout:-60} ${respawn_retry:-0}
-		procd_close_instance
-	fi
+	config_load "$CONFIG"
+
+	config_get enabled "main" "enabled" "0"
+	config_foreach check_for_enabled_groups value_group
+
+	[ "$GROUPS_ENABLED" = "0" ] && [ "$enabled" = "0" ] && return
+
+	procd_open_instance
+	procd_set_param command "$APP"
+	procd_set_param respawn ${respawn_threshold:-0} ${respawn_timeout:-60} ${respawn_retry:-0}
+	procd_close_instance
+}
+
+reload_service() {
+	procd_set_param file /etc/config/opcua_client
+	stop
+	start
 }
 
 service_triggers() {
-	procd_add_reload_trigger "opcua_client"
+	procd_add_reload_trigger "$CONFIG"
 }

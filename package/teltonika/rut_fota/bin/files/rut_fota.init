@@ -12,18 +12,15 @@ rm_cron_entry() {
 }
 
 start_service() {
-	local enabled
-	local hour minute wday
-
-	config_load rut_fota
-	config_get enabled config enabled 0
+	local enabled=$(uci -q get rut_fota.config.enabled)
 	[ $((enabled)) -eq 1 ] || return
+	[ -f "$cron_file" ] && grep -q "$FOTA_ID" "$cron_file" && return
 
 	rm_cron_entry
 
-	minute="$(awk -v min=0 -v max=59 'BEGIN{srand(); print int(min+rand()*(max-min+1))}')"
-	hour="$(($(date +%-H) + 1))"
-	wday="$(date +%w)"
+	local minute="$(awk -v min=0 -v max=59 'BEGIN{srand(); print int(min+rand()*(max-min+1))}')"
+	local hour="$(($(date +%-H) + 1))"
+	local wday="$(date +%w)"
 
 	[ "$hour" -gt 23 ] && {
 		hour=0
@@ -33,12 +30,12 @@ start_service() {
 
 	#Start fota at the next hour random minute, every week.
 	echo "${minute:-0} ${hour:-0} * * ${wday:-0} /sbin/rut_fota --fw_info >/dev/null 2>&1 #$FOTA_ID" >>/etc/crontabs/root
-	/etc/init.d/cron restart
+	/etc/init.d/cron restart &
 }
 
 stop_service() {
 	rm_cron_entry
-	[ $((RESTART)) -eq 0 ] || /etc/init.d/cron restart
+	[ $((RESTART)) -eq 0 ] || /etc/init.d/cron restart &
 }
 
 reload_service() {

@@ -25,7 +25,8 @@ define Package/pam
 endef
 
 define Package/pam/description
-	This application provides PAM methods through ubus
+	Privileged access management (PAM) allows to manage access
+	for different services through TACACS+ or Radius server.
 endef
 
 define Package/pam/conffiles
@@ -48,7 +49,7 @@ define Package/pam/prerm
 	}
 	
 	clean_dropbear() {
-		uci_remove "dropbear" "$$1" "pam"
+		uci_remove "dropbear" "$$1" "pam" 2> /dev/null
 	}
 	
 	config_load "rpcd"

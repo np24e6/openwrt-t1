@@ -25,6 +25,7 @@
 #include "garden.h"
 
 struct session_params {
+  uint8_t url[REDIR_USERURLSIZE];
   uint8_t filteridbuf[256];
   uint8_t filteridlen;
   uint8_t routeidx;
@@ -33,20 +34,10 @@ struct session_params {
   uint64_t maxinputoctets;
   uint64_t maxoutputoctets;
   uint64_t maxtotaloctets;
-  uint64_t warningoctets; /* Data amount over which an SMS warning is sent */
   uint64_t sessiontimeout;
   uint32_t idletimeout;
   uint16_t interim_interval;     /* Seconds. 0 = No interim accounting */
   time_t sessionterminatetime;
-  int period; /* Data limit period */
-  int start;  /* Data limit start point */
-  uint64_t expiration;  /* Expiration time for dynamically allocated users */
-  uint32_t padding;
-  uint8_t url[REDIR_USERURLSIZE];
-
-#define PERIOD_DAY 1
-#define PERIOD_WEEK 2
-#define PERIOD_MONTH 3
 
 #define REQUIRE_UAM_AUTH   (1<<0)
 #define REQUIRE_UAM_SPLASH (1<<1)
@@ -83,22 +74,26 @@ struct redir_state {
 
   char username[REDIR_USERNAMESIZE];
   char userurl[REDIR_USERURLSIZE];
-  char phone[64];
-  char email[128];
-  char signup_password[128];
 
   uint8_t uamchal[REDIR_MD5LEN];
+
+  /* To store the RADIUS CLASS attribute received in the Access Accept */
+  uint8_t classbuf[RADIUS_ATTR_VLEN];
+  size_t classlen;
+
+  /* To store the RADIUS CUI attribute received in the Access Accept */
+  uint8_t cuibuf[RADIUS_ATTR_VLEN];
+  size_t cuilen;
+
+  /* To store the RADIUS STATE attribute between Radius requests */
+  uint8_t statebuf[RADIUS_ATTR_VLEN];
+  uint8_t statelen;
 
   /*  EAP identity of the last request sent */
   uint8_t eap_identity;
 
   /* UAM protocol used */
   uint8_t uamprotocol;
-
-  uint8_t tos:1;
-  uint8_t otp_state:1;
-  int auth_mode; /* user authentication mode */
-  int user_time;
 
 #ifdef ENABLE_USERAGENT
   char useragent[REDIR_USERAGENTSIZE];
@@ -118,15 +113,6 @@ struct redir_state {
   size_t vsalen;
 #endif
 
-  /* To store the RADIUS CLASS attribute received in the Access Accept */
-  uint8_t classbuf[RADIUS_ATTR_VLEN];
-  /* To store the RADIUS CUI attribute received in the Access Accept */
-  uint8_t cuibuf[RADIUS_ATTR_VLEN];
-  /* To store the RADIUS STATE attribute between Radius requests */
-  uint8_t statebuf[RADIUS_ATTR_VLEN];
-  size_t classlen;
-  size_t cuilen;
-  uint8_t statelen;
 } __attribute__((packed));
 
 struct session_state {
@@ -151,16 +137,12 @@ struct session_state {
   time_t last_time; /* Last time a packet was received or sent */
   time_t uamtime;
 
-  int warning_sent_download;
-  int warning_sent_upload;
-
   uint64_t input_packets;
   uint64_t output_packets;
   uint64_t input_octets;
   uint64_t output_octets;
   uint32_t terminate_cause;
   uint32_t session_id;
-  uint32_t terminate_cause_ui;
 
 #ifdef ENABLE_GARDENACCOUNTING
   char garden_sessionid[REDIR_SESSIONID_LEN];
@@ -216,14 +198,5 @@ struct session_state {
 #endif
 
 } __attribute__((packed));
-#ifdef ENABLE_DATABASE
-struct session_history {
-    uint64_t input_packets;
-    uint64_t output_packets;
-    uint64_t input_octets;
-    uint64_t output_octets;
-    uint32_t sessiontime;
-} __attribute__((packed));
-#endif
 
 #endif

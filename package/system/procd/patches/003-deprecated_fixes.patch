@@ -1,0 +1,13 @@
+Index: procd-2021-02-23-37eed131/service/trigger.c
+===================================================================
+--- procd-2021-02-23-37eed131.orig/service/trigger.c
++++ procd-2021-02-23-37eed131/service/trigger.c
+@@ -166,7 +166,7 @@ static void trigger_command_add(struct t
+ 		}
+ 
+ 		/* Extend timer if trigger timeout is bigger than remaining time */
+-		remaining = uloop_timeout_remaining(&cmd->delay);
++		remaining = uloop_timeout_remaining64(&cmd->delay);
+ 		if (remaining < t->timeout)
+ 			uloop_timeout_set(&cmd->delay, t->timeout);
+ 

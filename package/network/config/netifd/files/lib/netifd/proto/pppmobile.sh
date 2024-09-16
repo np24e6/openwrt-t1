@@ -101,7 +101,7 @@ add_hide_dynamic_ipv6_interface() {
 	json_init
 	json_add_string name "$ifname_"
 	json_add_string proto "dhcpv6"
-	json_add_string _area_type "wan"
+	json_add_string area_type "wan"
 	json_add_string device "ppp-$interface"
 
 	json_add_string extendprefix 1

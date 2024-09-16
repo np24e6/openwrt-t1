@@ -1,0 +1,15 @@
+Index: mwan3-2.10.12/files/etc/hotplug.d/iface/15-mwan3
+===================================================================
+--- mwan3-2.10.12.orig/files/etc/hotplug.d/iface/15-mwan3
++++ mwan3-2.10.12/files/etc/hotplug.d/iface/15-mwan3
+@@ -68,6 +68,10 @@ case "$ACTION" in
+ 		mwan3_set_event $INTERFACE
+ 		;;
+ 	ifup)
++		mwan3_get_true_iface true_ifname $INTERFACE
++		network_get_device dev $true_ifname
++		[ -n "$dev" ] && DEVICE=$dev
++
+ 		mwan3_create_iface_iptables $INTERFACE $DEVICE
+ 		mwan3_create_iface_rules $INTERFACE $DEVICE
+ 		mwan3_set_iface_hotplug_state $INTERFACE "$status"

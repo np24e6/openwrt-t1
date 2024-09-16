@@ -6,15 +6,19 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=ntpclient
-PKG_VERSION:=2023-09-01
+PKG_VERSION:=2023-12-08
 PKG_RELEASE:=1
 
 GPL_INCLUDE_SRC:=1
 
-PKG_SOURCE_VERSION:=1.4
+PKG_SOURCE_VERSION:=1.5
 
 PKG_ORIGIN_URL:=https://github.com/Telconet/ntpclient
 PKG_LICENSE:=GPL-2.0
+
+PKG_UPSTREAM_VERSION:=2015_365
+PKG_UPSTREAM_URL:=http://doolittle.icarus.com/ntpclient/
+PKG_UPSTREAM_FILE:=ntpclient_$(PKG_UPSTREAM_VERSION).tar.gz
 
 include $(INCLUDE_DIR)/package.mk
 

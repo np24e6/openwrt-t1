@@ -36,10 +36,15 @@ tacplus_pam_conf() {
 
 	config_get server "$sec" server
 	config_get key "$sec" secret
+	config_get port "$sec" port
 
 	[ -z "$server" ] || [ -z "$key" ] && {
 		logger -t pam "TACACS+ server ip or key is not configured"
 		return
+	}
+
+	[ -z "$port" ] || {
+		server="$server:$port"
 	}
 
 	eval "$var=\"server=${server} secret=${key}\""

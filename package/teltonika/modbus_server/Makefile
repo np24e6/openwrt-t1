@@ -6,7 +6,10 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=modbus_server
-PKG_SOURCE_VERSION:=7.5
+PKG_VERSION:=2023-12-08
+PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
+PKG_SOURCE_VERSION:=7.6
+PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 
 include $(INCLUDE_DIR)/package.mk
 
@@ -14,8 +17,9 @@ define Package/$(PKG_NAME)
 	SECTION:=net
 	CATEGORY:=Network
 	TITLE:=Modbus server daemon by Teltonika
-	DEPENDS:=+libuci +libtlt_uci +libubus +libubox +libjson-c +libblobmsg-json +libmdcollect +libgsm \
-		+vuci-app-modbus-server-ui +IO_SUPPORT:iomand +libmnfinfo +libmodbus +libboardjson +USE_GLIBC:glib2
+	DEPENDS:=+libuci +libtlt_uci +libubus +libubox +libjson-c +libblobmsg-json \
+		 +MOBILE_SUPPORT:libmdcollect +MOBILE_SUPPORT:libgsm \
+		 +vuci-app-modbus-server-ui +IO_SUPPORT:iomand +libmnfinfo +libmodbus +libboardjson
 
 	ifeq (m, $(CONFIG_PACKAGE_modbus_server))
 		PKG_TLT_NAME:=MODBUS Server
@@ -23,11 +27,6 @@ define Package/$(PKG_NAME)
 		PKG_FIRMWARE:=7.0
 	endif
 endef
-
-ifeq ($(CONFIG_USE_GLIBC),y)
-TARGET_CPPFLAGS +=-Dstrlcpy=g_strlcpy
-TARGET_LDFLAGS +=-lglib-2.0
-endif
 
 define Package/$(PKG_NAME)/description
 	Modbus server daemon by Teltonika

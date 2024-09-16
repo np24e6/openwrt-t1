@@ -1,0 +1,13 @@
+Index: hostapd-2023-06-22-599d00be/src/ap/acs.c
+===================================================================
+--- hostapd-2023-06-22-599d00be.orig/src/ap/acs.c
++++ hostapd-2023-06-22-599d00be/src/ap/acs.c
+@@ -456,7 +456,7 @@ static int acs_survey_is_sufficient(stru
+ {
+ 	if (!(survey->filled & SURVEY_HAS_NF)) {
+ 		survey->nf = -95;
+-		wpa_printf(MSG_INFO,
++		wpa_printf(MSG_DEBUG,
+ 			   "ACS: Survey for freq %d is missing noise floor",
+ 			   survey->freq);
+ 	}

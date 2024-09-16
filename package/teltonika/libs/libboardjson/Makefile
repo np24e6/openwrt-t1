@@ -7,7 +7,7 @@ include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=libboardjson
 
-PKG_SOURCE_VERSION:=7.5
+PKG_SOURCE_VERSION:=7.6
 
 GPL_INCLUDE_HEADERS:=1
 

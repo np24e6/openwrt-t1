@@ -14,7 +14,7 @@ Submitted-by: Daniel Golle <daniel@makrotopia.org>
 
 --- a/drivers/net/usb/qmi_wwan.c
 +++ b/drivers/net/usb/qmi_wwan.c
-@@ -1212,6 +1212,7 @@ static const struct usb_device_id produc
+@@ -1456,6 +1456,7 @@ static const struct usb_device_id produc
  	{QMI_MATCH_FF_FF_FF(0x2c7c, 0x0620)},	/* Quectel EM160R-GL */
  	{QMI_MATCH_FF_RAWIP_INTF(0x2c7c, 0x0800, sdx55)},	/* Quectel RM500Q-GL */
  	{QMI_MATCH_FF_RAWIP_INTF(0x2c7c, 0x0801, sdx55)},	/* Quectel RM520N-EU */
@@ -24,7 +24,7 @@ Submitted-by: Daniel Golle <daniel@makrotopia.org>
  	{USB_VENDOR_AND_INTERFACE_INFO(0x2dee, 0xff, 0x10, 0x05)}, //rmnet
 --- a/drivers/usb/serial/option.c
 +++ b/drivers/usb/serial/option.c
-@@ -244,6 +244,8 @@ static void option_instat_callback(struc
+@@ -247,6 +247,8 @@ static void option_instat_callback(struc
  #define UBLOX_PRODUCT_R410M			0x90b2
  /* These Yuga products use Qualcomm's vendor ID */
  #define YUGA_PRODUCT_CLM920_NC5			0x9625
@@ -33,7 +33,7 @@ Submitted-by: Daniel Golle <daniel@makrotopia.org>
  
  #define MEIGLINK_VENDOR_ID 			0x2DEE
  #define MEIG_PRODUCT_SLM790 			0x4D20
-@@ -1188,6 +1190,11 @@ static const struct usb_device_id option
+@@ -1196,6 +1198,11 @@ static const struct usb_device_id option
  	  .driver_info = ZLP },
  	{ USB_DEVICE(QUECTEL_VENDOR_ID, QUECTEL_PRODUCT_BG96),
  	  .driver_info = RSVD(4) },

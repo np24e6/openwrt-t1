@@ -3,10 +3,12 @@
 #
 
 include $(TOPDIR)/rules.mk
+include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=gkeepalive
-PKG_VERSION:=2023-04-07
+PKG_VERSION:=2023-10-03
 PKG_RELEASE:=1
+PKG_SOURCE_VERSION=1.0
 
 
 include $(INCLUDE_DIR)/package.mk
@@ -14,14 +16,13 @@ include $(INCLUDE_DIR)/package.mk
 define Package/gkeepalive
   SECTION:=base
   CATEGORY:=Base system
-  DEPENDS:=+libpcap +libpthread +libtlt-logger
+  DEPENDS:=+libpcap +libpthread +libtlt-logger +libubus
   TITLE:=GRE keepalive
 endef
 
 define Package/gkeepalive/description
   GRE keepalive packet sender/receiver.
 endef
-
 
 
 define Package/gkeepalive/install

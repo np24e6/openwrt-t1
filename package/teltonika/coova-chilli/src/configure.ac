@@ -154,16 +154,7 @@ if test x"$enable_chilliquery" = xyes; then
    AC_DEFINE(ENABLE_CHILLIQUERY,1,[Define to enable chilli_query])
 fi
 
-AC_ARG_ENABLE(ubus, [AS_HELP_STRING([--disable-ubus],[Disable ubus])],
-  enable_ubus=$enableval, enable_ubus=yes)
-
-if test x"$enable_ubus" = xyes; then
-   AC_DEFINE(ENABLE_UBUS,1,[Define to enable ubus])
-fi
-
 AM_CONDITIONAL(WITH_CHILLIQUERY, [test x"$enable_chilliquery" != xno])
-
-AM_CONDITIONAL(WITH_UBUS, [test x"$enable_ubus" != xno])
 
 AC_ARG_ENABLE(leakybucket, [AS_HELP_STRING([--disable-leakybucket],[disable use of leaky bucket shaping])], 
   enable_leakybucket=$enableval, enable_leakybucket=yes)
@@ -215,7 +206,7 @@ if test x"$enable_radproxy" = xyes; then
 fi
 
 AC_ARG_ENABLE(json, [AS_HELP_STRING([--enable-json],[Enable support for JSON])], 
-  enable_json=$enableval, enable_json=yes)
+  enable_json=$enableval, enable_json=no)
 
 if test x"$enable_json" = xyes; then
    AC_DEFINE(ENABLE_JSON,1,[Define to enable Chilli JSON])
@@ -401,9 +392,6 @@ AS_IF([test x"$with_matrixssl" != xno],
   [AC_CHECK_HEADERS([matrixSsl.h matrixSsl/matrixSsl.h])])
 
 AM_CONDITIONAL(WITH_MATRIXSSL, [test x"$with_matrixssl" != xno])
-
-AC_ARG_WITH([cyassl],
- [AS_HELP_STRING([--with-cyassl], [enable support for cyassl])],[],[with_cyassl=no])
 
 AC_ARG_WITH([cyassl],
  [AS_HELP_STRING([--with-cyassl], [enable support for cyassl])],[],[with_cyassl=no])
@@ -609,24 +597,6 @@ if test x"$enable_chilliredir" = xyes; then
 fi
 
 AM_CONDITIONAL(WITH_CHILLIREDIR, [test x"$enable_chilliredir" = xyes])
-
-AC_ARG_ENABLE(database, [AS_HELP_STRING([--enable-database],[Enable support sqlite database])],
-  enable_database=$enableval, enable_database=no)
-
-if test x"$enable_database" = xyes; then
-   AC_DEFINE(ENABLE_DATABASE,1,[Define to enable sqlite database])
-fi
-
-AM_CONDITIONAL(WITH_DATABASE, [test x"$enable_database" = xyes])
-
-AC_ARG_ENABLE(gsm, [AS_HELP_STRING([--enable-gsm],[Enable gsm support])],
-  enable_gsm=$enableval, enable_gsm=no)
-
-if test x"$enable_gsm" = xyes; then
-   AC_DEFINE(ENABLE_GSM,1,[Define to enable gsm support])
-fi
-
-AM_CONDITIONAL(WITH_GSM, [test x"$enable_gsm" = xyes])
 
 AC_ARG_ENABLE(chilliscript, [AS_HELP_STRING([--enable-chilliscript],[Enable support for chilli_script helper])], 
   enable_chilliscript=$enableval, enable_chilliscript=no)
@@ -860,7 +830,7 @@ fi
 AM_CONDITIONAL(WITH_CONFIG, [test x"$enable_config" = xyes])
 
 AC_SUBST(sysconfdir)
-AC_CONFIG_FILES([Makefile
+AC_CONFIG_FILES([Makefile 
 		 bstring/Makefile 
 		 conf/Makefile
 		 debian/Makefile

@@ -7,7 +7,7 @@ include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=mnfinfo
 
-PKG_SOURCE_VERSION:=2.12
+PKG_SOURCE_VERSION:=2.13
 
 GPL_INCLUDE_HEADERS:=1
 
@@ -24,7 +24,7 @@ define Package/libmnfinfo
   SECTION:=libs
   CATEGORY:=Libraries
   TITLE:=Device mnf-info API library
-  DEPENDS:=+libubus +libubox
+  DEPENDS:=+libubus +libubox +libboardjson
 endef
 
 define Package/rpcd-mod-mnfinfo
@@ -47,7 +47,16 @@ define Package/mnfinfo/install
 
 	if [ $(TLT_PLATFORM_X86_64) ]; then \
 		$(INSTALL_DIR) $(1)/lib/firmware; \
-		$(CP) $(PKG_BUILD_DIR)/mnfinfo.bin $(1)/lib/firmware/; \
+		$(INSTALL_DIR) $(1)/lib/firmware/mnfinfo; \
+		$(CP) $(PKG_BUILD_DIR)/x86_data/mac $(1)/lib/firmware/mnfinfo/mac; \
+		$(CP) $(PKG_BUILD_DIR)/x86_data/name $(1)/lib/firmware/mnfinfo/name; \
+		$(CP) $(PKG_BUILD_DIR)/x86_data/wps $(1)/lib/firmware/mnfinfo/wps; \
+		$(CP) $(PKG_BUILD_DIR)/x86_data/batch $(1)/lib/firmware/mnfinfo/batch; \
+		$(CP) $(PKG_BUILD_DIR)/x86_data/hwver $(1)/lib/firmware/mnfinfo/hwver; \
+		$(CP) $(PKG_BUILD_DIR)/x86_data/simpin1 $(1)/lib/firmware/mnfinfo/simpin1; \
+		$(CP) $(PKG_BUILD_DIR)/x86_data/simpin2 $(1)/lib/firmware/mnfinfo/simpin2; \
+		$(CP) $(PKG_BUILD_DIR)/x86_data/wpass $(1)/lib/firmware/mnfinfo/wpass; \
+		$(CP) $(PKG_BUILD_DIR)/x86_data/pass $(1)/lib/firmware/mnfinfo/pass; \
 	fi
 endef
 

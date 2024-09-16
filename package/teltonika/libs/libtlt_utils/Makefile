@@ -7,7 +7,7 @@ include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=libtlt_utils
 
-PKG_SOURCE_VERSION:=1.3
+PKG_SOURCE_VERSION:=1.4
 
 GPL_INCLUDE_HEADERS:=1
 

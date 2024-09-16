@@ -1,0 +1,17 @@
+Index: mwan3-2.10.12/files/etc/hotplug.d/iface/15-mwan3
+===================================================================
+--- mwan3-2.10.12.orig/files/etc/hotplug.d/iface/15-mwan3
++++ mwan3-2.10.12/files/etc/hotplug.d/iface/15-mwan3
+@@ -74,7 +74,10 @@
+ 		if [ "$MWAN3_STARTUP" != "init" ]; then
+ 			mwan3_create_iface_route $INTERFACE $DEVICE
+ 			mwan3_set_general_rules
+-			[ "$status" = "online" ] && mwan3_set_policies_iptables
++			[ "$status" = "online" ] && {
++				mwan3_set_policies_iptables
++				mwan3_set_event $INTERFACE
++			}
+ 		fi
+ 		[ "$ACTION" = ifup ] && procd_running mwan3 "track_$INTERFACE" && procd_send_signal mwan3 "track_$INTERFACE" USR2
+ 		;;
+

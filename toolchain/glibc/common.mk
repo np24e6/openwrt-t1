@@ -7,14 +7,14 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=glibc
-PKG_VERSION:=2.33
-PKG_RELEASE:=2
+PKG_VERSION:=2.38
+PKG_RELEASE:=1
 
 PKG_SOURCE_PROTO:=git
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
-PKG_SOURCE_VERSION:=b5711025bc138c0c94d90b2015d57eda404decbe
-PKG_MIRROR_HASH:=6910af6ca27ea80e600c59fad25d88c51618928316f3bfcc78ad2f0c1794da16
-PKG_SOURCE_URL:=https://gitlab.com/gnutools/glibc.git
+PKG_SOURCE_VERSION:=750a45a783906a19591fb8ff6b7841470f1f5701
+PKG_MIRROR_HASH:=4d5b3de6ec7b47427700f74fdb529e32083b54a512f6ca86ec824a61092ecdd4
+PKG_SOURCE_URL:=https://sourceware.org/git/glibc.git
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION)-$(PKG_SOURCE_VERSION).tar.xz
 
 HOST_BUILD_DIR:=$(BUILD_DIR_TOOLCHAIN)/$(PKG_SOURCE_SUBDIR)
@@ -60,10 +60,12 @@ GLIBC_CONFIGURE:= \
 		--without-gd \
 		--without-cvs \
 		--enable-add-ons \
+		--enable-crypt \
 		--$(if $(CONFIG_SOFT_FLOAT),without,with)-fp \
 		  $(if $(CONFIG_PKG_CC_STACKPROTECTOR_REGULAR),--enable-stack-protector=yes) \
 		  $(if $(CONFIG_PKG_CC_STACKPROTECTOR_STRONG),--enable-stack-protector=strong) \
-		--enable-kernel=4.14.0
+		  $(if $(CONFIG_PKG_RELRO_FULL),--enable-bind-now) \
+		--enable-kernel=5.4.0
 
 export libc_cv_ssp=no
 export libc_cv_ssp_strong=no
@@ -78,11 +80,6 @@ define Host/SetToolchainInfo
 endef
 
 define Host/Configure
-	[ -f $(HOST_BUILD_DIR)/.autoconf ] || { \
-		cd $(HOST_BUILD_DIR)/; \
-		autoconf --force && \
-		touch $(HOST_BUILD_DIR)/.autoconf; \
-	}
 	mkdir -p $(CUR_BUILD_DIR)
 	( cd $(CUR_BUILD_DIR); rm -f config.cache; \
 		$(GLIBC_CONFIGURE) \

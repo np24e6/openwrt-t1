@@ -98,12 +98,19 @@ append_secret_by_type() {
 	type="$1"
 	id_slct="$2"
 	scrt="$3"
+	decryption_key="$4"
 
 	[ -z "$scrt" ] && return
 
 	case "${scrt::2}" in
 	0x|0s) secret_xappend "${id_slct} : $type $scrt";;
-	*) secret_xappend "${id_slct} : $type \"$scrt\"";;
+	*)
+		if [ -n "$decryption_key" ]; then
+			secret_xappend "${id_slct} : $type $scrt \"$decryption_key\""
+		else
+			secret_xappend "${id_slct} : $type \"$scrt\""
+		fi
+		;;
 	esac
 }
 
@@ -340,16 +347,16 @@ config_conn() {
 	if [ "$auth_method" = "psk" ]; then
 		ipsec_xappend "  leftauth=psk"
 		ipsec_xappend "  rightauth=psk"
-		[ "$remote_sourceip" != "" ] && ipsec_xappend "  rightsourceip=${remote_sourceip// /,}"
-		[ "$remote_subnet" != "" ] && [ "$comp_mode" -ne 1 ] && \
-			ipsec_xappend "  rightsubnet=${remote_subnet// /,}"
+		[ -n "$remote_sourceip" ] && ipsec_xappend "  rightsourceip=${remote_sourceip// /,}"
+		[ -n "$remote_subnet" ] && [ "$comp_mode" -ne 1 ] && \
+		ipsec_xappend "  rightsubnet=${remote_subnet// /,}"
 		ipsec_xappend "  auto=$mode"
 	elif [ "$auth_method" = "x509" ]; then
 		ipsec_xappend "  leftcert=$leftcert"
 		ipsec_xappend "  rightcert=$rightcert"
-		[ "$remote_sourceip" != "" ] && ipsec_xappend "  rightsourceip=${remote_sourceip// /,}"
-		[ "$remote_subnet" != "" ] && [ "$comp_mode" -ne 1 ] && \
-			ipsec_xappend "  rightsubnet=${remote_subnet// /,}"
+		[ -n "$remote_sourceip" ] && ipsec_xappend "  rightsourceip=${remote_sourceip// /,}"
+		[ -n "$remote_subnet" ] && [ "$comp_mode" -ne 1 ] && \
+		ipsec_xappend "  rightsubnet=${remote_subnet// /,}"
 		ipsec_xappend "  auto=$mode"
 	elif [ "$auth_method" = "eap-mschapv2" ]; then
 		ipsec_xappend "  leftauth=pubkey"
@@ -357,9 +364,16 @@ config_conn() {
 		ipsec_xappend "  rightauth=eap-mschapv2"
 		ipsec_xappend "  eap_identity=%any"
 		ipsec_xappend "  rekey=no"
-		[ "$remote_sourceip" != "" ] && ipsec_xappend "  rightsourceip=${remote_sourceip// /,}"
-		[ "$remote_subnet" != "" ] && [ "$comp_mode" -ne 1 ] && \
-			ipsec_xappend "  rightsubnet=${remote_subnet// /,}"
+		[ -n "$remote_sourceip" ] && ipsec_xappend "  rightsourceip=${remote_sourceip// /,}"
+		[ -n "$remote_subnet" ] && [ "$comp_mode" -ne 1 ] && \
+		ipsec_xappend "  rightsubnet=${remote_subnet// /,}"
+		ipsec_xappend "  auto=$mode"
+	elif [ "$auth_method" = "pkcs12" ]; then
+		ipsec_xappend "  leftauth=pubkey"
+		ipsec_xappend "  rightauth=pubkey"
+		[ -n "$remote_sourceip" ] && ipsec_xappend "  rightsourceip=${remote_sourceip// /,}"
+		[ -n "$remote_subnet" ] && [ "$comp_mode" -ne 1 ] && \
+		ipsec_xappend "  rightsubnet=${remote_subnet// /,}"
 		ipsec_xappend "  auto=$mode"
 	else
 		warning "AuthenticationMethod $auth_method not supported"
@@ -382,9 +396,9 @@ config_conn() {
 	[ -n "$local_updown" ] &&		ipsec_xappend "  leftupdown=$local_updown"
 	[ -n "$remote_updown" ] &&		ipsec_xappend "  rightupdown=$remote_updown"
 	[ -n "$rightdns" ] &&			ipsec_xappend "  rightdns=${rightdns// /,}"
-	[ -n "$leftprotoport" ] &&			ipsec_xappend "  leftprotoport=$leftprotoport"
-	[ -n "$rightprotoport" ] &&			ipsec_xappend "  rightprotoport=$rightprotoport"
-	[ -n "$packet_marker" ] && ipsec_xappend "  mark=$packet_marker"
+	[ -n "$leftprotoport" ] &&		ipsec_xappend "  leftprotoport=$leftprotoport"
+	[ -n "$rightprotoport" ] &&		ipsec_xappend "  rightprotoport=$rightprotoport"
+	[ -n "$packet_marker" ] &&		ipsec_xappend "  mark=$packet_marker"
 
 	[ "$aggressive" -eq 1 ] && ipsec_xappend "  aggressive=yes" || \
 		ipsec_xappend "  aggressive=no"
@@ -419,7 +433,7 @@ config_transport() {
 config_remote() {
 	local enabled
 	local gateway
-	local pre_shared_key
+	local pre_shared_key pkcs12_path pkcs12_decrypt
 	local auth_method
 	local local_identifier
 	local remote_identifier
@@ -461,6 +475,8 @@ config_remote() {
 	config_get cacert            "$1" cacert ""
 	config_get LEFT              "$1" left "%any"
 	config_get keyexchange	     "${1}_c" keyexchange ""
+	config_get pkcs12_path       "$1" "pkcs12_path"
+	config_get pkcs12_decrypt    "$1" "pkcs12_decrypt"
 
 	[ "$gateway" = "any" ] && remote_gateway="%any" || {
 		remote_gateway="$gateway"
@@ -481,12 +497,13 @@ config_remote() {
 		#~ network_get_gateway local_gateway $wan
 	#~ }
 
-	[ -n "$pre_shared_key" ] || [ -n "$key" ] && {
+	[ -n "$pre_shared_key" ] || [ -n "$key" ] || [ -n "$pkcs12_path" ] && {
 		[ -n "$local_identifier" ] && secret_xappend -n "$local_identifier " || secret_xappend -n "$local_gateway "
 		[ -n "$remote_identifier" ] && secret_xappend -n "$remote_identifier" || secret_xappend -n "$remote_gateway"
-
 		if [ -n "$pre_shared_key" ]; then
 			append_secret_by_type PSK "" "$pre_shared_key"
+		elif [ -n "$pkcs12_path" ]; then
+			secret_xappend " : P12 $pkcs12_path ${pkcs12_decrypt:+\"$pkcs12_decrypt\"}"
 		else
 			[ -n "$key_decrypt" ] && key_decrypt="\"$key_decrypt\""
 			secret_xappend " : ${key:+RSA $key $key_decrypt}"
@@ -583,15 +600,18 @@ config_ipsec() {
 }
 
 config_secrets() {
-	local id_selector type secret
+	local id_selector type secret key key_decrypt pkcs12_path pkcs12_decrypt
 
-	config_get id_selector "$1" id_selector
-	config_get type "$1" type
-	config_get secret "$1" secret
-	config_get key "$1" key
-	config_get key_decrypt "$1" key_decrypt
+	config_get id_selector    "$1" "id_selector"
+	config_get type           "$1" "type"
+	config_get secret         "$1" "secret"
+	config_get key            "$1" "key"
+	config_get key_decrypt    "$1" "key_decrypt"
+	config_get pkcs12_path    "$1" "pkcs12_path"
+	config_get pkcs12_decrypt "$1" "pkcs12_decrypt"
 
 	[ -n "$key" ] && [ "$type" = "rsa" ] && secret="${key}${key_decrypt:+ \"$key_decrypt\"}"
+	[ -n "$pkcs12_path" ] && [ "$type" = "pkcs12" ] && secret="${pkcs12_path}${pkcs12_decrypt:+ \"$pkcs12_decrypt\"}"
 	[ -z "$secret" ] && return 1
 
 	case "$type" in
@@ -599,6 +619,7 @@ config_secrets() {
 		xauth) append_secret_by_type XAUTH "${id_selector}" "$secret";;
 		rsa) secret_xappend "${id_selector} : RSA $secret";;
 		eap) append_secret_by_type EAP "${id_selector}" "$secret";;
+		pkcs12) secret_xappend "${id_selector} : P12 $secret";;
 	esac
 }
 
@@ -661,6 +682,9 @@ service_triggers() {
 }
 
 start_service() {
+	# only run if "remote" section exists in config
+	uci -q get ipsec.@remote[0] &>/dev/null || return
+
 	prepare_env
 
 	[ $WAIT_FOR_INTF -eq 1 ] && return

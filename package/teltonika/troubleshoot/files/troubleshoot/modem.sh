@@ -5,6 +5,15 @@ get_func get_network_info get_signal_query get_serving_cell get_neighbour_cells 
 get_net_greg_stat get_net_ereg_stat get_net_5greg_stat get_service_provider get_mbn_list get_ps_att_state \
 get_pdp_ctx_list get_active_pdp_ctx_list get_pdp_addr_list get_ims_state get_volte_state"
 
+methods_with_args="get_time{\"mode\":\"gmt\"} get_time{\"mode\":\"local\"} get_pdp_call{\"cid\":1}"
+
+invoke_ubus_with_args() {
+	method=$(echo "$1" | sed "s/{/ &/")
+	cmd="$(ubus call "$2" $method 2>&1)"
+	[ "$cmd" = "Command failed: Operation not supported" ] && return
+	printf "%s:\n%s\n" "$method" "$cmd" >>"$3"
+}
+
 get_special_info() {
 	modem_num="$2"
 	model="$1"
@@ -64,6 +73,11 @@ get_gsm_info() {
 				cmd="$(ubus call "$mdm" "$method_name" 2>&1)"
 				[ "$cmd" = "Command failed: Operation not supported" ] && continue
 				printf "%s:\n%s\n" "$method_name" "$cmd" >>"$log_file"
+			done
+
+			#foreach methods_with_args
+			for method in $methods_with_args; do
+				invoke_ubus_with_args "$method" "$mdm" "$log_file"
 			done
 
 			json_init

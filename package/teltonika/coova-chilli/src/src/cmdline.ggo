@@ -166,36 +166,6 @@ option "defidletimeout" - "Default idle-timeout if not returned by RADIUS" int d
 option "defbandwidthmaxdown" - "Default WISPr-Bandwidth-Max-Down if not returned by RADIUS" long default="0" no
 option "defbandwidthmaxup" - "Default WISPr-Bandwidth-Max-Up if not returned by RADIUS" long default="0" no
 option "definteriminterval" - "Default interim-interval for accounting if not returned by RADIUS" int default="300" no
-option "defmaxdownload" - "Default CoovaChilli-Max-Input-Octets if not returned by RADIUS" long default="0" no
-option "defmaxupload" - "Default CoovaChilli-Max-Output-Octets if not returned by RADIUS" long default="0" no
-option "defwarning" - "Default CoovaChilli-Warning-Octets if not returned by RADIUS" long default="0" no
-option "deflimitperiod" - "Default period for data limit calculations" int default="0" no
-option "deflimitstart" - "Default start point for data limit calculations" int default="0" no
-option "defexpirationtime" - "Default expiration time for dynamically allocated ussers" long default="0" no
-
-option "dynsessiontimeout" - "Dynamically created user session-timeout if not returned by RADIUS" long default="0" no
-option "dynidletimeout" - "Dynamically created user idle-timeout if not returned by RADIUS" int default="0" no
-option "dynbandwidthmaxdown" - "Dynamically created user WISPr-Bandwidth-Max-Down if not returned by RADIUS" long default="0" no
-option "dynbandwidthmaxup" - "Dynamically created user WISPr-Bandwidth-Max-Up if not returned by RADIUS" long default="0" no
-option "dyninteriminterval" - "Dynamically created user interim-interval for accounting if not returned by RADIUS" int default="300" no
-option "dynmaxdownload" - "Dynamically created user CoovaChilli-Max-Input-Octets if not returned by RADIUS" long default="0" no
-option "dynmaxupload" - "Dynamically created user CoovaChilli-Max-Output-Octets if not returned by RADIUS" long default="0" no
-option "dynwarning" - "Dynamically created user CoovaChilli-Warning-Octets if not returned by RADIUS" long default="0" no
-option "dynlimitperiod" - "Dynamically created user period for data limit calculations" int default="0" no
-option "dynlimitstart" - "Dynamically created user start point for data limit calculations" int default="0" no
-option "dynexpirationtime" - "Expiration time for dynamically allocated ussers" long default="0" no
-
-option "trialsessiontimeout" - "Trial session session-timeout if not returned by RADIUS" long default="0" no
-option "trialidletimeout" - "Trial session idle-timeout if not returned by RADIUS" int default="0" no
-option "trialbandwidthmaxdown" - "Trial session WISPr-Bandwidth-Max-Down if not returned by RADIUS" long default="0" no
-option "trialbandwidthmaxup" - "Trial session WISPr-Bandwidth-Max-Up if not returned by RADIUS" long default="0" no
-option "trialinteriminterval" - "Trial session interim-interval for accounting if not returned by RADIUS" int default="300" no
-option "trialmaxdownload" - "Trial session CoovaChilli-Max-Input-Octets if not returned by RADIUS" long default="0" no
-option "trialmaxupload" - "Trial session CoovaChilli-Max-Output-Octets if not returned by RADIUS" long default="0" no
-option "trialwarning" - "Trial session CoovaChilli-Warning-Octets if not returned by RADIUS" long default="0" no
-option "triallimitperiod" - "Trial session period for data limit calculations" int default="0" no
-option "triallimitstart" - "Trial session start point for data limit calculations" int default="0" no
-option "trialexpirationtime" - "Trial session expiration time" long default="0" no
 
 option "bwbucketupsize" - "Define the up-bound 'leaky bucket' size" int default="0" no
 option "bwbucketdnsize" - "Define the down-bound 'leaky bucket' size" int default="0" no
@@ -324,35 +294,4 @@ option "rfc7710uri" - "DHCP Captive Portal URI. Defaults to http://uamlisten:uam
 option "ipv6" - "Enable IPv6 support" flag off
 option "ipv6mode" - "IPv6 mode is either 6and4 (default), 4to6, or 6to4" string no
 option "ipv6only" - "Enable IPv6-Only" flag off
-
-#Custom options
-option "successuserurl" - "Do not return to the UAM server on success, original url instead" flag  off
-option "successurlcustom" - "Return to the custom URL on success. Overwrites 'successuserurl' option" string no
-option "dbpath" - "Path to the statistics database" string no
-option "usersdbpath" - "Path to the users database" string no
-option "smsusers"    - "Enable SMS OTP for authentication" flag   off
-option "duplicateusers"    - "Enable same SMS OTP for more than one user" flag	off
-option "macusers"    - "Enable mac users for authentication" flag   off
-option "trialusers"    - "Enable trial logins" flag   off
-option "macpass"    - "Protects MAC users with password" string no
-option "registerusers"    - "Enable signup to create new users" flag   off
-option "modemid" - "GSM modem id" string no
-option "usersignup"     - "Script to run after user has been created" string no
-option "tos"    - "Enable Terms Of Service requirement" flag   off
-
-option "paramuamip"     - "Overwrites uamip parameter name" string no
-option "paramuamport"     - "Overwrites uamport parameter name" string no
-option "paramcalled"     - "Overwrites called parameter name" string no
-option "parammac"     - "Overwrites mac parameter name" string no
-option "paramip"     - "Overwrites ip parameter name" string no
-option "paramnasid"     - "Overwrites nasid parameter name" string no
-option "paramsessionid"     - "Overwrites sessionid parameter name" string no
-option "paramuserurl"     - "Overwrites userurl parameter name" string no
-option "paramchallenge"     - "Overwrites challenge parameter name" string no
-option "param1"     - "Adds custom parameter to redirect url" string no
-option "param1value"     - "The value of custom parameter" string no
-option "param2"     - "Adds custom parameter to redirect url" string no
-option "param2value"     - "The value of custom parameter" string no
-
-option "testtime"    - "Disables CLOCK_MONOTONIC and use CLOCK_REALTIME instead" flag   off
 

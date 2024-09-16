@@ -23,6 +23,9 @@ PKG_LICENSE_FILES:=
 PKG_MAINTAINER:=Felix Fietkau <nbd@nbd.name>
 
 PKG_BUILD_PARALLEL:=0
+
+PKG_CONFIG_DEPENDS:= CONFIG_UCI_LOG_SUPPORT
+
 include $(INCLUDE_DIR)/package.mk
 include $(INCLUDE_DIR)/cmake.mk
 
@@ -33,8 +36,12 @@ define Package/libuci
   SECTION:=libs
   CATEGORY:=Libraries
   TITLE:=C library for the Unified Configuration Interface (UCI)
-  DEPENDS:=+libubox
+  DEPENDS:=+libubox +UCI_LOG_SUPPORT:libubus
   ABI_VERSION:=20130104
+endef
+
+define Package/libuci/config
+  source "$(SOURCE)/Config.in"
 endef
 
 define Package/uci
@@ -56,7 +63,8 @@ TARGET_LDFLAGS += -L$(STAGING_DIR)/usr/lib
 
 CMAKE_OPTIONS += \
 	-DLUAPATH=/usr/lib/lua \
-	$(if $(DEBUG),-DUCI_DEBUG=ON)
+	$(if $(DEBUG),-DUCI_DEBUG=ON) \
+	$(if $(CONFIG_UCI_LOG_SUPPORT),-DUCI_LOGGING=ON)
 
 define Package/libuci/install
 	$(INSTALL_DIR) $(1)/lib

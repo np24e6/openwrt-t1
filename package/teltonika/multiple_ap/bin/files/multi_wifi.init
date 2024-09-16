@@ -1,13 +1,15 @@
 #!/bin/sh /etc/rc.common
 
-. /lib/functions.sh
-
 START=99
 STOP=51
 USE_PROCD=1
 
 start_service() {
 	config_load multi_wifi
+	config_get enabled general enabled "0"
+
+	[ "$enabled" -eq 1 ] || return
+
 	config_get scan_time general scan_time "0"
 
 	procd_open_instance

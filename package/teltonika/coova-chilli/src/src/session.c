@@ -101,11 +101,6 @@ int session_json_params(struct session_state *state,
     bassignformat(tmp, "%lld", params->maxtotaloctets);
     bconcat(json, tmp);
   }
-  if (params->warningoctets) {
-    bcatcstr(json,",\"warningOctets\":");
-    bassignformat(tmp, "%lld", params->warningoctets);
-    bconcat(json, tmp);
-  }
 
   bdestroy(tmp);
   return 0;

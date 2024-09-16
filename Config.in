@@ -42,3 +42,7 @@ source "target/sdk/Config.in"
 source "target/toolchain/Config.in"
 
 source "tmp/.config-package.in"
+
+if BUILD_FACTORY_TEST_IMAGE
+source "target/linux/*/Config-factory.in"
+endif

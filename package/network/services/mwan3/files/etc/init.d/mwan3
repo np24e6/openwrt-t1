@@ -1,15 +1,11 @@
 #!/bin/sh /etc/rc.common
 
-. "${IPKG_INSTROOT}/lib/mwan3/common.sh"
-. "${IPKG_INSTROOT}/lib/functions/network.sh"
-. "${IPKG_INSTROOT}/lib/mwan3/mwan3.sh"
-
 START=19
 USE_PROCD=1
 SCRIPTNAME="mwan3-init"
 
 service_running() {
-	[ -d "$MWAN3_STATUS_DIR" ]
+	[ -d "/var/run/mwan3" ]
 }
 
 start_tracker() {
@@ -25,8 +21,27 @@ start_tracker() {
 	procd_close_instance
 }
 
+enabled_count(){
+	local enabled
+	interface=$1
+	config_get_bool enabled "$interface" 'enabled' '0'
+	[ "$enabled" -eq 0 ] && return
+
+	if_enabled=1
+	break
+}
+
 start_service() {
 	local enabled hotplug_pids
+	local if_enabled=0
+
+	config_load mwan3
+	config_foreach enabled_count interface
+	[ "$if_enabled" -eq 0 ] && return
+
+	. "${IPKG_INSTROOT}/lib/mwan3/common.sh"
+	. "${IPKG_INSTROOT}/lib/functions/network.sh"
+	. "${IPKG_INSTROOT}/lib/mwan3/mwan3.sh"
 
 	mwan3_init
 	config_foreach start_tracker interface
@@ -57,6 +72,10 @@ start_service() {
 
 stop_service() {
 	local ipset rule IP IPTR IPT family table tid
+
+	. "${IPKG_INSTROOT}/lib/mwan3/common.sh"
+	. "${IPKG_INSTROOT}/lib/functions/network.sh"
+	. "${IPKG_INSTROOT}/lib/mwan3/mwan3.sh"
 
 	mwan3_init
 	config_foreach mwan3_interface_shutdown interface

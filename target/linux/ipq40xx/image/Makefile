@@ -34,7 +34,8 @@ define Device/teltonika_rutx
 	BLOCKSIZE := 128k
 	PAGESIZE := 2048
 	FILESYSTEMS := squashfs
-	DEVICE_FEATURES := usb-port gps serial modbus io wifi bt dualsim port-mirror ntrip hw-offload
+	DEVICE_FEATURES := usb-port gps serial modbus io wifi bt dualsim \
+			port-mirror ntrip hw-offload mobile
 	# Default common packages for RUTX series
 	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	# Essential must-have:
@@ -47,7 +48,7 @@ define Device/teltonika_rutx
 	DEVICE_PACKAGES += kmod-usb-uhci
 
 	# Uncaterizored stuff
-	DEVICE_PACKAGES.basic += kmod-r2ec stm32flasher crconf
+	DEVICE_PACKAGES.basic := kmod-r2ec stm32flasher crconf
 
 	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	KERNEL_IN_UBI := 1

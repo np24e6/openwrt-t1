@@ -1,0 +1,61 @@
+--- a/uci.c
++++ b/uci.c
+@@ -1321,7 +1321,7 @@ rpc_uci_trigger_event(struct ubus_contex
+ }
+ 
+ static int
+-rpc_uci_revert_commit(struct ubus_context *ctx, struct blob_attr *msg, bool commit)
++rpc_uci_revert_commit(struct ubus_context *ctx, struct blob_attr *msg, bool commit, bool log)
+ {
+ 	struct blob_attr *tb[__RPC_C_MAX];
+ 	struct uci_package *p = NULL;
+@@ -1345,7 +1345,14 @@ rpc_uci_revert_commit(struct ubus_contex
+ 	{
+ 		if (!uci_load(cursor, ptr.package, &p))
+ 		{
+-			uci_commit(cursor, &p, false);
++			if (log)
++			{
++				uci_logged_commit(cursor, &p, false);
++			}
++			else
++			{
++				uci_commit(cursor, &p, false);
++			}
+ 			uci_unload(cursor, p);
+ 			rpc_uci_trigger_event(ctx, blobmsg_get_string(tb[RPC_C_CONFIG]));
+ 		}
+@@ -1367,7 +1374,7 @@ rpc_uci_revert(struct ubus_context *ctx,
+                struct ubus_request_data *req, const char *method,
+                struct blob_attr *msg)
+ {
+-	return rpc_uci_revert_commit(ctx, msg, false);
++	return rpc_uci_revert_commit(ctx, msg, false, false);
+ }
+ 
+ static int
+@@ -1375,7 +1382,15 @@ rpc_uci_commit(struct ubus_context *ctx,
+                struct ubus_request_data *req, const char *method,
+                struct blob_attr *msg)
+ {
+-	return rpc_uci_revert_commit(ctx, msg, true);
++	return rpc_uci_revert_commit(ctx, msg, true, false);
++}
++
++static int
++rpc_uci_logged_commit(struct ubus_context *ctx, struct ubus_object *obj,
++               struct ubus_request_data *req, const char *method,
++               struct blob_attr *msg)
++{
++	return rpc_uci_revert_commit(ctx, msg, true, true);
+ }
+ 
+ static int
+@@ -1771,6 +1786,7 @@ int rpc_uci_api_init(struct ubus_context
+ 		UBUS_METHOD("changes",  rpc_uci_changes,  rpc_uci_config_policy),
+ 		UBUS_METHOD("revert",   rpc_uci_revert,   rpc_uci_config_policy),
+ 		UBUS_METHOD("commit",   rpc_uci_commit,   rpc_uci_config_policy),
++		UBUS_METHOD("logged_commit",   rpc_uci_logged_commit,   rpc_uci_config_policy),
+ 		UBUS_METHOD("apply",    rpc_uci_apply,    rpc_uci_apply_policy),
+ 		UBUS_METHOD("confirm",  rpc_uci_confirm,  rpc_uci_rollback_policy),
+ 		UBUS_METHOD("rollback", rpc_uci_rollback, rpc_uci_rollback_policy),

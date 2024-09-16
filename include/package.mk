@@ -303,15 +303,21 @@ define Package/$(1)/description
 endef
 endif
 
-ifndef Package/$(1)/geninfo
-define Package/$(1)/geninfo
+ifndef Package/$(1)/description_detail
+define Package/$(1)/description_detail
+	$(TITLE)
+endef
+endif
+
+ifndef Package/geninfo
+define Package/geninfo
 	printf "%s," \
-		"$(1)" \
+		"$(PKG_NAME)" \
 		"$(VERSION)" \
 		"$(LICENSE)" \
 		"$(call Download/ParseURL,$(firstword $(PKG_ORIGIN_URL)))" \
-		>> "$(BIN_DIR)/rutos-$(CONFIG_TARGET_BOARD)-package-geninfo.csv"; \
-	printf "\n" >> "$(BIN_DIR)/rutos-$(CONFIG_TARGET_BOARD)-package-geninfo.csv"
+		>> "$(GENINFO_FILE)"; \
+	printf "\n" >> "$(GENINFO_FILE)"
 endef
 endif
 
@@ -429,12 +435,8 @@ CROSS=$(TARGET_CROSS);\
 ARCH=$(ARCH)" > "$(TMP_DIR)/.tc"; \
 	)
 
-define GenInfo
-	$(foreach m,$(BUILD_PACKAGES),$(if $(CONFIG_PACKAGE_$(m)),$(call Package/$(m)/geninfo);))
-endef
-
 geninfo:
 	$(if $(findstring package/teltonika,$(shell pwd)), \
-		$(if $(GPL_INCLUDE_SRC),$(call GenInfo)), \
-		$(if $(findstring feeds/vuci,$(shell pwd)),,$(call GenInfo)) \
+		$(if $(GPL_INCLUDE_SRC),$(call Package/geninfo)), \
+		$(if $(findstring feeds/vuci,$(shell pwd)),,$(call Package/geninfo)) \
 	)

@@ -69,8 +69,8 @@
  	printf("\t--tmp-dir		Specify tmp-dir.\n");
  	printf("\t-l			Specify lists-dir.\n");
  	printf("\t--lists-dir		Specify lists-dir.\n");
-+	printf("\t-e <conf_file>			Specify feeds file.\n");
-+	printf("\t--force-feeds	<conf_file>	Specify feeds file.\n");
++	printf("\t-e <file>		Specify feeds file.\n");
++	printf("\t--force_feeds <file>	Specify feeds file.\n");
  
  	printf("\n");
  

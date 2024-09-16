@@ -40,15 +40,11 @@ config COOVACHILLI_MULTILAN
 	default y
 
 config COOVACHILLI_DATABASE
-    bool "Enbaled support for sqlite database"
-    default y
-
-config COOVACHILLI_GSM
-    bool "Enbaled GSM support"
+    bool "Enable support for sqlite database"
     default y
 
 config COOVACHILLI_UBUS
-    bool "Enbaled UBUS support"
+    bool "Enable UBUS support"
     default y
 
 choice

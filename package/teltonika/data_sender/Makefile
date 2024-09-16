@@ -3,7 +3,7 @@ include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=data-sender
 
-PKG_SOURCE_VERSION:=1.3.1
+PKG_SOURCE_VERSION:=1.4
 
 PKG_FIXUP:=autoreconf
 
@@ -39,6 +39,12 @@ define Package/data-sender-mod-modbus
   $(call Package/data-sender/Default)
   DEPENDS:=data-sender +libsqlite3
   TITLE:=Input plugin for modbus data gathering
+endef
+
+define Package/data-sender-mod-modbus_alarm
+	$(call Package/data-sender/Default)
+	DEPENDS:=data-sender
+	TITLE:=Input plugin for modbus alarm gathering
 endef
 
 define Package/data-sender-mod-dnp3
@@ -236,6 +242,7 @@ CONFIGURE_ARGS += \
 		$(if $(CONFIG_PACKAGE_data-sender-mod-chilli),--enable-chilli) \
 		$(if $(CONFIG_PACKAGE_data-sender-mod-io),--enable-io) \
 		$(if $(CONFIG_PACKAGE_data-sender-mod-modbus),--enable-modbus) \
+		$(if $(CONFIG_PACKAGE_data-sender-mod-modbus_alarm),--enable-modbus_alarm) \
 		$(if $(CONFIG_PACKAGE_data-sender-mod-mbus),--enable-mbus) \
 		$(if $(CONFIG_PACKAGE_data-sender-mod-dnp3),--enable-dnp3) \
 		$(if $(CONFIG_PACKAGE_data-sender-mod-opcua),--enable-opcua) \
@@ -279,6 +286,7 @@ endef
 $(eval $(call BuildPackage,data-sender))
 $(eval $(call BuildPlugin,bluetooth,input_bluetooth))
 $(eval $(call BuildPlugin,modbus,input_modbus))
+$(eval $(call BuildPlugin,modbus_alarm,input_modbus_alarm))
 $(eval $(call BuildPlugin,dnp3,input_dnp3))
 $(eval $(call BuildPlugin,opcua,input_opcua))
 $(eval $(call BuildPlugin,mbus,input_mbus))

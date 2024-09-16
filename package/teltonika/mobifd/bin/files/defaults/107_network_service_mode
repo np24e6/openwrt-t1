@@ -33,11 +33,74 @@ convert_service(){
         esac
 }
 
+add_default_value_if_not_found() {
+    local section="$1"
+    local list_name="$2"
+    local band=""
+
+    config_get band "$section" "$list_name"
+
+    [ "$band" = "" ] && {
+        uci_add_list "$SIMCARD_CFG" "$section" "$list_name" "all"
+    }
+}
+
+fix_manual_bands_3g() {
+    local section="$1"
+
+    add_default_value_if_not_found "$section" "gsm" 
+    add_default_value_if_not_found "$section" "umts" 
+}
+
+fix_manual_bands_4g() {
+    local section="$1"
+
+    add_default_value_if_not_found "$section" "gsm"
+    add_default_value_if_not_found "$section" "umts"
+    add_default_value_if_not_found "$section" "lte_nb"
+    add_default_value_if_not_found "$section" "lte"
+}
+
+fix_manual_bands_5g() {
+    local section="$1"
+
+    add_default_value_if_not_found "$section" "umts"
+    add_default_value_if_not_found "$section" "lte"
+    add_default_value_if_not_found "$section" "nsa_nr5g"
+    add_default_value_if_not_found "$section" "sa_nr5g"
+}
+
 set_service() {
     local section="$1"
+    local band=""
+
     config_get service "$section" "service"
 
-    [ -n "$service" ] && uci_set "$SIMCARD_CFG" "$section" "service" $(convert_service "$service")
+        [ -n "$service" ] && {
+        converted_service=$(convert_service "$service")
+        uci_set "$SIMCARD_CFG" "$section" "service" "$converted_service"
+
+        # We fixed the service now, but if bands are manually set we need to fix them as well..
+        # If bands are not set to manual we do not need to take action
+        config_get band "$section" "band"
+        [ "$band" != "manual" ] && return
+
+        # Service mode did not change in migration we do not need to take action
+        [ "$service" = "$converted_service" ] && return
+
+        # Add lists with `all` value to manual band selections where service mode has changed
+        case "$converted_service" in
+                "3g_pref")
+                        fix_manual_bands_3g "$section"
+                        ;;
+                "lte_pref")
+                        fix_manual_bands_4g "$section"
+                        ;;
+                "nr5g_pref")
+                        fix_manual_bands_5g "$section"
+                        ;;
+        esac
+        }
 }
 
 config_load "$SIMCARD_CFG"

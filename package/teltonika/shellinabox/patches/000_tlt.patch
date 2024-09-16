@@ -1,0 +1,960 @@
+diff --recursive --unified --new-file --no-dereference orig/.gitignore src/.gitignore
+--- orig/.gitignore	2016-11-09 19:40:33.000000000 +0000
++++ src/.gitignore	1970-01-01 00:00:00.000000000 +0000
+@@ -1,62 +0,0 @@
+-*.o
+-*.la
+-*.lo
+-*~
+-.libs
+-.deps
+-.dirstamp
+-aclocal.m4
+-autom4te.cache
+-certificate.pem
+-compile
+-config.cache
+-config.guess
+-config.h
+-config.h.in
+-config.log
+-config.status
+-config.sub
+-configure
+-debian/autoreconf.after
+-debian/autoreconf.before
+-debian/files
+-debian/*.debhelper.log
+-debian/*.debhelper
+-debian/*.substvars
+-debian/shellinabox/
+-debian/tmp/
+-demo/beep.wav
+-demo/demo.js
+-demo/enabled.gif
+-demo/favicon.ico
+-demo/keyboard.png
+-demo/print-styles.css
+-demo/styles.css
+-demo/usercss-*.css
+-demo/vt100.js
+-depcomp
+-INSTALL
+-install-sh
+-libtool
+-ltmain.sh
+-Makefile
+-Makefile.in
+-missing
+-m4/
+-shellinabox/beep.h
+-shellinabox/cgi_root.h
+-shellinabox/enabled.h
+-shellinabox/favicon.h
+-shellinabox/keyboard.h
+-shellinabox/keyboard-layout.h
+-shellinabox/print-styles.h
+-shellinabox/root_page.h
+-shellinabox/shell_in_a_box.h
+-shellinabox/shell_in_a_box.js
+-shellinabox/styles.h
+-shellinabox/vt100.h
+-shellinabox/vt100.js
+-shellinaboxd
+-shellinaboxd.1
+-shellinaboxd.ps
+-stamp-h1
+diff --recursive --unified --new-file --no-dereference orig/.gitlab-ci.yml src/.gitlab-ci.yml
+--- orig/.gitlab-ci.yml	1970-01-01 00:00:00.000000000 +0000
++++ src/.gitlab-ci.yml	2023-10-04 10:40:51.000000000 +0000
+@@ -0,0 +1,20 @@
++include:
++  - project: teltonika/ci-templates
++    file:
++      - /templates/semgrep.yml
++
++workflow:
++  rules:
++    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
++    - if: $CI_PIPELINE_SOURCE == "web"
++    - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
++      when: never
++    - if: $CI_COMMIT_BRANCH
++
++semgrep_errors:
++  extends: .semgrep_errors
++
++semgrep_info:
++  extends: .semgrep_info
++  needs:
++    - job: semgrep_errors
+\ No newline at end of file
+diff --recursive --unified --new-file --no-dereference orig/cli.conf src/cli.conf
+--- orig/cli.conf	1970-01-01 00:00:00.000000000 +0000
++++ src/cli.conf	2023-10-04 10:40:51.000000000 +0000
+@@ -0,0 +1,6 @@
++config status 'status'
++	option enable '1'
++	option port '4200-4220'
++	option shell_limit '5'
++
++config cli
+diff --recursive --unified --new-file --no-dereference orig/config.h src/config.h
+--- orig/config.h	1970-01-01 00:00:00.000000000 +0000
++++ src/config.h	2023-10-04 10:40:51.000000000 +0000
+@@ -0,0 +1,189 @@
++/* config.h.  Generated from config.h.in by configure.  */
++/* config.h.in.  Generated from configure.ac by autoheader.  */
++
++/* Define to 1 if you have support for symbol aliasing */
++#define HAVE_ATTRIBUTE_ALIAS 1
++
++/* Define to 1 if you have support for the "unused" attribute */
++#define HAVE_ATTRIBUTE_UNUSED 1
++
++/* Set if you want support for calling /bin/login */
++#define HAVE_BIN_LOGIN 1
++
++/* Define to 1 if you have the <dlfcn.h> header file. */
++#define HAVE_DLFCN_H 1
++
++/* Define to 1 if you have the `dlopen' function. */
++#define HAVE_DLOPEN 1
++
++/* Define to 1 if you have the `getgrgid_r' function. */
++#define HAVE_GETGRGID_R 1
++
++/* Define to 1 if you have the `getgrnam_r' function. */
++#define HAVE_GETGRNAM_R 1
++
++/* Define to 1 if getgrouplist() takes ints as arguments */
++/* #undef HAVE_GETGROUPLIST_TAKES_INTS */
++
++/* Define to 1 if you have the `gethostbyname_r' function. */
++/* #undef HAVE_GETHOSTBYNAME_R */
++
++/* Define to 1 if you have the `getpwnam_r' function. */
++#define HAVE_GETPWNAM_R 1
++
++/* Define to 1 if you have the `getpwuid_r' function. */
++#define HAVE_GETPWUID_R 1
++
++/* Define to 1 if you have the `getresgid' function. */
++#define HAVE_GETRESGID 1
++
++/* Define to 1 if you have the `getresuid' function. */
++#define HAVE_GETRESUID 1
++
++/* Define to 1 if you have the <inttypes.h> header file. */
++#define HAVE_INTTYPES_H 1
++
++/* Define to 1 if you have support for isnan */
++#define HAVE_ISNAN 1
++
++/* Define to 1 if you have the <libutil.h> header file. */
++/* #undef HAVE_LIBUTIL_H */
++
++/* Define to 1 if you have the `login_tty' function. */
++#define HAVE_LOGIN_TTY 1
++
++/* Define to 1 if you have the <memory.h> header file. */
++#define HAVE_MEMORY_H 1
++
++/* Define to 1 if you have the `openpty' function. */
++#define HAVE_OPENPTY 1
++
++/* Define to 1 if you have the <openssl/bio.h> header file. */
++#define HAVE_OPENSSL_BIO_H 1
++
++/* Define to 1 if you have the <openssl/err.h> header file. */
++#define HAVE_OPENSSL_ERR_H 1
++
++/* Define to 1 if you have the <openssl/ssl.h> header file. */
++#define HAVE_OPENSSL_SSL_H 1
++
++/* Define to 1 if you have the <pthread.h> header file. */
++#define HAVE_PTHREAD_H 1
++
++/* Define to 1 if you have a re-entrant version of ptsname */
++#define HAVE_PTSNAME_R 1
++
++/* Define to 1 if you have the <pty.h> header file. */
++#define HAVE_PTY_H 1
++
++/* Define to 1 if you have the <security/pam_appl.h> header file. */
++/* #undef HAVE_SECURITY_PAM_APPL_H */
++
++/* Define to 1 if you have the <security/pam_client.h> header file. */
++/* #undef HAVE_SECURITY_PAM_CLIENT_H */
++
++/* Define to 1 if you have the <security/pam_misc.h> header file. */
++/* #undef HAVE_SECURITY_PAM_MISC_H */
++
++/* Define to 1 if you have the `setresgid' function. */
++#define HAVE_SETRESGID 1
++
++/* Define to 1 if you have the `setresuid' function. */
++/* #undef HAVE_SETRESUID */
++
++/* Define to 1 if you have a working sigwait */
++#define HAVE_SIGWAIT 1
++
++/* Define to 1 if you have the <stdint.h> header file. */
++#define HAVE_STDINT_H 1
++
++/* Define to 1 if you have the <stdlib.h> header file. */
++#define HAVE_STDLIB_H 1
++
++/* Define to 1 if you have the `strcasestr' function. */
++#define HAVE_STRCASESTR 1
++
++/* Define to 1 if you have the <strings.h> header file. */
++#define HAVE_STRINGS_H 1
++
++/* Define to 1 if you have the <string.h> header file. */
++#define HAVE_STRING_H 1
++
++/* Define to 1 if you have the `strlcat' function. */
++#define HAVE_STRLCAT 1
++
++/* Define to 1 if you have the <syslog.h> header file. */
++#define HAVE_SYSLOG_H 1
++
++/* Define to 1 if you have the <sys/prctl.h> header file. */
++#define HAVE_SYS_PRCTL_H 1
++
++/* Define to 1 if you have the <sys/stat.h> header file. */
++#define HAVE_SYS_STAT_H 1
++
++/* Define to 1 if you have the <sys/types.h> header file. */
++#define HAVE_SYS_TYPES_H 1
++
++/* Define to 1 if you have the <sys/uio.h> header file. */
++#define HAVE_SYS_UIO_H 1
++
++/* Define to 1 if you have the <unistd.h> header file. */
++#define HAVE_UNISTD_H 1
++
++/* Define to 1 if you have support for updwtmp */
++#define HAVE_UPDWTMP 1
++
++/* Define to 1 if you have support for updwtmpx */
++/* #undef HAVE_UPDWTMPX */
++
++/* Define to 1 if you have the <util.h> header file. */
++/* #undef HAVE_UTIL_H */
++
++/* Define to 1 if you have the <utmpx.h> header file. */
++#define HAVE_UTMPX_H 1
++
++/* Define to 1 if you have the <utmp.h> header file. */
++#define HAVE_UTMP_H 1
++
++/* Define to 1 if you have the `vsyslog' function. */
++#define HAVE_VSYSLOG 1
++
++/* Define to 1 if zlib development files are installed */
++#define HAVE_ZLIB 1
++
++/* Define to the sub-directory in which libtool stores uninstalled libraries.
++   */
++#define LT_OBJDIR ".libs/"
++
++/* Name of package */
++#define PACKAGE "shellinabox"
++
++/* Define to the address where bug reports for this package should be sent. */
++#define PACKAGE_BUGREPORT "markus@shellinabox.com"
++
++/* Define to the full name of this package. */
++#define PACKAGE_NAME "shellinabox"
++
++/* Define to the full name and version of this package. */
++#define PACKAGE_STRING "shellinabox 2.20"
++
++/* Define to the one symbol short name of this package. */
++#define PACKAGE_TARNAME "shellinabox"
++
++/* Define to the home page for this package. */
++#define PACKAGE_URL ""
++
++/* Define to the version of this package. */
++#define PACKAGE_VERSION "2.20"
++
++/* Define to 1 if you have the ANSI C header files. */
++#define STDC_HEADERS 1
++
++/* Most recent revision number in the version control system */
++#define VCS_REVISION ""
++
++/* Version number of package */
++#define VERSION "2.20"
++
++/* Define to empty if `const' does not conform to ANSI C. */
++/* #undef const */
+diff --recursive --unified --new-file --no-dereference orig/configure.ac src/configure.ac
+--- orig/configure.ac	2016-11-09 19:40:33.000000000 +0000
++++ src/configure.ac	2023-10-04 10:40:51.000000000 +0000
+@@ -34,6 +34,9 @@
+ AC_CHECK_HEADERS([libutil.h pthread.h pty.h strings.h syslog.h sys/prctl.h \
+                   sys/uio.h util.h])
+ 
++dnl Ubus support
++AC_CHECK_HEADERS(libubus.h, [LIBS="-lubus $LIBS"])
++
+ dnl Most systems require linking against libutil.so in order to get login_tty()
+ AC_CHECK_FUNCS(login_tty, [],
+                [AC_CHECK_LIB(util, login_tty,
+diff --recursive --unified --new-file --no-dereference orig/libhttp/httpconnection.c src/libhttp/httpconnection.c
+--- orig/libhttp/httpconnection.c	2016-11-09 19:40:33.000000000 +0000
++++ src/libhttp/httpconnection.c	2023-10-04 10:40:51.000000000 +0000
+@@ -288,33 +288,38 @@
+ }
+ 
+ static char *getPeerName(int fd, int *port, int numericHosts) {
+-  struct sockaddr peerAddr;
++  struct sockaddr_storage peerAddr;
+   socklen_t sockLen = sizeof(peerAddr);
+-  if (getpeername(fd, &peerAddr, &sockLen)) {
++  if (getpeername(fd, (struct sockaddr*)&peerAddr, &sockLen)) {
+     if (port) {
+       *port         = -1;
+     }
+     return NULL;
+   }
++  char ipaddr[INET6_ADDRSTRLEN];
+   char *ret;
+-  if (peerAddr.sa_family == AF_UNIX) {
++  if (peerAddr.ss_family == AF_INET) {
++    struct sockaddr_in *s = (struct sockaddr_in *)&peerAddr;
++    *port = ntohs(s->sin_port);
++    inet_ntop(AF_INET, &s->sin_addr, ipaddr, sizeof ipaddr);
++  } else if (peerAddr.ss_family == AF_INET6) {
++    struct sockaddr_in6 *s = (struct sockaddr_in6 *)&peerAddr;
++    *port = ntohs(s->sin6_port);
++    inet_ntop(AF_INET6, &s->sin6_addr, ipaddr, sizeof ipaddr);
++  } else {
+     if (port) {
+       *port         = 0;
+     }
+     check(ret       = strdup("localhost"));
+     return ret;
+   }
+-  char host[256];
+-  if (numericHosts ||
+-      getnameinfo(&peerAddr, sockLen, host, sizeof(host), NULL, 0, NI_NOFQDN)){
+-    check(inet_ntop(peerAddr.sa_family,
+-                    &((struct sockaddr_in *)&peerAddr)->sin_addr,
+-                    host, sizeof(host)));
+-  }
+-  if (port) {
+-    *port           = ntohs(((struct sockaddr_in *)&peerAddr)->sin_port);
++
++  char host[1024];
++  if (numericHosts || getnameinfo((struct sockaddr *)&peerAddr, sockLen, host, sizeof(host), 0, 0, NI_NOFQDN)) {
++    check(ret         = strdup(ipaddr));
++  } else {
++    check(ret         = strdup(host));
+   }
+-  check(ret         = strdup(host));
+   return ret;
+ }
+ 
+@@ -841,9 +846,9 @@
+         *ptr                                 = '\000';
+         break;
+       }
+-      if (ch != '-' && ch != '.' &&
+-          (ch < '0' ||(ch > '9' && ch < 'A') ||
+-          (ch > 'Z' && ch < 'a')||(ch > 'z' && ch <= 0x7E))) {
++      if (ch != '[' && ch != ']' && ch != '-' && ch != '.' &&
++          (ch < '0' || (ch > '9' && ch < 'A') ||
++          (ch > 'Z' && ch < 'a') || (ch > 'z' && ch <= 0x7E))) {
+         httpSendReply(http, 400, "Bad Request", NO_MSG);
+         return HTTP_DONE;
+       }
+diff --recursive --unified --new-file --no-dereference orig/libhttp/server.c src/libhttp/server.c
+--- orig/libhttp/server.c	2016-11-09 19:40:33.000000000 +0000
++++ src/libhttp/server.c	2023-10-04 10:40:51.000000000 +0000
+@@ -171,7 +171,7 @@
+                                                  "content-length");
+   if (!contentLength ||
+       (payload->bytes &&
+-       ((contentLength && atoi(contentLength) <= payload->len) || !buf))) {
++       ((contentLength && strtol(contentLength, NULL, 0) <= payload->len) || !buf))) {
+     rc = payload->handler(http, payload->arg,
+                           payload->bytes ? payload->bytes : "", payload->len);
+     free(payload->bytes);
+@@ -333,14 +333,14 @@
+     return;
+   }
+ 
+-  server->serverFd              = socket(PF_INET, SOCK_STREAM, 0);
++  server->serverFd              = socket(PF_INET6, SOCK_STREAM, 0);
+   check(server->serverFd >= 0);
+   check(!setsockopt(server->serverFd, SOL_SOCKET, SO_REUSEADDR,
+                     &true, sizeof(true)));
+-  struct sockaddr_in serverAddr = { 0 };
+-  serverAddr.sin_family         = AF_INET;
+-  serverAddr.sin_addr.s_addr    = htonl(localhostOnly
+-                                        ? INADDR_LOOPBACK : INADDR_ANY);
++  struct sockaddr_in6 serverAddr = { 0 };
++  serverAddr.sin6_family         = AF_INET6;
++  serverAddr.sin6_addr    = localhostOnly
++                                        ? in6addr_loopback : in6addr_any;
+ 
+   // Linux unlike BSD does not have support for picking a local port range.
+   // So, we have to randomly pick a port from our allowed port range, and then
+@@ -355,14 +355,14 @@
+     int portStart               = rand() % (portMax - portMin + 1) + portMin;
+     for (int p = 0; p <= portMax-portMin; p++) {
+       int port                  = (p+portStart)%(portMax-portMin+1)+ portMin;
+-      serverAddr.sin_port       = htons(port);
++      serverAddr.sin6_port       = htons(port);
+       if (!bind(server->serverFd, (struct sockaddr *)&serverAddr,
+                 sizeof(serverAddr))) {
+         break;
+       }
+-      serverAddr.sin_port       = 0;
++      serverAddr.sin6_port       = 0;
+     }
+-    if (!serverAddr.sin_port) {
++    if (!serverAddr.sin6_port) {
+       fatal("[server] Failed to find any available port!");
+     }
+   }
+@@ -372,7 +372,7 @@
+   check(!getsockname(server->serverFd, (struct sockaddr *)&serverAddr,
+                      &socklen));
+   check(socklen == sizeof(serverAddr));
+-  server->port                  = ntohs(serverAddr.sin_port);
++  server->port                  = ntohs(serverAddr.sin6_port);
+   info("[server] Listening on port %d...", server->port);
+ 
+   check(server->pollFds         = malloc(sizeof(struct pollfd)));
+diff --recursive --unified --new-file --no-dereference orig/libhttp/ssl.c src/libhttp/ssl.c
+--- orig/libhttp/ssl.c	2016-11-09 19:40:33.000000000 +0000
++++ src/libhttp/ssl.c	2023-10-04 10:40:51.000000000 +0000
+@@ -208,7 +208,7 @@
+   // The feature is currently disabled.
+   const char* path_libcrypto = NULL; // getenv ("SHELLINABOX_LIBCRYPTO_SO");
+   if (path_libcrypto == NULL)
+-    path_libcrypto = "libcrypto.so";
++    path_libcrypto = "/usr/lib/libcrypto.so.1.0.0";
+ 
+   if (!crypto++) {
+ #ifdef RTLD_NOLOAD
+@@ -267,7 +267,7 @@
+   // The feature is currently disabled.
+   const char* path_libssl = NULL; // = getenv ("SHELLINABOX_LIBSSL_SO");
+   if (path_libssl == NULL)
+-    path_libssl = "libssl.so";
++    path_libssl = "/usr/lib/libssl.so.1.0.0";
+   check(!SSL_library_init);
+   struct {
+     union {
+@@ -666,14 +666,7 @@
+ #endif
+ 
+   check(SSL_CTX_set_cipher_list(context,
+-    "ECDHE-RSA-AES256-GCM-SHA384:"
+-    "ECDHE-RSA-AES128-GCM-SHA256:"
+-    "ECDHE-RSA-AES256-SHA384:"
+-    "ECDHE-RSA-AES128-SHA256:"
+-    "ECDHE-RSA-AES256-SHA:"
+-    "ECDHE-RSA-AES128-SHA:"
+-    "ECDHE-RSA-DES-CBC3-SHA:"
+-    "HIGH:MEDIUM:!RC4:!aNULL:!MD5"));
++	"AES256+EECDH:AES256+EDH:AES128+EECDH:AES128+EDH:!RC4:!aNULL:!MD5:!DSS"));
+ 
+   SSL_CTX_set_info_callback(context, sslInfoCallback);
+ 
+diff --recursive --unified --new-file --no-dereference orig/libhttp/url.c src/libhttp/url.c
+--- orig/libhttp/url.c	2016-11-09 19:40:33.000000000 +0000
++++ src/libhttp/url.c	2023-10-04 10:40:51.000000000 +0000
+@@ -313,6 +313,19 @@
+             }
+           }
+         }
++        /* elf-2018.09.09: Detection of broken multipart/form-data
++           fixes DoS vulnerability.
++           On 9/9/18 10:43 AM, Imre Rad wrote:
++           Hi Markus, Marc!
++           I identified a vulnerability today in Shellinabox, it is
++           remote a denial of service, shellinaboxd eating up 100% cpu
++           and not processing subsequent requests after the attack was
++           mounted.
++        */
++        else {
++          warn("[http] Ignorning broken multipart/form-data");
++          break;
++        }
+       }
+       if (lastPart) {
+         warn("[http] Missing final \"boundary\" for \"multipart/form-data\"!");
+diff --recursive --unified --new-file --no-dereference orig/m4/.gitignore src/m4/.gitignore
+--- orig/m4/.gitignore	2016-11-09 19:40:33.000000000 +0000
++++ src/m4/.gitignore	1970-01-01 00:00:00.000000000 +0000
+@@ -1,3 +0,0 @@
+-# This directory is used by autotools, so we ignore all files except this one.
+-*
+-!.gitignore
+diff --recursive --unified --new-file --no-dereference orig/shellinabox/cgi_root.html src/shellinabox/cgi_root.html
+--- orig/shellinabox/cgi_root.html	2016-11-09 19:40:33.000000000 +0000
++++ src/shellinabox/cgi_root.html	2023-10-04 10:40:51.000000000 +0000
+@@ -49,7 +49,7 @@
+     http://shellinabox.com
+     -->
+     <title>Shell In A Box</title>
+-    <script type="text/javascript"><!--
++    <script nonce="%s" type="text/javascript"><!--
+     (function() {
+       var url   = document.location.protocol + '//' +
+                   document.location.hostname + ':%d/';
+@@ -67,10 +67,25 @@
+         }
+       }
+       document.write('<frameset cols="*">\n' +
+-                       '<frame src="' + url + '#' +
++                       '<frame id="cli_frame" src="' + url + '#' +
+                           encodeURIComponent(document.location.href) +
+                           ',%s' + '">\n' +
+                      '</frameset>');
++
++      function bindEvent(element, eventName, eventHandler) {
++            if (element.addEventListener) {
++                  element.addEventListener(eventName, eventHandler, false);
++            } else if (element.attachEvent) {
++                  element.attachEvent('on' + eventName, eventHandler);
++            }
++      }
++
++      bindEvent(window, 'message', function (e) {
++            if (window.location.href.indexOf(e.origin.substring(0, e.origin.lastIndexOf(':'))) !== -1 &&
++                  e.data === 'reconnect') {
++                  window.location.reload(true);
++            }
++      });
+     })();
+     --></script>
+   </head>
+diff --recursive --unified --new-file --no-dereference orig/shellinabox/launcher.c src/shellinabox/launcher.c
+--- orig/shellinabox/launcher.c	2016-11-09 19:40:33.000000000 +0000
++++ src/shellinabox/launcher.c	2023-10-04 10:40:51.000000000 +0000
+@@ -86,10 +86,6 @@
+ #include <util.h>
+ #endif
+ 
+-#ifdef HAVE_UTMP_H
+-#include <utmp.h>
+-#endif
+-
+ #ifdef HAVE_UTMPX_H
+ #include <utmpx.h>
+ #endif
+@@ -639,7 +635,7 @@
+   return utmp;
+ }
+ 
+-#if defined(HAVE_UPDWTMP) && !defined(HAVE_UPDWTMPX)
++#if defined(HAVE_UTMPX) && defined(HAVE_UPDWTMP) && !defined(HAVE_UPDWTMPX)
+ #define min(a,b) ({ typeof(a) _a=(a); typeof(b) _b=(b); _a < _b ? _a : _b; })
+ #define updwtmpx x_updwtmpx
+ 
+@@ -1678,14 +1674,22 @@
+     // At login service launch, we try to pass real IP in '-h' parameter. Real
+     // IP is provided in HTTP header field 'X-Real-IP', if ShellInABox is used
+     // behind properly configured HTTP proxy.
++
+     char remoteHost[256];
+     snprintf(remoteHost, 256,
+              (*realIP) ? "%s, %s" : "%s%s", peerName,
+              (*realIP) ? realIP : "");
+-    execle("/bin/login", "login", "-p", "-h", remoteHost,
+-           (void *)0, environment);
+-    execle("/usr/bin/login", "login", "-p", "-h", remoteHost,
+-           (void *)0, environment);
++	if (service->portRange) {
++		execle("/bin/login", "login", "-p", "-h", remoteHost, "-P", service->portRange,
++			(void *)0, environment);
++		execle("/usr/bin/login", "login", "-p", "-h", remoteHost, "-P", service->portRange,
++			(void *)0, environment);
++	} else {
++		execle("/bin/login", "login", "-p", "-h", remoteHost,
++			(void *)0, environment);
++		execle("/usr/bin/login", "login", "-p", "-h", remoteHost,
++			(void *)0, environment);
++	}
+   } else {
+     // Launch user provied service
+     execService(width, height, service, peerName, realIP, environment, url);
+@@ -1786,7 +1790,7 @@
+       if (!((*s >= '0' && *s <= '9') ||
+             (*s >= 'A' && *s <= 'Z') ||
+             (*s >= 'a' && *s <= 'z') ||
+-             *s == '.' || *s == '-')) {
++             *s == '.' || *s == '-' || *s == ':')) {
+         *s                    = '-';
+       }
+     }
+diff --recursive --unified --new-file --no-dereference orig/shellinabox/root_page.html src/shellinabox/root_page.html
+--- orig/shellinabox/root_page.html	2016-11-09 19:40:33.000000000 +0000
++++ src/shellinabox/root_page.html	2023-10-04 10:40:51.000000000 +0000
+@@ -110,6 +110,22 @@
+       }
+ 
+     --></script>
++    <script>
++      function bindEvent2(element, eventName, eventHandler) {
++            if (element.addEventListener) {
++                  element.addEventListener(eventName, eventHandler, false);
++            } else if (element.attachEvent) {
++                  element.attachEvent('on' + eventName, eventHandler);
++            }
++      }
++
++      bindEvent2(window, 'message', function (e) {
++            if (window.location.href.indexOf(e.origin.substring(0, e.origin.lastIndexOf(':'))) !== -1 &&
++                  e.data === 'reconnect') {
++                  window.location.reload(true);
++            }
++      });
++    </script>
+     <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
+     <script type="text/javascript" src="ShellInABox.js"></script>
+   </head>
+diff --recursive --unified --new-file --no-dereference orig/shellinabox/service.c src/shellinabox/service.c
+--- orig/shellinabox/service.c	2016-11-09 19:40:33.000000000 +0000
++++ src/shellinabox/service.c	2023-10-04 10:40:51.000000000 +0000
+@@ -253,9 +253,10 @@
+   free(desc);
+ }
+ 
+-struct Service *newService(const char *arg) {
++struct Service *newService(const char *arg, const char *portRange) {
+   struct Service *service;
+   check(service = malloc(sizeof(struct Service)));
++  service->portRange = portRange;
+   initService(service, arg);
+   return service;
+ }
+@@ -267,6 +268,7 @@
+     free((char *)service->group);
+     free((char *)service->cwd);
+     free((char *)service->cmdline);
++	free((char *)service->portRange);
+   }
+ }
+ 
+diff --recursive --unified --new-file --no-dereference orig/shellinabox/service.h src/shellinabox/service.h
+--- orig/shellinabox/service.h	2016-11-09 19:40:33.000000000 +0000
++++ src/shellinabox/service.h	2023-10-04 10:40:51.000000000 +0000
+@@ -61,13 +61,14 @@
+   const char *group;
+   const char *cwd;
+   const char *cmdline;
++  const char *portRange;
+ };
+ 
+ extern struct Service **services;
+ extern int            numServices;
+ 
+ void initService(struct Service *service, const char *arg);
+-struct Service *newService(const char *arg);
++struct Service *newService(const char *arg, const char *portRange);
+ void destroyService(struct Service *service);
+ void deleteService(struct Service *service);
+ void destroyServiceHashEntry(void *arg, char *key, char *value);
+diff --recursive --unified --new-file --no-dereference orig/shellinabox/shell_in_a_box.jspp src/shellinabox/shell_in_a_box.jspp
+--- orig/shellinabox/shell_in_a_box.jspp	2016-11-09 19:40:33.000000000 +0000
++++ src/shellinabox/shell_in_a_box.jspp	2023-10-04 10:40:51.000000000 +0000
+@@ -92,7 +92,7 @@
+ function ShellInABox(url, container) {
+   if (url == undefined) {
+     this.rooturl    = document.location.href;
+-    this.url        = document.location.href.replace(/[?#].*/, '');
++    this.url        = document.location.href;
+   } else {
+     this.rooturl    = url;
+     this.url        = url;
+@@ -146,12 +146,15 @@
+ ShellInABox.prototype.reconnect = function() {
+   this.showReconnect(false);
+   if (!this.session) {
+-    if (document.location.hash != '') {
++    var is_rms = document.location.hostname.match(/.*\.teltonika\.lt$/)
++    if (is_rms !== null) {
++      window.postMessage('reconnect', '*');
++    } else if (document.location.hash != '') {
+       // A shellinaboxd daemon launched from a CGI only allows a single
+       // session. In order to reconnect, we must reload the frame definition
+       // and obtain a new port number. As this is a different origin, we
+       // need to get enclosing page to help us.
+-      parent.location        = this.nextUrl;
++      window.parent.postMessage('reconnect', '*');
+     } else {
+       if (this.url != this.nextUrl) {
+         document.location.replace(this.nextUrl);
+@@ -170,7 +173,7 @@
+   if (request == undefined) {
+     request                  = new XMLHttpRequest();
+   }
+-  request.open('POST', this.url + '?', true);
++  request.open('POST', this.url, true);
+   request.timeout = 30000; // Don't leave POST pending forever: force 30s timeout to prevent HTTP Proxy thread hijack
+   request.setRequestHeader('Cache-Control', 'no-cache');
+   request.setRequestHeader('Content-Type',
+@@ -239,7 +242,7 @@
+     keys                       = this.pendingKeys + keys;
+     this.pendingKeys           = '';
+     var request                = new XMLHttpRequest();
+-    request.open('POST', this.url + '?', true);
++    request.open('POST', this.url, true);
+     request.setRequestHeader('Cache-Control', 'no-cache');
+     request.setRequestHeader('Content-Type',
+                            'application/x-www-form-urlencoded; charset=utf-8');
+diff --recursive --unified --new-file --no-dereference orig/shellinabox/shellinaboxd.c src/shellinabox/shellinaboxd.c
+--- orig/shellinabox/shellinaboxd.c	2016-11-09 19:40:33.000000000 +0000
++++ src/shellinabox/shellinaboxd.c	2023-10-04 10:40:51.000000000 +0000
+@@ -65,6 +65,7 @@
+ #include <sys/un.h>
+ #include <time.h>
+ #include <unistd.h>
++#include <libubus.h>
+ 
+ #ifdef HAVE_SYS_PRCTL_H
+ #include <sys/prctl.h>
+@@ -103,10 +104,12 @@
+ 
+ #define PORTNUM           4200
+ #define MAX_RESPONSE      2048
++#define NONCE_SIZE        128
+ 
+ static int            port;
+ static int            portMin;
+ static int            portMax;
++static char           *portRange;
+ static int            localhostOnly     = 0;
+ static int            noBeep            = 0;
+ static int            numericHosts      = 0;
+@@ -410,8 +413,8 @@
+ 
+   // Adjust window dimensions if provided by client
+   if (width && height) {
+-    session->width        = atoi(width);
+-    session->height       = atoi(height);
++    session->width        = strtol(width, NULL, 0);
++    session->height       = strtol(height, NULL, 0);
+   }
+ 
+   // Create a new session, if the client did not provide an existing one
+@@ -756,7 +759,7 @@
+   } else if (pathInfoLength > 8 && !memcmp(pathInfo, "usercss-", 8)) {
+     // Server user style sheets (if any)
+     struct UserCSS *css   = userCSSList;
+-    for (int idx          = atoi(pathInfo + 8);
++    for (int idx          = strtol(pathInfo + 8, NULL, 0);
+          idx-- > 0 && css; css = css->next ) {
+     }
+     if (css) {
+@@ -1043,6 +1046,7 @@
+         if (!ptr) {
+           fatal("[config] Syntax error in port range specification!");
+         }
++		check(portRange = strdup(optarg));
+         *ptr               = '\000';
+         portMin            = strtoint(optarg, 1, 65535);
+         *ptr               = '-';
+@@ -1145,7 +1149,7 @@
+         fatal("[config] Option \"--service\" expects an argument.");
+       }
+       struct Service *service;
+-      service              = newService(optarg);
++      service              = newService(optarg, NULL);
+       if (getRefFromHashMap(serviceTable, service->path)) {
+         fatal("[config] Duplicate service description for \"%s\".", service->path);
+       }
+@@ -1278,7 +1282,7 @@
+ #else
+                                     ":SSH"
+ #endif
+-                                    ));
++                                    , portRange));
+   }
+   enumerateServices(serviceTable);
+   deleteHashMap(serviceTable);
+@@ -1359,6 +1363,38 @@
+   }
+ }
+ 
++static void receive_uhttpd_nonce_cb(struct ubus_request *req, int type, struct blob_attr *msg) {
++  char *buf = req->priv;
++  struct blob_attr *cur;
++  int rem;
++  blobmsg_for_each_attr (cur, msg, rem) {
++    if (!strcmp(blobmsg_name(cur), "nonce")) {
++      strncpy(buf, blobmsg_get_string(cur), NONCE_SIZE - 1);
++    }
++  }
++}
++
++static int receive_uhttpd_nonce(char *buffer) {
++  struct ubus_context *ubus;
++  uint32_t obj;
++
++  ubus = ubus_connect(NULL);
++  if (!ubus) {
++    fprintf(stderr, "failed to connect to ubus\n");
++    return 1;
++  }
++
++  if (ubus_lookup_id(ubus, "uhttpd", &obj) ||
++    ubus_invoke(ubus, obj, "nonce", NULL, receive_uhttpd_nonce_cb, buffer, 1000)) {
++      fprintf(stderr, "ubus request failed\n");
++      ubus_free(ubus);
++      return 1;
++  }
++
++  ubus_free(ubus);
++  return 0;
++}
++
+ int main(int argc, char * const argv[]) {
+ #ifdef HAVE_SYS_PRCTL_H
+   // Disable core files
+@@ -1389,6 +1425,7 @@
+     // background.
+     pid_t pid;
+     int   fds[2];
++    char nonce_hash[NONCE_SIZE];
+     dropPrivileges();
+     check(!pipe(fds));
+     check((pid    = fork()) >= 0);
+@@ -1414,7 +1451,8 @@
+            "Content-type: text/html; charset=utf-8\r\n\r\n",
+            port, getpid(), cgiSessionKey);
+     UNUSED(cgiRootSize);
+-    printfUnchecked(cgiRootStart, port, cgiSessionKey);
++    receive_uhttpd_nonce(nonce_hash);
++    printfUnchecked(cgiRootStart, nonce_hash, port, cgiSessionKey);
+     fflush(stdout);
+     check(!NOINTR(close(fds[1])));
+     closeAllFds((int []){ launcherFd, serverGetFd(server) }, 2);
+@@ -1478,7 +1516,7 @@
+       NOINTR(close(fd));
+       if (sz > 0) {
+         buf[sz]   = '\000';
+-        if (atoi(buf) == getpid()) {
++        if (strtol(buf, NULL, 0) == getpid()) {
+           unlink(pidfile);
+         }
+       }
+diff --recursive --unified --new-file --no-dereference orig/shellinabox.init src/shellinabox.init
+--- orig/shellinabox.init	1970-01-01 00:00:00.000000000 +0000
++++ src/shellinabox.init	2023-10-04 10:40:51.000000000 +0000
+@@ -0,0 +1,46 @@
++#!/bin/sh /etc/rc.common
++# Copyright (C) 2018 Teltonika
++#. /lib/teltonika-functions.sh
++#. /lib/functions.sh
++START=99
++
++USE_PROCD=1
++enable=$(uci get cli.status.enable)
++uhttpd_cert=$(uci get uhttpd.main.cert)
++uhttpd_key=$(uci get uhttpd.main.key)
++key_type=$(uci get uhttpd.defaults.key_type)
++shell_cert="/tmp/certificate.pem"
++
++start_service()
++{
++	if [ "$enable" == "1" ]; then
++		if [ ! -s "$shell_cert" ]; then
++			openssl x509 -inform DER -in "$uhttpd_cert" -outform PEM | cat "$uhttpd_key" - > /tmp/shellinabox.tmp
++			mv /tmp/shellinabox.tmp "$shell_cert"
++
++			[ "$key_type" = "ec" ] && sed -i 's/PRIVATE/EC PRIVATE/g' "$shell_cert"
++		fi
++	fi
++}
++
++stop_service()
++{
++	rm -f "$shell_cert"
++	killall shellinaboxd
++}
++
++restart_service()
++{
++	rm -f "$shell_cert"
++	killall shellinaboxd
++	if [ "$enable" == "1" ]; then
++		openssl x509 -inform DER -in "$uhttpd_cert" -outform PEM | cat "$uhttpd_key" - > /tmp/shellinabox.tmp
++		mv /tmp/shellinabox.tmp "$shell_cert"
++		[ "$key_type" = "ec" ] && sed -i 's/PRIVATE/EC PRIVATE/g' "$shell_cert"
++	fi
++}
++
++reload_service()
++{
++	restart_service
++}
+diff --recursive --unified --new-file --no-dereference orig/shellinabox.sh src/shellinabox.sh
+--- orig/shellinabox.sh	1970-01-01 00:00:00.000000000 +0000
++++ src/shellinabox.sh	2023-10-04 10:40:51.000000000 +0000
+@@ -0,0 +1,55 @@
++#!/bin/sh
++title=""
++paragraph=""
++shell_cert="/tmp/certificate.pem"
++uhttpd_cert=$(uci -q get uhttpd.main.cert)
++uhttpd_key=$(uci -q get uhttpd.main.key)
++enable=$(uci -q get cli.status.enable)
++if [ "$enable" -eq "1" ]; then
++	port=$(uci -q get cli.status.port)
++	if [ -z "$port" ]; then
++		port="4200-4220"
++		uci -q set cli.status.port="$port"
++		uci -q commit cli
++	fi
++	shell_limit=$(uci -q get cli.status.shell_limit)
++	if [ -z "$shell_limit" ]; then
++		shell_limit="5"
++		uci -q set cli.status.shell_limit="$shell_limit"
++		uci -q commit cli
++	fi
++	shells=$(ps | grep -v grep | grep -c shellinaboxd)
++	if [ "$shells" -lt "$shell_limit" ]; then
++		if [ ! -s "$shell_cert" ]; then
++			openssl x509 -inform DER -in "$uhttpd_cert" -outform PEM | cat "$uhttpd_key" - > /tmp/shellinabox.tmp
++			mv /tmp/shellinabox.tmp "$shell_cert"
++		fi
++		if [ -n "$HTTPS" ]; then
++			/usr/sbin/shellinaboxd --disable-ssl-menu --cgi="${port}" -u 0 -g 0 -c /tmp
++		else
++			/usr/sbin/shellinaboxd -t --cgi="${port}" -u 0 -g 0
++		fi
++	else
++		title="Too many active shell instances!"
++		paragraph="Too many active shell instances! Close some shell instances and try again."
++	fi
++else
++	title="CLI not enabled!"
++	paragraph="CLI not enabled! Enable CLI and try again."
++fi
++
++if [ -n "$title" ] && [ -n "$paragraph" ]; then
++echo "Content-type: text/html"
++echo ""
++cat <<EOT
++<!DOCTYPE html>
++<html>
++<head>
++        <title>${title}</title>
++</head>
++<body>
++        <p>${paragraph}</p>
++</body>
++</html>
++EOT
++fi

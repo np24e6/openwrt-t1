@@ -6,10 +6,10 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=liblog
-PKG_VERSION:=2023-08-31
+PKG_VERSION:=2023-11-06
 PJG_RELEASE:=1
 
-PKG_SOURCE_VERSION:=1.3
+PKG_SOURCE_VERSION:=1.4
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_SOURCE_VERSION)-$(PKG_VERSION)
 PKG_SOURCE:=$(PKG_SOURCE_SUBDIR).tar.gz
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_SOURCE_SUBDIR)
@@ -20,7 +20,7 @@ define Package/liblog
 	SECTION:=libs
 	CATEGORY:=Libraries
 	TITLE:=A library for logd DB management. Select, insert etc.
-	DEPENDS:=+libuci +libtlt_uci +libubus +libsqlite3 +libubox
+	DEPENDS:=+libubus +libubox
 endef
 
 define Package/liblog/description

@@ -24,13 +24,17 @@ EC_EDL_FAILED="172"
 EC_DL_FAILED="173"
 EC_UPD_VERIFY_FAILED="174"
 EC_UPD_START_FAILED="175"
+EC_UPGRADE_START_ERROR="176"
 
 #prepare ENV
 modem_ids=""
 forced="false"
 update="false"
+MODE=""
+UPDATE_MODEM=""
 firmware_size=0
 export_info=0
+less_status=0
 export_status=0
 a_modem_id="" # Modem ID from arguments
 status="$UPDATE_SUCCESS"
@@ -39,6 +43,8 @@ json_file_status="/tmp/dfota_status.json"
 LAST_ERROR=""
 LAST_ERROR_CODE=""
 UPDATE_FAILED="0"
+
+TOTAL_LIST_RETRIES=10
 
 get_from_info() {
 	ubus call "$1" info | grep "$2" | cut -d'"' -f 4
@@ -67,6 +73,9 @@ print_help() {
 	Options:
 	-h	Print help message
 	-u	Check if there is an update available and start the update
+	-l	<url>	Update modem by link
+	-f	<path>	Update modem by file
+	-m	<id>	Modem id to update. (gsm.modem0, gsm.modem1...)
 	-e	Export JSON to $json_file_updates about available updates
 	-s	Export JSON to $json_file_status about update status
 	-w	Wait for default route and modem to appear
@@ -79,7 +88,22 @@ while [ -n "$1" ]; do
 		-w) export WAIT_FOR_WAN=1;;
 		-d) debug=1;;
 		-u) update="true";;
+		-l)
+			shift
+			MODE="link"
+			MODE_PATH="$1"
+		;;
+		-f)
+			shift
+			MODE="file"
+			MODE_PATH="$1"
+		;;
+		-m)
+			shift
+			UPDATE_MODEM="$1"
+		;;
 		-e) export_info=1;;
+		-k) less_status=1;;
 		-s)
 			export_status=1
 			[ -f "$json_file_status" ] && rm "$json_file_status"
@@ -172,6 +196,11 @@ notify_webui() {
 		stop)
 			mkdir -p /tmp/vuci
 			touch /tmp/vuci/dfota_finish
+			rm -rf /tmp/dfota_update
+			;;
+		error)
+			mkdir -p /tmp/vuci
+			touch /tmp/vuci/dfota_error
 			rm -rf /tmp/dfota_update
 			;;
 	esac
@@ -297,6 +326,8 @@ check_modem_status() {
 }
 
 check_update() {
+	[ -n "$MODE" ] && print_output "Skipping update checking because direct file or link provided" && return
+
 	#Check if there is available update
 	local modem_id="$1"
 	forced="false"
@@ -336,6 +367,14 @@ do_update() {
 	local modem_id="$1"
 	local ret
 
+	# Sets size for modem to expect
+	[ "$MODE" == "link" ] && firmware_size=$(curl -sI "$MODE_PATH" | awk -e '$0 ~ /^Content-Length: ([0-9]+)/ { print $2 }')
+	[ "$MODE" == "file" ] && firmware_size=$(du -b "$MODE_PATH" | awk '{print $1}')
+	[ -n "$MODE" ] && [ -z "$firmware_size" ] && {
+		print_error "Failed to get firmware_size from $MODE_PATH"
+		return 1
+	}
+
 	print_output "Preparing system for update!"
 
 	ubus call "$modem_id" delete_file "{\"path\":\"UFS:dfota.zip\"}" > /dev/null 2>&1
@@ -366,18 +405,32 @@ do_update() {
 
 	print_output "Starting download!"
 	json_update_modem_status "$modem_id" "downloading"
+	notify_webui "start"
 	# Add notification to rut_fota about start of downloading
-	rut_fota --notify_server
-	curl -s --ssl --connect-timeout 30 --max-time 900 -L "$download_link" -o "$cmd_port"
-	ret="$?"
+	[ -z "$MODE" ] && rut_fota --notify_server
+	if [ "$MODE" = "file" ]; then
+		cat "$MODE_PATH" > "$cmd_port"
+	else
+		if [ "$MODE" = "link" ]; then
+			download_link="$MODE_PATH"
+		fi
+		curl -s --ssl-reqd --connect-timeout 30 --max-time 900 -L "$download_link" -o "$cmd_port"
+	fi
 
-	sleep 2
+	ret="$?"
 
 	[ "$ret" = "0" ] || {
 		print_error "Firmware update download was unsuccessful. Error: $ret" "$EC_DL_FAILED"
 		return 1
 	}
-	get_file_list_result=$(ubus call "$modem_id" get_file_list "{\"path\":\"UFS:dfota.zip\"}" )
+
+	for i in $(seq $TOTAL_LIST_RETRIES); do
+		sleep 2
+		get_file_list_result=$(ubus call "$modem_id" get_file_list "{\"path\":\"UFS:dfota.zip\"}")
+		[ -z $(echo "$get_file_list_result" | grep "error") ] && break
+		debug "($i/$TOTAL_LIST_RETRIES) Retrying to get file list"
+	done
+
 	dl_file_size=$( echo "$get_file_list_result" | grep "size" | cut -d'"' -f 3 | cut -c 3- )
 	[ -n "$dl_file_size" ] &&\
 	[ -n "$firmware_size" ] &&\
@@ -397,7 +450,7 @@ do_update() {
 		ret=$(ubus call "$modem_id" dfota_upgrade "{\"path\":\"/cache/ufs/dfota.zip\"}")
 		ret=$(get_value_from_json "$ret" "status")
 		[ "$ret" == "OK" ] && return 0
-	
+
 		print_error "Unable to start firmware update process!" "$EC_UPD_START_FAILED"
 		return 1
 
@@ -416,7 +469,20 @@ track_update_status() {
 	print_output "Waiting for the update to start..."
 	json_update_modem_status "$modem_id" "waiting"
 	modem_usb_id=$(get_from_info "$modem_id" "usb_id")
+
+	# Counter and max wait time
+	counter=0
+	max_wait=30
+
 	while [ -e "/sys/bus/usb/devices/$modem_usb_id" ]; do
+		counter=$((counter+1))
+		if [ $counter -ge $max_wait ]; then
+			print_error "Unable to start update process" $EC_UPGRADE_START_ERROR
+			json_update_modem_error "$modem_id" "$LAST_ERROR" "$LAST_ERROR_CODE"
+			json_update_dfota_status "finished" "$UPDATE_FAILED"
+			end "$UPDATE_ERROR" "Update script done!"
+		fi
+
 		sleep 1
 	done
 
@@ -524,6 +590,10 @@ _json_update_dfota_status(){
 json_update_dfota_status(){
 	[ "$export_status" -eq 1 ] && {
 		_json_update_dfota_status "$1" "$2"
+		[ "$2" -ne 1 ] && return
+
+		[ "$less_status" -eq 0 ] || { [ "$LAST_ERROR_CODE" != "$EC_NO_UPDATE" ] &&
+		[ "$LAST_ERROR_CODE" != "$EC_NOT_QUECTEL" ]; } && notify_webui "error"
 	}
 }
 
@@ -555,8 +625,11 @@ json_update_modem_error(){
 
 update_loop(){
 	#Iterate modem ids
+	local modem_found=""
 	for m_id in $modem_ids; do
+		[ -n "$UPDATE_MODEM" ] && [ "$m_id" != "$UPDATE_MODEM" ] && continue
 		print_output "Preparing for $m_id update!"
+		modem_found="true"
 
 		check_modem_status "$m_id" || {
 			json_update_modem_error "$m_id" "$LAST_ERROR" "$LAST_ERROR_CODE"
@@ -586,6 +659,11 @@ update_loop(){
 		fi
 	done
 
+	[ -n "$UPDATE_MODEM" ] && [ -z "$modem_found" ] && {
+		print_error "Failed to select $UPDATE_MODEM modem." "$MODEM_NOT_FOUND"
+		exit 1
+	}
+
 	reset_on_fail "$status"
 	json_update_dfota_status "finished" "$UPDATE_FAILED"
 	end "$status" "Update script done!"
@@ -600,6 +678,8 @@ if [ "$(pgrep -f "$0")" != "$$" ]; then
 fi
 
 [ "$export_info" -eq 1 ] && [ "$update" = "true" ] && end "$BAD_ARGUMENTS" "Please define only -e or -u in arguments!"
+
+[ "$export_status" -eq 1 ] && [ "$less_status" -eq 0 ] &&  json_update_dfota_status "started" 0
 
 #Wait for full system boot
 while true; do

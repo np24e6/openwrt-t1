@@ -7,7 +7,7 @@ include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=urcd
 
-PKG_SOURCE_VERSION:=1.0
+PKG_SOURCE_VERSION:=1.1
 
 include $(INCLUDE_DIR)/package.mk
 

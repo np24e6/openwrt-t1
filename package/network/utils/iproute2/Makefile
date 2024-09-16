@@ -47,7 +47,7 @@ $(call Package/iproute2/Default)
   VARIANT:=ipfull
   PROVIDES:=ip
   ALTERNATIVES:=300:/sbin/ip:/usr/libexec/ip-full
-  DEPENDS:=+libnl-tiny +libbpf +(PACKAGE_devlink||PACKAGE_rdma):libmnl
+  DEPENDS:=+libnl-tiny +(PACKAGE_devlink||PACKAGE_rdma):libmnl
 endef
 
 define Package/tc-tiny
@@ -66,7 +66,7 @@ $(call Package/iproute2/Default)
   VARIANT:=tcbpf
   PROVIDES:=tc
   ALTERNATIVES:=300:/sbin/tc:/usr/libexec/tc-bpf
-  DEPENDS:=+kmod-sched-core +(PACKAGE_devlink||PACKAGE_rdma):libmnl +libbpf
+  DEPENDS:=+kmod-sched-core +(PACKAGE_devlink||PACKAGE_rdma):libmnl
 endef
 
 define Package/tc-full
@@ -75,14 +75,14 @@ $(call Package/iproute2/Default)
   VARIANT:=tcfull
   PROVIDES:=tc
   ALTERNATIVES:=400:/sbin/tc:/usr/libexec/tc-full
-  DEPENDS:=+kmod-sched-core +(PACKAGE_devlink||PACKAGE_rdma):libmnl +libbpf +libxtables +tc-mod-iptables
+  DEPENDS:=+kmod-sched-core +(PACKAGE_devlink||PACKAGE_rdma):libmnl +libxtables +tc-mod-iptables
 endef
 
 define Package/tc-mod-iptables
 $(call Package/iproute2/Default)
   TITLE:=Traffic control module - iptables action
   VARIANT:=tcfull
-  DEPENDS:=+libxtables +libbpf
+  DEPENDS:=+libxtables
 endef
 
 define Package/genl
@@ -127,7 +127,7 @@ ifeq ($(BUILD_VARIANT),iptiny)
 endif
 
 ifeq ($(BUILD_VARIANT),ipfull)
-  HAVE_ELF:=y
+  HAVE_ELF:=n
   LIBBPF_FORCE:=off
 endif
 
@@ -136,8 +136,8 @@ ifeq ($(BUILD_VARIANT),tctiny)
 endif
 
 ifeq ($(BUILD_VARIANT),tcbpf)
-  HAVE_ELF:=y
-  LIBBPF_FORCE:=on
+  HAVE_ELF:=n
+  LIBBPF_FORCE:=off
   SHARED_LIBS:=y
 endif
 
@@ -147,8 +147,8 @@ ifeq ($(BUILD_VARIANT),tcfull)
   TC_CONFIG_XT_OLD:=y
   TC_CONFIG_XT_OLD_H:=y
   TC_CONFIG_IPSET:=y
-  HAVE_ELF:=y
-  LIBBPF_FORCE:=on
+  HAVE_ELF:=n
+  LIBBPF_FORCE:=off
   SHARED_LIBS:=y
 else
   #disable iptables requirement by default

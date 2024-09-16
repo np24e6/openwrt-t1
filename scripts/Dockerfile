@@ -1,5 +1,7 @@
 FROM ubuntu:focal
 
+ENV NODE_MAJOR 18
+
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC \
 	apt-get install -y \
 	binutils \
@@ -7,6 +9,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC \
 	bison \
 	build-essential \
 	bzip2 \
+	ca-certificates \
 	curl \
 	default-jdk \
 	device-tree-compiler \
@@ -22,6 +25,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC \
 	gengetopt \
 	gettext \
 	git \
+	gnupg \
 	groff \
 	help2man \
 	java-wrappers \
@@ -31,8 +35,8 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC \
 	libffi-dev \
 	libncurses5-dev \
 	libpcre3-dev \
-	libssl-dev \
 	libsqlite3-dev \
+	libssl-dev \
 	libxml-parser-perl \
 	lz4 \
 	make \
@@ -52,16 +56,16 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC \
 	swig \
 	u-boot-tools \
 	unzip \
+	uuid-dev \
 	vim-common \
 	wget \
 	zip \
 	zlib1g-dev
 
 # install NodeJS v14
-RUN curl -sL https://deb.nodesource.com/gpgkey/nodesource.gpg.key | apt-key add - && \
-	/bin/echo 'deb https://deb.nodesource.com/node_14.x focal main' > /etc/apt/sources.list.d/nodesource.list && \
-	/bin/echo 'deb-src https://deb.nodesource.com/node_14.x focal main' >> /etc/apt/sources.list.d/nodesource.list && \
+RUN mkdir -p /etc/apt/keyrings && \
+	curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg && \
+	/bin/echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_$NODE_MAJOR.x nodistro main" | tee /etc/apt/sources.list.d/nodesource.list && \
 	apt-get update && apt-get install -y nodejs
-
 
 CMD ["/bin/bash"]

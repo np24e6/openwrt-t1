@@ -3,24 +3,20 @@
 
 START=03
 USE_PROCD=1
+CFG="system"
 
-validate_system_section() {
-	uci_load_validate system system "$1" "$2" \
-		'hostname:string:%%NAME%%' \
-		'conloglevel:uinteger' \
-		'buffersize:uinteger' \
-		'timezone:string:UTC' \
-		'zonename:string'
-}
-
-system_config() {
-	[ "$2" = 0 ] || {
-		echo "validation failed"
-		return 1
-	}
+reload_service() {
+	local hostname conloglevel buffersize timezone zonename
+	config_load "$CFG"
+	config_get hostname "$CFG" hostname "%%NAME%%"
+	config_get conloglevel "$CFG" conloglevel
+	config_get buffersize "$CFG" buffersize
+	config_get timezone "$CFG" timezone "UTC"
+	config_get zonename "$CFG" zonename
 
 	echo "$hostname" > /proc/sys/kernel/hostname
-	[ -z "$conloglevel" -a -z "$buffersize" ] || dmesg ${conloglevel:+-n $conloglevel} ${buffersize:+-s $buffersize}
+	[ -z "$conloglevel" -a -z "$buffersize" ] \
+		|| dmesg ${conloglevel:+-n $conloglevel} ${buffersize:+-s $buffersize}
 	echo "$timezone" > /tmp/TZ
 	[ -n "$zonename" ] && [ -f "/usr/share/zoneinfo/${zonename// /_}" ] \
 		&& ln -sf "/usr/share/zoneinfo/${zonename// /_}" /tmp/localtime \
@@ -30,14 +26,8 @@ system_config() {
 	hwclock -u --systz
 }
 
-reload_service() {
-	config_load system
-	config_foreach validate_system_section system system_config
-}
-
 service_triggers() {
 	procd_add_reload_trigger "system"
-	procd_add_validation validate_system_section
 }
 
 start_service() {

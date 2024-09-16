@@ -117,54 +117,6 @@ int get_urlparts(char *src, char *host, int hostsize, int *port, int *uripos) {
   return 0;
 }
 
-int bstrtocstr(bstring src, char *dst, unsigned int len) {
-	if (!src || src->slen == 0) {
-		dst[0] = 0;
-		return 0;
-	}
-
-	strlcpy(dst, (char*)src->data, len);
-	return 0;
-}
-
-int bescape_str(bstring src, bstring dst) {
-  int n;
-
-  bassigncstr(dst, "");
-  for (n=0; n < src->slen; n++)
-    if ('\'' != src->data[n] && src->data[n] != '"' &&
-        '\\' != src->data[n]) {
-      bconchar(dst,src->data[n]);
-    }
-
-  return 0;
-}
-
-int escape_cstr(char *src, char *dst) {
-  int i = 0;
-  int n;
-
-  for (n = 0; n < strlen(src); n++)
-    if ('\'' != src[n] && src[n] != '"' &&
-        '\\' != src[n]) {
-      dst[i++] = src[n];
-    }
-
-  dst[i] = 0;
-
-  return 0;
-}
-
-int besc_strtocstr(bstring src, char *dst, unsigned int len) {
-  bstring dst_bt = bfromcstr("");
-
-  bescape_str(src, dst_bt);
-  bstrtocstr(dst_bt, dst, len);
-  bdestroy(dst_bt);
-
-  return 0;
-}
-
 
 /* This file is free software; you can redistribute it and/or modify */
 /* it under the terms of the GNU General Public License as published by */

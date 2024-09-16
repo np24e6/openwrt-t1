@@ -44,7 +44,7 @@ define Package/classpath-tools
 endef
 
 define Download/antlr
-  URL:=http://www.antlr.org/download
+  URL:=http://www.antlr3.org/download
   FILE:=antlr-3.4-complete.jar
   HASH:=9d3e866b610460664522520f73b81777b5626fb0a282a5952b9800b751550bf7
 endef

@@ -39,6 +39,11 @@ define Package/miniupnpd
   endif
 endef
 
+define Package/miniupnpd/description
+	UPnP (Universal Plug and Play) is a service that allows clients in
+	the local network to automatically configure some devices and services.
+endef
+
 define Package/miniupnpd/conffiles
 /etc/config/upnpd
 endef

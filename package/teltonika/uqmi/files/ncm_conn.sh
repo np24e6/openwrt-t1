@@ -20,8 +20,8 @@ check_connection() {
 	[ -z "$mdm_ubus_obj" ] && echo "gsm.modem object not found. Downing connection." && ifdown $ifname
 
 	while true; do
-		pdp_call=$(ubus call "$mdm_ubus_obj" get_pdp_call "{\"cid\":${pdp}}" > /dev/null 2>&1 )
-		if [ "$pdp_call" = "" ]; then
+		pdp_call=$(ubus call "$mdm_ubus_obj" get_pdp_call "{\"cid\":${pdp}}" 2> /dev/null)
+		if [ -z "$pdp_call" ]; then
 			addr=$(ubus call "$mdm_ubus_obj" get_pdp_addr "{\"index\":${pdp}}" | grep addr)
 			if [ "$addr" = "" ]; then
 				count=$((count+1))
@@ -32,15 +32,17 @@ check_connection() {
 				sleep "$WHILE_INTERVAL"
 				continue
 			fi
-			count=0
+		fi
+
+		if [ -n "$pdp_call" ]; then
+			json_load "$pdp_call"
+			json_get_var parsed_pdp cid
+			json_get_var parsed_status state_id
+			json_get_var errno errno
+		else
 			sleep "$WHILE_INTERVAL"
 			continue
 		fi
-
-		json_load $pdp_call
-		json_get_var parsed_pdp cid
-		json_get_var parsed_status state_id
-		json_get_var errno errno
 
 		if [ -z "$errno" ] && [ "$parsed_pdp" -eq "$pdp" ] && [ "$parsed_status" -eq 2 ]; then
 			count=0

@@ -1,0 +1,21 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+num=1
+
+rename_section () {
+        SECTION="$1"
+        NAME="$2"
+
+        [ "$NAME" = "" ] && NAME="$num"
+
+        uci_rename "ntpclient" "$SECTION" "$NAME" &>/dev/null
+        num=$((num+1))
+}
+
+config_load "ntpclient"
+config_foreach "rename_section" "ntpserver"
+config_foreach "rename_section" "ntpdrift" "ntpdrift"
+config_foreach "rename_section" "ntpclient" "ntpclient"
+uci_commit "ntpclient"

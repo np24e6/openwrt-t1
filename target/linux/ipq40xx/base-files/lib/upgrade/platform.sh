@@ -1,3 +1,5 @@
+. /lib/upgrade/common.sh
+
 PART_NAME=firmware
 REQUIRE_IMAGE_METADATA=1
 
@@ -7,19 +9,6 @@ platform_check_image() {
 
 platform_do_upgrade() {
 	platform_do_upgrade_ipq "$1"
-}
-
-prepare_metadata_hw_mods () {
-	local metadata="/tmp/sysupgrade.meta"
-
-	[ -e "$metadata" ] || { fwtool -q -i $metadata "$1"; } && {
-		json_load_file "$metadata"
-		json_select hw_mods 1> /dev/null && {
-			json_get_values hw_mods
-		}
-		return 0
-	}
-	return 1
 }
 
 prepare_metadata_hw_supp () {
@@ -35,10 +24,6 @@ prepare_metadata_hw_supp () {
 		return 0
 	}
 	return 1
-}
-
-find_hw_mod() {
-	echo "$hw_mods" | grep -q "$1"
 }
 
 find_io_exp() {

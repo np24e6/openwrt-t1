@@ -37,14 +37,14 @@
 
 /**
  * QmiWdsIpFamily:
- * @QMI_WDS_IP_FAMILY_UNKNOWN: unknown.
+ * @QMI_WDS_IP_FAMILY_UNKNOWN: unknown. Since: 1.18.
  * @QMI_WDS_IP_FAMILY_IPV4: IPv4.
  * @QMI_WDS_IP_FAMILY_IPV6: IPv6.
  * @QMI_WDS_IP_FAMILY_UNSPECIFIED: None specified.
  *
  * Type of IP family.
  *
- * Since 1.0
+ * Since: 1.0
  */
 typedef enum { /*< since=1.0 >*/
     QMI_WDS_IP_FAMILY_UNKNOWN     = 0,
@@ -60,7 +60,7 @@ typedef enum { /*< since=1.0 >*/
  *
  * Type of network allowed when trying to connect.
  *
- * Since 1.0
+ * Since: 1.0
  */
 typedef enum { /*< since=1.0 >*/
     QMI_WDS_TECHNOLOGY_PREFERENCE_ALLOW_3GPP  = 1 << 0,
@@ -77,7 +77,7 @@ typedef enum { /*< since=1.0 >*/
  *
  * Type of network allowed when trying to connect.
  *
- * Since 1.0
+ * Since: 1.0
  */
 typedef enum { /*< since=1.0 >*/
     QMI_WDS_EXTENDED_TECHNOLOGY_PREFERENCE_CDMA             = 32769,
@@ -94,7 +94,7 @@ typedef enum { /*< since=1.0 >*/
  *
  * Type of call to originate.
  *
- * Since 1.0
+ * Since: 1.0
  */
 typedef enum { /*< since=1.0 >*/
     QMI_WDS_CALL_TYPE_LAPTOP   = 0,
@@ -178,7 +178,7 @@ typedef enum { /*< since=1.0 >*/
  *
  * Reason for ending the call.
  *
- * Since 1.0
+ * Since: 1.0
  */
 typedef enum { /*< since=1.0 >*/
     /* Generic reasons */
@@ -274,7 +274,7 @@ typedef enum { /*< since=1.0 >*/
  *
  * Type of verbose call end reason.
  *
- * Since 1.0
+ * Since: 1.0
  */
 typedef enum { /*< since=1.0 >*/
     QMI_WDS_VERBOSE_CALL_END_REASON_TYPE_MIP      = 1,
@@ -322,7 +322,7 @@ typedef enum { /*< since=1.0 >*/
  *
  * Mobile IP specific call end reasons, given when the @QmiWdsVerboseCallEndReasonType is #QMI_WDS_VERBOSE_CALL_END_REASON_TYPE_MIP.
  *
- * Since 1.0
+ * Since: 1.0
  */
 typedef enum { /*< since=1.0 >*/
     QMI_WDS_VERBOSE_CALL_END_REASON_MIP_ERROR_REASON_UNKNOWN                                = -1,
@@ -371,52 +371,52 @@ typedef enum { /*< since=1.0 >*/
  * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_CLOSE_IN_PROGRESS: Close in progress.
  * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_NETWORK_INITIATED_TERMINATION: Network initiated termination.
  * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_APP_PREEMPTED: App preempted.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_PDN_IPV4_CALL_DISALLOWED: PDN IPv4 call disallowed.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_PDN_IPV4_CALL_THROTTLED: PDN IPv4 call throttled.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_PDN_IPV6_CALL_DISALLOWED: PDN IPv6 call disallowed.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_PDN_IPV6_CALL_THROTTLED: PDN IPv6 call throttled.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_MODEM_RESTART: Modem restart.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_PDP_PPP_NOT_SUPPORTED: PDP PPP not supported.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_UNPREFERRED_RAT: Unpreferred RAT.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_PHYSICAL_LINK_CLOSE_IN_PROGRESS: Physical link close in progress.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_APN_PENDING_HANDOVER: APN pending handover.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_PROFILE_BEARER_INCOMPATIBLE: Profile bearer incompatible.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_MMGDSI_CARD_EVENT: MMGDSI Card event.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_LPM_OR_POWER_DOWN: LPM or power down.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_APN_DISABLED: APN disabled.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_MPIT_EXPIRED: MPIT expired.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_IPV6_ADDRESS_TRANSFER_FAILED: IPv6 address transfer failed.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_TRAT_SWAP_FAILED: TRAT swap failed.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_EHRPD_TO_HRPD_FALLBACK: eHRPD to HRPD fallback.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_MANDATORY_APN_DISABLED: Mandatory APN disabled.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_MIP_CONFIG_FAILURE: MIP config failure.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_PDN_INACTIVITY_TIMER_EXPIRED: PDN inactivity timeout expired.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_MAX_V4_CONNECTIONS: Max IPv4 connections.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_MAX_V6_CONNECTIONS: Max IPv6 connections.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_APN_MISMATCH: APN mismatch.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_IP_VERSION_MISMATCH: IP version mismatch.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_DUN_CALL_DISALLOWED: DUN call disallowed.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_INVALID_PROFILE: Invalid profile.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_EPC_NONEPC_TRANSITION: EPC to non-EPC transition.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_INVALID_PROFILE_ID: Invalid profile ID.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_CALL_ALREADY_PRESENT: Call already present.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_INTERFACE_IN_USE: Interface in use.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_IP_PDP_MISMATCH: IP PDP mismatch.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_APN_DISALLOWED_ON_ROAMING: APN disallowed on roaming.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_APN_PARAMETER_CHANGE: APN parameter change.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_INTERFACE_IN_USE_CONFIG_MATCH: Interface in use config match.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_NULL_APN_DISALLOWED: NULL APN disallowed.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_THERMAL_MITIGATION: Thermal mitigation.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_PDN_IPV4_CALL_DISALLOWED: PDN IPv4 call disallowed. Since: 1.14.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_PDN_IPV4_CALL_THROTTLED: PDN IPv4 call throttled. Since: 1.14.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_PDN_IPV6_CALL_DISALLOWED: PDN IPv6 call disallowed. Since: 1.14.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_PDN_IPV6_CALL_THROTTLED: PDN IPv6 call throttled. Since: 1.14.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_MODEM_RESTART: Modem restart. Since: 1.14.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_PDP_PPP_NOT_SUPPORTED: PDP PPP not supported. Since: 1.14.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_UNPREFERRED_RAT: Unpreferred RAT. Since: 1.14.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_PHYSICAL_LINK_CLOSE_IN_PROGRESS: Physical link close in progress. Since: 1.14.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_APN_PENDING_HANDOVER: APN pending handover. Since: 1.14.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_PROFILE_BEARER_INCOMPATIBLE: Profile bearer incompatible. Since: 1.14.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_MMGDSI_CARD_EVENT: MMGDSI Card event. Since: 1.14.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_LPM_OR_POWER_DOWN: LPM or power down. Since: 1.14.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_APN_DISABLED: APN disabled. Since: 1.14.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_MPIT_EXPIRED: MPIT expired. Since: 1.14.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_IPV6_ADDRESS_TRANSFER_FAILED: IPv6 address transfer failed. Since: 1.14.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_TRAT_SWAP_FAILED: TRAT swap failed. Since: 1.14.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_EHRPD_TO_HRPD_FALLBACK: eHRPD to HRPD fallback. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_MANDATORY_APN_DISABLED: Mandatory APN disabled. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_MIP_CONFIG_FAILURE: MIP config failure. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_PDN_INACTIVITY_TIMER_EXPIRED: PDN inactivity timeout expired. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_MAX_V4_CONNECTIONS: Max IPv4 connections. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_MAX_V6_CONNECTIONS: Max IPv6 connections. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_APN_MISMATCH: APN mismatch. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_IP_VERSION_MISMATCH: IP version mismatch. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_DUN_CALL_DISALLOWED: DUN call disallowed. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_INVALID_PROFILE: Invalid profile. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_EPC_NONEPC_TRANSITION: EPC to non-EPC transition. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_INVALID_PROFILE_ID: Invalid profile ID. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_CALL_ALREADY_PRESENT: Call already present. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_INTERFACE_IN_USE: Interface in use. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_IP_PDP_MISMATCH: IP PDP mismatch. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_APN_DISALLOWED_ON_ROAMING: APN disallowed on roaming. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_APN_PARAMETER_CHANGE: APN parameter change. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_INTERFACE_IN_USE_CONFIG_MATCH: Interface in use config match. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_NULL_APN_DISALLOWED: NULL APN disallowed. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_THERMAL_MITIGATION: Thermal mitigation. Since 1.24.10.
  * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_SUBS_ID_MISMATCH: Subs ID mismatch Since 1.24.10.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_DATA_SETTINGS_DISABLED: Data settings disabled.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_DATA_ROAMING_SETTINGS_DISABLED: Data roaming settings disabled.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_APN_FORMAT_INVALID: APN format invalid.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_DDS_CALL_ABORT: DDS call abort.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_VALIDATION_FAILURE: Validation failure.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_DATA_SETTINGS_DISABLED: Data settings disabled. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_DATA_ROAMING_SETTINGS_DISABLED: Data roaming settings disabled. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_APN_FORMAT_INVALID: APN format invalid. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_DDS_CALL_ABORT: DDS call abort. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_VALIDATION_FAILURE: Validation failure. Since 1.24.10.
  *
  * Internal call end reasons, given when the @QmiWdsVerboseCallEndReasonType is #QMI_WDS_VERBOSE_CALL_END_REASON_TYPE_INTERNAL.
  *
- * Since 1.0
+ * Since: 1.0
  */
 typedef enum { /*< since=1.0 >*/
     QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_ERROR                           = 201,
@@ -488,17 +488,17 @@ typedef enum { /*< since=1.0 >*/
  * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_USER_CALL_ORIGINATED_DURING_GPS: CDMA specific. Call originated during GPS.
  * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_USER_CALL_ORIGINATED_DURING_SMS: CDMA specific. Call originated during SMS.
  * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_NO_CDMA_SERVICE: CDMA specific. No service.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_MC_ABORT: MC abort.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_PSIST_NG: Persistence test failure.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_UIM_NOT_PRESENT: UIM not present.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_MC_ABORT: MC abort. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_PSIST_NG: Persistence test failure. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_UIM_NOT_PRESENT: UIM not present. Since 1.24.10.
  * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_RETRY_ORDER: Retry order.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_ACCESS_BLOCK: Access blocked.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_ACCESS_BLOCK_ALL: Access blocked for all.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_IS707B_MAX_ACCESS_PROBES: Maximum access probes for IS-707B call.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_THERMAL_EMERGENCY: Thermal emergency.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_CALL_ORIGINATION_THROTTLED: Call origination throttled.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_USER_CALL_ORIGINATED: Voice call originated and concurrent voice/data not supported.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_CONFERENCE_FAILED: Conference failed.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_ACCESS_BLOCK: Access blocked. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_ACCESS_BLOCK_ALL: Access blocked for all. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_IS707B_MAX_ACCESS_PROBES: Maximum access probes for IS-707B call. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_THERMAL_EMERGENCY: Thermal emergency. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_CALL_ORIGINATION_THROTTLED: Call origination throttled. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_USER_CALL_ORIGINATED: Voice call originated and concurrent voice/data not supported. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_CONFERENCE_FAILED: Conference failed. Since 1.24.10.
  * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_INCOMING_REJECTED: Incoming rejected.
  * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_NO_GATEWAY_SERVICE: No gateway service.
  * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_NO_GPRS_CONTEXT: No GPRS context.
@@ -516,59 +516,59 @@ typedef enum { /*< since=1.0 >*/
  * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_CONGESTION: Congestion.
  * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_NO_PDP_CONTEXT_ACTIVATED: No PDP context activated.
  * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_ACCESS_CLASS_DSAC_REJECTION: Access class DSAC rejection.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_PDP_ACTIVATE_MAX_RETRY_FAILED: Maximum retries failed to activate PDP context.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_RAB_FAILURE: RAB failure.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_EPS_SERVICE_NOT_ALLOWED: EPS service not allowed.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_TRACKING_AREA_NOT_ALLOWED: Tracking area not allowed.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_ROAMING_NOT_ALLOWED_IN_TRACKING_AREA: Roaming not allowed in tracking area.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_NO_SUITABLE_CELLS_IN_TRACKING_AREA: No suitable cells in tracking area.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_NOT_AUTHORIZED_CLOSED_SUBSCRIBER_GROUP: Not authorized in closed subscriber group.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_ESM_UNKNOWN_EPS_BEARER_CONTEXT: EPS Session Management, unknown EPS bearer context.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_DRB_RELEASED_AT_RRC: DRB released at RRC.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_NAS_SIGNAL_CONNECTION_RELEASED: NAS signal connection released.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_EMM_DETACHED: EPS Mobility Management, detached.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_EMM_ATTACH_FAILED: EPS Mobility Management, attach failed.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_EMM_ATTACH_STARTED: EPS Mobility Management, attach started.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LTE_NAS_SERVICE_REQUEST_FAILED: LTE NAS service request failed.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_ESM_ACTIVE_DEDICATED_BEARER_REACTIVATED_BY_NW: EPS Session Management, active dedicated bearer reactivated by network.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_ESM_LOWER_LAYER_FAILURE: EPS Session Management, lower layer failure.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_ESM_SYNC_UP_WITH_NW: EPS Session Management, sync up with network.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_ESM_NW_ACTIVATED_DEDICATED_BEARER_WITH_ID_OF_DEFAULT_BEARER: EPS Session Management, network activated dedicated bearer with id of default bearer.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_ESM_BAD_OTA_MESSAGE: EPS Session Management, bad OTA message.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_ESM_DS_REJECTED_CALL: EPS Session Management, DS rejected call.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_ESM_CONTEXT_TRANSFERRED_DUE_TO_IRAT: EPS Session Management, context transferred due to IRAT.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_DS_EXPLICIT_DEACT: DS explicit deactivation.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_ESM_LOCAL_CAUSE_NONE: EPS Session Management, local cause none.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LTE_NAS_SERVICE_REQUEST_FAILED_NO_THROTTLE: LTE NAS service request failed, no throttle.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_ACL_FAILURE: ACL failure.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LTE_NAS_SERVICE_REQUEST_FAILED_DS_DISALLOW: LTE NAS service request failed, DS disallow.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_EMM_T3417_EXPIRED: EPS Mobility Management, T3417 expired.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_EMM_T3417_EXT_EXPIRED: EPS Mobility Management, T3417 ext expired.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LRRC_UL_DATA_CONFIRMATION_FAILURE_TXN: LTE Radio Resource Control, UL data confirmation failure, txn.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LRRC_UL_DATA_CONFIRMATION_FAILURE_HANDOVER: LTE Radio Resource Control, UL data confirmation failure, handover.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LRRC_UL_DATA_CONFIRMATION_FAILURE_CONN_REL: LTE Radio Resource Control, UL data confirmation failure, connection release.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LRRC_UL_DATA_CONFIRMATION_FAILURE_RLF: LTE Radio Resource Control, UL data confirmation failure, radio link failure.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LRRC_UL_DATA_CONFIRMATION_FAILURE_CTRL_NOT_CONN: LTE Radio Resource Control, UL data confirmation failure, ctrl not conn.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LRRC_CONNECTION_ESTABLISHMENT_FAILURE: LTE Radio Resource Control, connection establishment failure.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LRRC_CONNECTION_ESTABLISHMENT_FAILURE_ABORTED: LTE Radio Resource Control, connection establishment failure, aborted.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LRRC_CONNECTION_ESTABLISHMENT_FAILURE_ACCESS_BARRED: LTE Radio Resource Control, connection establishment failure, access barred.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LRRC_CONNECTION_ESTABLISHMENT_FAILURE_CELL_RESELECTION: LTE Radio Resource Control, connection establishment failure, cell reselection.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LRRC_CONNECTION_ESTABLISHMENT_FAILURE_CONFIG_FAILURE: LTE Radio Resource Control, connection establishment failure, config failure.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LRRC_CONNECTION_ESTABLISHMENT_FAILURE_TIMER_EXPIRED: LTE Radio Resource Control, connection establishment failure, timer expired.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LRRC_CONNECTION_ESTABLISHMENT_FAILURE_LINK_FAILURE: LTE Radio Resource Control, connection establishment failure, link failure.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LRRC_CONNECTION_ESTABLISHMENT_FAILURE_NOT_CAMPED: LTE Radio Resource Control, connection establishment failure, not camped.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LRRC_CONNECTION_ESTABLISHMENT_FAILURE_SI_FAILURE: LTE Radio Resource Control, connection establishment failure, SI failure.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LRRC_CONNECTION_ESTABLISHMENT_FAILURE_REJECTED: LTE Radio Resource Control, connection establishment failure, rejected.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LRRC_CONNECTION_RELEASE_NORMAL: LTE Radio Resource Control, connection release, normal.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LRRC_CONNECTION_RELEASE_RLF: LTE Radio Resource Control, connection release, radio link failure.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LRRC_CONNECTION_RELEASE_CRE_FAILURE: LTE Radio Resource Control, connection release, cre failure.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LRRC_CONNECTION_RELEASE_OOS_DURING_CRE: LTE Radio Resource Control, connection release, oos during cre.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LRRC_CONNECTION_RELEASE_ABORTED: LTE Radio Resource Control, connection release, aborted.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LRRC_CONNECTION_RELEASE_SIB_READ_ERROR: LTE Radio Resource Control, connection release, SIB read error.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_DETACH_WITH_REATTACH_LTE_NW_DETACH: Detach with reattach LTE network detach.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_DETACH_WITHOUT_REATTACH_LTE_NW_DETACH: Detach without reattach LTE network detach.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_ESM_PROC_TIMEOUT: EPS Session Management, proc timeout.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_MESSAGE_EXCEED_MAX_L2_LIMIT: Message exceed max L2 limit.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_PDP_ACTIVATE_MAX_RETRY_FAILED: Maximum retries failed to activate PDP context. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_RAB_FAILURE: RAB failure. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_EPS_SERVICE_NOT_ALLOWED: EPS service not allowed. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_TRACKING_AREA_NOT_ALLOWED: Tracking area not allowed. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_ROAMING_NOT_ALLOWED_IN_TRACKING_AREA: Roaming not allowed in tracking area. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_NO_SUITABLE_CELLS_IN_TRACKING_AREA: No suitable cells in tracking area. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_NOT_AUTHORIZED_CLOSED_SUBSCRIBER_GROUP: Not authorized in closed subscriber group. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_ESM_UNKNOWN_EPS_BEARER_CONTEXT: EPS Session Management, unknown EPS bearer context. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_DRB_RELEASED_AT_RRC: DRB released at RRC. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_NAS_SIGNAL_CONNECTION_RELEASED: NAS signal connection released. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_EMM_DETACHED: EPS Mobility Management, detached. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_EMM_ATTACH_FAILED: EPS Mobility Management, attach failed. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_EMM_ATTACH_STARTED: EPS Mobility Management, attach started. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LTE_NAS_SERVICE_REQUEST_FAILED: LTE NAS service request failed. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_ESM_ACTIVE_DEDICATED_BEARER_REACTIVATED_BY_NW: EPS Session Management, active dedicated bearer reactivated by network. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_ESM_LOWER_LAYER_FAILURE: EPS Session Management, lower layer failure. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_ESM_SYNC_UP_WITH_NW: EPS Session Management, sync up with network. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_ESM_NW_ACTIVATED_DEDICATED_BEARER_WITH_ID_OF_DEFAULT_BEARER: EPS Session Management, network activated dedicated bearer with id of default bearer. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_ESM_BAD_OTA_MESSAGE: EPS Session Management, bad OTA message. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_ESM_DS_REJECTED_CALL: EPS Session Management, DS rejected call. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_ESM_CONTEXT_TRANSFERRED_DUE_TO_IRAT: EPS Session Management, context transferred due to IRAT. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_DS_EXPLICIT_DEACT: DS explicit deactivation. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_ESM_LOCAL_CAUSE_NONE: EPS Session Management, local cause none. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LTE_NAS_SERVICE_REQUEST_FAILED_NO_THROTTLE: LTE NAS service request failed, no throttle. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_ACL_FAILURE: ACL failure. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LTE_NAS_SERVICE_REQUEST_FAILED_DS_DISALLOW: LTE NAS service request failed, DS disallow. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_EMM_T3417_EXPIRED: EPS Mobility Management, T3417 expired. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_EMM_T3417_EXT_EXPIRED: EPS Mobility Management, T3417 ext expired. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LRRC_UL_DATA_CONFIRMATION_FAILURE_TXN: LTE Radio Resource Control, UL data confirmation failure, txn. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LRRC_UL_DATA_CONFIRMATION_FAILURE_HANDOVER: LTE Radio Resource Control, UL data confirmation failure, handover. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LRRC_UL_DATA_CONFIRMATION_FAILURE_CONN_REL: LTE Radio Resource Control, UL data confirmation failure, connection release. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LRRC_UL_DATA_CONFIRMATION_FAILURE_RLF: LTE Radio Resource Control, UL data confirmation failure, radio link failure. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LRRC_UL_DATA_CONFIRMATION_FAILURE_CTRL_NOT_CONN: LTE Radio Resource Control, UL data confirmation failure, ctrl not conn. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LRRC_CONNECTION_ESTABLISHMENT_FAILURE: LTE Radio Resource Control, connection establishment failure. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LRRC_CONNECTION_ESTABLISHMENT_FAILURE_ABORTED: LTE Radio Resource Control, connection establishment failure, aborted. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LRRC_CONNECTION_ESTABLISHMENT_FAILURE_ACCESS_BARRED: LTE Radio Resource Control, connection establishment failure, access barred. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LRRC_CONNECTION_ESTABLISHMENT_FAILURE_CELL_RESELECTION: LTE Radio Resource Control, connection establishment failure, cell reselection. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LRRC_CONNECTION_ESTABLISHMENT_FAILURE_CONFIG_FAILURE: LTE Radio Resource Control, connection establishment failure, config failure. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LRRC_CONNECTION_ESTABLISHMENT_FAILURE_TIMER_EXPIRED: LTE Radio Resource Control, connection establishment failure, timer expired. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LRRC_CONNECTION_ESTABLISHMENT_FAILURE_LINK_FAILURE: LTE Radio Resource Control, connection establishment failure, link failure. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LRRC_CONNECTION_ESTABLISHMENT_FAILURE_NOT_CAMPED: LTE Radio Resource Control, connection establishment failure, not camped. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LRRC_CONNECTION_ESTABLISHMENT_FAILURE_SI_FAILURE: LTE Radio Resource Control, connection establishment failure, SI failure. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LRRC_CONNECTION_ESTABLISHMENT_FAILURE_REJECTED: LTE Radio Resource Control, connection establishment failure, rejected. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LRRC_CONNECTION_RELEASE_NORMAL: LTE Radio Resource Control, connection release, normal. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LRRC_CONNECTION_RELEASE_RLF: LTE Radio Resource Control, connection release, radio link failure. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LRRC_CONNECTION_RELEASE_CRE_FAILURE: LTE Radio Resource Control, connection release, cre failure. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LRRC_CONNECTION_RELEASE_OOS_DURING_CRE: LTE Radio Resource Control, connection release, oos during cre. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LRRC_CONNECTION_RELEASE_ABORTED: LTE Radio Resource Control, connection release, aborted. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LRRC_CONNECTION_RELEASE_SIB_READ_ERROR: LTE Radio Resource Control, connection release, SIB read error. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_DETACH_WITH_REATTACH_LTE_NW_DETACH: Detach with reattach LTE network detach. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_DETACH_WITHOUT_REATTACH_LTE_NW_DETACH: Detach without reattach LTE network detach. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_ESM_PROC_TIMEOUT: EPS Session Management, proc timeout. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_MESSAGE_EXCEED_MAX_L2_LIMIT: Message exceed max L2 limit. Since 1.24.10.
  * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_CONNECTION_DENY_GENERAL_OR_BUSY: CDMA/EVDO specific. Received Connection Deny. General or Network busy.
  * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_CONNECTION_DENY_BILLING_OR_AUTHENTICATION_FAILURE: CDMA/EVDO specific. Received Connection Deny. Billing or Authentication failure.
  * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_HDR_CHANGE: CDMA/EVDO specific. Change HDR.
@@ -577,13 +577,13 @@ typedef enum { /*< since=1.0 >*/
  * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_HDR_ORIGINATION_DURING_GPS_FIX: CDMA/EVDO specific. HDR call ended in favor of a GPS fix.
  * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_HDR_CONNECTION_SETUP_TIMEOUT: CDMA/EVDO specific. Connection setup timeout.
  * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_HDR_RELEASED_BY_CM: CDMA/EVDO specific. Released HDR call by call manager.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_HDR_COLLOCATED_ACQUISITION_FAILED: Failed to acquire co-located HDR for origination.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_OTASP_COMMIT_IN_PROGRESS: CDMA/EVDO specific. OTASP commit in progress.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_HDR_COLLOCATED_ACQUISITION_FAILED: Failed to acquire co-located HDR for origination. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_OTASP_COMMIT_IN_PROGRESS: CDMA/EVDO specific. OTASP commit in progress. Since 1.24.10.
  * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_HDR_NO_HYBRID_SERVICE: CDMA/EVDO specific. No hybrid HDR service.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_HDR_NO_LOCK_GRANTED: CDMA/EVDO specific. No lock granted.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_HOLD_OTHER_IN_PROGRESS: CDMA/EVDO specific. hold other in progress.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_HDR_FADE: CDMA/EVDO specific. Fade.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_HDR_ACCESS_FAILURE: CDMA/EVDO specific. Access failure.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_HDR_NO_LOCK_GRANTED: CDMA/EVDO specific. No lock granted. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_HOLD_OTHER_IN_PROGRESS: CDMA/EVDO specific. hold other in progress. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_HDR_FADE: CDMA/EVDO specific. Fade. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_HDR_ACCESS_FAILURE: CDMA/EVDO specific. Access failure. Since 1.24.10.
  * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_CLIENT_END: Client end.
  * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_NO_SERVICE: No service.
  * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_FADE: Fade.
@@ -591,17 +591,17 @@ typedef enum { /*< since=1.0 >*/
  * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_ACCESS_ATTEMPT_IN_PROGRESS: Access attempt in progress.
  * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_ACCESS_FAILURE: Access Failure.
  * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_REDIRECTION_OR_HANDOFF: Redirection or handoff.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_OFFLINE: Offline.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_EMERGENCY_MODE: Emergency mode.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_PHONE_IN_USE: Phone in use.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_INVALID_MODE: Invalid mode.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_INVALID_SIM_STATE: Invalid SIM state.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_NO_COLLOCATED_HDR: No collocated HDR.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_CALL_CONTROL_REJECTED: Call control rejected.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_OFFLINE: Offline. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_EMERGENCY_MODE: Emergency mode. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_PHONE_IN_USE: Phone in use. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_INVALID_MODE: Invalid mode. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_INVALID_SIM_STATE: Invalid SIM state. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_NO_COLLOCATED_HDR: No collocated HDR. Since 1.24.10.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_CALL_CONTROL_REJECTED: Call control rejected. Since 1.24.10.
  *
  * Call manager specific call end reasons, given when the @QmiWdsVerboseCallEndReasonType is #QMI_WDS_VERBOSE_CALL_END_REASON_TYPE_CM.
  *
- * Since 1.0
+ * Since: 1.0
  */
 typedef enum { /*< since=1.0 >*/
     QMI_WDS_VERBOSE_CALL_END_REASON_CM_CDMA_LOCK                       = 500,
@@ -746,7 +746,7 @@ typedef enum { /*< since=1.0 >*/
  * @QMI_WDS_VERBOSE_CALL_END_REASON_3GPP_AUTHENTICATION_FAILED: Authentication failed.
  * @QMI_WDS_VERBOSE_CALL_END_REASON_3GPP_GGSN_REJECT: Activation rejected by GGSN.
  * @QMI_WDS_VERBOSE_CALL_END_REASON_3GPP_ACTIVATION_REJECT: Activation rejected.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_3GPP_OPTION_NOT_SUPPORTED: Service option not supported.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_3GPP_OPTION_NOT_SUPPORTED:  Service option not supported.
  * @QMI_WDS_VERBOSE_CALL_END_REASON_3GPP_OPTION_UNSUBSCRIBED: Service option not subscribed.
  * @QMI_WDS_VERBOSE_CALL_END_REASON_3GPP_OPTION_TEMPORARILY_OUT_OF_ORDER: Service option temporarily out of order.
  * @QMI_WDS_VERBOSE_CALL_END_REASON_3GPP_NSAPI_ALREADY_USED: NSAPI already used.
@@ -769,7 +769,7 @@ typedef enum { /*< since=1.0 >*/
  * @QMI_WDS_VERBOSE_CALL_END_REASON_3GPP_MULTIPLE_CONNECTION_TO_SAME_PDN_NOT_ALLOWED: Multiple connection to same PDN not allowed.
  * @QMI_WDS_VERBOSE_CALL_END_REASON_3GPP_INVALID_TRANSACTION_ID: Invalid transaction ID.
  * @QMI_WDS_VERBOSE_CALL_END_REASON_3GPP_MESSAGE_INCORRECT_SEMANTIC: Message incorrect semantically.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_3GPP_INVALID_MANDATORY_INFO: Invalid mandatory information.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_3GPP_INVALID_MANDATORY_INFO:  Invalid mandatory information.
  * @QMI_WDS_VERBOSE_CALL_END_REASON_3GPP_MESSAGE_TYPE_UNSUPPORTED: Message type not implemented.
  * @QMI_WDS_VERBOSE_CALL_END_REASON_3GPP_MESSAGE_TYPE_NONCOMPATIBLE_STATE: Message not compatible with state.
  * @QMI_WDS_VERBOSE_CALL_END_REASON_3GPP_UNKNOWN_INFO_ELEMENT: Information element unknown.
@@ -777,11 +777,11 @@ typedef enum { /*< since=1.0 >*/
  * @QMI_WDS_VERBOSE_CALL_END_REASON_3GPP_MESSAGE_AND_PROTOCOL_STATE_UNCOMPATIBLE: Message and protocol state uncompatible.
  * @QMI_WDS_VERBOSE_CALL_END_REASON_3GPP_PROTOCOL_ERROR: Protocol error.
  * @QMI_WDS_VERBOSE_CALL_END_REASON_3GPP_APN_TYPE_CONFLICT: APN type conflict.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_3GPP_INVALID_PROXY_CALL_SESSION_CONTROL_FUNCTION_ADDRESS: Invalid proxy call session control function address.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_3GPP_INVALID_PROXY_CALL_SESSION_CONTROL_FUNCTION_ADDRESS: Invalid proxy call session control function address. Since 1.24.10.
  *
  * 3GPP-specific call end reasons, given when the @QmiWdsVerboseCallEndReasonType is #QMI_WDS_VERBOSE_CALL_END_REASON_TYPE_3GPP.
  *
- * Since 1.0
+ * Since: 1.0
  */
 typedef enum { /*< underscore_name=qmi_wds_verbose_call_end_reason_3gpp,since=1.0 >*/
     QMI_WDS_VERBOSE_CALL_END_REASON_3GPP_OPERATOR_DETERMINED_BARRING = 8,
@@ -839,11 +839,11 @@ typedef enum { /*< underscore_name=qmi_wds_verbose_call_end_reason_3gpp,since=1.
  * @QMI_WDS_VERBOSE_CALL_END_REASON_PPP_OPTION_MISMATCH: Option mismatch.
  * @QMI_WDS_VERBOSE_CALL_END_REASON_PPP_PAP_FAILURE: PAP failure.
  * @QMI_WDS_VERBOSE_CALL_END_REASON_PPP_CHAP_FAILURE: CHAP failure.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_PPP_CLOSE_IN_PROGRESS: Close in progress.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_PPP_CLOSE_IN_PROGRESS: Close in progress. Since 1.24.10.
  *
  * PPP-specific call end reasons, given when the @QmiWdsVerboseCallEndReasonType is #QMI_WDS_VERBOSE_CALL_END_REASON_TYPE_PPP.
  *
- * Since 1.0
+ * Since: 1.0
  */
 typedef enum { /*< since=1.0 >*/
     QMI_WDS_VERBOSE_CALL_END_REASON_PPP_UNKNOWN = -1,
@@ -879,7 +879,7 @@ typedef enum { /*< since=1.0 >*/
  *
  * eHRPD-specific call end reasons, given when the @QmiWdsVerboseCallEndReasonType is #QMI_WDS_VERBOSE_CALL_END_REASON_TYPE_EHRPD.
  *
- * Since 1.0
+ * Since: 1.0
  */
 typedef enum { /*< since=1.0 >*/
     QMI_WDS_VERBOSE_CALL_END_REASON_EHRPD_SUBSCRIPTION_LIMITED_TO_IPV4 = 1,
@@ -905,11 +905,11 @@ typedef enum { /*< since=1.0 >*/
  * QmiWdsVerboseCallEndReasonIpv6:
  * @QMI_WDS_VERBOSE_CALL_END_REASON_IPV6_PREFIX_UNAVAILABLE: Prefix unavailable.
  * @QMI_WDS_VERBOSE_CALL_END_REASON_IPV6_HRPD_IPV6_DISABLED: HRDP IPv6 disabled.
- * @QMI_WDS_VERBOSE_CALL_END_REASON_IPV6_DISABLED: IPv6 disabled.
+ * @QMI_WDS_VERBOSE_CALL_END_REASON_IPV6_DISABLED: IPv6 disabled. Since 1.24.10.
  *
  * IPv6-specific call end reasons, given when the @QmiWdsVerboseCallEndReasonType is #QMI_WDS_VERBOSE_CALL_END_REASON_TYPE_IPV6.
  *
- * Since 1.0
+ * Since: 1.0
  */
 typedef enum { /*< since=1.0 >*/
     QMI_WDS_VERBOSE_CALL_END_REASON_IPV6_PREFIX_UNAVAILABLE = 1,
@@ -930,7 +930,7 @@ typedef enum { /*< since=1.0 >*/
  *
  * Status of the network connection.
  *
- * Since 1.0
+ * Since: 1.0
  */
 typedef enum { /*< since=1.0 >*/
     QMI_WDS_CONNECTION_STATUS_UNKNOWN        = 0,
@@ -961,15 +961,15 @@ typedef enum { /*< since=1.0 >*/
  * @QMI_WDS_DATA_BEARER_TECHNOLOGY_HSDPAPLUS_HSUPA: HSDPA+ and HSUPA.
  * @QMI_WDS_DATA_BEARER_TECHNOLOGY_DCHSDPAPLUS: DC-HSDPA+ and WCDMA.
  * @QMI_WDS_DATA_BEARER_TECHNOLOGY_DCHSDPAPLUS_HSUPA: DC-HSDPA+ and HSUPA.
- * @QMI_WDS_DATA_BEARER_TECHNOLOGY_HSDPAPLUS_PLUS_64QAM: HSDPA+ with 64QAM.
- * @QMI_WDS_DATA_BEARER_TECHNOLOGY_HSDPAPLUS_PLUS_64QAM_HSUPA: HSDPA+ with 64QAM and HSUPA.
- * @QMI_WDS_DATA_BEARER_TECHNOLOGY_TDSCDMA: TD-SCDMA.
- * @QMI_WDS_DATA_BEARER_TECHNOLOGY_TDSCDMA_HSDPA: TD-SCDMA and HSDPA.
- * @QMI_WDS_DATA_BEARER_TECHNOLOGY_TDSCDMA_HSUPA: TD-SCDMA and HSUPA.
+ * @QMI_WDS_DATA_BEARER_TECHNOLOGY_HSDPAPLUS_PLUS_64QAM: HSDPA+ with 64QAM. Since: 1.18.
+ * @QMI_WDS_DATA_BEARER_TECHNOLOGY_HSDPAPLUS_PLUS_64QAM_HSUPA: HSDPA+ with 64QAM and HSUPA. Since: 1.18.
+ * @QMI_WDS_DATA_BEARER_TECHNOLOGY_TDSCDMA: TD-SCDMA. Since: 1.18.
+ * @QMI_WDS_DATA_BEARER_TECHNOLOGY_TDSCDMA_HSDPA: TD-SCDMA and HSDPA. Since: 1.18.
+ * @QMI_WDS_DATA_BEARER_TECHNOLOGY_TDSCDMA_HSUPA: TD-SCDMA and HSUPA. Since: 1.18.
  *
  * Data bearer technology.
  *
- * Since 1.0
+ * Since: 1.0
  */
 typedef enum { /*< since=1.0 >*/
     QMI_WDS_DATA_BEARER_TECHNOLOGY_UNKNOWN                    = -1,
@@ -1006,7 +1006,7 @@ typedef enum { /*< since=1.0 >*/
  *
  * Network type of the data bearer.
  *
- * Since 1.0
+ * Since: 1.0
  */
 typedef enum { /*< since=1.0 >*/
     QMI_WDS_NETWORK_TYPE_UNKNOWN = 0,
@@ -1021,7 +1021,7 @@ typedef enum { /*< since=1.0 >*/
  *
  * Network type of the data system.
  *
- * Since 1.14
+ * Since: 1.14
  */
 typedef enum { /*< since=1.14 >*/
     QMI_WDS_DATA_SYSTEM_NETWORK_TYPE_3GPP  = 0,
@@ -1040,7 +1040,7 @@ typedef enum { /*< since=1.14 >*/
  *
  * Data system type.
  *
- * Since 1.18
+ * Since: 1.18
  */
 typedef enum { /*< since=1.18 >*/
     QMI_WDS_DATA_SYSTEM_UNKNOWN     = 0,
@@ -1059,14 +1059,14 @@ typedef enum { /*< since=1.18 >*/
  * @QMI_WDS_RAT_3GPP2_EVDO_REV0: EVDO Rev0.
  * @QMI_WDS_RAT_3GPP2_EVDO_REVA: EVDO RevA.
  * @QMI_WDS_RAT_3GPP2_EVDO_REVB: EVDO RevB.
- * @QMI_WDS_RAT_3GPP2_EHRPD: eHRPD.
- * @QMI_WDS_RAT_3GPP2_FMC: FMC.
+ * @QMI_WDS_RAT_3GPP2_EHRPD: eHRPD. Since: 1.18.
+ * @QMI_WDS_RAT_3GPP2_FMC: FMC. Since: 1.18.
  * @QMI_WDS_RAT_3GPP2_NULL_BEARER: No bearer.
  *
  * Flags specifying the 3GPP2-specific Radio Access Technology, when the data
  * bearer network type is @QMI_WDS_NETWORK_TYPE_3GPP2.
  *
- * Since 1.0
+ * Since: 1.0
  */
 typedef enum { /*< underscore_name=qmi_wds_rat_3gpp2,since=1.0 >*/
     QMI_WDS_RAT_3GPP2_NONE        = 0,
@@ -1090,14 +1090,14 @@ typedef enum { /*< underscore_name=qmi_wds_rat_3gpp2,since=1.0 >*/
  * @QMI_WDS_RAT_3GPP_LTE: LTE.
  * @QMI_WDS_RAT_3GPP_HSDPAPLUS: HSDPA+.
  * @QMI_WDS_RAT_3GPP_DCHSDPAPLUS: DC-HSDPA+.
- * @QMI_WDS_RAT_3GPP_64QAM: 64QAM.
- * @QMI_WDS_RAT_3GPP_TDSCDMA: TD-SCDMA.
+ * @QMI_WDS_RAT_3GPP_64QAM: 64QAM. Since: 1.18.
+ * @QMI_WDS_RAT_3GPP_TDSCDMA: TD-SCDMA. Since: 1.18.
  * @QMI_WDS_RAT_3GPP_NULL_BEARER: No bearer.
  *
  * Flags specifying the 3GPP-specific Radio Access Technology, when the data
  * bearer network type is @QMI_WDS_NETWORK_TYPE_3GPP.
  *
- * Since 1.0
+ * Since: 1.0
  */
 typedef enum { /*< underscore_name=qmi_wds_rat_3gpp,since=1.0 >*/
     QMI_WDS_RAT_3GPP_NONE        = 0,
@@ -1125,7 +1125,7 @@ typedef enum { /*< underscore_name=qmi_wds_rat_3gpp,since=1.0 >*/
  * @QMI_WDS_NETWORK_TYPE_3GPP2 and when the Radio Access Technology mask
  * contains @QMI_WDS_RAT_3GPP2_CDMA1X.
  *
- * Since 1.0
+ * Since: 1.0
  */
 typedef enum { /*< since=1.0 >*/
     QMI_WDS_SO_CDMA1X_NONE         = 0,
@@ -1143,7 +1143,7 @@ typedef enum { /*< since=1.0 >*/
  * @QMI_WDS_NETWORK_TYPE_3GPP2 and when the Radio Access Technology mask
  * contains @QMI_WDS_RAT_3GPP2_EVDO_REV0.
  *
- * Since 1.18
+ * Since: 1.18
  */
 typedef enum { /*< since=1.18 >*/
     QMI_WDS_SO_EVDO_REV0_NONE = 0,
@@ -1162,7 +1162,7 @@ typedef enum { /*< since=1.18 >*/
  * @QMI_WDS_NETWORK_TYPE_3GPP2 and when the Radio Access Technology mask
  * contains @QMI_WDS_RAT_3GPP2_EVDO_REVA.
  *
- * Since 1.0
+ * Since: 1.0
  */
 typedef enum { /*< underscore_name=qmi_wds_so_evdo_reva,since=1.0 >*/
     QMI_WDS_SO_EVDO_REVA_NONE       = 0,
@@ -1186,7 +1186,7 @@ typedef enum { /*< underscore_name=qmi_wds_so_evdo_reva,since=1.0 >*/
  * @QMI_WDS_NETWORK_TYPE_3GPP2 and when the Radio Access Technology mask
  * contains @QMI_WDS_RAT_3GPP2_EVDO_REVB.
  *
- * Since 1.18
+ * Since: 1.18
  */
 typedef enum { /*< underscore_name=qmi_wds_so_evdo_revb,since=1.18 >*/
     QMI_WDS_SO_EVDO_REVB_NONE       = 0,
@@ -1226,7 +1226,7 @@ typedef enum { /*< underscore_name=qmi_wds_so_evdo_revb,since=1.18 >*/
  * Flags specifying which specific settings to return when requesting the
  * current WDS bearer settings.
  *
- * Since 1.0
+ * Since: 1.0
  */
 typedef enum { /*< since=1.0 >*/
     QMI_WDS_GET_CURRENT_SETTINGS_REQUESTED_SETTINGS_NONE                      = 0,
@@ -1259,7 +1259,7 @@ typedef enum { /*< since=1.0 >*/
  *
  * PDP context type.
  *
- * Since 1.0
+ * Since: 1.0
  */
 typedef enum { /*< since=1.0 >*/
     QMI_WDS_PDP_TYPE_IPV4         = 0,
@@ -1278,7 +1278,7 @@ typedef enum { /*< since=1.0 >*/
  *
  * QoS Traffic Classes.
  *
- * Since 1.0
+ * Since: 1.0
  */
 typedef enum { /*< since=1.0 >*/
     QMI_WDS_TRAFFIC_CLASS_SUBSCRIBED     = 0,
@@ -1296,7 +1296,7 @@ typedef enum { /*< since=1.0 >*/
  *
  * PDP context authentication protocols.
  *
- * Since 1.0
+ * Since: 1.0
  */
 typedef enum { /*< since=1.0 >*/
     QMI_WDS_AUTHENTICATION_NONE = 0,
@@ -1311,7 +1311,7 @@ typedef enum { /*< since=1.0 >*/
  *
  * Profile network type family.
  *
- * Since 1.0
+ * Since: 1.0
  */
 typedef enum { /*< since=1.0 >*/
     QMI_WDS_PROFILE_TYPE_3GPP    = 0,
@@ -1325,7 +1325,7 @@ typedef enum { /*< since=1.0 >*/
   *
   * Profile family.
   *
-  * Since 1.22
+  * Since: 1.22
   */
  typedef enum { /*< since=1.22 >*/
      QMI_WDS_PROFILE_FAMILY_EMBEDDED = 0,
@@ -1340,7 +1340,7 @@ typedef enum { /*< since=1.0 >*/
  *
  * QoS delivery order.
  *
- * Since 1.14
+ * Since: 1.14
  */
 typedef enum { /*< since=1.14 >*/
     QMI_WDS_QOS_DELIVERY_ORDER_SUBSCRIBE = 0,
@@ -1361,7 +1361,7 @@ typedef enum { /*< since=1.14 >*/
  *
  * Target value for the fraction of SDUs lost or detected as erroneous.
  *
- * Since 1.14
+ * Since: 1.14
  */
 typedef enum { /*< since=1.14 >*/
     QMI_WDS_SDU_ERROR_RATIO_SUBSCRIBE = 0,
@@ -1389,7 +1389,7 @@ typedef enum { /*< since=1.14 >*/
  *
  * Target value for the undetected bit error ratio in the delivered SDUs.
  *
- * Since 1.14
+ * Since: 1.14
  */
 typedef enum { /*< since=1.14 >*/
     QMI_WDS_SDU_RESIDUAL_BIT_ERROR_RATIO_SUBSCRIBE = 0,
@@ -1413,7 +1413,7 @@ typedef enum { /*< since=1.14 >*/
  *
  * Whether SDUs detected as erroneous are delivered or not.
  *
- * Since 1.14
+ * Since: 1.14
  */
 typedef enum { /*< since=1.14 >*/
     QMI_WDS_SDU_ERRONEOUS_DELIVERY_SUBSCRIBE    = 0,
@@ -1440,7 +1440,7 @@ typedef enum { /*< since=1.14 >*/
  *
  * Mask to use when requesting packet statistics.
  *
- * Since 1.6
+ * Since: 1.6
  */
 typedef enum { /*< since=1.6 >*/
     QMI_WDS_PACKET_STATISTICS_MASK_FLAG_TX_PACKETS_OK      = 1 << 0,
@@ -1483,7 +1483,7 @@ typedef enum { /*< since=1.6 >*/
  *
  * Extended DS profile errors.
  *
- * Since 1.8
+ * Since: 1.8
  */
 typedef enum { /*< since=1.8 >*/
     QMI_WDS_DS_PROFILE_ERROR_UNKNOWN                     = 0,
@@ -1516,7 +1516,7 @@ typedef enum { /*< since=1.8 >*/
  *
  * Status of the autoconnect setting.
  *
- * Since 1.14
+ * Since: 1.14
  */
 typedef enum { /*< since=1.14 >*/
     QMI_WDS_AUTOCONNECT_SETTING_DISABLED = 0,
@@ -1531,7 +1531,7 @@ typedef enum { /*< since=1.14 >*/
  *
  * Status of the autoconnect setting while roaming.
  *
- * Since 1.14
+ * Since: 1.14
  */
 typedef enum { /*< since=1.14 >*/
     QMI_WDS_AUTOCONNECT_SETTING_ROAMING_ALLOWED   = 0,
@@ -1557,7 +1557,7 @@ typedef enum { /*< since=1.14 >*/
  * Flags indicating which WDS Set Event Report Transfer Statistics indicators
  * should be emitted.
  *
- * Since 1.18
+ * Since: 1.18
  */
 typedef enum { /*< since=1.18 >*/
     QMI_WDS_SET_EVENT_REPORT_TRANSFER_STATISTICS_REPORT_TX_PACKETS_OK      = 1 << 0,
@@ -1580,7 +1580,7 @@ typedef enum { /*< since=1.18 >*/
  *
  * Dormancy status.
  *
- * Since 1.18
+ * Since: 1.18
  */
 typedef enum { /*< since=1.18 >*/
     QMI_WDS_DORMANCY_STATUS_UNKNOWN                 = 0,
@@ -1596,7 +1596,7 @@ typedef enum { /*< since=1.18 >*/
  *
  * Data call status.
  *
- * Since 1.18
+ * Since: 1.18
  */
 typedef enum { /*< since=1.18 >*/
     QMI_WDS_DATA_CALL_STATUS_UNKNOWN    = 0,
@@ -1613,7 +1613,7 @@ typedef enum { /*< since=1.18 >*/
  *
  * Data call type.
  *
- * Since 1.18
+ * Since: 1.18
  */
 typedef enum { /*< since=1.18 >*/
     QMI_WDS_DATA_CALL_TYPE_UNKNOWN        = 0,
@@ -1630,7 +1630,7 @@ typedef enum { /*< since=1.18 >*/
  *
  * Tethered call type.
  *
- * Since 1.18
+ * Since: 1.18
  */
 typedef enum { /*< since=1.18 >*/
     QMI_WDS_TETHERED_CALL_TYPE_NON_TETHERED = 0,
@@ -1655,7 +1655,7 @@ typedef enum { /*< since=1.18 >*/
  *
  * Radio access technology.
  *
- * Since 1.18
+ * Since: 1.18
  */
 typedef enum { /*< since=1.18 >*/
     QMI_WDS_RADIO_ACCESS_TECHNOLOGY_NULL_BEARER   = 0,
@@ -1692,7 +1692,7 @@ typedef enum { /*< since=1.18 >*/
  *
  * 3GPP extended data bearer technologies.
  *
- * Since 1.18
+ * Since: 1.18
  */
 typedef enum { /*< underscore_name=qmi_wds_extended_data_bearer_technology_3gpp,since=1.18 >*/
     QMI_WDS_EXTENDED_DATA_BEARER_TECHNOLOGY_3GPP_UNKNOWN             = 0,
@@ -1731,7 +1731,7 @@ typedef enum { /*< underscore_name=qmi_wds_extended_data_bearer_technology_3gpp,
  *
  * 3GPP2 extended data bearer technologies.
  *
- * Since 1.18
+ * Since: 1.18
  */
 typedef enum { /*< underscore_name=qmi_wds_extended_data_bearer_technology_3gpp2,since=1.18 >*/
     QMI_WDS_EXTENDED_DATA_BEARER_TECHNOLOGY_3GPP2_UNKNOWN             = 0,
@@ -1763,7 +1763,7 @@ typedef enum { /*< underscore_name=qmi_wds_extended_data_bearer_technology_3gpp2
  *
  * PDP header compression types.
  *
- * Since 1.18
+ * Since: 1.18
  */
 typedef enum { /*< since=1.18 >*/
     QMI_WDS_PDP_HEADER_COMPRESSION_TYPE_OFF                    = 0,
@@ -1782,7 +1782,7 @@ typedef enum { /*< since=1.18 >*/
  *
  * PDP data compression types.
  *
- * Since 1.18
+ * Since: 1.18
  */
 typedef enum { /*< since=1.18 >*/
     QMI_WDS_PDP_DATA_COMPRESSION_TYPE_OFF                    = 0,
@@ -1805,7 +1805,7 @@ typedef enum { /*< since=1.18 >*/
  *
  * QoS Class Identifier.
  *
- * Since 1.18
+ * Since: 1.18
  */
 typedef enum { /*< since=1.18 >*/
     QMI_WDS_QOS_CLASS_IDENTIFIER_NETWORK_ASSIGN          = 0,
@@ -1826,7 +1826,7 @@ typedef enum { /*< since=1.18 >*/
  *
  * Action when setting the attach PDN list.
  *
- * Since 1.28
+ * Since: 1.28
  */
 typedef enum { /*< since=1.28 >*/
     QMI_WDS_ATTACH_PDN_LIST_ACTION_NONE                     = 0x01,
@@ -1840,7 +1840,7 @@ typedef enum { /*< since=1.28 >*/
  *
  * Client Type
  *
- * Since 1.18
+ * Since: 1.18
  */
 typedef enum { /*< since=1.18 >*/
     QMI_WDS_CLIENT_TYPE_TETHERED = 0x01,
@@ -1852,7 +1852,7 @@ typedef enum { /*< since=1.18 >*/
  *
  * The TX/RX rate information is unavailable or cannot be measured.
  *
- * Since 1.22.4
+ * Since: 1.22.4
  */
 #define QMI_WDS_RATE_UNAVAILABLE 0xFFFFFFFF
 
@@ -1864,7 +1864,7 @@ typedef enum { /*< since=1.18 >*/
  *
  * IP support type.
  *
- * Since 1.28
+ * Since: 1.28
  */
 typedef enum {  /*< since=1.28 >*/
     QMI_WDS_IP_SUPPORT_TYPE_IPV4   = 0,

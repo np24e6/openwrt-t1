@@ -12,19 +12,54 @@ CFG=/etc/board.json
 # do not run on preinit/early init
 [ "$EARLY_INIT" ] && return
 
+# Adds modem supported features
+add_modem_features() {
+	local revision bands modem_func_id multi_apn operator_scan dhcp_filter dynamic_mtu ipv6 volte
+	revision="$(jsonfilter -s "$modem_info_from_unhandler" -qe '$.cache.firmware')"
+
+	# Loads modem info
+	json_set_namespace support old_cb
+	json_load "$modem_info_from_unhandler"
+	json_get_vars modem_func_id multi_apn operator_scan dhcp_filter dynamic_mtu ipv6 volte csd
+	json_get_values bands band_list
+	json_set_namespace "$old_cb"
+
+	# Sets modem supported feature values
+	json_add_string	revision "$revision"
+	json_add_int modem_func_id "$modem_func_id"
+	json_add_boolean multi_apn "$multi_apn"
+	json_add_boolean operator_scan "$operator_scan"
+	json_add_boolean dhcp_filter "$dhcp_filter"
+	json_add_boolean dynamic_mtu "$dynamic_mtu"
+	json_add_boolean ipv6 "$ipv6"
+	json_add_boolean volte "$volte"
+	json_add_boolean csd "$csd"
+
+	# Adds supported band array
+	json_is_a band_list array || {
+		json_add_array band_list
+		for band in $bands; do
+			json_add_string "" "$band"
+		done
+		json_close_array
+	}
+}
+
 #~ Get model name for RUTX products
 setup_modem() {
 	local key="$1"
 	local object_num="$2"
-	local id gps boudrate type desc control product vendor stop_bits
+	local id gps boudrate type desc control product vendor stop_bits devicename
 
 	json_select "$object_num"
 	json_get_vars id product
 
 	if [ "$id" = "$id_from_unhandler" ]; then
+		# Adds features for specific modem
+		add_modem_features
 
-		[ -z "$product" ] || \
-		{
+		[ -z "$product" ] || {
+			# Returns if no internal usb modems
 			[ -f "/sys/bus/usb/devices/$id/idVendor" ] && [ -f "/sys/bus/usb/devices/$id/idProduct" ] || {
 				json_select ..
 				return 1
@@ -51,7 +86,6 @@ setup_modem() {
 				json_add_string type "$type"
 				json_add_string desc "$desc"
 				json_add_string control "$control"
-				json_add_string	revision "${revision_from_unhandler}"
 			}
 		}
 	fi
@@ -61,7 +95,7 @@ setup_modem() {
 [ -s "${CFG}" ] || exit 1
 
 id_from_unhandler="$1"
-revision_from_unhandler="$2"
+modem_info_from_unhandler="$2"
 
 lock /var/run/board_modem.lock
 

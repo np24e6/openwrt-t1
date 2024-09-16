@@ -1,10 +1,8 @@
 #!/bin/sh
 
 #
-# Copyright (C) 2021 Teltonika
+# Copyright (C) 20XX Teltonika
 #
-
-source /lib/functions.sh
 
 alias logger="logger -s -t sme.sh"
 usb_msd_fs="ext4"
@@ -13,6 +11,33 @@ pending_reboot="/tmp/.sme_pending_reboot"
 orig_overlay="/rwm"
 conf_backup="pre_sme.tgz"
 mmc_driver='/etc/modules-late.d/mmc-spi'
+uuid_file='.sme_uuid'
+sme_maj_min='/tmp/.sme_major_minor'
+
+[[ ! -e '/tmp/.fmt-usb-msd_blockdev_hotplug_paused' && -n "$HOTPLUG_TYPE" ]] && {
+	# handle accidental storage dev removal and re-insertion. must execute after block hotplug.
+
+	if [[ -z "$DEVPATH" || -n "${DEVPATH##*usb*}" || "$DEVTYPE" != "partition" || -z "$DEVNAME" ]]; then
+		exit 0
+	fi
+
+	case $ACTION in
+		add)
+			[ -e $sme_maj_min ] && exit 0
+			uuid="$(uci -q get fstab.overlay.uuid)"
+			[[ -n "$uuid" && "$uuid" = "$(cat /mnt/$DEVNAME/$uuid_file)" ]] && reboot -f
+		;;
+		remove)
+			[ -e $sme_maj_min ] || exit 0
+			. $sme_maj_min
+			[[ $SME_MAJOR = $MAJOR && $SME_MINOR = $MINOR ]] && reboot -f
+		;;
+	esac
+
+	exit 0
+}
+
+source /lib/functions.sh
 
 must_expand_in_bg() {
 	[ ${expand_in_bg:-0} -eq 1 ]
@@ -64,11 +89,6 @@ fs_state_ready() {
 	ln -s 2 $fstate # FS_STATE_READY == 2
 }
 
-samba_has_it() {
-	local $(block_info_vars $1)
-	[ "$MOUNT" ] && grep -q "$MOUNT" /etc/config/samba
-}
-
 # Matching an exact _binary_ signature of a legacy SME fstab config
 is_legacy_fstab() {
 	local uuid="$(sed -n 11p /etc/config/fstab | cut -b 15-50)"
@@ -107,7 +127,7 @@ fix_legacy_fstab() {
 
 expand() {
 	logger "started $msd formatting"
-	source fmt-usb-msd.sh $usb_msd_fs $usb_msd_label || {
+	fmt-usb-msd.sh $usb_msd_fs $msd $usb_msd_label || {
 		logger "failed, couldn't format $msd"
 		return 1
 	}
@@ -167,13 +187,9 @@ expand_prelude() {
 		return 1
 	}
 
-	source fmt-usb-msd.sh target 2>&- >&- || {
-		logger "failed, couldn't determine target device"
-		return 1
-	}
-
-	samba_has_it $msd && {
-		logger "failed, $msd appears to be in use by samba"
+	msd="$(fmt-usb-msd.sh basedev $1)"
+	[ -z "$msd" ] && {
+		logger "failed, target device unavailable"
 		return 1
 	}
 
@@ -209,23 +225,6 @@ is_expanded() {
 	[ "$(uci -q get fstab.overlay.sme)" != "1" ] && return 1
 	local $(block_info_vars $(uci -q get fstab.overlay.uuid))
 	[ "$MOUNT" = "/overlay" ]
-}
-
-device_present() {
-	source fmt-usb-msd.sh target 2>&- >&- && \
-	local $(block_info_vars $msd) && \
-	[ "$MOUNT" != "/overlay" ] || {
-		echo "not_present"
-		exit 1
-	}
-
-	samba_has_it $msd && {
-		echo "in_use_by_samba"
-		exit 2
-	}
-
-	echo "present"
-	exit 0
 }
 
 mk_sd_node() {
@@ -278,8 +277,7 @@ preboot() {
 	[ -e "$mmc_driver" ] && /sbin/kmodloader "$mmc_driver"
 
 	local c=0
-	while [ $c -lt 15 ]; do
-		: $((++c))
+	while [ $((c++)) -lt 15 ]; do
 		mk_sd_node
 		local $(block_info_vars "$(uci -q get fstab.overlay.uuid)")
 		[ -b "$DEVICE" ] && break
@@ -295,6 +293,7 @@ preboot() {
 
 	cp -a /overlay/./ ./ || return 3
 	fs_state_ready $mnt || return 4
+	fs_state_ready /overlay || return 5
 
 	cd -
 	sync
@@ -313,7 +312,7 @@ case $1 in
 			operation fail
 			exit 1
 		else
-			expand_prelude && {
+			expand_prelude $2 && {
 				must_expand_in_bg || operation success
 				exit 0
 			} || {
@@ -353,9 +352,6 @@ case $1 in
 			echo "unexpanded"
 		fi
 	;;
-	--device-present|-d)
-		device_present
-	;;
 	--operation|-o)
 		echo $(operation get)
 	;;
@@ -365,13 +361,12 @@ case $1 in
 	*)
 		echo -e "\
 Usage:
-	-e, --expand          expands storage if all conditions are met
-	-s, --shrink          disable/undo expansion
-	-t, --status          reports whether storage is 'expanded', 'unexpanded' or waiting for 'reboot'
-	-d, --device-present  reports whether an expansion-eligible USB MSD is present
-	-o, --operation       reports status/result of an ongoing/finished expansion or shrinkage
+	-e, --expand <device>   expands storage if all conditions are met
+	-s, --shrink            disable/undo expansion
+	-t, --status            reports whether storage is 'expanded', 'unexpanded' or waiting for 'reboot'
+	-o, --operation         reports status/result of an ongoing/finished expansion or shrinkage
 
-	Overridable ENV vars (listed with default values): mmc=0, expand_in_bg=0
+	Overridable ENV vars (listed with default values): expand_in_bg=0
 "
 		exit 1
 	;;

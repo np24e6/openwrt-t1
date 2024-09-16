@@ -15,13 +15,13 @@ entry_execute_method_root_ManagementServer() {
 		common_execute_method_obj "$DMROOT.ManagementServer." "0"
 		common_execute_method_param "$DMROOT.ManagementServer.URL" "1" "$UCI_GET easycwmp.@acs[0].url" "management_server_set_url"
 		common_execute_method_param "$DMROOT.ManagementServer.Username" "1" "$UCI_GET easycwmp.@acs[0].username" "management_server_set easycwmp.@acs[0].username"
-		common_execute_method_param "$DMROOT.ManagementServer.Password" "1" "$UCI_GET easycwmp.@acs[0].password" "management_server_set easycwmp.@acs[0].password"
-		common_execute_method_param "$DMROOT.ManagementServer.PeriodicInformEnable" "1" "$UCI_GET easycwmp.@acs[0].periodic_enable" "management_server_set easycwmp.@acs[0].periodic_enable" "xsd:boolean"
+		common_execute_method_param "$DMROOT.ManagementServer.Password" "1" "" "management_server_set easycwmp.@acs[0].password"
+		common_execute_method_param "$DMROOT.ManagementServer.PeriodicInformEnable" "1" "$UCI_GET easycwmp.@acs[0].periodic_enable" "management_server_set_periodic_enable" "xsd:boolean"
 		common_execute_method_param "$DMROOT.ManagementServer.PeriodicInformInterval" "1" "$UCI_GET easycwmp.@acs[0].periodic_interval" "management_server_set easycwmp.@acs[0].periodic_interval" "xsd:unsignedInt"
 		common_execute_method_param "$DMROOT.ManagementServer.PeriodicInformTime" "1" "$UCI_GET easycwmp.@acs[0].periodic_time" "management_server_set easycwmp.@acs[0].periodic_time" "xsd:dateTime" 
 		common_execute_method_param "$DMROOT.ManagementServer.ConnectionRequestURL" "0" "management_server_get_connection_request_url" "" "" "1"
 		common_execute_method_param "$DMROOT.ManagementServer.ConnectionRequestUsername" "1" "$UCI_GET easycwmp.@local[0].username" "management_server_set easycwmp.@local[0].username"
-		common_execute_method_param "$DMROOT.ManagementServer.ConnectionRequestPassword" "1" "$UCI_GET easycwmp.@local[0].password" "management_server_set easycwmp.@local[0].password"
+		common_execute_method_param "$DMROOT.ManagementServer.ConnectionRequestPassword" "1" "" "management_server_set easycwmp.@local[0].password"
 		common_execute_method_param "$DMROOT.ManagementServer.ParameterKey" "0" "$UCI_GET easycwmp.@acs[0].parameter_key" "" "" "1"
 		return 0;
 		;;
@@ -49,10 +49,16 @@ management_server_set() {
 	return 0
 }
 
+management_server_set_periodic_enable() {
+	local val=$1
+	common_set_bool "easycwmp.@acs[0].periodic_enable" "$val" "1" "0"
+	return 0
+}
+
 management_server_get_connection_request_url() {
 	local val
 	if [ -z "$default_management_server_connection_request_url" ]; then
-		local intf=`/sbin/wan_info interface 2> /dev/null`
+		local intf=`$UCI_GET easycwmp.@local[0].interface 2> /dev/null`
 		local ip=`ifconfig "$intf" | grep inet | sed 's/^ *//g' | cut -f 2 -d ' '|cut -f 2 -d ':'`
 		local port=`$UCI_GET easycwmp.@local[0].port 2> /dev/null`
 

@@ -6,10 +6,10 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=speedtest
-PKG_VERSION:=2023-08-31
-PKG_RELEASE:=2
+PKG_VERSION:=2023-10-11
+PKG_RELEASE:=1
 
-PKG_SOURCE_VERSION:=1.5
+PKG_SOURCE_VERSION:=1.6
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_SOURCE_VERSION)-$(PKG_VERSION)
 PKG_SOURCE:=$(PKG_SOURCE_SUBDIR).tar.gz
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_SOURCE_SUBDIR)
@@ -27,6 +27,11 @@ define Package/speedtest
   	PKG_TLT_NAME:=Speedtest
   	PKG_ROUTER:=$(TLT_PLATFORM_NAME)
   endif
+endef
+
+define Package/speedtest/description
+	Speed Test package provides with the possibility to test
+	the data transfer speed of your WAN connection.
 endef
 
 

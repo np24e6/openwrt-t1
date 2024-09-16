@@ -3760,7 +3760,7 @@ int dhcp_receive_ip(struct dhcp_ctx *ctx, uint8_t *pack, size_t len) {
    */
   if (!dhcp_hashget(this, &conn, pack_ethh->src)) {
 
-    if (_options.debug > 2)
+    if (_options.debug)
       syslog(LOG_DEBUG, "%s(%d): Address found", __FUNCTION__, __LINE__);
 
     ourip.s_addr = conn->ourip.s_addr;
@@ -4119,9 +4119,8 @@ int dhcp_receive_ip(struct dhcp_ctx *ctx, uint8_t *pack, size_t len) {
         if (appconn) {
           if (appconn->s_state.authenticated) {
             terminate_appconn(appconn, RADIUS_TERMINATE_CAUSE_USER_REQUEST);
-            char str[INET_ADDRSTRLEN] = {0};
-            inet_ntop(AF_INET, &(appconn->hisip), str, INET_ADDRSTRLEN);
-            syslog(LOG_INFO, "Dropping session due to request for auto-logout from username=%s IP=%s", appconn->s_state.redir.username, str);
+            if (_options.debug)
+              syslog(LOG_DEBUG, "%s(%d): Dropping session due to request for auto-logout ip", __FUNCTION__, __LINE__);
             appconn->uamexit = 1;
           }
         }

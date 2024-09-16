@@ -371,29 +371,6 @@ int options_fromfd(int fd, bstring bt) {
       return 0;
   }
 
-  if (!option_s_l(bt, &o.successurlcustom)) return 0;
-  if (!option_s_l(bt, &o.dbpath)) return 0;
-  if (!option_s_l(bt, &o.usersdbpath)) return 0;
-  if (!option_s_l(bt, &o.usersignup)) return 0;
-  if (!option_s_l(bt, &o.macpass)) return 0;
-  if (!option_s_l(bt, &o.paramuamip)) return 0;
-  if (!option_s_l(bt, &o.paramuamport)) return 0;
-  if (!option_s_l(bt, &o.paramcalled)) return 0;
-  if (!option_s_l(bt, &o.parammac)) return 0;
-  if (!option_s_l(bt, &o.paramip)) return 0;
-  if (!option_s_l(bt, &o.paramnasid)) return 0;
-  if (!option_s_l(bt, &o.paramsessionid)) return 0;
-  if (!option_s_l(bt, &o.paramuserurl)) return 0;
-  if (!option_s_l(bt, &o.paramchallenge)) return 0;
-  if (!option_s_l(bt, &o.param1)) return 0;
-  if (!option_s_l(bt, &o.param1value)) return 0;
-  if (!option_s_l(bt, &o.param2)) return 0;
-  if (!option_s_l(bt, &o.param2value)) return 0;
-
-#ifdef ENABLE_GSM
-  if (!option_s_l(bt, &o.modemid)) return 0;
-#endif
-
 #ifdef EX_OPTIONS_LOAD
 #include EX_OPTIONS_LOAD
 #endif
@@ -593,28 +570,6 @@ int options_save(char *file, bstring bt) {
     if (!option_s_s(bt, &o.uamdomains[i]))
       return 0;
   }
-
-  if (!option_s_s(bt, &o.successurlcustom)) return 0;
-  if (!option_s_s(bt, &o.dbpath)) return 0;
-  if (!option_s_s(bt, &o.usersdbpath)) return 0;
-  if (!option_s_s(bt, &o.usersignup)) return 0;
-  if (!option_s_s(bt, &o.macpass)) return 0;
-  if (!option_s_s(bt, &o.paramuamip)) return 0;
-  if (!option_s_s(bt, &o.paramuamport)) return 0;
-  if (!option_s_s(bt, &o.paramcalled)) return 0;
-  if (!option_s_s(bt, &o.parammac)) return 0;
-  if (!option_s_s(bt, &o.paramip)) return 0;
-  if (!option_s_s(bt, &o.paramnasid)) return 0;
-  if (!option_s_s(bt, &o.paramsessionid)) return 0;
-  if (!option_s_s(bt, &o.paramuserurl)) return 0;
-  if (!option_s_s(bt, &o.paramchallenge)) return 0;
-  if (!option_s_s(bt, &o.param1)) return 0;
-  if (!option_s_s(bt, &o.param1value)) return 0;
-  if (!option_s_s(bt, &o.param2)) return 0;
-  if (!option_s_s(bt, &o.param2value)) return 0;
-#ifdef ENABLE_GSM
-  if (!option_s_s(bt, &o.modemid)) return 0;
-#endif
 
 #ifdef EX_OPTIONS_SAVE
 #include EX_OPTIONS_SAVE

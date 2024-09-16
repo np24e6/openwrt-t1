@@ -6,7 +6,7 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=blesemd
-PKG_SOURCE_VERSION:=7.5-2
+PKG_SOURCE_VERSION:=7.6
 
 include $(INCLUDE_DIR)/package.mk
 

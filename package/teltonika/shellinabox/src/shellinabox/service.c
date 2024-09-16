@@ -253,10 +253,9 @@ void initService(struct Service *service, const char *arg) {
   free(desc);
 }
 
-struct Service *newService(const char *arg, const char *portRange) {
+struct Service *newService(const char *arg) {
   struct Service *service;
   check(service = malloc(sizeof(struct Service)));
-  service->portRange = portRange;
   initService(service, arg);
   return service;
 }
@@ -268,7 +267,6 @@ void destroyService(struct Service *service) {
     free((char *)service->group);
     free((char *)service->cwd);
     free((char *)service->cmdline);
-	free((char *)service->portRange);
   }
 }
 

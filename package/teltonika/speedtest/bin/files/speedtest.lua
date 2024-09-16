@@ -15,6 +15,11 @@ local UBYTES = 0
 local DSPEED = 0
 local USPEED = 0
 
+local function exit()
+    os.remove("/var/run/speedtest.pid")
+    os.exit()
+end
+
 --Writes to JSON file all of the information
 local function writeToJSON(downloadSpeed, currentDownloaded, uploadSpeed, currentUpload)
     local file = io.open("/tmp/speedtest.json", "w")
@@ -130,7 +135,7 @@ function writeData(downloadSpeed, currentDownloaded, uploadSpeed, currentUpload)
         if COUNT == 3 then
             ERROR = "Connection to the speed test server was lost."
             writeData()
-            os.exit()
+            exit()
         end
     else
         COUNT = 0;
@@ -160,43 +165,17 @@ function writeData(downloadSpeed, currentDownloaded, uploadSpeed, currentUpload)
     end
 end
 
---Acts by the given flag from avg
-local function flagCheck(num,flag)
-    local tmp = 0;
+local function fetchServerList()
+    local body
+    body = libspeedtest.getbody("https://www.speedtest.net/api/js/servers?engine=js&limit=100&https_functional=true")
 
-    if flag == "--help" or flag == "-h" then
-        print("usage: speedtest [options]\nAvailible options are:\n--help      shows usage of file\n-s          set silent mode\n-u [url]    set server\n-t [time]    set test time\n")
-        os.exit()
-    elseif flag == "-s" then
-        SILENT = true;
-    elseif flag == "-u" then
-        SERVER = arg[num + 1]
-        if SERVER == nil then
-            WARNING = "The link was not set correctly"
-            writeData()
-        end
-
-        SERVER = trimLink(SERVER)
-
-        if socket.connect(SERVER, 8080) == nil then
-            ERROR = "There was no connection to the given server"
-            writeData()
-        end
-
-        tmp = 1
-    elseif flag == "-t" then
-        if arg[num + 1] ~= nil then
-            TIME = arg[num + 1]
-            tmp = 1
-        else
-            WARNING = "The time was not set correctly"
-            writeData()
-        end
-    else
-        print("The is no such option as "..flag)
+    if body == nil or body == "" then
+        ERROR = "Could not get the server list."
+        writeData()
+        exit()
     end
 
-    return tmp
+    return body
 end
 
 local function getServerList()
@@ -211,25 +190,61 @@ local function getServerList()
             os.remove("/tmp/serverlist.json")
             ERROR = "Could not get the servers list."
             writeData()
-            os.exit()
+            exit()
         end
 
         file:close()
     else
+        body = fetchServerList()
         file = io.open("/tmp/serverlist.json", "w")
-        body = libspeedtest.getbody("https://www.speedtest.net/api/js/servers?engine=js&limit=100&https_functional=true")
-
-        if body == nil or body == "" then
-            ERROR = "Could not get the server list."
-            writeData()
-            os.exit()
-        end
-
         file:write(body)
         file:close()
     end
 
     return body
+end
+
+--Acts by the given flag from avg
+local function flagCheck(num,flag)
+    local tmp = 0;
+
+    if flag == "--help" or flag == "-h" then
+        print("usage: speedtest [options]\nAvailible options are:\n--help      shows usage of file\n-s          set silent mode\n-u [url]    set server\n-t [time]   set test time\n-g          get server list")
+        exit()
+    elseif flag == "-s" then
+        SILENT = true;
+    elseif flag == "-g" then
+        print(fetchServerList())
+        exit()
+    elseif flag == "-u" then
+        SERVER = arg[num + 1]
+        if SERVER == nil or string.match(SERVER, "^%-") then
+            WARNING = "The link was not set correctly"
+            writeData()
+            exit();
+        end
+
+        SERVER = trimLink(SERVER)
+
+        if socket.connect(SERVER, 8080) == nil then
+            ERROR = "There was no connection to the given server"
+            writeData()
+        end
+
+        tmp = 1
+    elseif flag == "-t" then
+        if arg[num + 1] == nil or string.match(arg[num + 1], "^%-") then
+            WARNING = "The time was not set correctly"
+            writeData()
+        else
+            TIME = arg[num + 1]
+            tmp = 1
+        end
+    else
+        print("The is no such option as "..flag)
+    end
+
+    return tmp
 end
 
 local function getClosestServer()
@@ -276,14 +291,14 @@ writeData()
 if not checkConnection("www.google.com", 80) then
     ERROR = "Internet connection is required to use this application."
     writeData()
-    os.exit()
+    exit()
 end
 
 if not SILENT then
     print("This speedtest can use up a lot of internet data. Do you want to continue?(y/n)")
     local info = io.read();
     if not (info == "y") and not (info == "Y") then
-        os.exit()
+        exit()
     end
 end
 
@@ -300,14 +315,14 @@ if not SERVER then
     if not SERVER then
         ERROR = "We could not determine the closest server to you."
         writeData()
-        os.exit()
+        exit()
     end
 end
 
 if not checkConnection(SERVER) then
     ERROR = "There was no response from the selected server."
     writeData()
-    os.exit()
+    exit()
 end
 
 if not SILENT then
@@ -319,7 +334,7 @@ isError, res = libspeedtest.testspeed(SERVER..":8080/download", TIME, false)
 if isError then
     ERROR = res
     writeData()
-    os.exit()
+    exit()
 end
 
 STATE = "COOLDOWN"
@@ -331,9 +346,9 @@ isError, res = libspeedtest.testspeed(SERVER..":8080/speedtest/upload.php", TIME
 if isError then
     ERROR = res
     writeData()
-    os.exit()
+    exit()
 end
 
 STATE = "FINISHED"
 writeToJSON(DSPEED, DBYTES, USPEED, UBYTES)
-os.remove("/var/run/speedtest.pid")
+exit()

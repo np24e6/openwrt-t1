@@ -7,7 +7,7 @@ include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=post_get
 
-PKG_SOURCE_VERSION:=1.2
+PKG_SOURCE_VERSION:=1.3
 
 PKG_FIXUP:=autoreconf
 
@@ -72,7 +72,8 @@ MOBILE_HANDLERS:= \
 	sms_delete \
 	sms_total \
 	sms_list \
-	mobile_data
+	mobile_data \
+	mobile_sim_pin
 
 IO_HANDLERS:= \
 	io_state \

@@ -1,0 +1,18 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+change_options() {
+    uci -q rename stunnel."${1}"._cipher_type=cipher_type
+    config_get connect "$1" "connect" ""
+    config_get _connect "$1" "_connect" ""
+    if [ -z "$connect" ]; then
+        uci -q rename stunnel."${1}"_connect=connect
+    else
+        [ -n "$_connect" ] && uci_remove "stunnel" "$1" "_connect"
+    fi
+}
+
+config_load "stunnel"
+config_foreach change_options "service"
+uci_commit stunnel

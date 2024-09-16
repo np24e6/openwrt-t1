@@ -124,11 +124,15 @@ ucidef_set_hwinfo() {
 	port_link
 	multi_tag
 	micro_usb
+	soft_port_mirror
+	gigabit_port
+	2_5_gigabit_port
 	'
 
 	json_select_object hwinfo
 
 	for opt in $options; do
+		[ -z "$opt" ] && continue
 		if [[ "$args" =~ " $(echo "$opt" | tr -d '\011\012\015\040') " ]]; then
 			json_add_boolean "$opt" 1
 		else

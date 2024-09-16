@@ -6,7 +6,7 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=libbrand
-PKG_VERSION:=2023-08-31
+PKG_VERSION:=2020-01-06
 PKG_RELEASE:=1
 
 PKG_SOURCE_VERSION:=1.1

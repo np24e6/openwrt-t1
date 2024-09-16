@@ -4,11 +4,11 @@ PROJECT(uqmi C)
 
 OPTION(BUILD_STATIC OFF)
 
-ADD_DEFINITIONS(-Os -Wall -Werror --std=gnu99 -Wmissing-declarations)
+ADD_DEFINITIONS(-Os -ggdb -Wall -Werror --std=gnu99 -Wmissing-declarations -Wno-enum-conversion)
 
 SET(CMAKE_SHARED_LIBRARY_LINK_C_FLAGS "")
 
-SET(SOURCES main.c)
+SET(SOURCES main.c dev.c commands.c qmi-message.c mbim.c)
 
 FIND_PATH(ubox_include_dir libubox/usock.h)
 FIND_PATH(blobmsg_json_include_dir libubox/blobmsg_json.h)
@@ -32,7 +32,7 @@ IF(DEBUG_PACKET)
 ENDIF()
 
 IF(DEBUG)
-  ADD_DEFINITIONS(-DDEBUG -ggdb -g3)
+  ADD_DEFINITIONS(-DDEBUG -g3)
 ENDIF()
 
 SET(service_headers)
@@ -58,27 +58,14 @@ ADD_CUSTOM_COMMAND(
 	COMMAND ${CMAKE_SOURCE_DIR}/data/gen-error-list.pl ${CMAKE_SOURCE_DIR}/qmi-errors.h > ${CMAKE_SOURCE_DIR}/qmi-errors.c
 	DEPENDS ${CMAKE_SOURCE_DIR}/data/gen-error-list.pl ${CMAKE_SOURCE_DIR}/qmi-errors.h
 )
-
-ADD_CUSTOM_COMMAND(
-	OUTPUT  ${CMAKE_SOURCE_DIR}/qmi-wds-error-types.c
-	COMMAND ${CMAKE_SOURCE_DIR}/data/gen-verbose-error-list.pl ${CMAKE_SOURCE_DIR}/qmi-enums-wds.h ${CMAKE_SOURCE_DIR}/qmi-wds-error-types.c
-	DEPENDS ${CMAKE_SOURCE_DIR}/data/gen-error-list.pl ${CMAKE_SOURCE_DIR}/qmi-enums-wds.h
-)
 ADD_CUSTOM_TARGET(gen-errors DEPENDS qmi-errors.c)
-ADD_CUSTOM_TARGET(gen-verbose-errors DEPENDS qmi-wds-error-types.c)
 ADD_CUSTOM_TARGET(gen-headers DEPENDS ${service_headers})
 
-SET(LIB_SOURCES libuqmi.c dev.c commands.c qmi-message.c mbim.c)
+ADD_EXECUTABLE(uqmi ${SOURCES} ${service_sources})
+ADD_DEPENDENCIES(uqmi gen-headers gen-errors)
 
-ADD_LIBRARY(tlt_uqmi SHARED ${LIB_SOURCES} ${service_headers} ${service_sources})
-ADD_DEPENDENCIES(tlt_uqmi gen-headers gen-errors gen-verbose-errors)
-
-ADD_EXECUTABLE(uqmi ${SOURCES})
-# ADD_DEPENDENCIES(uqmi gen-headers gen-errors gen-verbose-errors)
-
-TARGET_LINK_LIBRARIES(uqmi ${LIBS} tlt_uqmi)
+TARGET_LINK_LIBRARIES(uqmi ${LIBS})
 
 INSTALL(TARGETS uqmi
-	LIBRARY DESTINATION lib
 	RUNTIME DESTINATION sbin
 )

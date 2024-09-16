@@ -1,0 +1,63 @@
+--- a/block.c
++++ b/block.c
+@@ -1099,8 +1099,11 @@ static int mount_device(struct probe_inf
+ 	}
+ 
+ 	m = find_block(pr->uuid, pr->label, device, NULL);
+-	if (m && m->extroot)
+-		return -1;
++	if (m && m->extroot) {
++		// force mount SME overlay as anon so the SME hotplug can handle it
++		anon_mount = 1;
++		m = NULL;
++	}
+ 
+ 	mp = find_mount_point(pr->dev);
+ 	if (mp) {
+@@ -1624,6 +1627,46 @@ static int mount_extroot(char *cfg)
+ 			err = check_extroot(path);
+ 			if (err)
+ 				umount(path);
++			else {
++				// place SME partition major+minor on /tmp/
++				struct stat statbuf;
++				err = stat(pr->dev, &statbuf);
++				if (err) {
++					ULOG_ERR("extroot: stat '%s' error (%m)\n", pr->dev);
++					return err;
++				}
++
++				FILE *file = fopen("/tmp/.sme_major_minor", "w");
++				if (!file) {
++					ULOG_ERR("extroot: error opening file (%m)\n");
++					return errno;
++				}
++
++				fprintf(file, "SME_MAJOR=%d\n", major(statbuf.st_rdev));
++				fprintf(file, "SME_MINOR=%d\n", minor(statbuf.st_rdev));
++				fclose(file);
++
++				// place SME partition uuid on itself. ignoring .extroot-uuid
++				char uuid_path[32];
++				snprintf(uuid_path, sizeof(uuid_path), "%s/.sme_uuid", path);
++				err = stat(uuid_path, &statbuf);
++				if (err && errno == ENOENT) {
++					err = 0;
++					file = fopen(uuid_path, "w");
++					if (!file) {
++						ULOG_ERR("extroot: error opening '%s' (%m)\n", uuid_path);
++						return errno;
++					}
++
++					fputs(pr->uuid, file);
++					fputc('\n', file);
++					fclose(file);
++
++				} else if (err) {
++					ULOG_ERR("extroot: stat '%s' error (%m)\n", pr->dev);
++					return err;
++				}
++			}
+ 		}
+ 	} else {
+ 		ULOG_ERR("extroot: cannot find device %s%s\n",

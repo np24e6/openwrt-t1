@@ -7,7 +7,11 @@ struct survey_table {
 	char bssid[20];
 	char security[23];
 	char *crypto;
-	char signal[6];
+	char rssi[6];
+	char quality[9];
+	char primary_channel[4];
+	char secondary_channel[7];
+	char channel_width[4];
 };
 
 #define MAX_SURVEY_CNT 128
@@ -786,7 +790,11 @@ static void wifi_site_survey(const char *ifname, char *essid, int print)
 		next_field(&line, st[survey_count].ssid, sizeof(st->ssid));
 		next_field(&line, st[survey_count].bssid, sizeof(st->bssid));
 		next_field(&line, st[survey_count].security, sizeof(st->security));
-		next_field(&line, st[survey_count].signal, sizeof(st->signal));
+		next_field(&line, st[survey_count].rssi, sizeof(st->rssi));
+		next_field(&line, st[survey_count].quality, sizeof(st->quality));
+		next_field(&line, st[survey_count].primary_channel, sizeof(st->primary_channel));
+		next_field(&line, st[survey_count].secondary_channel, sizeof(st->secondary_channel));
+		next_field(&line, st[survey_count].channel_width, sizeof(st->channel_width));
 		line			= strtok(NULL, "\n");
 		st[survey_count].crypto = strstr(st[survey_count].security, "/");
 		if (st[survey_count].crypto) {
@@ -828,13 +836,25 @@ static int ralink_get_scanlist(const char *ifname, char *buf, int *len)
 			e[i].mac[j] = (uint8_t)strtoul(&st[i].bssid[j * 3], NULL, 16);
 		}
 		strcpy(e[i].ssid, st[i].ssid);
-		e[i].channel	 = atoi(st[i].channel);
+		e[i].channel	 = (uint8_t)strtoul(st[i].channel, NULL, 10);
 		e[i].mode	 = IWINFO_OPMODE_MASTER;
-		e[i].quality	 = atoi(st[i].signal);
+		e[i].signal	 = (int8_t)strtol(st[i].rssi, NULL, 10);
+		e[i].quality	 = (uint8_t)strtoul(st[i].quality, NULL, 10);
 		e[i].quality_max = 100;
 		memset(&e[i].crypto, 0, sizeof(struct iwinfo_crypto_entry));
 		memset(&e[i].ht_chan_info, 0, sizeof(struct iwinfo_scanlist_ht_chan_entry));
 		memset(&e[i].vht_chan_info, 0, sizeof(struct iwinfo_scanlist_vht_chan_entry));
+
+		e[i].ht_chan_info.chan_width = (uint8_t)strtoul(st[i].channel_width, NULL, 10);
+		e[i].ht_chan_info.primary_chan = (uint8_t)strtoul(st[i].primary_channel, NULL, 10);
+		
+		if(strstr(st[i].secondary_channel, "NONE"))
+			e[i].ht_chan_info.secondary_chan_off = 0;
+		else if (strstr(st[i].secondary_channel, "ABOVE"))
+			e[i].ht_chan_info.secondary_chan_off = 1;
+		else if(strstr(st[i].secondary_channel, "BELOW"))
+			e[i].ht_chan_info.secondary_chan_off = 3;
+
 		if (strstr(st[i].security, "WPA")) {
 			e[i].crypto.enabled = 1;
 			e[i].crypto.auth_suites |= IWINFO_KMGMT_PSK;

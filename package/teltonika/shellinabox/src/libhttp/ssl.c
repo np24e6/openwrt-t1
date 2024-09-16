@@ -208,7 +208,7 @@ static int maybeLoadCrypto(void) {
   // The feature is currently disabled.
   const char* path_libcrypto = NULL; // getenv ("SHELLINABOX_LIBCRYPTO_SO");
   if (path_libcrypto == NULL)
-    path_libcrypto = "/usr/lib/libcrypto.so.1.0.0";
+    path_libcrypto = "libcrypto.so";
 
   if (!crypto++) {
 #ifdef RTLD_NOLOAD
@@ -267,7 +267,7 @@ static void loadSSL(void) {
   // The feature is currently disabled.
   const char* path_libssl = NULL; // = getenv ("SHELLINABOX_LIBSSL_SO");
   if (path_libssl == NULL)
-    path_libssl = "/usr/lib/libssl.so.1.0.0";
+    path_libssl = "libssl.so";
   check(!SSL_library_init);
   struct {
     union {
@@ -666,7 +666,14 @@ static SSL_CTX *sslMakeContext(void) {
 #endif
 
   check(SSL_CTX_set_cipher_list(context,
-	"AES256+EECDH:AES256+EDH:AES128+EECDH:AES128+EDH:!RC4:!aNULL:!MD5:!DSS"));
+    "ECDHE-RSA-AES256-GCM-SHA384:"
+    "ECDHE-RSA-AES128-GCM-SHA256:"
+    "ECDHE-RSA-AES256-SHA384:"
+    "ECDHE-RSA-AES128-SHA256:"
+    "ECDHE-RSA-AES256-SHA:"
+    "ECDHE-RSA-AES128-SHA:"
+    "ECDHE-RSA-DES-CBC3-SHA:"
+    "HIGH:MEDIUM:!RC4:!aNULL:!MD5"));
 
   SSL_CTX_set_info_callback(context, sslInfoCallback);
 

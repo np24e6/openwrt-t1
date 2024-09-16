@@ -1,21 +1,42 @@
-TARGET = dlms_client
+# project name (generate executable with this name)
+TARGET   = gurux.dlms.client.bin
 
-SRCDIR := ./src
+CC       = gcc
 
-SOURCES := $(wildcard $(SRCDIR)/*.c)
+# compiling flags here
+CFLAGS   = -std=gnu99 -Wall -I.
 
-OBJS = $(SOURCES:.c=.o)
+LINKER   = gcc -o
 
-CFLAGS += -D_GNU_SOURCE -DCONFIG_MACHINE_$(TLT_PLATFORM_NAME)
-CFLAGS += -Wall -Wextra -Werror -pedantic -fno-common -ffunction-sections -fdata-sections -Wundef
+# linking flags here
+LFLAGS   = -L../development/lib
 
-LDFLAGS += -lubus -lubox -lsqlite3 -ltlt_uci -luci -lgurux_dlms_c -ltlt_logger -lpthread
-RM = rm -f
+# change these to set the proper directories where each files should be
 
-all: $(TARGET)
+SRCDIR   = src
+OBJDIR   = obj
+BINDIR   = bin
 
-$(TARGET): $(OBJS)
-	$(CC) -o $@ $^ $(LDFLAGS)
+SOURCES  := $(wildcard $(SRCDIR)/*.c)
+INCLUDES := $(wildcard $(SRCDIR)/*.h)
+OBJECTS  := $(SOURCES:$(SRCDIR)/%.c=$(OBJDIR)/%.o)
+rm       = rm -f
 
+$(BINDIR)/$(TARGET): $(OBJECTS)
+	@$(LINKER) $@ $(LFLAGS) $(OBJECTS) -lgurux_dlms_c -lm
+	@echo "Linking complete!"
+
+$(OBJECTS): $(OBJDIR)/%.o : $(SRCDIR)/%.c
+	@$(CC) $(CFLAGS) -c $< -o $@
+	@echo "Compiled "$<" successfully!"
+
+.PHONEY: clean
 clean:
-	$(RM) $(OBJS) $(TARGET)
+	@$(rm) $(OBJECTS)
+	@echo "Cleanup complete!" 
+	@echo $(OBJECTS)
+
+.PHONEY: remove
+remove: clean
+	@$(rm) $(BINDIR)/$(TARGET)
+	@echo "Executable removed!"

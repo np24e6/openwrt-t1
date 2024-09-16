@@ -1,0 +1,10 @@
+--- a/select.c
++++ b/select.c
+@@ -83,6 +83,7 @@ select_fini(void)
+ 
+ 	free(events);
+ 	events = NULL;
++	nevents = 0;
+ }
+ 
+ static int

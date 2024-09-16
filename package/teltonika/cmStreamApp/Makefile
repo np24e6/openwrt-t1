@@ -6,16 +6,13 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=cmStreamApp
-PKG_VERSION:=2023-09-01
+PKG_VERSION:=2023-12-06
 PKG_RELEASE:=1
 
-PKG_SOURCE_VERSION:=1.9
-
+PKG_SOURCE_VERSION:=2.0
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_SOURCE_VERSION)-$(PKG_VERSION)
 PKG_SOURCE:=$(PKG_SOURCE_SUBDIR).tar.gz
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_SOURCE_SUBDIR)
-
-GPL_INCLUDE_SRC:=1
 
 include $(INCLUDE_DIR)/package.mk
 
@@ -23,7 +20,7 @@ define Package/cmStreamApp
 	SECTION:=net
 	CATEGORY:=Network
 	TITLE:=Cumulocity - Cloud of Things stream application.
-	DEPENDS:=+libsera +libuci +libgsm +libmnfinfo +vuci-app-cumulocity-ui
+	DEPENDS:=+libsera +libuci +MOBILE_SUPPORT:libgsm +libmnfinfo +vuci-app-cumulocity-ui
 	PKG_TLT_NAME:=Cumulocity - Cloud of Things
 	PKG_ROUTER:=$(TLT_PLATFORM_NAME)
 endef
@@ -35,6 +32,7 @@ endef
 define Package/cmStreamApp/conffiles
 /etc/config/iot
 endef
+
 
 define Package/cmStreamApp/install
 	$(INSTALL_DIR) $(1)/usr/bin
@@ -51,7 +49,7 @@ define Package/cmStreamApp/install
 
 	if [ ! $(TLT_PLATFORM_RUTX) ]; then \
 		$(SED) "s#Teltonika-Networks_RUTX#Teltonika-Networks_$(TLT_PLATFORM_NAME)#g" $(1)/usr/lib/lua/cm/srtemplate.txt; \
-    fi;
+	fi;
 endef
 
 $(eval $(call BuildPackage,cmStreamApp))

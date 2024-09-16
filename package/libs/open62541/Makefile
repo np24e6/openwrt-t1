@@ -33,9 +33,9 @@ define Package/open62541/description
 endef
 
 define Build/InstallDev
-	$(INSTALL_DIR) $(1)/usr/lib $(1)/usr/include/open62541
+	$(INSTALL_DIR) $(1)/usr/lib $(1)/usr/include
 	$(CP) $(PKG_BUILD_DIR)/bin/*.so* $(1)/usr/lib
-	$(CP) $(PKG_BUILD_DIR)/ipkg-install/usr/include/open62541/* $(1)/usr/include/open62541
+	$(CP) $(PKG_BUILD_DIR)/ipkg-install/usr/include/* $(1)/usr/include
 endef
 
 define Package/open62541/install

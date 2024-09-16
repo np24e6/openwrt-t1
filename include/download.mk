@@ -7,7 +7,11 @@ PROJECT_GIT = https://git.openwrt.org
 
 OPENWRT_GIT = $(PROJECT_GIT)
 LEDE_GIT = $(PROJECT_GIT)
-TLT_GIT = git@git.teltonika.lt:teltonika
+
+TLT_HOST := git.teltonika.lt
+TLT_GIT := git@$(TLT_HOST):teltonika
+CI_PROJECT_ID ?= 352
+TLT_PACKAGE_API := https://$(TLT_HOST)/api/v4/projects/$(CI_PROJECT_ID)/packages/generic
 
 ifdef PKG_SOURCE_VERSION
   ifndef PKG_VERSION
@@ -132,7 +136,7 @@ endef
 
 define DownloadMethod/default
 	$(SCRIPT_DIR)/download.pl "$(DL_DIR)" \
-		"$(if $(findstring $(TLT_GIT),$(PKG_SOURCE_URL)),skip-mirrors)" "$(FILE)" "$(HASH)" "$(URL_FILE)" $(foreach url,$(URL),"$(url)") \
+		"$(if $(findstring $(TLT_GIT),$(PKG_SOURCE_URL)),skip-mirrors)" "$(FILE)" "$(HASH)" "$(URL_FILE)" $(foreach url,$(URL),"$(url)") "$(PKG_UPSTREAM_URL)" \
 	$(if $(filter check,$(1)), \
 		$(call check_hash,$(FILE),$(HASH),$(2)$(call hash_var,$(MD5SUM))) \
 		$(call check_md5,$(MD5SUM),$(2)MD5SUM,$(2)HASH) \
@@ -214,7 +218,7 @@ define DownloadMethod/rawgit
 	cd $(TMP_DIR)/dl && \
 	rm -rf $(SUBDIR) && \
 	[ \! -d $(SUBDIR) ] && \
-	git clone $(OPTS) $(URL) $(SUBDIR) && \
+	(git clone $(OPTS) $(URL) $(SUBDIR) || git clone $(OPTS) $(PKG_UPSTREAM_URL) $(SUBDIR)) && \
 	(cd $(SUBDIR) && git checkout $(VERSION) && \
 	git submodule update --init --recursive) && \
 	echo "Packing checkout..." && \

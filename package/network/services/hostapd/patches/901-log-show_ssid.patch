@@ -1,0 +1,74 @@
+Index: hostapd-2023-09-08-e5ccbfc6/src/ap/sta_info.c
+===================================================================
+--- hostapd-2023-09-08-e5ccbfc6.orig/src/ap/sta_info.c	2023-11-06 11:30:59.971637063 +0200
++++ hostapd-2023-09-08-e5ccbfc6/src/ap/sta_info.c	2023-11-06 11:31:05.000000000 +0200
+@@ -1300,6 +1300,9 @@
+ 	const u8 *dev_addr = NULL;
+ 	char buf[100];
+ 	char mac[18] = { 0 };
++	struct hostapd_ssid *ssid;
++
++	ssid = &hapd->conf->ssid;
+ #ifdef CONFIG_P2P
+ 	u8 addr[ETH_ALEN];
+ 	u8 ip_addr_buf[4];
+@@ -1416,7 +1419,7 @@
+ 					  buf, ip_addr, keyid_buf,
+ 					  dpp_pkhash_buf, alg_buf);
+ 
+-		hostapd_ubus_insert_wifi_log(mac, 1);
++		hostapd_ubus_insert_wifi_log(ssid, mac, 1);
+ 	} else {
+ 		wpa_msg(hapd->msg_ctx, MSG_INFO, AP_STA_DISCONNECTED "%s", buf);
+ 		hostapd_ubus_notify(hapd, "disassoc", sta->addr);
+@@ -1426,7 +1429,7 @@
+ 			wpa_msg_no_global(hapd->msg_ctx_parent, MSG_INFO,
+ 					  AP_STA_DISCONNECTED "%s", buf);
+ 
+-		hostapd_ubus_insert_wifi_log(mac, 0);
++		hostapd_ubus_insert_wifi_log(ssid, mac, 0);
+ 	}
+ 
+ #ifdef CONFIG_FST
+Index: hostapd-2023-09-08-e5ccbfc6/src/ap/ubus.c
+===================================================================
+--- hostapd-2023-09-08-e5ccbfc6.orig/src/ap/ubus.c	2023-11-06 11:30:59.971637063 +0200
++++ hostapd-2023-09-08-e5ccbfc6/src/ap/ubus.c	2023-11-06 11:30:59.971637063 +0200
+@@ -1958,10 +1958,10 @@
+ 	ubus_notify(ctx, &hapd->ubus.obj, "beacon-report", b.head, -1);
+ }
+ 
+-void hostapd_ubus_insert_wifi_log(char *mac, int ident)
++void hostapd_ubus_insert_wifi_log(struct hostapd_ssid *ssid, char *mac, int ident)
+ {
+ 	struct events_log new_task = { 0 };
+-	char cmd[45]		   = { 0 };
++	char cmd[80]		   = { 0 };
+ 	int i			   = 0;
+ 
+ 	while (mac[i]) {
+@@ -1970,9 +1970,9 @@
+ 	}
+ 
+ 	if (ident) {
+-		sprintf(cmd, "WiFi client connected: %s", mac);
++		sprintf(cmd, "%s: WiFi client connected: %s", wpa_ssid_txt(ssid->ssid, ssid->ssid_len), mac);
+ 	} else {
+-		sprintf(cmd, "WiFi client disconnected: %s", mac);
++		sprintf(cmd, "%s: WiFi client disconnected: %s", wpa_ssid_txt(ssid->ssid, ssid->ssid_len), mac);
+ 	}
+ 
+ 	new_task.table	  = LLOG_CONNECTIONS;
+Index: hostapd-2023-09-08-e5ccbfc6/src/ap/ubus.h
+===================================================================
+--- hostapd-2023-09-08-e5ccbfc6.orig/src/ap/ubus.h	2023-11-06 11:30:59.971637063 +0200
++++ hostapd-2023-09-08-e5ccbfc6/src/ap/ubus.h	2023-11-06 11:30:59.971637063 +0200
+@@ -62,7 +62,7 @@
+ 	struct hostapd_data *hapd, const u8 *addr, u8 dialog_token, u8 status_code,
+ 	u8 bss_termination_delay, const u8 *target_bssid,
+ 	const u8 *candidate_list, u16 candidate_list_len);
+-void hostapd_ubus_insert_wifi_log(char *mac, int ident);
++void hostapd_ubus_insert_wifi_log(struct hostapd_ssid *ssid, char *mac, int ident);
+ void hostapd_ubus_add(struct hapd_interfaces *interfaces);
+ void hostapd_ubus_free(struct hapd_interfaces *interfaces);
+ int hostapd_ubus_notify_bss_transition_query(

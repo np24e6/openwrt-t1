@@ -145,6 +145,10 @@ define Package/openvpn-$(BUILD_VARIANT)/install
                 files/updown.sh \
                 $(1)/etc/openvpn/
 
+	$(INSTALL_BIN) \
+		files/route.sh \
+		$(1)/etc/openvpn/
+
 	$(if $(CONFIG_OPENVPN_openssl_ENABLE_CHECK_TOOL), \
 		$(INSTALL_BIN) \
 			files/openvpn.check \

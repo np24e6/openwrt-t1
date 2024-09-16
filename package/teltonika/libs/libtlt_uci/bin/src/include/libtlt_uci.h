@@ -108,6 +108,14 @@ long ucix_get_option_long(struct uci_context *ctx, const char *p, const char *s,
 int ucix_commit(struct uci_context *ctx, const char *p);
 
 /**
+ * @brief commit, save uci changes and log config changes
+ * @param ctx uci context
+ * @param p configuration name
+ * @return on success function return 0, on failure -1 and errno is set
+ */
+int ucix_logged_commit(struct uci_context *ctx, const char *p);
+
+/**
  * @brief free uci context
  * @param ctx uci context
  */

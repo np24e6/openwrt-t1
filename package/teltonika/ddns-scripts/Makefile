@@ -8,7 +8,7 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=ddns-scripts
-PKG_VERSION:=2023-08-31
+PKG_VERSION:=2023-11-10
 PKG_RELEASE:=1
 
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
@@ -18,6 +18,10 @@ GPL_INCLUDE_SRC:=1
 PKG_LICENSE:=GPL-2.0
 PKG_MAINTAINER:=
 PKG_ORIGIN_URL:=https://github.com/openwrt/packages/tree/openwrt-21.02/net/ddns-scripts
+
+PKG_UPSTREAM_VERSION:=18.06
+PKG_UPSTREAM_URL:=https://git.teltonika.lt/api/v4/projects/352/packages/generic/ddns-scripts/$(PKG_UPSTREAM_VERSION)
+PKG_UPSTREAM_FILE:=ddns-scripts-$(PKG_UPSTREAM_VERSION).tar.gz
 
 include $(INCLUDE_DIR)/package.mk
 
@@ -141,6 +145,13 @@ define Package/tlt-ddns
 	endif
 endef
 
+define Package/tlt-ddns/description
+	Dynamic DNS (DDNS or DynDNS) is a method of automatically updating
+	a name server in the Domain Name System (DNS). This is most often
+	utilized when the end user has a dynamic IP address and wants to
+	bind it to a static hostname.
+endef
+
 ###### *************************************************************************
 define Build/Configure
 endef
@@ -198,9 +209,6 @@ define Package/ddns-scripts/prerm
 	#!/bin/sh
 	# if run within buildroot exit
 	[ -n "$${IPKG_INSTROOT}" ] && exit 0
-	# stop running scripts
-	/etc/init.d/ddns stop
-	/etc/init.d/ddns disable
 	# clear LuCI indexcache
 	rm -fr /tmp/luci-indexcache/ >/dev/null 2>&1
 	exit 0	# suppress errors
@@ -234,8 +242,6 @@ define Package/ddns-scripts_cloudflare.com-v4/postinst
 endef
 define Package/ddns-scripts_cloudflare.com-v4/prerm
 	#!/bin/sh
-	# if NOT run buildroot then stop service
-	[ -z "$${IPKG_INSTROOT}" ] && /etc/init.d/ddns stop				>/dev/null 2>&1
 	# remove services file entries
 	/bin/sed -i '/cloudflare\.com-v4/d' $${IPKG_INSTROOT}/etc/ddns/services		>/dev/null 2>&1
 	/bin/sed -i '/cloudflare\.com-v4/d' $${IPKG_INSTROOT}/etc/ddns/services_ipv6	>/dev/null 2>&1
@@ -268,8 +274,6 @@ define Package/ddns-scripts_freedns_42_pl/postinst
 endef
 define Package/ddns-scripts_freedns_42_pl/prerm
 	#!/bin/sh
-	# if NOT run buildroot then stop service
-	[ -z "$${IPKG_INSTROOT}" ] && /etc/init.d/ddns stop		>/dev/null 2>&1
 	# remove services file entries
 	/bin/sed -i '/freedns\.42\.pl/d' $${IPKG_INSTROOT}/etc/ddns/services	>/dev/null 2>&1
 	exit 0	# suppress errors
@@ -303,8 +307,6 @@ define Package/ddns-scripts_godaddy.com-v1/postinst
 endef
 define Package/ddns-scripts_godaddy.com-v1/prerm
 	#!/bin/sh
-	# if NOT run buildroot then stop service
-	[ -z "$${IPKG_INSTROOT}" ] && /etc/init.d/ddns stop				>/dev/null 2>&1
 	# remove services file entries
 	/bin/sed -i '/godaddy\.com-v1/d' $${IPKG_INSTROOT}/etc/ddns/services		>/dev/null 2>&1
 	/bin/sed -i '/godaddy\.com-v1/d' $${IPKG_INSTROOT}/etc/ddns/services_ipv6	>/dev/null 2>&1
@@ -337,8 +339,6 @@ define Package/ddns-scripts_no-ip_com/postinst
 endef
 define Package/ddns-scripts_no-ip_com/prerm
 	#!/bin/sh
-	# if NOT run buildroot then stop service
-	[ -z "$${IPKG_INSTROOT}" ] && /etc/init.d/ddns stop		>/dev/null 2>&1
 	# remove services file entries
 	/bin/sed -i '/no-ip\.com/d' $${IPKG_INSTROOT}/etc/ddns/services	>/dev/null 2>&1
 	exit 0	# suppress errors
@@ -372,8 +372,6 @@ define Package/ddns-scripts_nsupdate/postinst
 endef
 define Package/ddns-scripts_nsupdate/prerm
 	#!/bin/sh
-	# if NOT run buildroot then stop service
-	[ -z "$${IPKG_INSTROOT}" ] && /etc/init.d/ddns stop			>/dev/null 2>&1
 	# remove services file entries
 	/bin/sed -i '/bind-nsupdate/d' $${IPKG_INSTROOT}/etc/ddns/services	>/dev/null 2>&1
 	/bin/sed -i '/bind-nsupdate/d' $${IPKG_INSTROOT}/etc/ddns/services_ipv6	>/dev/null 2>&1
@@ -408,8 +406,6 @@ define Package/ddns-scripts_route53-v1/postinst
 endef
 define Package/ddns-scripts_route53-v1/prerm
 	#!/bin/sh
-	# if NOT run buildroot then stop service
-	[ -z "$${IPKG_INSTROOT}" ] && /etc/init.d/ddns stop				>/dev/null 2>&1
 	# remove services file entries
 	/bin/sed -i 'route53-v1/d' $${IPKG_INSTROOT}/etc/ddns/services		>/dev/null 2>&1
 	/bin/sed -i 'route53-v1/d' $${IPKG_INSTROOT}/etc/ddns/services_ipv6	>/dev/null 2>&1

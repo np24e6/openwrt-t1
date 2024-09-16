@@ -1,0 +1,2229 @@
+diff --recursive --unified --new-file --no-dereference orig/.gitignore src/.gitignore
+--- orig/.gitignore	2023-11-09 07:11:45.000000000 +0000
++++ src/.gitignore	1970-01-01 00:00:00.000000000 +0000
+@@ -1,10 +0,0 @@
+-uqmi
+-.*
+-Makefile
+-CMakeCache.txt
+-CMakeFiles
+-*.cmake
+-install_manifest.txt
+-qmi-message-*.h
+-qmi-message-*.c
+-qmi-errors.c
+diff --recursive --unified --new-file --no-dereference orig/.gitlab-ci.yml src/.gitlab-ci.yml
+--- orig/.gitlab-ci.yml	1970-01-01 00:00:00.000000000 +0000
++++ src/.gitlab-ci.yml	2023-07-10 05:34:36.000000000 +0000
+@@ -0,0 +1,20 @@
++include:
++  - project: teltonika/ci-templates
++    file:
++      - /templates/semgrep.yml
++
++workflow:
++  rules:
++    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
++    - if: $CI_PIPELINE_SOURCE == "web"
++    - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
++      when: never
++    - if: $CI_COMMIT_BRANCH
++
++semgrep_errors:
++  extends: .semgrep_errors
++
++semgrep_info:
++  extends: .semgrep_info
++  needs:
++    - job: semgrep_errors
+\ No newline at end of file
+diff --recursive --unified --new-file --no-dereference orig/CMakeLists.txt src/CMakeLists.txt
+--- orig/CMakeLists.txt	2023-11-09 07:11:45.000000000 +0000
++++ src/CMakeLists.txt	2023-07-10 05:34:36.000000000 +0000
+@@ -4,11 +4,11 @@
+ 
+ OPTION(BUILD_STATIC OFF)
+ 
+-ADD_DEFINITIONS(-Os -ggdb -Wall -Werror --std=gnu99 -Wmissing-declarations -Wno-enum-conversion)
++ADD_DEFINITIONS(-Os -Wall -Werror --std=gnu99 -Wmissing-declarations)
+ 
+ SET(CMAKE_SHARED_LIBRARY_LINK_C_FLAGS "")
+ 
+-SET(SOURCES main.c dev.c commands.c qmi-message.c mbim.c)
++SET(SOURCES main.c)
+ 
+ FIND_PATH(ubox_include_dir libubox/usock.h)
+ FIND_PATH(blobmsg_json_include_dir libubox/blobmsg_json.h)
+@@ -32,7 +32,7 @@
+ ENDIF()
+ 
+ IF(DEBUG)
+-  ADD_DEFINITIONS(-DDEBUG -g3)
++  ADD_DEFINITIONS(-DDEBUG -ggdb -g3)
+ ENDIF()
+ 
+ SET(service_headers)
+@@ -58,14 +58,27 @@
+ 	COMMAND ${CMAKE_SOURCE_DIR}/data/gen-error-list.pl ${CMAKE_SOURCE_DIR}/qmi-errors.h > ${CMAKE_SOURCE_DIR}/qmi-errors.c
+ 	DEPENDS ${CMAKE_SOURCE_DIR}/data/gen-error-list.pl ${CMAKE_SOURCE_DIR}/qmi-errors.h
+ )
++
++ADD_CUSTOM_COMMAND(
++	OUTPUT  ${CMAKE_SOURCE_DIR}/qmi-wds-error-types.c
++	COMMAND ${CMAKE_SOURCE_DIR}/data/gen-verbose-error-list.pl ${CMAKE_SOURCE_DIR}/qmi-enums-wds.h ${CMAKE_SOURCE_DIR}/qmi-wds-error-types.c
++	DEPENDS ${CMAKE_SOURCE_DIR}/data/gen-error-list.pl ${CMAKE_SOURCE_DIR}/qmi-enums-wds.h
++)
+ ADD_CUSTOM_TARGET(gen-errors DEPENDS qmi-errors.c)
++ADD_CUSTOM_TARGET(gen-verbose-errors DEPENDS qmi-wds-error-types.c)
+ ADD_CUSTOM_TARGET(gen-headers DEPENDS ${service_headers})
+ 
+-ADD_EXECUTABLE(uqmi ${SOURCES} ${service_sources})
+-ADD_DEPENDENCIES(uqmi gen-headers gen-errors)
++SET(LIB_SOURCES libuqmi.c dev.c commands.c qmi-message.c mbim.c)
++
++ADD_LIBRARY(tlt_uqmi SHARED ${LIB_SOURCES} ${service_headers} ${service_sources})
++ADD_DEPENDENCIES(tlt_uqmi gen-headers gen-errors gen-verbose-errors)
++
++ADD_EXECUTABLE(uqmi ${SOURCES})
++# ADD_DEPENDENCIES(uqmi gen-headers gen-errors gen-verbose-errors)
+ 
+-TARGET_LINK_LIBRARIES(uqmi ${LIBS})
++TARGET_LINK_LIBRARIES(uqmi ${LIBS} tlt_uqmi)
+ 
+ INSTALL(TARGETS uqmi
++	LIBRARY DESTINATION lib
+ 	RUNTIME DESTINATION sbin
+ )
+diff --recursive --unified --new-file --no-dereference orig/commands-nas.c src/commands-nas.c
+--- orig/commands-nas.c	2023-11-09 07:17:16.000000000 +0000
++++ src/commands-nas.c	2023-07-10 05:34:36.000000000 +0000
+@@ -924,6 +924,18 @@
+ 		[QMI_NAS_REGISTRATION_STATE_REGISTRATION_DENIED] = "registering_denied",
+ 		[QMI_NAS_REGISTRATION_STATE_UNKNOWN] = "unknown",
+ 	};
++	static const char *ext_serv_system[] = {
++		[QMI_NAS_SERVICE_STATUS_NONE] = "none",
++		[QMI_NAS_SERVICE_STATUS_LIMITED] = "limited",
++		[QMI_NAS_SERVICE_STATUS_AVAILABLE] = "available",
++		[QMI_NAS_SERVICE_STATUS_LIMITED_REGIONAL] = "limited_regional",
++		[QMI_NAS_SERVICE_STATUS_POWER_SAVE] = "power_save",
++	};
++	static const char *attach_states[] = {
++		[QMI_NAS_ATTACH_STATE_UNKNOWN] = "unknown",
++		[QMI_NAS_ATTACH_STATE_ATTACHED] = "attached",
++		[QMI_NAS_ATTACH_STATE_DETACHED] = "detached",
++	};
+ 	void *c;
+ 
+ 	qmi_parse_nas_get_serving_system_response(msg, &res);
+@@ -931,11 +943,15 @@
+ 	c = blobmsg_open_table(&status, NULL);
+ 	if (res.set.serving_system) {
+ 		int state = res.data.serving_system.registration_state;
++		int cs_state = res.data.serving_system.cs_attach_state;
++		int ps_state = res.data.serving_system.ps_attach_state;
+ 
+ 		if (state > QMI_NAS_REGISTRATION_STATE_UNKNOWN)
+ 			state = QMI_NAS_REGISTRATION_STATE_UNKNOWN;
+ 
+ 		blobmsg_add_string(&status, "registration", reg_states[state]);
++		blobmsg_add_string(&status, "CS", attach_states[cs_state]);
++		blobmsg_add_string(&status, "PS", attach_states[ps_state]);
+ 	}
+ 	if (res.set.current_plmn) {
+ 		blobmsg_add_u32(&status, "plmn_mcc", res.data.current_plmn.mcc);
+@@ -947,6 +963,12 @@
+ 	if (res.set.roaming_indicator)
+ 		blobmsg_add_u8(&status, "roaming", !res.data.roaming_indicator);
+ 
++	if (res.set.detailed_service_status) {
++		int ext_status = res.data.detailed_service_status.status;
++
++		blobmsg_add_string(&status, "status", ext_serv_system[ext_status]);
++	}
++
+ 	blobmsg_close_table(&status, c);
+ }
+ 
+diff --recursive --unified --new-file --no-dereference orig/commands-wda.c src/commands-wda.c
+--- orig/commands-wda.c	2023-11-09 07:17:16.000000000 +0000
++++ src/commands-wda.c	2023-07-10 05:34:36.000000000 +0000
+@@ -31,30 +31,231 @@
+ 	{ "raw-ip", QMI_WDA_LINK_LAYER_PROTOCOL_RAW_IP },
+ };
+ 
++static const struct {
++	const char *name;
++	QmiWdaDataAggregationProtocol aggreg;
++} aggreg_modes[] = {
++	{ "disabled", QMI_WDA_DATA_AGGREGATION_PROTOCOL_DISABLED },
++	{ "tlp", QMI_WDA_DATA_AGGREGATION_PROTOCOL_TLP },
++	{ "qc-cm", QMI_WDA_DATA_AGGREGATION_PROTOCOL_QC_NCM },
++	{ "mbim", QMI_WDA_DATA_AGGREGATION_PROTOCOL_MBIM },
++	{ "rndis", QMI_WDA_DATA_AGGREGATION_PROTOCOL_RNDIS },
++	{ "qmap", QMI_WDA_DATA_AGGREGATION_PROTOCOL_QMAP },
++	{ "qmapv5", QMI_WDA_DATA_AGGREGATION_PROTOCOL_QMAPV5 },
++};
++
++static struct {
++	uint32_t iface_number;
++	uint32_t dl_max_size;
++	uint32_t dl_max_datagrams;
++	uint32_t ul_max_size;
++	uint32_t ul_max_datagrams;
++	uint32_t dl_min_padding;
++	uint8_t qos_format;
++	QmiDataEndpointType endpoint_type;
++	QmiWdaDataAggregationProtocol ul_aggreg;
++	QmiWdaDataAggregationProtocol dl_aggreg;
++	QmiWdaLinkLayerProtocol val;
++} wda_endpoint_info;
++
+ #define cmd_wda_set_data_format_cb no_cb
+ 
+ static enum qmi_cmd_result
+-cmd_wda_set_data_format_prepare(struct qmi_dev *qmi, struct qmi_request *req, struct qmi_msg *msg, char *arg)
++cmd_wda_set_data_format_prepare(struct qmi_dev *qmi, struct qmi_request *req,
++				struct qmi_msg *msg, char *arg)
+ {
+-	struct qmi_wda_set_data_format_request data_req = {};
+-	int i;
++	struct qmi_wda_set_data_format_request wda_sdf_req = {
++		QMI_INIT(link_layer_protocol, wda_endpoint_info.val),
++		QMI_INIT(uplink_data_aggregation_protocol, wda_endpoint_info.ul_aggreg),
++		QMI_INIT(downlink_data_aggregation_protocol, wda_endpoint_info.dl_aggreg),
++		QMI_INIT(downlink_data_aggregation_max_datagrams, wda_endpoint_info.dl_max_datagrams),
++		QMI_INIT(downlink_data_aggregation_max_size, wda_endpoint_info.dl_max_size),
++		QMI_INIT(uplink_data_aggregation_max_datagrams, wda_endpoint_info.ul_max_datagrams),
++		QMI_INIT(uplink_data_aggregation_max_size, wda_endpoint_info.ul_max_size),
++		QMI_INIT(downlink_minimum_padding, wda_endpoint_info.dl_min_padding),
++		QMI_INIT(qos_format, wda_endpoint_info.qos_format),
++	};
+ 
+-	for (i = 0; i < ARRAY_SIZE(link_modes); i++) {
+-		if (strcasecmp(link_modes[i].name, arg) != 0)
++	if (wda_endpoint_info.endpoint_type) {
++		wda_sdf_req.data.endpoint_info.endpoint_type = wda_endpoint_info.endpoint_type;
++	}
++
++	if (wda_endpoint_info.iface_number) {
++		wda_sdf_req.data.endpoint_info.interface_number = wda_endpoint_info.iface_number;
++	}
++
++	qmi_set_wda_set_data_format_request(msg, &wda_sdf_req);
++	return QMI_CMD_REQUEST;
++}
++
++#define cmd_wda_link_layer_protocol_cb no_cb
++
++static enum qmi_cmd_result cmd_wda_link_layer_protocol_prepare(
++	struct qmi_dev * qmi, struct qmi_request * req, struct qmi_msg * msg,
++	char *arg)
++{
++	for (uint32_t i = 0; i < ARRAY_SIZE(link_modes); i++) {
++		if (strcasecmp(link_modes[i].name, arg))
++		    continue;
++
++		wda_endpoint_info.val = link_modes[i].val;
++		return QMI_CMD_DONE;
++	}
++
++	uqmi_add_error("Invalid value (valid: 802.3, raw-ip");
++	return QMI_CMD_EXIT;
++}
++
++#define cmd_wda_uplink_data_aggregation_protocol_cb no_cb
++
++static enum qmi_cmd_result
++cmd_wda_uplink_data_aggregation_protocol_prepare(struct qmi_dev *qmi,
++						 struct qmi_request *req,
++						 struct qmi_msg *msg, char *arg)
++{
++	for (uint32_t i = 0; i < ARRAY_SIZE(aggreg_modes); i++) {
++		if (strcasecmp(aggreg_modes[i].name, arg))
++			continue;
++
++		wda_endpoint_info.ul_aggreg = aggreg_modes[i].aggreg;
++		return QMI_CMD_DONE;
++	}
++
++	uqmi_add_error("Invalid value (valid: disabled, tlp, qc-cm, mbim, rndis, qmap, qmapv5");
++	return QMI_CMD_EXIT;
++}
++
++#define cmd_wda_downlink_data_aggregation_protocol_cb no_cb
++
++static enum qmi_cmd_result cmd_wda_downlink_data_aggregation_protocol_prepare(
++	struct qmi_dev *qmi, struct qmi_request *req, struct qmi_msg *msg,
++	char *arg)
++{
++	for (uint32_t i = 0; i < ARRAY_SIZE(aggreg_modes); i++) {
++		if (strcasecmp(aggreg_modes[i].name, arg))
+ 			continue;
+ 
+-		qmi_set(&data_req, link_layer_protocol, link_modes[i].val);
+-		qmi_set_wda_set_data_format_request(msg, &data_req);
+-		return QMI_CMD_REQUEST;
++		wda_endpoint_info.dl_aggreg = aggreg_modes[i].aggreg;
++		return QMI_CMD_DONE;
+ 	}
+ 
+-	uqmi_add_error("Invalid auth mode (valid: 802.3, raw-ip)");
++	uqmi_add_error("Invalid value (valid: disabled, tlp, qc-cm, mbim, rndis, qmap, qmapv5");
+ 	return QMI_CMD_EXIT;
+ }
+ 
+-static void
+-cmd_wda_get_data_format_cb(struct qmi_dev *qmi, struct qmi_request *req, struct qmi_msg *msg)
++#define cmd_wda_downlink_data_aggregation_max_datagrams_cb no_cb
++
++static enum qmi_cmd_result cmd_wda_downlink_data_aggregation_max_datagrams_prepare(
++	struct qmi_dev * qmi, struct qmi_request * req, struct qmi_msg * msg,
++	char *arg)
++{
++	uint32_t max_datagrams = strtoul(arg, NULL, 10);
++
++	wda_endpoint_info.dl_max_datagrams = max_datagrams;
++	return QMI_CMD_DONE;
++}
++
++#define cmd_wda_uplink_data_aggregation_max_datagrams_cb no_cb
++
++static enum qmi_cmd_result cmd_wda_uplink_data_aggregation_max_datagrams_prepare(
++	struct qmi_dev * qmi, struct qmi_request * req, struct qmi_msg * msg,
++	char *arg)
+ {
++	uint32_t max_datagrams = strtoul(arg, NULL, 10);
++
++	wda_endpoint_info.ul_max_datagrams = max_datagrams;
++	return QMI_CMD_DONE;
++}
++
++#define cmd_wda_downlink_data_aggregation_max_size_cb no_cb
++
++static enum qmi_cmd_result cmd_wda_downlink_data_aggregation_max_size_prepare(
++	struct qmi_dev *qmi, struct qmi_request *req, struct qmi_msg *msg,
++	char *arg)
++{
++	uint32_t max_size = strtoul(arg, NULL, 10);
++
++	wda_endpoint_info.dl_max_size = max_size;
++	return QMI_CMD_DONE;
++}
++
++#define cmd_wda_uplink_data_aggregation_max_size_cb no_cb
++
++static enum qmi_cmd_result cmd_wda_uplink_data_aggregation_max_size_prepare(
++	struct qmi_dev *qmi, struct qmi_request *req, struct qmi_msg *msg,
++	char *arg)
++{
++	uint32_t max_size = strtoul(arg, NULL, 10);
++
++	wda_endpoint_info.ul_max_size = max_size;
++	return QMI_CMD_DONE;
++}
++
++#define cmd_wda_downlink_minimum_padding_cb no_cb
++
++static enum qmi_cmd_result cmd_wda_downlink_minimum_padding_prepare(
++	struct qmi_dev *qmi, struct qmi_request *req, struct qmi_msg *msg,
++	char *arg)
++{
++	uint32_t min_pad = strtoul(arg, NULL, 10);
++
++	wda_endpoint_info.dl_min_padding = min_pad;
++	return QMI_CMD_DONE;
++}
++
++#define cmd_wda_qos_format_cb no_cb
++
++static enum qmi_cmd_result cmd_wda_qos_format_prepare(
++	struct qmi_dev *qmi, struct qmi_request *req, struct qmi_msg *msg,
++	char *arg)
++{
++	uint8_t format = strtoul(arg, NULL, 10);
++
++	wda_endpoint_info.qos_format = format;
++	return QMI_CMD_DONE;
++}
++
++
++#define cmd_wda_endpoint_type_cb no_cb
++
++static enum qmi_cmd_result
++cmd_wda_endpoint_type_prepare(struct qmi_dev *qmi, struct qmi_request *req,
++			      struct qmi_msg *msg, char *arg)
++{
++	static const char *endpoint_type[] = {
++		[QMI_DATA_ENDPOINT_TYPE_HSUSB] = "hsusb",
++		[QMI_DATA_ENDPOINT_TYPE_UNDEFINED] = "undefined",
++	};
++
++	for (uint32_t i = 0; i < ARRAY_SIZE(endpoint_type); i++) {
++		if (endpoint_type[i] && !strcmp(endpoint_type[i], arg)) {
++			wda_endpoint_info.endpoint_type = i;
++			return QMI_CMD_DONE;
++		}
++	}
++
++	uqmi_add_error("Invalid value (valid: undefined, hsusb");
++	return QMI_CMD_EXIT;
++}
++
++#define cmd_wda_endpoint_interface_number_cb no_cb
++
++static enum qmi_cmd_result
++cmd_wda_endpoint_interface_number_prepare(struct qmi_dev *qmi,
++					  struct qmi_request *req,
++					  struct qmi_msg *msg, char *arg)
++{
++	uint32_t iface_num = strtoul(arg, NULL, 10);
++
++	wda_endpoint_info.iface_number = iface_num;
++	return QMI_CMD_DONE;
++}
++
++static void cmd_wda_get_data_format_cb(struct qmi_dev *qmi,
++				       struct qmi_request *req,
++				       struct qmi_msg *msg)
++{
++	void *t;
+ 	struct qmi_wda_get_data_format_response res;
+ 	const char *name = "unknown";
+ 	int i;
+@@ -68,7 +269,13 @@
+ 		break;
+ 	}
+ 
+-	blobmsg_add_string(&status, NULL, name);
++	t = blobmsg_open_table(&status, NULL);
++
++	blobmsg_add_u32(&status, "dl data aggregation max size", res.data.downlink_data_aggregation_max_size);
++
++	blobmsg_add_string(&status, "Link Layer Protocol", name);
++
++	blobmsg_close_table(&status, t);
+ }
+ 
+ static enum qmi_cmd_result
+diff --recursive --unified --new-file --no-dereference orig/commands-wda.h src/commands-wda.h
+--- orig/commands-wda.h	2023-11-09 07:11:45.000000000 +0000
++++ src/commands-wda.h	2023-07-10 05:34:36.000000000 +0000
+@@ -20,11 +20,32 @@
+  */
+ 
+ #define __uqmi_wda_commands \
+-	__uqmi_command(wda_set_data_format, wda-set-data-format, required, QMI_SERVICE_WDA), \
++	__uqmi_command(wda_set_data_format, wda-set-data-format, no, QMI_SERVICE_WDA), \
++	__uqmi_command(wda_link_layer_protocol, link-layer-protocol, required, CMD_TYPE_OPTION), \
++	__uqmi_command(wda_uplink_data_aggregation_protocol, ul-protocol, required, CMD_TYPE_OPTION), \
++	__uqmi_command(wda_downlink_data_aggregation_protocol, dl-protocol, required, CMD_TYPE_OPTION), \
++	__uqmi_command(wda_endpoint_type, endpoint-type, required, CMD_TYPE_OPTION), \
++	__uqmi_command(wda_endpoint_interface_number, endpoint-iface-number, required, CMD_TYPE_OPTION), \
++	__uqmi_command(wda_downlink_data_aggregation_max_datagrams, dl-max-datagrams, required, CMD_TYPE_OPTION), \
++	__uqmi_command(wda_uplink_data_aggregation_max_datagrams, ul-max-datagrams, required, CMD_TYPE_OPTION), \
++	__uqmi_command(wda_downlink_data_aggregation_max_size, dl-datagram-max-size, required, CMD_TYPE_OPTION), \
++	__uqmi_command(wda_uplink_data_aggregation_max_size, ul-datagram-max-size, required, CMD_TYPE_OPTION), \
++	__uqmi_command(wda_downlink_minimum_padding, dl-min-padding, required, CMD_TYPE_OPTION), \
++	__uqmi_command(wda_qos_format, qos-format, required, CMD_TYPE_OPTION), \
+ 	__uqmi_command(wda_get_data_format, wda-get-data-format, no, QMI_SERVICE_WDA)
+ 
+-
+ #define wda_helptext \
+-		"  --wda-set-data-format <type>:     Set data format (type: 802.3|raw-ip)\n" \
++		"  --wda-set-data-format:     	     Set data format (Use with options below)\n" \
++		"    --qos-size <size>:   	     Set qos format (number)\n" \
++		"    --endpoint-type <type>:	     Set EP endpoint type (type: hsusb|pcie)\n" \
++		"    --enpoint-iface-number <number> Set EP endpoint iface number (number)\n" \
++		"    --link-layer-protocol <type>:   Set data format (type: 802.3|raw-ip)\n" \
++		"    --ul-protocol <proto>:	     Set upload protocol (proto: tlp|qc-cm|mbim|rndis|qmap|qmapv5)\n" \
++		"    --dl-protocol <proto>:	     Set downlink protocol (proto: tlp|qc-cm|mbim|rndis|qmap|qmapv5)\n" \
++		"    --dl-max-datagrams <size>:      Set downlink max datagrams (number)\n" \
++		"    --ul-max-datagrams <size>:      Set uplink max datagrams (number)\n" \
++		"    --dl-datagram-max-size <size>:  Set downlink datagram max size (number)\n" \
++		"    --ul-datagram-max-size <size>:  Set uplink datagram max size (number)\n" \
++		"    --dl-min-padding <size>:  	     Set downlink minimum padding (number)\n" \
+ 		"  --wda-get-data-format:            Get data format\n" \
+ 
+diff --recursive --unified --new-file --no-dereference orig/commands-wds.c src/commands-wds.c
+--- orig/commands-wds.c	2023-11-09 07:17:16.000000000 +0000
++++ src/commands-wds.c	2023-07-10 05:34:36.000000000 +0000
+@@ -24,6 +24,30 @@
+ 
+ #include "qmi-message.h"
+ 
++#define LOG(...) do { \
++	fprintf(stdout, ##__VA_ARGS__); fflush(stdout); \
++} while (0);
++
++#define DD LOG("DD[***\%s:\%d]\\n", __func__, __LINE__)
++
++static struct {
++	uint32_t mux_id;
++	uint32_t iface_number;
++	//QmiDataEndpointType endpoint_type;
++} wds_endpoint_info;
++
++static struct {
++	QmiWdsProfileType type;
++	QmiWdsPdpType pdp_type;
++	QmiWdsAuthentication authentication;
++	uint32_t profile_index;
++	char *profile_name;
++	bool no_roam;
++	char *username;
++	char *password;
++	char *apn;
++} wds_modify_profile_info;
++
+ static struct qmi_wds_start_network_request wds_sn_req = {
+ 	QMI_INIT(authentication_preference,
+ 	         QMI_WDS_AUTHENTICATION_PAP | QMI_WDS_AUTHENTICATION_CHAP),
+@@ -35,6 +59,7 @@
+ cmd_wds_set_apn_prepare(struct qmi_dev *qmi, struct qmi_request *req, struct qmi_msg *msg, char *arg)
+ {
+ 	qmi_set_ptr(&wds_sn_req, apn, arg);
++	wds_modify_profile_info.apn = arg;
+ 	return QMI_CMD_DONE;
+ }
+ 
+@@ -57,6 +82,7 @@
+ 		if (strcasecmp(modes[i].name, arg) != 0)
+ 			continue;
+ 
++		wds_modify_profile_info.authentication = modes[i].auth;
+ 		qmi_set(&wds_sn_req, authentication_preference, modes[i].auth);
+ 		return QMI_CMD_DONE;
+ 	}
+@@ -70,6 +96,7 @@
+ cmd_wds_set_username_prepare(struct qmi_dev *qmi, struct qmi_request *req, struct qmi_msg *msg, char *arg)
+ {
+ 	qmi_set_ptr(&wds_sn_req, username, arg);
++	wds_modify_profile_info.username = arg;
+ 	return QMI_CMD_DONE;
+ }
+ 
+@@ -78,6 +105,7 @@
+ cmd_wds_set_password_prepare(struct qmi_dev *qmi, struct qmi_request *req, struct qmi_msg *msg, char *arg)
+ {
+ 	qmi_set_ptr(&wds_sn_req, password, arg);
++	wds_modify_profile_info.password = arg;
+ 	return QMI_CMD_DONE;
+ }
+ 
+@@ -126,14 +154,20 @@
+ 	return QMI_CMD_DONE;
+ }
+ 
+-static void
++void
+ cmd_wds_start_network_cb(struct qmi_dev *qmi, struct qmi_request *req, struct qmi_msg *msg)
+ {
+ 	struct qmi_wds_start_network_response res;
+-
+ 	qmi_parse_wds_start_network_response(msg, &res);
+-	if (res.set.packet_data_handle)
++
++	if (res.set.packet_data_handle && res.data.packet_data_handle != 0) {
+ 		blobmsg_add_u32(&status, NULL, res.data.packet_data_handle);
++	} else {
++		LOG("%s\"\n", qmi_wds_verbose_call_end_reason_get_string(
++					res.data.verbose_call_end_reason.type,
++					res.data.verbose_call_end_reason.reason));
++	}
++
+ }
+ 
+ static enum qmi_cmd_result
+@@ -243,6 +277,51 @@
+ 	return QMI_CMD_EXIT;
+ }
+ 
++#define cmd_wds_bind_mux_data_port_cb no_cb
++
++static enum qmi_cmd_result
++cmd_wds_bind_mux_data_port_prepare(struct qmi_dev *qmi, struct qmi_request *req,
++				   struct qmi_msg *msg, char *arg)
++{
++	struct qmi_wds_bind_mux_data_port_request wds_mux_req = {
++		QMI_INIT_SEQUENCE(
++				  endpoint_info,
++				  .endpoint_type = QMI_DATA_ENDPOINT_TYPE_HSUSB,
++				  .interface_number = wds_endpoint_info.iface_number,
++				  ),
++		QMI_INIT(mux_id, wds_endpoint_info.mux_id),
++		QMI_INIT(client_type, QMI_WDS_CLIENT_TYPE_TETHERED),
++	};
++
++	qmi_set_wds_bind_mux_data_port_request(msg, &wds_mux_req);
++        return QMI_CMD_REQUEST;
++}
++
++#define cmd_wds_mux_id_cb no_cb
++
++static enum qmi_cmd_result cmd_wds_mux_id_prepare(struct qmi_dev *qmi,
++						  struct qmi_request *req,
++						  struct qmi_msg *msg,
++						  char *arg)
++{
++	uint32_t mux_num = strtoul(arg, NULL, 10);
++
++	wds_endpoint_info.mux_id = mux_num;
++	return QMI_CMD_DONE;
++}
++
++#define cmd_wds_ep_iface_number_cb no_cb
++
++static enum qmi_cmd_result
++cmd_wds_ep_iface_number_prepare(struct qmi_dev *qmi, struct qmi_request *req,
++				struct qmi_msg *msg, char *arg)
++{
++        uint32_t iface_num = strtoul(arg, NULL, 10);
++
++        wds_endpoint_info.iface_number = iface_num;
++        return QMI_CMD_DONE;
++}
++
+ static void wds_to_ipv4(const char *name, const uint32_t addr)
+ {
+ 	struct in_addr ip_addr;
+@@ -363,3 +442,135 @@
+ 	qmi_set_wds_get_current_settings_request(msg, &gcs_req);
+ 	return QMI_CMD_REQUEST;
+ }
++
++static void
++cmd_wds_get_dormancy_status_cb(struct qmi_dev *qmi, struct qmi_request *req, struct qmi_msg *msg)
++{
++	struct qmi_wds_get_dormancy_status_response res;
++	const char *dormancy_types[] = {
++		[QMI_WDS_DORMANCY_STATUS_UNKNOWN] = "unknown",
++		[QMI_WDS_DORMANCY_STATUS_TRAFFIC_CHANNEL_ACTIVE] = "traffic-channel-active",
++		[QMI_WDS_DORMANCY_STATUS_TRAFFIC_CHANNEL_DORMANT] = "traffic-channel-dormant",
++	};
++	void *c;
++
++	qmi_parse_wds_get_dormancy_status_response(msg, &res);
++
++	c = blobmsg_open_table(&status, NULL);
++	if (res.set.dormancy_status) {
++		int dormancy_state = res.data.dormancy_status;
++
++		blobmsg_add_string(&status, "dormancy_status", dormancy_types[dormancy_state]);
++	}
++
++	blobmsg_close_table(&status, c);
++}
++
++static enum qmi_cmd_result
++cmd_wds_get_dormancy_status_prepare(struct qmi_dev *qmi, struct qmi_request *req, struct qmi_msg *msg, char *arg)
++{
++	qmi_set_wds_get_dormancy_status_request(msg);
++	return QMI_CMD_REQUEST;
++}
++
++// ---- MODIFY PROFILE ----
++#define cmd_wds_modify_profile_cb no_cb
++
++static enum qmi_cmd_result
++cmd_wds_modify_profile_prepare(struct qmi_dev *qmi, struct qmi_request *req, struct qmi_msg *msg, char *arg)
++{
++	struct qmi_wds_modify_profile_request wds_mod_prof_req = {
++		QMI_INIT_SEQUENCE(profile_identifier,
++				  .profile_type = wds_modify_profile_info.type,
++				  .profile_index = wds_modify_profile_info.profile_index),
++		QMI_INIT_PTR(profile_name, wds_modify_profile_info.profile_name),
++		QMI_INIT_PTR(username, wds_modify_profile_info.username),
++		QMI_INIT_PTR(password, wds_modify_profile_info.password),
++		QMI_INIT_PTR(apn_name, wds_modify_profile_info.apn),
++		QMI_INIT(roaming_disallowed_flag, wds_modify_profile_info.no_roam),
++		QMI_INIT(authentication, wds_modify_profile_info.authentication),
++		QMI_INIT(pdp_type, wds_modify_profile_info.pdp_type),
++	};
++
++	qmi_set_wds_modify_profile_request(msg, &wds_mod_prof_req);
++	return QMI_CMD_REQUEST;
++}
++
++#define cmd_wds_set_profile_identifier_cb no_cb
++
++static enum qmi_cmd_result
++cmd_wds_set_profile_identifier_prepare(struct qmi_dev *qmi, struct qmi_request *req, struct qmi_msg *msg, char *arg)
++{
++	char *tmp = NULL;
++
++	tmp = strtok(arg, ",");
++
++	if (!strcmp(tmp, "3gpp2")) {
++		wds_modify_profile_info.type = QMI_WDS_PROFILE_TYPE_3GPP2;
++	} else if (!strcmp(tmp, "3gpp")) {
++		wds_modify_profile_info.type = QMI_WDS_PROFILE_TYPE_3GPP;
++	} else {
++		uqmi_add_error("Invalid profile type (valid: 3gpp, 3gpp2)");
++		return QMI_CMD_EXIT;
++	}
++
++	tmp = strtok(NULL, "\0");
++	wds_modify_profile_info.profile_index = strtol(tmp, NULL, 10);
++
++	return QMI_CMD_DONE;
++}
++
++#define cmd_wds_set_roaming_disallowed_flag_cb no_cb
++
++static enum qmi_cmd_result
++cmd_wds_set_roaming_disallowed_flag_prepare(struct qmi_dev *qmi, struct qmi_request *req, struct qmi_msg *msg, char *arg)
++{
++	if (!strcasecmp(arg, "yes") || !strcasecmp(arg, "true")) {
++		wds_modify_profile_info.no_roam = 1;
++	} else if (!strcasecmp(arg, "no") || !strcasecmp(arg, "false")) {
++		wds_modify_profile_info.no_roam = 0;
++	} else {
++		uqmi_add_error("Invalid flag (valid: yes, true, no, false)");
++		return QMI_CMD_EXIT;
++	}
++
++	return QMI_CMD_DONE;
++}
++
++#define cmd_wds_set_profile_name_cb no_cb
++
++static enum qmi_cmd_result
++cmd_wds_set_profile_name_prepare(struct qmi_dev *qmi, struct qmi_request *req, struct qmi_msg *msg, char *arg)
++{
++	wds_modify_profile_info.profile_name = arg;
++	return QMI_CMD_DONE;
++}
++
++#define cmd_wds_set_pdp_type_cb no_cb
++
++static enum qmi_cmd_result
++cmd_wds_set_pdp_type_prepare(struct qmi_dev *qmi, struct qmi_request *req, struct qmi_msg *msg, char *arg)
++{
++	const struct pdp_modes {
++		const char *name;
++		const QmiWdsPdpType mode;
++	} modes[] = {
++		{ "ip", QMI_WDS_PDP_TYPE_IPV4 },
++		{ "ipv4", QMI_WDS_PDP_TYPE_IPV4 },
++		{ "ipv6", QMI_WDS_PDP_TYPE_IPV6 },
++		{ "ppp", QMI_WDS_PDP_TYPE_PPP },
++		{ "ipv4v6", QMI_WDS_PDP_TYPE_IPV4_OR_IPV6 },
++	};
++	int i;
++
++	for (i = 0; i < ARRAY_SIZE(modes); i++) {
++		if (strcasecmp(modes[i].name, arg) != 0)
++			continue;
++
++		wds_modify_profile_info.pdp_type = modes[i].mode;
++		return QMI_CMD_DONE;
++	}
++
++	uqmi_add_error("Invalid value (valid: ipv4, ipv6, ppp, ipv4v6)");
++	return QMI_CMD_EXIT;
++}
+diff --recursive --unified --new-file --no-dereference orig/commands-wds.h src/commands-wds.h
+--- orig/commands-wds.h	2023-11-09 07:17:16.000000000 +0000
++++ src/commands-wds.h	2023-07-10 05:34:36.000000000 +0000
+@@ -28,13 +28,21 @@
+ 	__uqmi_command(wds_set_ip_family_pref, ip-family, required, CMD_TYPE_OPTION), \
+ 	__uqmi_command(wds_set_autoconnect, autoconnect, no, CMD_TYPE_OPTION), \
+ 	__uqmi_command(wds_set_profile, profile, required, CMD_TYPE_OPTION), \
++	__uqmi_command(wds_modify_profile, modify-profile, no, QMI_SERVICE_WDS), \
++	__uqmi_command(wds_set_profile_identifier, profile-identifier, required, CMD_TYPE_OPTION), \
++	__uqmi_command(wds_set_roaming_disallowed_flag, roaming-disallowed-flag, required, CMD_TYPE_OPTION), \
++	__uqmi_command(wds_set_profile_name, profile-name, required, CMD_TYPE_OPTION), \
++	__uqmi_command(wds_set_pdp_type, pdp-type, required, CMD_TYPE_OPTION), \
+ 	__uqmi_command(wds_stop_network, stop-network, required, QMI_SERVICE_WDS), \
+ 	__uqmi_command(wds_get_packet_service_status, get-data-status, no, QMI_SERVICE_WDS), \
+ 	__uqmi_command(wds_set_ip_family, set-ip-family, required, QMI_SERVICE_WDS), \
+ 	__uqmi_command(wds_set_autoconnect_settings, set-autoconnect, required, QMI_SERVICE_WDS), \
+ 	__uqmi_command(wds_reset, reset-wds, no, QMI_SERVICE_WDS), \
+-	__uqmi_command(wds_get_current_settings, get-current-settings, no, QMI_SERVICE_WDS) \
+-
++	__uqmi_command(wds_get_current_settings, get-current-settings, no, QMI_SERVICE_WDS), \
++	__uqmi_command(wds_get_dormancy_status, get-dormancy-status, no, QMI_SERVICE_WDS), \
++	__uqmi_command(wds_bind_mux_data_port, wds-bind-mux-data-port, no, QMI_SERVICE_WDS), \
++	__uqmi_command(wds_mux_id, mux-id, required, CMD_TYPE_OPTION), \
++	__uqmi_command(wds_ep_iface_number, ep-iface-number, required, CMD_TYPE_OPTION) \
+ 
+ #define wds_helptext \
+ 		"  --start-network:                  Start network connection (use with options below)\n" \
+@@ -45,10 +53,21 @@
+ 		"    --ip-family <family>:           Use ip-family for the connection (ipv4, ipv6, unspecified)\n" \
+ 		"    --autoconnect:                  Enable automatic connect/reconnect\n" \
+ 		"    --profile <index>:              Use connection profile\n" \
++		"  --modify-profile:                 Modify pdp configuration (with options below)\n" \
++		"    --profile-identifier <type>,<pdp>: Use profile identifier (3gpp,3gpp2|number)\n" \
++		"    --roaming-disallowed-flag <bool> : Use roaming disallowed flag\n" \
++		"    --profile-name <name>:	     Use profile name\n" \
++		"    --pdp-type <type>:		     Use pdp profile type (ipv4, ipv6, ppp, ipv4v6)\n" \
+ 		"  --stop-network <pdh>:             Stop network connection (use with option below)\n" \
+ 		"    --autoconnect:                  Disable automatic connect/reconnect\n" \
+ 		"  --get-data-status:                Get current data access status\n" \
+ 		"  --set-ip-family <val>:            Set ip-family (ipv4, ipv6, unspecified)\n" \
+ 		"  --set-autoconnect <val>:          Set automatic connect/reconnect (disabled, enabled, paused)\n" \
+ 		"  --get-current-settings:           Get current connection settings\n" \
++		"  --get-dormancy-status:	     Get current dormancy status\n" \
++		"  --wds-bind-mux-data-port:	     Bind qmux data port to controller device (use with options below)\n" \
++		"    --mux-id <id>:		     Set qmux port id\n" \
++		"    --ep-iface-number <number>:     Set endpoint interface number\n" \
++
++void cmd_wds_start_network_cb(struct qmi_dev *qmi, struct qmi_request *req, struct qmi_msg *msg);
+ 
+diff --recursive --unified --new-file --no-dereference orig/commands.c src/commands.c
+--- orig/commands.c	2023-11-09 07:11:45.000000000 +0000
++++ src/commands.c	2023-07-10 05:34:36.000000000 +0000
+@@ -19,11 +19,13 @@
+  * Boston, MA 02110-1301 USA.
+  */
+ 
++#define _GNU_SOURCE
+ #include <stdio.h>
+ #include <string.h>
+ #include <strings.h>
+ #include <stdlib.h>
+ #include <unistd.h>
++#include <dirent.h>
+ 
+ #include <libubox/blobmsg.h>
+ #include <libubox/blobmsg_json.h>
+@@ -164,6 +166,174 @@
+ 	return QMI_CMD_DONE;
+ }
+ 
++static void
++reload_wwan_iface_name(struct qmi_dev *qmi)
++{
++	const char *cdc_wdm_device_name;
++	static const char *driver_names[] = { "usbmisc", "usb" };
++	uint32_t i;
++
++	cdc_wdm_device_name = strrchr(qmi->fd_path, '/');
++	if (!cdc_wdm_device_name) {
++		uqmi_add_error("invalid path for cdc-wdm control port");
++		return;
++	}
++	cdc_wdm_device_name++;
++
++	for (i = 0; i < ARRAY_SIZE(driver_names) && !qmi->wwan_iface; i++) {
++		char *sysfs_path;
++		struct dirent *sysfs_entry;
++		DIR *sysfs_fold;
++
++		asprintf(&sysfs_path, "/sys/class/%s/%s/device/net",
++			 driver_names[i], cdc_wdm_device_name);
++		sysfs_fold = opendir(sysfs_path);
++		if (!sysfs_fold) {
++//			uqmi_add_error("Failed to open");
++			continue;
++		}
++
++		while ((sysfs_entry = readdir(sysfs_fold))) {
++			if (strstr(sysfs_entry->d_name, ".")) {
++				continue;
++			}
++			/* We only expect ONE file in the sysfs directory corresponding
++                         * to this control port, if more found for any reason, warn about it */
++			if (qmi->wwan_iface) {
++				uqmi_add_error("Invalid additional wwan iface found");
++			} else {
++				qmi->wwan_iface = strdup(sysfs_entry->d_name);
++				break;
++			}
++		}
++
++		closedir(sysfs_fold);
++		free(sysfs_path);
++	}
++
++	if (!qmi->wwan_iface) {
++		uqmi_add_error("wwan iface not found");
++	}
++}
++
++static enum qmi_cmd_result
++set_expected_data_format(char *sysfs_path,
++			 QmiCtlDataLinkProtocol requested)
++{
++	enum qmi_cmd_result ret = QMI_CMD_EXIT;
++	char value;
++	FILE *f = NULL;
++
++	if (requested == QMI_CTL_DATA_LINK_PROTOCOL_RAW_IP)
++		value = 'Y';
++	else if (requested == QMI_CTL_DATA_LINK_PROTOCOL_802_3)
++		value = 'N';
++	else
++		goto out;
++
++	if (!(f = fopen(sysfs_path, "w"))) {
++		uqmi_add_error("Failed to open file for R/W");
++		goto out;
++	}
++
++	if (fwrite(&value, 1, 1, f) != 1) {
++		uqmi_add_error("Failed to write to file");
++		goto out;
++	}
++
++	ret = QMI_CMD_DONE;
++out:
++	if (f)
++		fclose(f);
++	return ret;
++}
++
++static QmiCtlDataLinkProtocol get_expected_data_format(char *sysfs_path)
++{
++	QmiCtlDataLinkProtocol expected = QMI_CTL_DATA_LINK_PROTOCOL_UNKNOWN;
++	char value = '\0';
++	FILE *f;
++
++	if (!(f = fopen(sysfs_path, "r"))) {
++		uqmi_add_error("Failed to open file");
++		goto out;
++	}
++
++	if (fread(&value, 1, 1, f) != 1) {
++		uqmi_add_error("Failed to read from file");
++		goto out;
++	}
++
++	if (value == 'Y')
++		expected = QMI_CTL_DATA_LINK_PROTOCOL_RAW_IP;
++	else if (value == 'N')
++		expected = QMI_CTL_DATA_LINK_PROTOCOL_802_3;
++	else
++		uqmi_add_error("Unexpected sysfs file contents");
++
++out:
++	if (f)
++		fclose(f);
++	return expected;
++}
++
++static enum qmi_cmd_result
++cmd_ctl_get_set_expected_data_format(struct qmi_dev *qmi,
++				     QmiCtlDataLinkProtocol requested)
++{
++	char *sysfs_path = NULL;
++	QmiCtlDataLinkProtocol expected = QMI_CTL_DATA_LINK_PROTOCOL_UNKNOWN;
++	bool read_only;
++	enum qmi_cmd_result ret = QMI_CMD_EXIT;
++
++	read_only = (requested == QMI_CTL_DATA_LINK_PROTOCOL_UNKNOWN);
++
++	reload_wwan_iface_name(qmi);
++	if (!qmi->wwan_iface) {
++		uqmi_add_error("Unknown wwan iface");
++		goto out;
++	}
++
++	asprintf(&sysfs_path, "/sys/class/net/%s/qmi/raw_ip", qmi->wwan_iface);
++
++	if (!read_only && set_expected_data_format(sysfs_path, requested))
++		goto out;
++
++	if ((expected = get_expected_data_format(sysfs_path)) ==
++	    QMI_CTL_DATA_LINK_PROTOCOL_UNKNOWN)
++		goto out;
++
++	if (!read_only && (requested != expected)) {
++		uqmi_add_error("Expected data format not updated properly");
++		expected = QMI_CTL_DATA_LINK_PROTOCOL_UNKNOWN;
++		goto out;
++	}
++
++	ret = QMI_CMD_DONE;
++out:
++	free(sysfs_path);
++	return ret;
++}
++
++#define cmd_ctl_set_expected_data_format_cb no_cb
++static enum qmi_cmd_result
++cmd_ctl_set_expected_data_format_prepare(struct qmi_dev *qmi, struct qmi_request *req, struct qmi_msg *msg, char *arg)
++{
++	const char *modes[] = {
++		[QMI_CTL_DATA_LINK_PROTOCOL_802_3] = "802.3",
++		[QMI_CTL_DATA_LINK_PROTOCOL_RAW_IP] = "raw-ip",
++	};
++	int mode = qmi_get_array_idx(modes, ARRAY_SIZE(modes), arg);
++
++	if (mode < 0) {
++		uqmi_add_error("Invalid mode (modes: 802.3, raw-ip)");
++		return QMI_CMD_EXIT;
++	}
++
++	cmd_ctl_get_set_expected_data_format(qmi, mode);
++	return QMI_CMD_DONE;
++}
++
+ #include "commands-wds.c"
+ #include "commands-dms.c"
+ #include "commands-nas.c"
+diff --recursive --unified --new-file --no-dereference orig/commands.h src/commands.h
+--- orig/commands.h	2023-11-09 07:11:45.000000000 +0000
++++ src/commands.h	2023-07-10 05:34:36.000000000 +0000
+@@ -59,6 +59,7 @@
+ 	__uqmi_command(set_client_id, set-client-id, required, CMD_TYPE_OPTION), \
+ 	__uqmi_command(get_client_id, get-client-id, required, QMI_SERVICE_CTL), \
+ 	__uqmi_command(ctl_set_data_format, set-data-format, required, QMI_SERVICE_CTL), \
++	__uqmi_command(ctl_set_expected_data_format, set-expected-data-format, required, QMI_SERVICE_CTL), \
+ 	__uqmi_wds_commands, \
+ 	__uqmi_dms_commands, \
+ 	__uqmi_nas_commands, \
+diff --recursive --unified --new-file --no-dereference orig/data/gen-verbose-error-list.pl src/data/gen-verbose-error-list.pl
+--- orig/data/gen-verbose-error-list.pl	1970-01-01 00:00:00.000000000 +0000
++++ src/data/gen-verbose-error-list.pl	2023-07-10 05:34:36.000000000 +0000
+@@ -0,0 +1,116 @@
++#!/usr/bin/env perl
++use strict;
++
++my $read_fd = @ARGV[0];
++my $write_fd = @ARGV[1];
++
++my $doc_start;
++my $error_data;
++my $line;
++my @errors;
++
++my $print_header;
++my $header_was_printed;
++my $reason_type;
++my $r_type;
++my $ori_r_type = "";
++my $function_name = "";
++my @wds_verbose_type = ("Mip", "Internal", "Cm", "3gpp", "Ppp", "Ehrpd", "Ipv6");
++
++open(RH, '<', $read_fd) or die $!;
++open(WF, '>', $write_fd) or die $!;
++
++print WF <<EOF;
++#define LOG(...) do { \\
++	fprintf(stdout, ##__VA_ARGS__); fflush(stdout); \\
++} while (0);
++
++#define F_IN LOG("START[***\%s:\%d]\\n", __func__, __LINE__)
++#define F_OUT LOG("END[***\%s:\%d]\\n\\n", __func__, __LINE__)
++#define DD LOG("DD[***\%s:\%d]\\n", __func__, __LINE__)
++
++struct Gen_ErrorEnumValue {
++	int code;
++	const char *text;
++};
++
++
++EOF
++
++while ($line = <RH>) {
++	chomp $line;
++
++	$line =~ /^\/\*\*/ and do {
++		$doc_start = 1;
++		next;
++	};
++
++	$line =~ /^\s*\*\// and do {
++		undef $error_data;
++		if ( $header_was_printed == 1 ) {
++			$function_name = 'qmi_wds_verbose_call_end_reason_' . $r_type . '_values';
++			print WF "};\n\n";
++			print WF "static char *qmi_wds_verbose_call_end_reason_" . $r_type . "_get_string(QmiWdsVerboseCallEndReason" . $ori_r_type . " val)\n";
++print WF <<EOF;
++{
++	int i;
++	char *error_str = NULL;
++
++	for(i = 0; $function_name\[i].text; i++ ) {
++		if (val == $function_name\[i].code) {
++			error_str = calloc(1, strlen($function_name\[i].text) + 1);
++			if (error_str) {
++				strcpy(error_str, $function_name\[i].text);
++				return error_str;
++			}
++			break;
++		}
++	}
++	if (!error_str) {
++		error_str = calloc(1, strlen("Unknown reason") + 1);
++			if (error_str) {
++				strcpy(error_str, "Unknown reason");
++				return error_str;
++			}
++	}
++	return error_str;
++}
++
++
++EOF
++			$function_name = "";
++			undef $header_was_printed;
++		}
++	};
++
++	foreach $reason_type ( @wds_verbose_type ) {
++		$doc_start and $line =~ /^\s*\*\s*QmiWdsVerboseCallEndReason$reason_type:/ and do {
++			$r_type = lc($reason_type);
++			$ori_r_type = "$reason_type";
++			$error_data = 1;
++			$print_header = 1;
++			undef $doc_start;
++			next;
++		};
++	}
++
++	$line =~ /^\s*\*\s*@(.+): (.+)\./ and do {
++		push @errors, [ $1, $2 ];
++		undef $doc_start;
++
++		if ( $error_data == 1 && $print_header == 1) {
++			$header_was_printed = 1;
++			print WF "struct Gen_ErrorEnumValue qmi_wds_verbose_call_end_reason_";
++			print WF "$r_type";
++			print WF "_values[] = {\n";
++			print WF "\t{ ".$1.", \"".$2."\" },\n";
++			undef $print_header
++		} elsif ( $error_data == 1 ) {
++			print WF "\t{ ".$1.", \"".$2."\" },\n";
++		}
++	};
++
++}
++close(RH);
++close(WF);
++
+diff --recursive --unified --new-file --no-dereference orig/data/qmi-service-wda.json src/data/qmi-service-wda.json
+--- orig/data/qmi-service-wda.json	2023-11-09 07:17:16.000000000 +0000
++++ src/data/qmi-service-wda.json	2023-07-10 05:34:36.000000000 +0000
+@@ -80,10 +80,25 @@
+                      "since"         : "1.18",
+                      "format"        : "sequence",
+                      "contents"  : [ { "name"          : "Endpoint Type",
+-                                       "format"        : "guint32",
+-                                       "public-format" : "QmiDataEndpointType"},
++                                     "format"        : "guint32",
++                                     "public-format" : "QmiDataEndpointType"},
+                                      { "name"          : "Interface Number",
+-                                       "format"        : "guint32"}] }],
++                                       "format"        : "guint32"}] },
++                   { "name"          : "Downlink Minimum Padding",
++                     "id"            : "0x19",
++                     "mandatory"     : "no",
++                     "type"          : "TLV",
++                     "format"        : "guint32" },
++                   { "name"          : "Uplink Data Aggregation Max Datagrams",
++                     "id"            : "0x1B",
++                     "mandatory"     : "no",
++                     "type"          : "TLV",
++                     "format"        : "guint32" },
++                   { "name"          : "Uplink Data Aggregation Max Size",
++                     "id"            : "0x1C",
++                     "mandatory"     : "no",
++                     "Type"          : "TLV",
++                     "format"        : "guint32"}],
+      "output"  : [ { "common-ref" : "Operation Result" },
+                    { "name"          : "QoS Format",
+                      "id"            : "0x10",
+diff --recursive --unified --new-file --no-dereference orig/dev.c src/dev.c
+--- orig/dev.c	2023-11-09 07:11:45.000000000 +0000
++++ src/dev.c	2023-07-10 05:34:36.000000000 +0000
+@@ -28,6 +28,8 @@
+ #include "qmi-errors.h"
+ #include "qmi-errors.c"
+ #include "mbim.h"
++#include "commands-wds.h"
++#include "libuqmi.h"
+ 
+ bool cancel_all_requests = false;
+ 
+@@ -37,19 +39,6 @@
+ };
+ #undef __qmi_service
+ 
+-#ifdef DEBUG_PACKET
+-void dump_packet(const char *prefix, void *ptr, int len)
+-{
+-	unsigned char *data = ptr;
+-	int i;
+-
+-	fprintf(stderr, "%s:", prefix);
+-	for (i = 0; i < len; i++)
+-		fprintf(stderr, " %02x", data[i]);
+-	fprintf(stderr, "\n");
+-}
+-#endif
+-
+ static int
+ qmi_get_service_idx(QmiService svc)
+ {
+@@ -76,14 +65,19 @@
+ 	if (msg) {
+ 		tlv_buf = qmi_msg_get_tlv_buf(msg, &tlv_len);
+ 		req->ret = qmi_check_message_status(tlv_buf, tlv_len);
+-		if (req->ret)
+-			msg = NULL;
++
++		if (req->ret) {
++			if (req->cb != cmd_wds_start_network_cb)
++				msg = NULL;
++		}
+ 	} else {
+ 		req->ret = QMI_ERROR_CANCELLED;
+ 	}
+ 
+-	if (req->cb && (msg || !req->no_error_cb))
++	if ((req->cb && (msg || !req->no_error_cb))
++		|| (req->cb == cmd_wds_start_network_cb)) {
+ 		req->cb(qmi, req, msg);
++	}
+ 
+ 	if (req->complete) {
+ 		*req->complete = true;
+@@ -364,6 +358,7 @@
+ 	INIT_LIST_HEAD(&qmi->req);
+ 	qmi->ctl_tid = 1;
+ 	qmi->buf = msgbuf.u.buf;
++	qmi->fd_path = path;
+ 
+ 	return 0;
+ }
+diff --recursive --unified --new-file --no-dereference orig/libuqmi.c src/libuqmi.c
+--- orig/libuqmi.c	1970-01-01 00:00:00.000000000 +0000
++++ src/libuqmi.c	2023-07-10 05:34:36.000000000 +0000
+@@ -0,0 +1,37 @@
++#include <stdio.h>
++#include <stdlib.h>
++
++#include "libuqmi.h"
++
++#ifdef DEBUG_PACKET
++void dump_packet(const char *prefix, void *ptr, int len)
++{
++	unsigned char *data = ptr;
++	int i;
++
++	fprintf(stderr, "%s:", prefix);
++	for (i = 0; i < len; i++)
++		fprintf(stderr, " %02x", data[i]);
++	fprintf(stderr, "\n");
++}
++#endif
++
++void keep_client_id(struct qmi_dev *qmi, const char *optarg)
++{
++	QmiService svc = qmi_service_get_by_name(optarg);
++	if (svc < 0) {
++		fprintf(stderr, "Invalid service %s\n", optarg);
++		exit(1);
++	}
++	qmi_service_get_client_id(qmi, svc);
++}
++
++void release_client_id(struct qmi_dev *qmi, const char *optarg)
++{
++	QmiService svc = qmi_service_get_by_name(optarg);
++	if (svc < 0) {
++		fprintf(stderr, "Invalid service %s\n", optarg);
++		exit(1);
++	}
++	qmi_service_release_client_id(qmi, svc);
++}
+diff --recursive --unified --new-file --no-dereference orig/libuqmi.h src/libuqmi.h
+--- orig/libuqmi.h	1970-01-01 00:00:00.000000000 +0000
++++ src/libuqmi.h	2023-07-10 05:34:36.000000000 +0000
+@@ -0,0 +1,11 @@
++#ifndef __LIBUQMI_H
++#define __LIBUQMI_H
++
++#include "uqmi.h"
++#include "commands.h"
++
++void dump_packet(const char *prefix, void *ptr, int len);
++
++void keep_client_id(struct qmi_dev *qmi, const char *optarg);
++void release_client_id(struct qmi_dev *qmi, const char *optarg);
++#endif
+diff --recursive --unified --new-file --no-dereference orig/main.c src/main.c
+--- orig/main.c	2023-11-09 07:11:45.000000000 +0000
++++ src/main.c	2023-07-10 05:34:36.000000000 +0000
+@@ -28,9 +28,11 @@
+ #include <errno.h>
+ #include <getopt.h>
+ #include <signal.h>
++#include <sys/file.h>
+ 
+-#include "uqmi.h"
+-#include "commands.h"
++#include "libuqmi.h"
++
++#define UQMI_PID "/var/run/uqmi.pid"
+ 
+ static const char *device;
+ 
+@@ -69,6 +71,7 @@
+ 		"  --get-client-id <name>:           Connect and get Client ID for service <name>\n"
+ 		"                                    (implies --keep-client-id)\n"
+ 		"  --sync:                           Release all Client IDs\n"
++		"  --set-expected-data-format <type>: Set expected data format (type: 802.3, raw-ip)\n"
+ 		wds_helptext
+ 		dms_helptext
+ 		uim_helptext
+@@ -79,26 +82,6 @@
+ 	return 1;
+ }
+ 
+-static void keep_client_id(struct qmi_dev *qmi, const char *optarg)
+-{
+-	QmiService svc = qmi_service_get_by_name(optarg);
+-	if (svc < 0) {
+-		fprintf(stderr, "Invalid service %s\n", optarg);
+-		exit(1);
+-	}
+-	qmi_service_get_client_id(qmi, svc);
+-}
+-
+-static void release_client_id(struct qmi_dev *qmi, const char *optarg)
+-{
+-	QmiService svc = qmi_service_get_by_name(optarg);
+-	if (svc < 0) {
+-		fprintf(stderr, "Invalid service %s\n", optarg);
+-		exit(1);
+-	}
+-	qmi_service_release_client_id(qmi, svc);
+-}
+-
+ static void handle_exit_signal(int signal)
+ {
+ 	cancel_all_requests = true;
+@@ -116,7 +99,8 @@
+ int main(int argc, char **argv)
+ {
+ 	static struct qmi_dev dev;
+-	int ch, ret;
++	int ch, ret, pid;
++	char uq_pid[32] = { 0 };
+ 
+ 	uloop_init();
+ 	signal(SIGINT, handle_exit_signal);
+@@ -154,19 +138,26 @@
+ 		}
+ 	}
+ 
++	snprintf(uq_pid, sizeof(uq_pid), UQMI_PID);
++	pid = open(uq_pid, O_CREAT | O_RDWR, 0666);
++	while (flock(pid, LOCK_EX | LOCK_NB) && (errno == EWOULDBLOCK)) {
++		sleep(1);
++	}
++
+ 	if (!device) {
+ 		fprintf(stderr, "No device given\n");
+ 		return usage(argv[0]);
+ 	}
+ 
+ 	if (qmi_device_open(&dev, device)) {
+-		fprintf(stderr, "Failed to open device\n");
++		fprintf(stderr, "Failed to open device, errno: %d\n", errno);
+ 		return 2;
+ 	}
+ 
+ 	ret = uqmi_run_commands(&dev) ? 0 : -1;
+ 
+ 	qmi_device_close(&dev);
++	close(pid);
+ 
+ 	return ret;
+ }
+diff --recursive --unified --new-file --no-dereference orig/qmi-enums-wds.h src/qmi-enums-wds.h
+--- orig/qmi-enums-wds.h	2023-11-09 07:17:16.000000000 +0000
++++ src/qmi-enums-wds.h	2023-07-10 05:34:36.000000000 +0000
+@@ -37,14 +37,14 @@
+ 
+ /**
+  * QmiWdsIpFamily:
+- * @QMI_WDS_IP_FAMILY_UNKNOWN: unknown. Since: 1.18.
++ * @QMI_WDS_IP_FAMILY_UNKNOWN: unknown.
+  * @QMI_WDS_IP_FAMILY_IPV4: IPv4.
+  * @QMI_WDS_IP_FAMILY_IPV6: IPv6.
+  * @QMI_WDS_IP_FAMILY_UNSPECIFIED: None specified.
+  *
+  * Type of IP family.
+  *
+- * Since: 1.0
++ * Since 1.0
+  */
+ typedef enum { /*< since=1.0 >*/
+     QMI_WDS_IP_FAMILY_UNKNOWN     = 0,
+@@ -60,7 +60,7 @@
+  *
+  * Type of network allowed when trying to connect.
+  *
+- * Since: 1.0
++ * Since 1.0
+  */
+ typedef enum { /*< since=1.0 >*/
+     QMI_WDS_TECHNOLOGY_PREFERENCE_ALLOW_3GPP  = 1 << 0,
+@@ -77,7 +77,7 @@
+  *
+  * Type of network allowed when trying to connect.
+  *
+- * Since: 1.0
++ * Since 1.0
+  */
+ typedef enum { /*< since=1.0 >*/
+     QMI_WDS_EXTENDED_TECHNOLOGY_PREFERENCE_CDMA             = 32769,
+@@ -94,7 +94,7 @@
+  *
+  * Type of call to originate.
+  *
+- * Since: 1.0
++ * Since 1.0
+  */
+ typedef enum { /*< since=1.0 >*/
+     QMI_WDS_CALL_TYPE_LAPTOP   = 0,
+@@ -178,7 +178,7 @@
+  *
+  * Reason for ending the call.
+  *
+- * Since: 1.0
++ * Since 1.0
+  */
+ typedef enum { /*< since=1.0 >*/
+     /* Generic reasons */
+@@ -274,7 +274,7 @@
+  *
+  * Type of verbose call end reason.
+  *
+- * Since: 1.0
++ * Since 1.0
+  */
+ typedef enum { /*< since=1.0 >*/
+     QMI_WDS_VERBOSE_CALL_END_REASON_TYPE_MIP      = 1,
+@@ -322,7 +322,7 @@
+  *
+  * Mobile IP specific call end reasons, given when the @QmiWdsVerboseCallEndReasonType is #QMI_WDS_VERBOSE_CALL_END_REASON_TYPE_MIP.
+  *
+- * Since: 1.0
++ * Since 1.0
+  */
+ typedef enum { /*< since=1.0 >*/
+     QMI_WDS_VERBOSE_CALL_END_REASON_MIP_ERROR_REASON_UNKNOWN                                = -1,
+@@ -371,52 +371,52 @@
+  * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_CLOSE_IN_PROGRESS: Close in progress.
+  * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_NETWORK_INITIATED_TERMINATION: Network initiated termination.
+  * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_APP_PREEMPTED: App preempted.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_PDN_IPV4_CALL_DISALLOWED: PDN IPv4 call disallowed. Since: 1.14.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_PDN_IPV4_CALL_THROTTLED: PDN IPv4 call throttled. Since: 1.14.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_PDN_IPV6_CALL_DISALLOWED: PDN IPv6 call disallowed. Since: 1.14.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_PDN_IPV6_CALL_THROTTLED: PDN IPv6 call throttled. Since: 1.14.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_MODEM_RESTART: Modem restart. Since: 1.14.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_PDP_PPP_NOT_SUPPORTED: PDP PPP not supported. Since: 1.14.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_UNPREFERRED_RAT: Unpreferred RAT. Since: 1.14.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_PHYSICAL_LINK_CLOSE_IN_PROGRESS: Physical link close in progress. Since: 1.14.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_APN_PENDING_HANDOVER: APN pending handover. Since: 1.14.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_PROFILE_BEARER_INCOMPATIBLE: Profile bearer incompatible. Since: 1.14.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_MMGDSI_CARD_EVENT: MMGDSI Card event. Since: 1.14.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_LPM_OR_POWER_DOWN: LPM or power down. Since: 1.14.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_APN_DISABLED: APN disabled. Since: 1.14.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_MPIT_EXPIRED: MPIT expired. Since: 1.14.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_IPV6_ADDRESS_TRANSFER_FAILED: IPv6 address transfer failed. Since: 1.14.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_TRAT_SWAP_FAILED: TRAT swap failed. Since: 1.14.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_EHRPD_TO_HRPD_FALLBACK: eHRPD to HRPD fallback. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_MANDATORY_APN_DISABLED: Mandatory APN disabled. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_MIP_CONFIG_FAILURE: MIP config failure. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_PDN_INACTIVITY_TIMER_EXPIRED: PDN inactivity timeout expired. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_MAX_V4_CONNECTIONS: Max IPv4 connections. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_MAX_V6_CONNECTIONS: Max IPv6 connections. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_APN_MISMATCH: APN mismatch. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_IP_VERSION_MISMATCH: IP version mismatch. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_DUN_CALL_DISALLOWED: DUN call disallowed. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_INVALID_PROFILE: Invalid profile. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_EPC_NONEPC_TRANSITION: EPC to non-EPC transition. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_INVALID_PROFILE_ID: Invalid profile ID. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_CALL_ALREADY_PRESENT: Call already present. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_INTERFACE_IN_USE: Interface in use. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_IP_PDP_MISMATCH: IP PDP mismatch. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_APN_DISALLOWED_ON_ROAMING: APN disallowed on roaming. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_APN_PARAMETER_CHANGE: APN parameter change. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_INTERFACE_IN_USE_CONFIG_MATCH: Interface in use config match. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_NULL_APN_DISALLOWED: NULL APN disallowed. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_THERMAL_MITIGATION: Thermal mitigation. Since 1.24.10.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_PDN_IPV4_CALL_DISALLOWED: PDN IPv4 call disallowed.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_PDN_IPV4_CALL_THROTTLED: PDN IPv4 call throttled.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_PDN_IPV6_CALL_DISALLOWED: PDN IPv6 call disallowed.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_PDN_IPV6_CALL_THROTTLED: PDN IPv6 call throttled.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_MODEM_RESTART: Modem restart.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_PDP_PPP_NOT_SUPPORTED: PDP PPP not supported.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_UNPREFERRED_RAT: Unpreferred RAT.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_PHYSICAL_LINK_CLOSE_IN_PROGRESS: Physical link close in progress.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_APN_PENDING_HANDOVER: APN pending handover.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_PROFILE_BEARER_INCOMPATIBLE: Profile bearer incompatible.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_MMGDSI_CARD_EVENT: MMGDSI Card event.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_LPM_OR_POWER_DOWN: LPM or power down.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_APN_DISABLED: APN disabled.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_MPIT_EXPIRED: MPIT expired.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_IPV6_ADDRESS_TRANSFER_FAILED: IPv6 address transfer failed.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_TRAT_SWAP_FAILED: TRAT swap failed.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_EHRPD_TO_HRPD_FALLBACK: eHRPD to HRPD fallback.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_MANDATORY_APN_DISABLED: Mandatory APN disabled.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_MIP_CONFIG_FAILURE: MIP config failure.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_PDN_INACTIVITY_TIMER_EXPIRED: PDN inactivity timeout expired.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_MAX_V4_CONNECTIONS: Max IPv4 connections.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_MAX_V6_CONNECTIONS: Max IPv6 connections.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_APN_MISMATCH: APN mismatch.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_IP_VERSION_MISMATCH: IP version mismatch.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_DUN_CALL_DISALLOWED: DUN call disallowed.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_INVALID_PROFILE: Invalid profile.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_EPC_NONEPC_TRANSITION: EPC to non-EPC transition.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_INVALID_PROFILE_ID: Invalid profile ID.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_CALL_ALREADY_PRESENT: Call already present.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_INTERFACE_IN_USE: Interface in use.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_IP_PDP_MISMATCH: IP PDP mismatch.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_APN_DISALLOWED_ON_ROAMING: APN disallowed on roaming.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_APN_PARAMETER_CHANGE: APN parameter change.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_INTERFACE_IN_USE_CONFIG_MATCH: Interface in use config match.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_NULL_APN_DISALLOWED: NULL APN disallowed.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_THERMAL_MITIGATION: Thermal mitigation.
+  * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_SUBS_ID_MISMATCH: Subs ID mismatch Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_DATA_SETTINGS_DISABLED: Data settings disabled. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_DATA_ROAMING_SETTINGS_DISABLED: Data roaming settings disabled. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_APN_FORMAT_INVALID: APN format invalid. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_DDS_CALL_ABORT: DDS call abort. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_VALIDATION_FAILURE: Validation failure. Since 1.24.10.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_DATA_SETTINGS_DISABLED: Data settings disabled.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_DATA_ROAMING_SETTINGS_DISABLED: Data roaming settings disabled.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_APN_FORMAT_INVALID: APN format invalid.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_DDS_CALL_ABORT: DDS call abort.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_VALIDATION_FAILURE: Validation failure.
+  *
+  * Internal call end reasons, given when the @QmiWdsVerboseCallEndReasonType is #QMI_WDS_VERBOSE_CALL_END_REASON_TYPE_INTERNAL.
+  *
+- * Since: 1.0
++ * Since 1.0
+  */
+ typedef enum { /*< since=1.0 >*/
+     QMI_WDS_VERBOSE_CALL_END_REASON_INTERNAL_ERROR                           = 201,
+@@ -488,17 +488,17 @@
+  * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_USER_CALL_ORIGINATED_DURING_GPS: CDMA specific. Call originated during GPS.
+  * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_USER_CALL_ORIGINATED_DURING_SMS: CDMA specific. Call originated during SMS.
+  * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_NO_CDMA_SERVICE: CDMA specific. No service.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_MC_ABORT: MC abort. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_PSIST_NG: Persistence test failure. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_UIM_NOT_PRESENT: UIM not present. Since 1.24.10.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_MC_ABORT: MC abort.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_PSIST_NG: Persistence test failure.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_UIM_NOT_PRESENT: UIM not present.
+  * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_RETRY_ORDER: Retry order.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_ACCESS_BLOCK: Access blocked. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_ACCESS_BLOCK_ALL: Access blocked for all. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_IS707B_MAX_ACCESS_PROBES: Maximum access probes for IS-707B call. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_THERMAL_EMERGENCY: Thermal emergency. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_CALL_ORIGINATION_THROTTLED: Call origination throttled. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_USER_CALL_ORIGINATED: Voice call originated and concurrent voice/data not supported. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_CONFERENCE_FAILED: Conference failed. Since 1.24.10.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_ACCESS_BLOCK: Access blocked.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_ACCESS_BLOCK_ALL: Access blocked for all.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_IS707B_MAX_ACCESS_PROBES: Maximum access probes for IS-707B call.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_THERMAL_EMERGENCY: Thermal emergency.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_CALL_ORIGINATION_THROTTLED: Call origination throttled.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_USER_CALL_ORIGINATED: Voice call originated and concurrent voice/data not supported.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_CONFERENCE_FAILED: Conference failed.
+  * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_INCOMING_REJECTED: Incoming rejected.
+  * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_NO_GATEWAY_SERVICE: No gateway service.
+  * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_NO_GPRS_CONTEXT: No GPRS context.
+@@ -516,59 +516,59 @@
+  * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_CONGESTION: Congestion.
+  * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_NO_PDP_CONTEXT_ACTIVATED: No PDP context activated.
+  * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_ACCESS_CLASS_DSAC_REJECTION: Access class DSAC rejection.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_PDP_ACTIVATE_MAX_RETRY_FAILED: Maximum retries failed to activate PDP context. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_RAB_FAILURE: RAB failure. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_EPS_SERVICE_NOT_ALLOWED: EPS service not allowed. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_TRACKING_AREA_NOT_ALLOWED: Tracking area not allowed. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_ROAMING_NOT_ALLOWED_IN_TRACKING_AREA: Roaming not allowed in tracking area. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_NO_SUITABLE_CELLS_IN_TRACKING_AREA: No suitable cells in tracking area. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_NOT_AUTHORIZED_CLOSED_SUBSCRIBER_GROUP: Not authorized in closed subscriber group. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_ESM_UNKNOWN_EPS_BEARER_CONTEXT: EPS Session Management, unknown EPS bearer context. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_DRB_RELEASED_AT_RRC: DRB released at RRC. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_NAS_SIGNAL_CONNECTION_RELEASED: NAS signal connection released. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_EMM_DETACHED: EPS Mobility Management, detached. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_EMM_ATTACH_FAILED: EPS Mobility Management, attach failed. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_EMM_ATTACH_STARTED: EPS Mobility Management, attach started. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LTE_NAS_SERVICE_REQUEST_FAILED: LTE NAS service request failed. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_ESM_ACTIVE_DEDICATED_BEARER_REACTIVATED_BY_NW: EPS Session Management, active dedicated bearer reactivated by network. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_ESM_LOWER_LAYER_FAILURE: EPS Session Management, lower layer failure. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_ESM_SYNC_UP_WITH_NW: EPS Session Management, sync up with network. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_ESM_NW_ACTIVATED_DEDICATED_BEARER_WITH_ID_OF_DEFAULT_BEARER: EPS Session Management, network activated dedicated bearer with id of default bearer. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_ESM_BAD_OTA_MESSAGE: EPS Session Management, bad OTA message. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_ESM_DS_REJECTED_CALL: EPS Session Management, DS rejected call. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_ESM_CONTEXT_TRANSFERRED_DUE_TO_IRAT: EPS Session Management, context transferred due to IRAT. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_DS_EXPLICIT_DEACT: DS explicit deactivation. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_ESM_LOCAL_CAUSE_NONE: EPS Session Management, local cause none. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LTE_NAS_SERVICE_REQUEST_FAILED_NO_THROTTLE: LTE NAS service request failed, no throttle. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_ACL_FAILURE: ACL failure. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LTE_NAS_SERVICE_REQUEST_FAILED_DS_DISALLOW: LTE NAS service request failed, DS disallow. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_EMM_T3417_EXPIRED: EPS Mobility Management, T3417 expired. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_EMM_T3417_EXT_EXPIRED: EPS Mobility Management, T3417 ext expired. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LRRC_UL_DATA_CONFIRMATION_FAILURE_TXN: LTE Radio Resource Control, UL data confirmation failure, txn. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LRRC_UL_DATA_CONFIRMATION_FAILURE_HANDOVER: LTE Radio Resource Control, UL data confirmation failure, handover. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LRRC_UL_DATA_CONFIRMATION_FAILURE_CONN_REL: LTE Radio Resource Control, UL data confirmation failure, connection release. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LRRC_UL_DATA_CONFIRMATION_FAILURE_RLF: LTE Radio Resource Control, UL data confirmation failure, radio link failure. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LRRC_UL_DATA_CONFIRMATION_FAILURE_CTRL_NOT_CONN: LTE Radio Resource Control, UL data confirmation failure, ctrl not conn. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LRRC_CONNECTION_ESTABLISHMENT_FAILURE: LTE Radio Resource Control, connection establishment failure. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LRRC_CONNECTION_ESTABLISHMENT_FAILURE_ABORTED: LTE Radio Resource Control, connection establishment failure, aborted. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LRRC_CONNECTION_ESTABLISHMENT_FAILURE_ACCESS_BARRED: LTE Radio Resource Control, connection establishment failure, access barred. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LRRC_CONNECTION_ESTABLISHMENT_FAILURE_CELL_RESELECTION: LTE Radio Resource Control, connection establishment failure, cell reselection. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LRRC_CONNECTION_ESTABLISHMENT_FAILURE_CONFIG_FAILURE: LTE Radio Resource Control, connection establishment failure, config failure. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LRRC_CONNECTION_ESTABLISHMENT_FAILURE_TIMER_EXPIRED: LTE Radio Resource Control, connection establishment failure, timer expired. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LRRC_CONNECTION_ESTABLISHMENT_FAILURE_LINK_FAILURE: LTE Radio Resource Control, connection establishment failure, link failure. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LRRC_CONNECTION_ESTABLISHMENT_FAILURE_NOT_CAMPED: LTE Radio Resource Control, connection establishment failure, not camped. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LRRC_CONNECTION_ESTABLISHMENT_FAILURE_SI_FAILURE: LTE Radio Resource Control, connection establishment failure, SI failure. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LRRC_CONNECTION_ESTABLISHMENT_FAILURE_REJECTED: LTE Radio Resource Control, connection establishment failure, rejected. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LRRC_CONNECTION_RELEASE_NORMAL: LTE Radio Resource Control, connection release, normal. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LRRC_CONNECTION_RELEASE_RLF: LTE Radio Resource Control, connection release, radio link failure. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LRRC_CONNECTION_RELEASE_CRE_FAILURE: LTE Radio Resource Control, connection release, cre failure. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LRRC_CONNECTION_RELEASE_OOS_DURING_CRE: LTE Radio Resource Control, connection release, oos during cre. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LRRC_CONNECTION_RELEASE_ABORTED: LTE Radio Resource Control, connection release, aborted. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LRRC_CONNECTION_RELEASE_SIB_READ_ERROR: LTE Radio Resource Control, connection release, SIB read error. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_DETACH_WITH_REATTACH_LTE_NW_DETACH: Detach with reattach LTE network detach. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_DETACH_WITHOUT_REATTACH_LTE_NW_DETACH: Detach without reattach LTE network detach. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_ESM_PROC_TIMEOUT: EPS Session Management, proc timeout. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_MESSAGE_EXCEED_MAX_L2_LIMIT: Message exceed max L2 limit. Since 1.24.10.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_PDP_ACTIVATE_MAX_RETRY_FAILED: Maximum retries failed to activate PDP context.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_RAB_FAILURE: RAB failure.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_EPS_SERVICE_NOT_ALLOWED: EPS service not allowed.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_TRACKING_AREA_NOT_ALLOWED: Tracking area not allowed.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_ROAMING_NOT_ALLOWED_IN_TRACKING_AREA: Roaming not allowed in tracking area.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_NO_SUITABLE_CELLS_IN_TRACKING_AREA: No suitable cells in tracking area.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_NOT_AUTHORIZED_CLOSED_SUBSCRIBER_GROUP: Not authorized in closed subscriber group.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_ESM_UNKNOWN_EPS_BEARER_CONTEXT: EPS Session Management, unknown EPS bearer context.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_DRB_RELEASED_AT_RRC: DRB released at RRC.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_NAS_SIGNAL_CONNECTION_RELEASED: NAS signal connection released.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_EMM_DETACHED: EPS Mobility Management, detached.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_EMM_ATTACH_FAILED: EPS Mobility Management, attach failed.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_EMM_ATTACH_STARTED: EPS Mobility Management, attach started.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LTE_NAS_SERVICE_REQUEST_FAILED: LTE NAS service request failed.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_ESM_ACTIVE_DEDICATED_BEARER_REACTIVATED_BY_NW: EPS Session Management, active dedicated bearer reactivated by network.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_ESM_LOWER_LAYER_FAILURE: EPS Session Management, lower layer failure.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_ESM_SYNC_UP_WITH_NW: EPS Session Management, sync up with network.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_ESM_NW_ACTIVATED_DEDICATED_BEARER_WITH_ID_OF_DEFAULT_BEARER: EPS Session Management, network activated dedicated bearer with id of default bearer.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_ESM_BAD_OTA_MESSAGE: EPS Session Management, bad OTA message.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_ESM_DS_REJECTED_CALL: EPS Session Management, DS rejected call.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_ESM_CONTEXT_TRANSFERRED_DUE_TO_IRAT: EPS Session Management, context transferred due to IRAT.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_DS_EXPLICIT_DEACT: DS explicit deactivation.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_ESM_LOCAL_CAUSE_NONE: EPS Session Management, local cause none.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LTE_NAS_SERVICE_REQUEST_FAILED_NO_THROTTLE: LTE NAS service request failed, no throttle.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_ACL_FAILURE: ACL failure.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LTE_NAS_SERVICE_REQUEST_FAILED_DS_DISALLOW: LTE NAS service request failed, DS disallow.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_EMM_T3417_EXPIRED: EPS Mobility Management, T3417 expired.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_EMM_T3417_EXT_EXPIRED: EPS Mobility Management, T3417 ext expired.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LRRC_UL_DATA_CONFIRMATION_FAILURE_TXN: LTE Radio Resource Control, UL data confirmation failure, txn.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LRRC_UL_DATA_CONFIRMATION_FAILURE_HANDOVER: LTE Radio Resource Control, UL data confirmation failure, handover.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LRRC_UL_DATA_CONFIRMATION_FAILURE_CONN_REL: LTE Radio Resource Control, UL data confirmation failure, connection release.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LRRC_UL_DATA_CONFIRMATION_FAILURE_RLF: LTE Radio Resource Control, UL data confirmation failure, radio link failure.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LRRC_UL_DATA_CONFIRMATION_FAILURE_CTRL_NOT_CONN: LTE Radio Resource Control, UL data confirmation failure, ctrl not conn.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LRRC_CONNECTION_ESTABLISHMENT_FAILURE: LTE Radio Resource Control, connection establishment failure.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LRRC_CONNECTION_ESTABLISHMENT_FAILURE_ABORTED: LTE Radio Resource Control, connection establishment failure, aborted.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LRRC_CONNECTION_ESTABLISHMENT_FAILURE_ACCESS_BARRED: LTE Radio Resource Control, connection establishment failure, access barred.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LRRC_CONNECTION_ESTABLISHMENT_FAILURE_CELL_RESELECTION: LTE Radio Resource Control, connection establishment failure, cell reselection.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LRRC_CONNECTION_ESTABLISHMENT_FAILURE_CONFIG_FAILURE: LTE Radio Resource Control, connection establishment failure, config failure.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LRRC_CONNECTION_ESTABLISHMENT_FAILURE_TIMER_EXPIRED: LTE Radio Resource Control, connection establishment failure, timer expired.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LRRC_CONNECTION_ESTABLISHMENT_FAILURE_LINK_FAILURE: LTE Radio Resource Control, connection establishment failure, link failure.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LRRC_CONNECTION_ESTABLISHMENT_FAILURE_NOT_CAMPED: LTE Radio Resource Control, connection establishment failure, not camped.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LRRC_CONNECTION_ESTABLISHMENT_FAILURE_SI_FAILURE: LTE Radio Resource Control, connection establishment failure, SI failure.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LRRC_CONNECTION_ESTABLISHMENT_FAILURE_REJECTED: LTE Radio Resource Control, connection establishment failure, rejected.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LRRC_CONNECTION_RELEASE_NORMAL: LTE Radio Resource Control, connection release, normal.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LRRC_CONNECTION_RELEASE_RLF: LTE Radio Resource Control, connection release, radio link failure.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LRRC_CONNECTION_RELEASE_CRE_FAILURE: LTE Radio Resource Control, connection release, cre failure.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LRRC_CONNECTION_RELEASE_OOS_DURING_CRE: LTE Radio Resource Control, connection release, oos during cre.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LRRC_CONNECTION_RELEASE_ABORTED: LTE Radio Resource Control, connection release, aborted.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_LRRC_CONNECTION_RELEASE_SIB_READ_ERROR: LTE Radio Resource Control, connection release, SIB read error.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_DETACH_WITH_REATTACH_LTE_NW_DETACH: Detach with reattach LTE network detach.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_DETACH_WITHOUT_REATTACH_LTE_NW_DETACH: Detach without reattach LTE network detach.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_ESM_PROC_TIMEOUT: EPS Session Management, proc timeout.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_MESSAGE_EXCEED_MAX_L2_LIMIT: Message exceed max L2 limit.
+  * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_CONNECTION_DENY_GENERAL_OR_BUSY: CDMA/EVDO specific. Received Connection Deny. General or Network busy.
+  * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_CONNECTION_DENY_BILLING_OR_AUTHENTICATION_FAILURE: CDMA/EVDO specific. Received Connection Deny. Billing or Authentication failure.
+  * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_HDR_CHANGE: CDMA/EVDO specific. Change HDR.
+@@ -577,13 +577,13 @@
+  * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_HDR_ORIGINATION_DURING_GPS_FIX: CDMA/EVDO specific. HDR call ended in favor of a GPS fix.
+  * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_HDR_CONNECTION_SETUP_TIMEOUT: CDMA/EVDO specific. Connection setup timeout.
+  * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_HDR_RELEASED_BY_CM: CDMA/EVDO specific. Released HDR call by call manager.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_HDR_COLLOCATED_ACQUISITION_FAILED: Failed to acquire co-located HDR for origination. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_OTASP_COMMIT_IN_PROGRESS: CDMA/EVDO specific. OTASP commit in progress. Since 1.24.10.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_HDR_COLLOCATED_ACQUISITION_FAILED: Failed to acquire co-located HDR for origination.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_OTASP_COMMIT_IN_PROGRESS: CDMA/EVDO specific. OTASP commit in progress.
+  * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_HDR_NO_HYBRID_SERVICE: CDMA/EVDO specific. No hybrid HDR service.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_HDR_NO_LOCK_GRANTED: CDMA/EVDO specific. No lock granted. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_HOLD_OTHER_IN_PROGRESS: CDMA/EVDO specific. hold other in progress. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_HDR_FADE: CDMA/EVDO specific. Fade. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_HDR_ACCESS_FAILURE: CDMA/EVDO specific. Access failure. Since 1.24.10.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_HDR_NO_LOCK_GRANTED: CDMA/EVDO specific. No lock granted.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_HOLD_OTHER_IN_PROGRESS: CDMA/EVDO specific. hold other in progress.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_HDR_FADE: CDMA/EVDO specific. Fade.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_HDR_ACCESS_FAILURE: CDMA/EVDO specific. Access failure.
+  * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_CLIENT_END: Client end.
+  * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_NO_SERVICE: No service.
+  * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_FADE: Fade.
+@@ -591,17 +591,17 @@
+  * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_ACCESS_ATTEMPT_IN_PROGRESS: Access attempt in progress.
+  * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_ACCESS_FAILURE: Access Failure.
+  * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_REDIRECTION_OR_HANDOFF: Redirection or handoff.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_OFFLINE: Offline. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_EMERGENCY_MODE: Emergency mode. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_PHONE_IN_USE: Phone in use. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_INVALID_MODE: Invalid mode. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_INVALID_SIM_STATE: Invalid SIM state. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_NO_COLLOCATED_HDR: No collocated HDR. Since 1.24.10.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_CALL_CONTROL_REJECTED: Call control rejected. Since 1.24.10.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_OFFLINE: Offline.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_EMERGENCY_MODE: Emergency mode.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_PHONE_IN_USE: Phone in use.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_INVALID_MODE: Invalid mode.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_INVALID_SIM_STATE: Invalid SIM state.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_NO_COLLOCATED_HDR: No collocated HDR.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_CM_CALL_CONTROL_REJECTED: Call control rejected.
+  *
+  * Call manager specific call end reasons, given when the @QmiWdsVerboseCallEndReasonType is #QMI_WDS_VERBOSE_CALL_END_REASON_TYPE_CM.
+  *
+- * Since: 1.0
++ * Since 1.0
+  */
+ typedef enum { /*< since=1.0 >*/
+     QMI_WDS_VERBOSE_CALL_END_REASON_CM_CDMA_LOCK                       = 500,
+@@ -746,7 +746,7 @@
+  * @QMI_WDS_VERBOSE_CALL_END_REASON_3GPP_AUTHENTICATION_FAILED: Authentication failed.
+  * @QMI_WDS_VERBOSE_CALL_END_REASON_3GPP_GGSN_REJECT: Activation rejected by GGSN.
+  * @QMI_WDS_VERBOSE_CALL_END_REASON_3GPP_ACTIVATION_REJECT: Activation rejected.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_3GPP_OPTION_NOT_SUPPORTED:  Service option not supported.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_3GPP_OPTION_NOT_SUPPORTED: Service option not supported.
+  * @QMI_WDS_VERBOSE_CALL_END_REASON_3GPP_OPTION_UNSUBSCRIBED: Service option not subscribed.
+  * @QMI_WDS_VERBOSE_CALL_END_REASON_3GPP_OPTION_TEMPORARILY_OUT_OF_ORDER: Service option temporarily out of order.
+  * @QMI_WDS_VERBOSE_CALL_END_REASON_3GPP_NSAPI_ALREADY_USED: NSAPI already used.
+@@ -769,7 +769,7 @@
+  * @QMI_WDS_VERBOSE_CALL_END_REASON_3GPP_MULTIPLE_CONNECTION_TO_SAME_PDN_NOT_ALLOWED: Multiple connection to same PDN not allowed.
+  * @QMI_WDS_VERBOSE_CALL_END_REASON_3GPP_INVALID_TRANSACTION_ID: Invalid transaction ID.
+  * @QMI_WDS_VERBOSE_CALL_END_REASON_3GPP_MESSAGE_INCORRECT_SEMANTIC: Message incorrect semantically.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_3GPP_INVALID_MANDATORY_INFO:  Invalid mandatory information.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_3GPP_INVALID_MANDATORY_INFO: Invalid mandatory information.
+  * @QMI_WDS_VERBOSE_CALL_END_REASON_3GPP_MESSAGE_TYPE_UNSUPPORTED: Message type not implemented.
+  * @QMI_WDS_VERBOSE_CALL_END_REASON_3GPP_MESSAGE_TYPE_NONCOMPATIBLE_STATE: Message not compatible with state.
+  * @QMI_WDS_VERBOSE_CALL_END_REASON_3GPP_UNKNOWN_INFO_ELEMENT: Information element unknown.
+@@ -777,11 +777,11 @@
+  * @QMI_WDS_VERBOSE_CALL_END_REASON_3GPP_MESSAGE_AND_PROTOCOL_STATE_UNCOMPATIBLE: Message and protocol state uncompatible.
+  * @QMI_WDS_VERBOSE_CALL_END_REASON_3GPP_PROTOCOL_ERROR: Protocol error.
+  * @QMI_WDS_VERBOSE_CALL_END_REASON_3GPP_APN_TYPE_CONFLICT: APN type conflict.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_3GPP_INVALID_PROXY_CALL_SESSION_CONTROL_FUNCTION_ADDRESS: Invalid proxy call session control function address. Since 1.24.10.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_3GPP_INVALID_PROXY_CALL_SESSION_CONTROL_FUNCTION_ADDRESS: Invalid proxy call session control function address.
+  *
+  * 3GPP-specific call end reasons, given when the @QmiWdsVerboseCallEndReasonType is #QMI_WDS_VERBOSE_CALL_END_REASON_TYPE_3GPP.
+  *
+- * Since: 1.0
++ * Since 1.0
+  */
+ typedef enum { /*< underscore_name=qmi_wds_verbose_call_end_reason_3gpp,since=1.0 >*/
+     QMI_WDS_VERBOSE_CALL_END_REASON_3GPP_OPERATOR_DETERMINED_BARRING = 8,
+@@ -839,11 +839,11 @@
+  * @QMI_WDS_VERBOSE_CALL_END_REASON_PPP_OPTION_MISMATCH: Option mismatch.
+  * @QMI_WDS_VERBOSE_CALL_END_REASON_PPP_PAP_FAILURE: PAP failure.
+  * @QMI_WDS_VERBOSE_CALL_END_REASON_PPP_CHAP_FAILURE: CHAP failure.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_PPP_CLOSE_IN_PROGRESS: Close in progress. Since 1.24.10.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_PPP_CLOSE_IN_PROGRESS: Close in progress.
+  *
+  * PPP-specific call end reasons, given when the @QmiWdsVerboseCallEndReasonType is #QMI_WDS_VERBOSE_CALL_END_REASON_TYPE_PPP.
+  *
+- * Since: 1.0
++ * Since 1.0
+  */
+ typedef enum { /*< since=1.0 >*/
+     QMI_WDS_VERBOSE_CALL_END_REASON_PPP_UNKNOWN = -1,
+@@ -879,7 +879,7 @@
+  *
+  * eHRPD-specific call end reasons, given when the @QmiWdsVerboseCallEndReasonType is #QMI_WDS_VERBOSE_CALL_END_REASON_TYPE_EHRPD.
+  *
+- * Since: 1.0
++ * Since 1.0
+  */
+ typedef enum { /*< since=1.0 >*/
+     QMI_WDS_VERBOSE_CALL_END_REASON_EHRPD_SUBSCRIPTION_LIMITED_TO_IPV4 = 1,
+@@ -905,11 +905,11 @@
+  * QmiWdsVerboseCallEndReasonIpv6:
+  * @QMI_WDS_VERBOSE_CALL_END_REASON_IPV6_PREFIX_UNAVAILABLE: Prefix unavailable.
+  * @QMI_WDS_VERBOSE_CALL_END_REASON_IPV6_HRPD_IPV6_DISABLED: HRDP IPv6 disabled.
+- * @QMI_WDS_VERBOSE_CALL_END_REASON_IPV6_DISABLED: IPv6 disabled. Since 1.24.10.
++ * @QMI_WDS_VERBOSE_CALL_END_REASON_IPV6_DISABLED: IPv6 disabled.
+  *
+  * IPv6-specific call end reasons, given when the @QmiWdsVerboseCallEndReasonType is #QMI_WDS_VERBOSE_CALL_END_REASON_TYPE_IPV6.
+  *
+- * Since: 1.0
++ * Since 1.0
+  */
+ typedef enum { /*< since=1.0 >*/
+     QMI_WDS_VERBOSE_CALL_END_REASON_IPV6_PREFIX_UNAVAILABLE = 1,
+@@ -930,7 +930,7 @@
+  *
+  * Status of the network connection.
+  *
+- * Since: 1.0
++ * Since 1.0
+  */
+ typedef enum { /*< since=1.0 >*/
+     QMI_WDS_CONNECTION_STATUS_UNKNOWN        = 0,
+@@ -961,15 +961,15 @@
+  * @QMI_WDS_DATA_BEARER_TECHNOLOGY_HSDPAPLUS_HSUPA: HSDPA+ and HSUPA.
+  * @QMI_WDS_DATA_BEARER_TECHNOLOGY_DCHSDPAPLUS: DC-HSDPA+ and WCDMA.
+  * @QMI_WDS_DATA_BEARER_TECHNOLOGY_DCHSDPAPLUS_HSUPA: DC-HSDPA+ and HSUPA.
+- * @QMI_WDS_DATA_BEARER_TECHNOLOGY_HSDPAPLUS_PLUS_64QAM: HSDPA+ with 64QAM. Since: 1.18.
+- * @QMI_WDS_DATA_BEARER_TECHNOLOGY_HSDPAPLUS_PLUS_64QAM_HSUPA: HSDPA+ with 64QAM and HSUPA. Since: 1.18.
+- * @QMI_WDS_DATA_BEARER_TECHNOLOGY_TDSCDMA: TD-SCDMA. Since: 1.18.
+- * @QMI_WDS_DATA_BEARER_TECHNOLOGY_TDSCDMA_HSDPA: TD-SCDMA and HSDPA. Since: 1.18.
+- * @QMI_WDS_DATA_BEARER_TECHNOLOGY_TDSCDMA_HSUPA: TD-SCDMA and HSUPA. Since: 1.18.
++ * @QMI_WDS_DATA_BEARER_TECHNOLOGY_HSDPAPLUS_PLUS_64QAM: HSDPA+ with 64QAM.
++ * @QMI_WDS_DATA_BEARER_TECHNOLOGY_HSDPAPLUS_PLUS_64QAM_HSUPA: HSDPA+ with 64QAM and HSUPA.
++ * @QMI_WDS_DATA_BEARER_TECHNOLOGY_TDSCDMA: TD-SCDMA.
++ * @QMI_WDS_DATA_BEARER_TECHNOLOGY_TDSCDMA_HSDPA: TD-SCDMA and HSDPA.
++ * @QMI_WDS_DATA_BEARER_TECHNOLOGY_TDSCDMA_HSUPA: TD-SCDMA and HSUPA.
+  *
+  * Data bearer technology.
+  *
+- * Since: 1.0
++ * Since 1.0
+  */
+ typedef enum { /*< since=1.0 >*/
+     QMI_WDS_DATA_BEARER_TECHNOLOGY_UNKNOWN                    = -1,
+@@ -1006,7 +1006,7 @@
+  *
+  * Network type of the data bearer.
+  *
+- * Since: 1.0
++ * Since 1.0
+  */
+ typedef enum { /*< since=1.0 >*/
+     QMI_WDS_NETWORK_TYPE_UNKNOWN = 0,
+@@ -1021,7 +1021,7 @@
+  *
+  * Network type of the data system.
+  *
+- * Since: 1.14
++ * Since 1.14
+  */
+ typedef enum { /*< since=1.14 >*/
+     QMI_WDS_DATA_SYSTEM_NETWORK_TYPE_3GPP  = 0,
+@@ -1040,7 +1040,7 @@
+  *
+  * Data system type.
+  *
+- * Since: 1.18
++ * Since 1.18
+  */
+ typedef enum { /*< since=1.18 >*/
+     QMI_WDS_DATA_SYSTEM_UNKNOWN     = 0,
+@@ -1059,14 +1059,14 @@
+  * @QMI_WDS_RAT_3GPP2_EVDO_REV0: EVDO Rev0.
+  * @QMI_WDS_RAT_3GPP2_EVDO_REVA: EVDO RevA.
+  * @QMI_WDS_RAT_3GPP2_EVDO_REVB: EVDO RevB.
+- * @QMI_WDS_RAT_3GPP2_EHRPD: eHRPD. Since: 1.18.
+- * @QMI_WDS_RAT_3GPP2_FMC: FMC. Since: 1.18.
++ * @QMI_WDS_RAT_3GPP2_EHRPD: eHRPD.
++ * @QMI_WDS_RAT_3GPP2_FMC: FMC.
+  * @QMI_WDS_RAT_3GPP2_NULL_BEARER: No bearer.
+  *
+  * Flags specifying the 3GPP2-specific Radio Access Technology, when the data
+  * bearer network type is @QMI_WDS_NETWORK_TYPE_3GPP2.
+  *
+- * Since: 1.0
++ * Since 1.0
+  */
+ typedef enum { /*< underscore_name=qmi_wds_rat_3gpp2,since=1.0 >*/
+     QMI_WDS_RAT_3GPP2_NONE        = 0,
+@@ -1090,14 +1090,14 @@
+  * @QMI_WDS_RAT_3GPP_LTE: LTE.
+  * @QMI_WDS_RAT_3GPP_HSDPAPLUS: HSDPA+.
+  * @QMI_WDS_RAT_3GPP_DCHSDPAPLUS: DC-HSDPA+.
+- * @QMI_WDS_RAT_3GPP_64QAM: 64QAM. Since: 1.18.
+- * @QMI_WDS_RAT_3GPP_TDSCDMA: TD-SCDMA. Since: 1.18.
++ * @QMI_WDS_RAT_3GPP_64QAM: 64QAM.
++ * @QMI_WDS_RAT_3GPP_TDSCDMA: TD-SCDMA.
+  * @QMI_WDS_RAT_3GPP_NULL_BEARER: No bearer.
+  *
+  * Flags specifying the 3GPP-specific Radio Access Technology, when the data
+  * bearer network type is @QMI_WDS_NETWORK_TYPE_3GPP.
+  *
+- * Since: 1.0
++ * Since 1.0
+  */
+ typedef enum { /*< underscore_name=qmi_wds_rat_3gpp,since=1.0 >*/
+     QMI_WDS_RAT_3GPP_NONE        = 0,
+@@ -1125,7 +1125,7 @@
+  * @QMI_WDS_NETWORK_TYPE_3GPP2 and when the Radio Access Technology mask
+  * contains @QMI_WDS_RAT_3GPP2_CDMA1X.
+  *
+- * Since: 1.0
++ * Since 1.0
+  */
+ typedef enum { /*< since=1.0 >*/
+     QMI_WDS_SO_CDMA1X_NONE         = 0,
+@@ -1143,7 +1143,7 @@
+  * @QMI_WDS_NETWORK_TYPE_3GPP2 and when the Radio Access Technology mask
+  * contains @QMI_WDS_RAT_3GPP2_EVDO_REV0.
+  *
+- * Since: 1.18
++ * Since 1.18
+  */
+ typedef enum { /*< since=1.18 >*/
+     QMI_WDS_SO_EVDO_REV0_NONE = 0,
+@@ -1162,7 +1162,7 @@
+  * @QMI_WDS_NETWORK_TYPE_3GPP2 and when the Radio Access Technology mask
+  * contains @QMI_WDS_RAT_3GPP2_EVDO_REVA.
+  *
+- * Since: 1.0
++ * Since 1.0
+  */
+ typedef enum { /*< underscore_name=qmi_wds_so_evdo_reva,since=1.0 >*/
+     QMI_WDS_SO_EVDO_REVA_NONE       = 0,
+@@ -1186,7 +1186,7 @@
+  * @QMI_WDS_NETWORK_TYPE_3GPP2 and when the Radio Access Technology mask
+  * contains @QMI_WDS_RAT_3GPP2_EVDO_REVB.
+  *
+- * Since: 1.18
++ * Since 1.18
+  */
+ typedef enum { /*< underscore_name=qmi_wds_so_evdo_revb,since=1.18 >*/
+     QMI_WDS_SO_EVDO_REVB_NONE       = 0,
+@@ -1226,7 +1226,7 @@
+  * Flags specifying which specific settings to return when requesting the
+  * current WDS bearer settings.
+  *
+- * Since: 1.0
++ * Since 1.0
+  */
+ typedef enum { /*< since=1.0 >*/
+     QMI_WDS_GET_CURRENT_SETTINGS_REQUESTED_SETTINGS_NONE                      = 0,
+@@ -1259,7 +1259,7 @@
+  *
+  * PDP context type.
+  *
+- * Since: 1.0
++ * Since 1.0
+  */
+ typedef enum { /*< since=1.0 >*/
+     QMI_WDS_PDP_TYPE_IPV4         = 0,
+@@ -1278,7 +1278,7 @@
+  *
+  * QoS Traffic Classes.
+  *
+- * Since: 1.0
++ * Since 1.0
+  */
+ typedef enum { /*< since=1.0 >*/
+     QMI_WDS_TRAFFIC_CLASS_SUBSCRIBED     = 0,
+@@ -1296,7 +1296,7 @@
+  *
+  * PDP context authentication protocols.
+  *
+- * Since: 1.0
++ * Since 1.0
+  */
+ typedef enum { /*< since=1.0 >*/
+     QMI_WDS_AUTHENTICATION_NONE = 0,
+@@ -1311,7 +1311,7 @@
+  *
+  * Profile network type family.
+  *
+- * Since: 1.0
++ * Since 1.0
+  */
+ typedef enum { /*< since=1.0 >*/
+     QMI_WDS_PROFILE_TYPE_3GPP    = 0,
+@@ -1325,7 +1325,7 @@
+   *
+   * Profile family.
+   *
+-  * Since: 1.22
++  * Since 1.22
+   */
+  typedef enum { /*< since=1.22 >*/
+      QMI_WDS_PROFILE_FAMILY_EMBEDDED = 0,
+@@ -1340,7 +1340,7 @@
+  *
+  * QoS delivery order.
+  *
+- * Since: 1.14
++ * Since 1.14
+  */
+ typedef enum { /*< since=1.14 >*/
+     QMI_WDS_QOS_DELIVERY_ORDER_SUBSCRIBE = 0,
+@@ -1361,7 +1361,7 @@
+  *
+  * Target value for the fraction of SDUs lost or detected as erroneous.
+  *
+- * Since: 1.14
++ * Since 1.14
+  */
+ typedef enum { /*< since=1.14 >*/
+     QMI_WDS_SDU_ERROR_RATIO_SUBSCRIBE = 0,
+@@ -1389,7 +1389,7 @@
+  *
+  * Target value for the undetected bit error ratio in the delivered SDUs.
+  *
+- * Since: 1.14
++ * Since 1.14
+  */
+ typedef enum { /*< since=1.14 >*/
+     QMI_WDS_SDU_RESIDUAL_BIT_ERROR_RATIO_SUBSCRIBE = 0,
+@@ -1413,7 +1413,7 @@
+  *
+  * Whether SDUs detected as erroneous are delivered or not.
+  *
+- * Since: 1.14
++ * Since 1.14
+  */
+ typedef enum { /*< since=1.14 >*/
+     QMI_WDS_SDU_ERRONEOUS_DELIVERY_SUBSCRIBE    = 0,
+@@ -1440,7 +1440,7 @@
+  *
+  * Mask to use when requesting packet statistics.
+  *
+- * Since: 1.6
++ * Since 1.6
+  */
+ typedef enum { /*< since=1.6 >*/
+     QMI_WDS_PACKET_STATISTICS_MASK_FLAG_TX_PACKETS_OK      = 1 << 0,
+@@ -1483,7 +1483,7 @@
+  *
+  * Extended DS profile errors.
+  *
+- * Since: 1.8
++ * Since 1.8
+  */
+ typedef enum { /*< since=1.8 >*/
+     QMI_WDS_DS_PROFILE_ERROR_UNKNOWN                     = 0,
+@@ -1516,7 +1516,7 @@
+  *
+  * Status of the autoconnect setting.
+  *
+- * Since: 1.14
++ * Since 1.14
+  */
+ typedef enum { /*< since=1.14 >*/
+     QMI_WDS_AUTOCONNECT_SETTING_DISABLED = 0,
+@@ -1531,7 +1531,7 @@
+  *
+  * Status of the autoconnect setting while roaming.
+  *
+- * Since: 1.14
++ * Since 1.14
+  */
+ typedef enum { /*< since=1.14 >*/
+     QMI_WDS_AUTOCONNECT_SETTING_ROAMING_ALLOWED   = 0,
+@@ -1557,7 +1557,7 @@
+  * Flags indicating which WDS Set Event Report Transfer Statistics indicators
+  * should be emitted.
+  *
+- * Since: 1.18
++ * Since 1.18
+  */
+ typedef enum { /*< since=1.18 >*/
+     QMI_WDS_SET_EVENT_REPORT_TRANSFER_STATISTICS_REPORT_TX_PACKETS_OK      = 1 << 0,
+@@ -1580,7 +1580,7 @@
+  *
+  * Dormancy status.
+  *
+- * Since: 1.18
++ * Since 1.18
+  */
+ typedef enum { /*< since=1.18 >*/
+     QMI_WDS_DORMANCY_STATUS_UNKNOWN                 = 0,
+@@ -1596,7 +1596,7 @@
+  *
+  * Data call status.
+  *
+- * Since: 1.18
++ * Since 1.18
+  */
+ typedef enum { /*< since=1.18 >*/
+     QMI_WDS_DATA_CALL_STATUS_UNKNOWN    = 0,
+@@ -1613,7 +1613,7 @@
+  *
+  * Data call type.
+  *
+- * Since: 1.18
++ * Since 1.18
+  */
+ typedef enum { /*< since=1.18 >*/
+     QMI_WDS_DATA_CALL_TYPE_UNKNOWN        = 0,
+@@ -1630,7 +1630,7 @@
+  *
+  * Tethered call type.
+  *
+- * Since: 1.18
++ * Since 1.18
+  */
+ typedef enum { /*< since=1.18 >*/
+     QMI_WDS_TETHERED_CALL_TYPE_NON_TETHERED = 0,
+@@ -1655,7 +1655,7 @@
+  *
+  * Radio access technology.
+  *
+- * Since: 1.18
++ * Since 1.18
+  */
+ typedef enum { /*< since=1.18 >*/
+     QMI_WDS_RADIO_ACCESS_TECHNOLOGY_NULL_BEARER   = 0,
+@@ -1692,7 +1692,7 @@
+  *
+  * 3GPP extended data bearer technologies.
+  *
+- * Since: 1.18
++ * Since 1.18
+  */
+ typedef enum { /*< underscore_name=qmi_wds_extended_data_bearer_technology_3gpp,since=1.18 >*/
+     QMI_WDS_EXTENDED_DATA_BEARER_TECHNOLOGY_3GPP_UNKNOWN             = 0,
+@@ -1731,7 +1731,7 @@
+  *
+  * 3GPP2 extended data bearer technologies.
+  *
+- * Since: 1.18
++ * Since 1.18
+  */
+ typedef enum { /*< underscore_name=qmi_wds_extended_data_bearer_technology_3gpp2,since=1.18 >*/
+     QMI_WDS_EXTENDED_DATA_BEARER_TECHNOLOGY_3GPP2_UNKNOWN             = 0,
+@@ -1763,7 +1763,7 @@
+  *
+  * PDP header compression types.
+  *
+- * Since: 1.18
++ * Since 1.18
+  */
+ typedef enum { /*< since=1.18 >*/
+     QMI_WDS_PDP_HEADER_COMPRESSION_TYPE_OFF                    = 0,
+@@ -1782,7 +1782,7 @@
+  *
+  * PDP data compression types.
+  *
+- * Since: 1.18
++ * Since 1.18
+  */
+ typedef enum { /*< since=1.18 >*/
+     QMI_WDS_PDP_DATA_COMPRESSION_TYPE_OFF                    = 0,
+@@ -1805,7 +1805,7 @@
+  *
+  * QoS Class Identifier.
+  *
+- * Since: 1.18
++ * Since 1.18
+  */
+ typedef enum { /*< since=1.18 >*/
+     QMI_WDS_QOS_CLASS_IDENTIFIER_NETWORK_ASSIGN          = 0,
+@@ -1826,7 +1826,7 @@
+  *
+  * Action when setting the attach PDN list.
+  *
+- * Since: 1.28
++ * Since 1.28
+  */
+ typedef enum { /*< since=1.28 >*/
+     QMI_WDS_ATTACH_PDN_LIST_ACTION_NONE                     = 0x01,
+@@ -1840,7 +1840,7 @@
+  *
+  * Client Type
+  *
+- * Since: 1.18
++ * Since 1.18
+  */
+ typedef enum { /*< since=1.18 >*/
+     QMI_WDS_CLIENT_TYPE_TETHERED = 0x01,
+@@ -1852,7 +1852,7 @@
+  *
+  * The TX/RX rate information is unavailable or cannot be measured.
+  *
+- * Since: 1.22.4
++ * Since 1.22.4
+  */
+ #define QMI_WDS_RATE_UNAVAILABLE 0xFFFFFFFF
+ 
+@@ -1864,7 +1864,7 @@
+  *
+  * IP support type.
+  *
+- * Since: 1.28
++ * Since 1.28
+  */
+ typedef enum {  /*< since=1.28 >*/
+     QMI_WDS_IP_SUPPORT_TYPE_IPV4   = 0,
+diff --recursive --unified --new-file --no-dereference orig/qmi-message.c src/qmi-message.c
+--- orig/qmi-message.c	2023-11-09 07:11:45.000000000 +0000
++++ src/qmi-message.c	2023-07-10 05:34:36.000000000 +0000
+@@ -24,6 +24,15 @@
+ #include <stdlib.h>
+ 
+ #include "qmi-message.h"
++#include "qmi-wds-error-types.c"
++
++#define LOG(...) do { \
++	fprintf(stdout, ##__VA_ARGS__); fflush(stdout); \
++} while (0);
++
++#define DD LOG("DD[***%s:%d]\n", __func__, __LINE__)
++
++#define ERROR_VERBOSE_STR "QMI call error, reason type"
+ 
+ static uint8_t buf[QMI_BUFFER_LEN];
+ static unsigned int buf_ofs;
+@@ -173,4 +182,32 @@
+ 	return ptr;
+ }
+ 
+-
++char *qmi_wds_verbose_call_end_reason_get_string (QmiWdsVerboseCallEndReasonType type, uint16_t reason)
++{
++	switch (type) {
++	case QMI_WDS_VERBOSE_CALL_END_REASON_TYPE_MIP:
++		LOG("%s MIP: \"", ERROR_VERBOSE_STR);
++	        return qmi_wds_verbose_call_end_reason_mip_get_string ((QmiWdsVerboseCallEndReasonMip)reason);
++	case QMI_WDS_VERBOSE_CALL_END_REASON_TYPE_INTERNAL:
++		LOG("%s INTERNAL: \"", ERROR_VERBOSE_STR);
++	        return qmi_wds_verbose_call_end_reason_internal_get_string ((QmiWdsVerboseCallEndReasonInternal)reason);
++	case QMI_WDS_VERBOSE_CALL_END_REASON_TYPE_CM:
++		LOG("%s CM: \"", ERROR_VERBOSE_STR);
++	        return qmi_wds_verbose_call_end_reason_cm_get_string ((QmiWdsVerboseCallEndReasonCm)reason);
++	case QMI_WDS_VERBOSE_CALL_END_REASON_TYPE_3GPP:
++		LOG("%s 3GPP: \"", ERROR_VERBOSE_STR);
++	        return qmi_wds_verbose_call_end_reason_3gpp_get_string ((QmiWdsVerboseCallEndReason3gpp)reason);
++	case QMI_WDS_VERBOSE_CALL_END_REASON_TYPE_PPP:
++		LOG("%s PPP: \"", ERROR_VERBOSE_STR);
++	        return qmi_wds_verbose_call_end_reason_ppp_get_string ((QmiWdsVerboseCallEndReasonPpp)reason);
++	case QMI_WDS_VERBOSE_CALL_END_REASON_TYPE_EHRPD:
++		LOG("%s EHRPD: \"", ERROR_VERBOSE_STR);
++	        return qmi_wds_verbose_call_end_reason_ehrpd_get_string ((QmiWdsVerboseCallEndReasonEhrpd)reason);
++	case QMI_WDS_VERBOSE_CALL_END_REASON_TYPE_IPV6:
++		LOG("%s IPV6: \"", ERROR_VERBOSE_STR);
++	        return qmi_wds_verbose_call_end_reason_ipv6_get_string ((QmiWdsVerboseCallEndReasonIpv6)reason);
++	default:
++        return "Reason type not found";
++	}
++	return NULL;
++}
+diff --recursive --unified --new-file --no-dereference orig/qmi-message.h src/qmi-message.h
+--- orig/qmi-message.h	2023-11-09 07:11:45.000000000 +0000
++++ src/qmi-message.h	2023-07-10 05:34:36.000000000 +0000
+@@ -122,5 +122,6 @@
+ int qmi_complete_request_message(struct qmi_msg *qm);
+ int qmi_check_message_status(void *buf, unsigned int len);
+ void *qmi_msg_get_tlv_buf(struct qmi_msg *qm, int *len);
++char *qmi_wds_verbose_call_end_reason_get_string (QmiWdsVerboseCallEndReasonType type, uint16_t reason);
+ 
+ #endif
+diff --recursive --unified --new-file --no-dereference orig/uqmi.h src/uqmi.h
+--- orig/uqmi.h	2023-11-09 07:11:45.000000000 +0000
++++ src/uqmi.h	2023-07-10 05:34:36.000000000 +0000
+@@ -72,6 +72,8 @@
+ typedef void (*request_cb)(struct qmi_dev *qmi, struct qmi_request *req, struct qmi_msg *msg);
+ 
+ struct qmi_dev {
++	const char *fd_path;
++	char *wwan_iface;
+ 	struct ustream_fd sf;
+ 
+ 	struct list_head req;

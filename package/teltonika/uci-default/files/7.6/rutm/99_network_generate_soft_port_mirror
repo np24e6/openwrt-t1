@@ -1,0 +1,42 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+NETWORK_CFG="network"
+BRD_CFG=/etc/board.json
+EXISTS=0
+
+config_load "$NETWORK_CFG"
+
+apply_soft_port_mirror_options() {
+	json_init
+	json_load_file $BRD_CFG
+
+	json_select hwinfo
+		json_get_vars soft_port_mirror
+	json_select ..
+
+	[ "$soft_port_mirror" = "0" ] && return 0
+
+	uci -q batch <<-EOF
+		add network interface
+		rename network.@interface[-1]='ifmirror'
+		set network.@interface[-1].disabled='1'
+		set network.@interface[-1].proto='mirror'
+		set network.@interface[-1].enable_mirror_tx='0'
+		set network.@interface[-1].enable_mirror_rx='0'
+	EOF
+	return 0
+}
+
+check_soft_port_mirror_conf() {
+	[ "$1" = "ifmirror" ] && EXISTS=1
+}
+
+config_foreach check_soft_port_mirror_conf interface
+
+[ $EXISTS -eq 0 ] && apply_soft_port_mirror_options
+
+uci_commit "$NETWORK_CFG"
+
+exit 0

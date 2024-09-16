@@ -1,9 +1,8 @@
-ndex: linux-5.10.185/drivers/net/usb/usbnet.c
-===================================================================
-Index: linux-5.10.191/drivers/net/usb/usbnet.c
-===================================================================
---- linux-5.10.191.orig/drivers/net/usb/usbnet.c
-+++ linux-5.10.191/drivers/net/usb/usbnet.c
+Implement napi for handling rx_fixup, this allows for expensive rx_fixup
+operations to be done in a seperate thread, as well as allows for GRO
+
+--- a/drivers/net/usb/usbnet.c
++++ b/drivers/net/usb/usbnet.c
 @@ -330,7 +330,11 @@ void usbnet_skb_return (struct usbnet *d
  	if (skb_defer_rx_timestamp(skb))
  		return;
@@ -143,10 +142,8 @@ Index: linux-5.10.191/drivers/net/usb/usbnet.c
  	status = register_netdev (net);
  	if (status)
  		goto out5;
-Index: linux-5.10.191/include/linux/usb/usbnet.h
-===================================================================
---- linux-5.10.191.orig/include/linux/usb/usbnet.h
-+++ linux-5.10.191/include/linux/usb/usbnet.h
+--- a/include/linux/usb/usbnet.h
++++ b/include/linux/usb/usbnet.h
 @@ -65,6 +65,13 @@ struct usbnet {
  	struct usb_anchor	deferred;
  	struct tasklet_struct	bh;

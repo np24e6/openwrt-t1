@@ -80,7 +80,7 @@ sub target_config_features(@) {
 		/^gateway$/ and $ret .= "\tselect GATEWAY_DEVICE\n";
 		/^access-point$/ and $ret .= "\tselect AP_DEVICE\n";
 		/^64mb_ram$/ and $ret .= "\tselect 64MB_RAM\n";
-		/^ledman-full$/ and $ret .= "\tselect LEDMAN_FULL\n";
+		/^ledman-lite$/ and $ret .= "\tselect LEDMAN_LITE\n";
 		/^sw-offload$/ and $ret .= "\tselect SW_OFFLOAD\n";
 		/^hw-offload$/ and $ret .= "\tselect HW_OFFLOAD\n";
 		/^tlt-failsafe-boot$/ and $ret .= "\tselect TLT_FAILSAFE_BOOT\n"
@@ -248,9 +248,12 @@ EOF
 print <<EOF;
 endchoice
 
+config USE_MULTI_PROFILE
+	bool
+
 choice
 	prompt "Target Profile"
-	default TARGET_MULTI_PROFILE if BUILDBOT
+	default TARGET_MULTI_PROFILE if BUILDBOT || USE_MULTI_PROFILE
 
 EOF
 	foreach my $target (@target) {
@@ -278,7 +281,7 @@ EOF
 			print <<EOF;
 config TARGET_$target->{conf}_$profile->{id}
 	bool "$profile->{name}"
-	depends on TARGET_$target->{conf}
+	depends on TARGET_$target->{conf} && !USE_MULTI_PROFILE
 EOF
 			$profile->{broken} and print "\tdepends on BROKEN\n";
 			my @pkglist = merge_package_lists($target->{packages}, $profile->{packages});
@@ -427,6 +430,19 @@ EOF
 
 	print <<EOF;
 
+config TARGET_BOOT_NAME
+	string
+EOF
+	foreach my $target (@target) {
+		my $profiles = $target->{profiles};
+		foreach my $profile (@$profiles) {
+			next unless $profile->{boot_name};
+			print "\tdefault \"$profile->{boot_name}\" if TARGET_$target->{conf}_$profile->{id}\n";
+		}
+	}
+
+	print <<EOF;
+
 config INITIAL_SUPPORT_VERSION
 	string
 EOF
@@ -435,6 +451,19 @@ EOF
 		foreach my $profile (@$profiles) {
 			next unless $profile->{initial_support_version};
 			print "\tdefault $profile->{initial_support_version} if TARGET_$target->{conf}_$profile->{id}\n";
+		}
+	}
+
+	print <<EOF;
+
+config DEVICE_MTD_LOG_PARTNAME
+	string
+EOF
+	foreach my $target (@target) {
+		my $profiles = $target->{profiles};
+		foreach my $profile (@$profiles) {
+			next unless $profile->{mtd_log_partition};
+			print "\tdefault $profile->{mtd_log_partition} if TARGET_$target->{conf}_$profile->{id}\n";
 		}
 	}
 
@@ -526,6 +555,63 @@ sub find_feature_option() {
 	print $name
 }
 
+sub dump_device_list() {
+	my $file = shift @ARGV;
+	my $nl = shift @ARGV;
+	my @target = parse_target_metadata($file);
+	my @devices = ();
+
+	foreach my $cur (@target) {
+		foreach my $profile (@{$cur->{profiles}}) {
+			# remove device profile prefix
+			$profile->{id} =~ s/DEVICE_//;
+			$profile->{id} =~ s/teltonika_//;
+
+			# remove double usage of `xx` in device profile name
+			$profile->{id} =~ s/xx//;
+
+			push(@devices, $profile->{id});
+		}
+
+	}
+
+	foreach my $cur (sort(@devices)) {
+                print $cur." ";
+        }
+
+        if (index($nl, "nl", 0) == -1) {
+                print "\n";
+        }
+}
+
+sub find_profile_target() {
+	my $file = shift @ARGV;
+	my $prof = shift @ARGV;
+	my @target = parse_target_metadata($file);
+
+	OUT: foreach my $cur (@target) {
+
+		foreach my $profile (@{$cur->{profiles}}) {
+			next unless (index($profile->{id}, "DEVICE_teltonika_$prof") != -1 ||
+						 index($profile->{id}, "DEVICE_$prof") != -1);
+
+			print "DEVICE_TARGET=$cur->{board}\n";
+
+			# cut target to get subtarget value
+			my $subtarget = $cur->{id};
+			$subtarget =~ s/$cur->{board}\///;
+
+			if (index($subtarget, $cur->{id}) == -1) {
+				print "DEVICE_SUBTARGET=$subtarget\n";
+			}
+
+			print "DEVICE_PROFILE=$profile->{id}\n";
+
+			last OUT;
+		}
+	}
+}
+
 sub parse_command() {
 	GetOptions("ignore=s", \@ignore);
 	my $cmd = shift @ARGV;
@@ -533,12 +619,16 @@ sub parse_command() {
 		/^config$/ and return gen_target_config();
 		/^profile_mk$/ and return gen_profile_mk();
 		/^show$/ and return find_feature_option();
+		/^devlist$/ and return dump_device_list();
+		/^target$/ and return find_profile_target();
 	}
 	die <<EOF
 Available Commands:
 	$0 config [file] 			Target metadata in Kconfig format
 	$0 profile_mk [file] [target]		Profile metadata in makefile format
 	$0 show [feature]			Get Kconfig option from feature name
+	$0 devlist [file]			Get available device list
+	$0 target [file] [profile]		Get target and subtarget from device profile
 
 EOF
 }

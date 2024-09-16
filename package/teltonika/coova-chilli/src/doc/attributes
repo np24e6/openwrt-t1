@@ -8,7 +8,7 @@ NAS-IP-Address    :     4 : IPaddr  : X : - : X : - : - : IP address of Chilli (
 Service-Type      :     6 : Integer : X : - : X : - : - : Set to Login (1) for normal authentication requests.  The Access-Accept message from the radius server for configuration management messages must also be set to Administrative-User.
 Framed-IP-Address : 	8 : IPaddr  : X : X : X : - : - : IP address of the user, which is configurable during MAC authentication in the Access-Accept.
 Framed-IP-Netmask : 	9 : IPaddr  : - : X : - : - : - : IP netmask of the user, which is configurable during MAC authentication in the Access-Accept.
-Filter-ID         :    11 : String  : - : X : - : X : X : Filter ID pass on to scripts possibly.
+Filter-ID         :    11 : String  : - : X : - : X : X : Filter ID pass on to scripts possibly. 
 Reply-Message     :    18 : String  : - : X : - : - : - : Reason of reject if present.
 State             :    24 : String  : X : X : - : - : - : Sent to chilli in Access-Accept or Access-Challenge. Used transparently in subsequent Access-Request.
 Class             :    25 : String  : - : X : X : - : - : Copied transparently by chilli from Access-Accept to Accounting-Request.

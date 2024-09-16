@@ -61,6 +61,7 @@ static struct menu *current_menu, *current_entry;
 %token T_ENDIF
 %token T_ENDMENU
 %token T_HELP
+%token T_DETAIL
 %token T_HEX
 %token T_IF
 %token T_IMPLY
@@ -77,6 +78,7 @@ static struct menu *current_menu, *current_entry;
 %token T_PROMPT
 %token T_RANGE
 %token T_RESET
+%token T_MAINTAINER
 %token T_SELECT
 %token T_SOURCE
 %token T_STRING
@@ -171,6 +173,7 @@ config_option_list:
 	| config_option_list config_option
 	| config_option_list depends
 	| config_option_list help
+	| config_option_list detail
 ;
 
 config_option: type prompt_stmt_opt T_EOL
@@ -230,6 +233,11 @@ config_option: T_OPTION T_ALLNOCONFIG_Y T_EOL
 	menu_add_option_allnoconfig_y();
 };
 
+config_option: T_MAINTAINER T_WORD_QUOTE T_EOL
+{
+	printd(DEBUG_PARSE, "%s:%d:maintainer(%s)\n", zconf_curname(), zconf_lineno(), $2);
+};
+
 /* choice entry */
 
 choice: T_CHOICE word_opt T_EOL
@@ -263,6 +271,7 @@ choice_option_list:
 	| choice_option_list choice_option
 	| choice_option_list depends
 	| choice_option_list help
+	| choice_option_list detail
 ;
 
 choice_option: T_PROMPT T_WORD_QUOTE if_expr T_EOL
@@ -407,7 +416,21 @@ help: help_start T_HELPTEXT
 		zconfprint("warning: '%s' defined with blank help text",
 			   current_entry->sym->name ?: "<choice>");
 
+	printd(DEBUG_PARSE, "%s:%d:help(%s)\n", zconf_curname(), zconf_lineno(), $2);
 	current_entry->help = $2;
+};
+
+/* detail option */
+
+detail_start: T_DETAIL T_EOL
+{
+	printd(DEBUG_PARSE, "%s:%d:detail\n", zconf_curname(), zconf_lineno());
+	zconf_starthelp();
+};
+
+detail: detail_start T_HELPTEXT
+{
+	printd(DEBUG_PARSE, "%s:%d:detail(%s)\n", zconf_curname(), zconf_lineno(), $2);
 };
 
 /* depends option */

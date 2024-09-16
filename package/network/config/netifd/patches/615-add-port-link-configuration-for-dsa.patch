@@ -8,41 +8,10 @@
 
  #if LINUX_VERSION_CODE < KERNEL_VERSION(4,4,300)
  enum ethtool_link_mode_bit_indices {
-@@ -1899,6 +1900,79 @@
+@@ -1899,6 +1900,53 @@
  		s->arp_accept = strtoul(buf, NULL, 0);
  		s->flags |= DEV_OPT_ARP_ACCEPT;
  	}
-+}
-+
-+void
-+set_port_adv(struct ethtool_cmd *ecmd, int adv)
-+{
-+	static const struct {
-+		__u32 advertisement;
-+	} advert[] = {
-+		{ ADVERTISED_10baseT_Half },
-+		{ ADVERTISED_10baseT_Full },
-+		{ ADVERTISED_10baseT_Full | ADVERTISED_10baseT_Full },
-+		{ ADVERTISED_100baseT_Half },
-+		{ ADVERTISED_10baseT_Half | ADVERTISED_100baseT_Half },
-+		{ ADVERTISED_10baseT_Full | ADVERTISED_100baseT_Half },
-+		{ ADVERTISED_10baseT_Half | ADVERTISED_10baseT_Full | ADVERTISED_100baseT_Half },
-+		{ ADVERTISED_100baseT_Full },
-+		{ ADVERTISED_10baseT_Half | ADVERTISED_100baseT_Full },
-+		{ ADVERTISED_10baseT_Full | ADVERTISED_100baseT_Full },
-+		{ ADVERTISED_10baseT_Half | ADVERTISED_10baseT_Full | ADVERTISED_100baseT_Full },
-+		{ ADVERTISED_100baseT_Half | ADVERTISED_100baseT_Full },
-+		{ ADVERTISED_10baseT_Half | ADVERTISED_100baseT_Half | ADVERTISED_100baseT_Full },
-+		{ ADVERTISED_10baseT_Full | ADVERTISED_100baseT_Half | ADVERTISED_100baseT_Full },
-+		{ ADVERTISED_10baseT_Half | ADVERTISED_10baseT_Full | ADVERTISED_100baseT_Half | ADVERTISED_100baseT_Full },
-+	};
-+
-+	if (adv < 1 || adv >= MAX_ADV_VAL) {
-+		ecmd->advertising = ecmd->supported;
-+		return;
-+	}
-+
-+	ecmd->advertising = advert[adv - 1].advertisement;
 +}
 +
 +int set_dev_link(const char *ifname, bool autoneg, bool duplex, int speed, int advert)
@@ -65,9 +34,14 @@
 +
 +	ecmd.cmd = ETHTOOL_SSET;
 +
++	if (advert < 1 || advert >= MAX_ADV_VAL) {
++		advert = MAX_ADV_VAL;
++	}
++
 +	ecmd.autoneg = autoneg;
 +	if (autoneg) {
-+		set_port_adv(&ecmd, advert);
++		ecmd.supported = MAX_ADV_VAL;
++		ecmd.advertising = advert;
 +		goto end;
 +	}
 +
@@ -99,12 +73,11 @@
  #include "device.h"
  #include "interface-ip.h"
  #include "iprule.h"
-@@ -313,5 +314,7 @@
+@@ -313,5 +314,6 @@
  int system_link_netns_move(struct device *dev, const pid_t target_ns, const char *target_ifname);
  int system_netns_open(const pid_t target_ns);
  int system_netns_set(int netns_fd);
 +int set_dev_link(const char *ifname, bool autoneg, bool duplex, int speed, int advert);
-+void set_port_adv(struct ethtool_cmd *ecmd, int adv);
  
  #endif
 
@@ -227,7 +200,7 @@
 
 --- a/port_link.c
 +++ b/port_link.c
-@@ -0,0 +1,141 @@
+@@ -0,0 +1,144 @@
 +#include "netifd.h"
 +#include "port_link.h"
 +#include "device.h"
@@ -325,10 +298,11 @@
 +		set_port_state(port_new->ifname, port_new->enabled);
 +
 +		if (!port_new->enabled) {
-+			return ret;
++			goto end;
 +		}
 +
-+		return set_dev_link(port_new->ifname, port_new->autoneg, port_new->duplex, port_new->speed, port_new->advert);
++		set_dev_link(port_new->ifname, port_new->autoneg, port_new->duplex, port_new->speed, port_new->advert);
++		goto end;
 +	}
 +
 +	if (port_old->autoneg != port_new->autoneg || port_old->duplex != port_new->duplex ||
@@ -336,6 +310,8 @@
 +		ret = set_dev_link(port_new->ifname, port_new->autoneg, port_new->duplex, port_new->speed, port_new->advert);
 +	}
 +	
++end:
++	free(port_old);
 +	return ret;
 +}
 +
@@ -370,6 +346,7 @@
 +	vlist_init(&port_entries, avl_strcmp, port_entry_update);
 +}
 
+
 --- a/port_link.h
 +++ b/port_link.h
 @@ -0,0 +1,35 @@
@@ -377,7 +354,7 @@
 +#define __NETIFD_PORT_LINK_H
 +
 +#define BFR_SIZE 256
-+#define MAX_ADV_VAL 47
++#define MAX_ADV_VAL 32815
 +
 +extern struct vlist_tree port_entries;
 +

@@ -69,7 +69,7 @@ check_config "frr" "bgp_general" "enabled" "frr-bgpd" "BGP daemon"
 check_config "frr" "rip_general" "enabled" "frr-ripd" "RIP daemon"
 check_config "frr" "ospf" "enabled" "frr-ospfd" "OSPFv2 daemon"
 check_config "frr" "nhrp_general" "enabled" "frr-nhrp" "NHRP daemon"
-check_config "frr" "eigrp_general" "enabled" "frr-eigrpd" "EIGRPD daemon"
+check_config "frr" "eigrp_general" "enabled" "frr-eigrpd" "EIGRP daemon"
 check_config "modbus_serial_master" "rs232" "enabled" "modbus_serial_master" "Modbus Serial Master"
 check_config "modbus_serial_master" "rs485" "enabled" "modbus_serial_master" "Modbus Serial Master"
 

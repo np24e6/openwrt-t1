@@ -2,10 +2,10 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=mqtt_pub
-PKG_VERSION:=2023-09-01
+PKG_VERSION:=2023-12-06
 PKG_RELEASE:=1
 
-PKG_SOURCE_VERSION:=2.1
+PKG_SOURCE_VERSION:=2.2
 
 include $(INCLUDE_DIR)/package.mk
 
@@ -15,18 +15,13 @@ define Package/mqtt_pub
 	TITLE:=MQTT client for device monitoring
 	DEPENDS:=+libuci +libtlt_uci +libmosquitto-ssl +libubus +libjson-c \
 		+libubox +libblobmsg-json +mosquitto-ssl +vuci-app-mqtt-ui \
-		+IO_SUPPORT:iomand +USE_GLIBC:glib2 +libgsm +libmnfinfo
+		+IO_SUPPORT:iomand +MOBILE_SUPPORT:libgsm +libmnfinfo
 
 	ifeq (m, $(CONFIG_PACKAGE_mqtt_pub))
 		PKG_TLT_NAME:=MQTT
 		PKG_ROUTER:=$(TLT_PLATFORM_NAME)
 	endif
 endef
-
-ifeq ($(CONFIG_USE_GLIBC),y)
-TARGET_CPPFLAGS +=-Dstrlcpy=g_strlcpy
-TARGET_LDFLAGS +=-lglib-2.0
-endif
 
 define Package/mqtt_pub/description
 	MQTT client for device monitoring by Teltonika

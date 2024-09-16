@@ -9,14 +9,14 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=coova-chilli
-PKG_VERSION:=2023-08-31
+PKG_VERSION:=2023-11-10
 PKG_MAINTAINER:=Jaehoon You <teslamint@gmail.com>
 PKG_LICENSE:=GPL-2.0+
 PKG_LICENSE_FILES:=COPYING
 PKG_RELEASE:=1
 
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
-PKG_SOURCE_VERSION:=2.11
+PKG_SOURCE_VERSION:=2.12
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_SOURCE_VERSION)-$(PKG_VERSION)
 PKG_SOURCE:=$(PKG_SOURCE_SUBDIR).tar.gz
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_SOURCE_SUBDIR)
@@ -25,6 +25,10 @@ PKG_ORIGIN_URL:=https://github.com/coova/coova-chilli
 
 PKG_INSTALL:=1
 GPL_INCLUDE_SRC:=1
+
+PKG_UPSTREAM_VERSION:=1.4
+PKG_UPSTREAM_URL:=https://codeload.github.com/coova/coova-chilli/tar.gz/refs/tags/$(PKG_UPSTREAM_VERSION)?
+PKG_UPSTREAM_FILE:=coova-chilli-$(PKG_UPSTREAM_VERSION).tar.gz
 
 PKG_CONFIG_DEPENDS := \
   COOVACHILLI_MINIPORTAL \
@@ -36,8 +40,8 @@ PKG_CONFIG_DEPENDS := \
   COOVACHILLI_NOSSL \
   COOVACHILLI_OPENSSL \
   COOVACHILLI_DATABASE \
-  COOVACHILLI_GSM \
-  COOVACHILLI_UBUS
+  COOVACHILLI_UBUS \
+  CONFIG_MOBILE_SUPPORT
 
 include $(INCLUDE_DIR)/package.mk
 include $(INCLUDE_DIR)/kernel.mk
@@ -47,7 +51,7 @@ define Package/coova-chilli
   SECTION:=net
   CATEGORY:=Network
   DEPENDS:=+libuci +libtlt_uci +kmod-tun +librt +COOVACHILLI_CYASSL:libcyassl +COOVACHILLI_OPENSSL:libopenssl \
-	+COOVACHILLI_DATABASE:libsqlite3 +COOVACHILLI_GSM:libgsm +libubus +libubox \
+	+COOVACHILLI_DATABASE:libsqlite3 +MOBILE_SUPPORT:libgsm +libubus +libubox \
 	+vuci-app-coovachilli-ui +vuci-app-landingpage +WIFI_SUPPORT:vuci-app-hotspot2-ui +libtltchilli \
 	+tlt_hs_theme_default
   TITLE:=Wireless LAN HotSpot controller (Coova Chilli Version)
@@ -131,7 +135,7 @@ define Build/Configure
 	$(if $(CONFIG_COOVACHILLI_UAMDOMAINFILE),--enable,--disable)-uamdomainfile \
 	$(if $(CONFIG_COOVACHILLI_MULTILAN),--enable,--disable)-multilan \
 	$(if $(CONFIG_COOVACHILLI_DATABASE),--enable,--disable)-database \
-	$(if $(CONFIG_COOVACHILLI_GSM),--enable,--disable)-gsm \
+	$(if $(CONFIG_MOBILE_SUPPORT),--enable,--disable)-gsm \
 	$(if $(CONFIG_COOVACHILLI_UBUS),--enable,--disable)-ubus \
 	$(if $(CONFIG_IPV6),--with,--without)-ipv6 \
 	$(if $(CONFIG_COOVACHILLI_OPENSSL),--with,--without)-openssl \

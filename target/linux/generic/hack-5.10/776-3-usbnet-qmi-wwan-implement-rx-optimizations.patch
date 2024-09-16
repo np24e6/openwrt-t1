@@ -1,8 +1,8 @@
-Index: linux-5.10.191/drivers/net/usb/qmi_wwan.c
-===================================================================
---- linux-5.10.191.orig/drivers/net/usb/qmi_wwan.c
-+++ linux-5.10.191/drivers/net/usb/qmi_wwan.c
-@@ -440,11 +440,12 @@ static bool qmimux_has_slaves(struct usb
+Implement zerocopy and napi/GRO optimizations for qmimux driver
+
+--- a/drivers/net/usb/qmi_wwan.c
++++ b/drivers/net/usb/qmi_wwan.c
+@@ -427,11 +427,12 @@ static bool qmimux_has_slaves(struct usb
  
  static int qmimux_rx_fixup(struct usbnet *dev, struct sk_buff *skb)
  {
@@ -16,7 +16,7 @@ Index: linux-5.10.191/drivers/net/usb/qmi_wwan.c
  
  	if (dev->driver_info->data & QMI_WWAN_V5_HEAD) {
  		qmimux_hdr_sz += sizeof(struct rmnet_map_v5_csum_header);
-@@ -469,33 +470,43 @@ static int qmimux_rx_fixup(struct usbnet
+@@ -456,33 +457,43 @@ static int qmimux_rx_fixup(struct usbnet
  			goto skip;
  		pkt_len = len - pad_len;
  
@@ -77,7 +77,7 @@ Index: linux-5.10.191/drivers/net/usb/qmi_wwan.c
  			net->stats.rx_errors++;
  			return 0;
  		} else {
-@@ -1298,7 +1309,8 @@ err:
+@@ -1266,7 +1277,8 @@ err:
  
  static const struct driver_info	qmi_wwan_info = {
  	.description	= "WWAN/QMI device",
@@ -87,7 +87,7 @@ Index: linux-5.10.191/drivers/net/usb/qmi_wwan.c
  	.bind		= qmi_wwan_bind,
  	.unbind		= qmi_wwan_unbind,
  	.manage_power	= qmi_wwan_manage_power,
-@@ -1307,7 +1319,8 @@ static const struct driver_info	qmi_wwan
+@@ -1275,7 +1287,8 @@ static const struct driver_info	qmi_wwan
  
  static const struct driver_info	qmi_wwan_info_quirk_dtr = {
  	.description	= "WWAN/QMI device",
@@ -97,7 +97,7 @@ Index: linux-5.10.191/drivers/net/usb/qmi_wwan.c
  	.bind		= qmi_wwan_bind,
  	.unbind		= qmi_wwan_unbind,
  	.manage_power	= qmi_wwan_manage_power,
-@@ -1317,7 +1330,9 @@ static const struct driver_info	qmi_wwan
+@@ -1285,7 +1298,9 @@ static const struct driver_info	qmi_wwan
  
  static const struct driver_info qmi_wwan_info_quirk_dtr_sdx55 = {
  	.description    = "WWAN/QMI device",

@@ -28,11 +28,9 @@
 #include <errno.h>
 #include <getopt.h>
 #include <signal.h>
-#include <sys/file.h>
 
-#include "libuqmi.h"
-
-#define UQMI_PID "/var/run/uqmi.pid"
+#include "uqmi.h"
+#include "commands.h"
 
 static const char *device;
 
@@ -71,7 +69,6 @@ static int usage(const char *progname)
 		"  --get-client-id <name>:           Connect and get Client ID for service <name>\n"
 		"                                    (implies --keep-client-id)\n"
 		"  --sync:                           Release all Client IDs\n"
-		"  --set-expected-data-format <type>: Set expected data format (type: 802.3, raw-ip)\n"
 		wds_helptext
 		dms_helptext
 		uim_helptext
@@ -80,6 +77,26 @@ static int usage(const char *progname)
 		wda_helptext
 		"\n", progname);
 	return 1;
+}
+
+static void keep_client_id(struct qmi_dev *qmi, const char *optarg)
+{
+	QmiService svc = qmi_service_get_by_name(optarg);
+	if (svc < 0) {
+		fprintf(stderr, "Invalid service %s\n", optarg);
+		exit(1);
+	}
+	qmi_service_get_client_id(qmi, svc);
+}
+
+static void release_client_id(struct qmi_dev *qmi, const char *optarg)
+{
+	QmiService svc = qmi_service_get_by_name(optarg);
+	if (svc < 0) {
+		fprintf(stderr, "Invalid service %s\n", optarg);
+		exit(1);
+	}
+	qmi_service_release_client_id(qmi, svc);
 }
 
 static void handle_exit_signal(int signal)
@@ -99,8 +116,7 @@ struct uloop_timeout request_timeout = { .cb = _request_timeout_handler, };
 int main(int argc, char **argv)
 {
 	static struct qmi_dev dev;
-	int ch, ret, pid;
-	char uq_pid[32] = { 0 };
+	int ch, ret;
 
 	uloop_init();
 	signal(SIGINT, handle_exit_signal);
@@ -138,26 +154,19 @@ int main(int argc, char **argv)
 		}
 	}
 
-	snprintf(uq_pid, sizeof(uq_pid), UQMI_PID);
-	pid = open(uq_pid, O_CREAT | O_RDWR, 0666);
-	while (flock(pid, LOCK_EX | LOCK_NB) && (errno == EWOULDBLOCK)) {
-		sleep(1);
-	}
-
 	if (!device) {
 		fprintf(stderr, "No device given\n");
 		return usage(argv[0]);
 	}
 
 	if (qmi_device_open(&dev, device)) {
-		fprintf(stderr, "Failed to open device, errno: %d\n", errno);
+		fprintf(stderr, "Failed to open device\n");
 		return 2;
 	}
 
 	ret = uqmi_run_commands(&dev) ? 0 : -1;
 
 	qmi_device_close(&dev);
-	close(pid);
 
 	return ret;
 }

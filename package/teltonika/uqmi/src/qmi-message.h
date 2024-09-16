@@ -122,6 +122,5 @@ void qmi_init_request_message(struct qmi_msg *qm, QmiService service);
 int qmi_complete_request_message(struct qmi_msg *qm);
 int qmi_check_message_status(void *buf, unsigned int len);
 void *qmi_msg_get_tlv_buf(struct qmi_msg *qm, int *len);
-char *qmi_wds_verbose_call_end_reason_get_string (QmiWdsVerboseCallEndReasonType type, uint16_t reason);
 
 #endif

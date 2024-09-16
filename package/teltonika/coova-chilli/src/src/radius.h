@@ -202,9 +202,9 @@ struct radius_server_t {
   struct in_addr addr0;
   struct in_addr addr1;
   char secret[RADIUS_SECRETSIZE];
+  size_t secretlen;
   uint16_t authport;
   uint16_t acctport;
-  size_t secretlen;
 };
 
 struct radius_t {
@@ -224,8 +224,6 @@ struct radius_t {
 
   struct in_addr hisaddr0;       /* Server address */
   struct in_addr hisaddr1;       /* Server address */
-  /* Padding to separate secret from preceding field */
-  char padding1[2];
   char secret[RADIUS_SECRETSIZE];/* Shared secret */
   size_t secretlen;              /* Length of sharet secret */
 
@@ -243,15 +241,11 @@ struct radius_t {
   uint16_t proxyport;            /* Proxy port to listen to */
   struct in_addr proxyaddr;      /* Proxy client address */
   struct in_addr proxymask;      /* Proxy client mask */
-  /* Padding to separate proxysecret from preceding field */
-  char padding2[2];
   char proxysecret[RADIUS_SECRETSIZE]; /* Proxy secret */
   size_t proxysecretlen;            /* Length of sharet secret */
 #endif
 
   unsigned char nas_hwaddr[6];   /* Hardware address of NAS */
-  /* Padding to separate debug from preceding field */
-  char padding3[2];
   int debug;                     /* Print debug messages */
 
   int (*cb_ind)       (struct radius_t *radius, struct radius_packet_t *pack,

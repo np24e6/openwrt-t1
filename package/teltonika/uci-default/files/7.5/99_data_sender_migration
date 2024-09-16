@@ -525,7 +525,7 @@ migrate_sender() {
 	local enabled data_source protocol name
 	local retry_sending sender_id json_segment_count format_non_array
 
-	config_get data_source "$sec" data_source "modbus_data"
+	config_get data_source "$sec" data_source
 	config_get protocol "$sec" protocol
 	config_get enabled "$sec" enabled 0
 	config_get name "$sec" name

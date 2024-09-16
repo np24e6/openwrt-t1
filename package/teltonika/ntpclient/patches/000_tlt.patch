@@ -1,0 +1,5302 @@
+diff --recursive --unified --new-file --no-dereference orig/.gitlab-ci.yml src/.gitlab-ci.yml
+--- orig/.gitlab-ci.yml	1970-01-01 00:00:00.000000000 +0000
++++ src/.gitlab-ci.yml	2023-11-28 15:20:53.000000000 +0000
+@@ -0,0 +1,20 @@
++include:
++  - project: teltonika/ci-templates
++    file:
++      - /templates/semgrep.yml
++
++workflow:
++  rules:
++    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
++    - if: $CI_PIPELINE_SOURCE == "web"
++    - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
++      when: never
++    - if: $CI_COMMIT_BRANCH
++
++semgrep_errors:
++  extends: .semgrep_errors
++
++semgrep_info:
++  extends: .semgrep_info
++  needs:
++    - job: semgrep_errors
+\ No newline at end of file
+diff --recursive --unified --new-file --no-dereference orig/HOWTO src/HOWTO
+--- orig/HOWTO	2015-12-29 19:37:17.000000000 +0000
++++ src/HOWTO	1970-01-01 00:00:00.000000000 +0000
+@@ -1,176 +0,0 @@
+-The goal of ntpclient is not only to set your computer's clock
+-right once, but keep it there.
+-
+-First, a note on typical 1990's and 2000's computer crystals.  They
+-are truly pathetic.  A "real" crystal oscillator (TCXO) usually has
+-an initial set error of less than 5 ppm, and variation over time, voltage,
+-and temperature measured in tenths of a ppm (and an OCXO can reach ±0.3 ppm
+-stability over ten years and 85°C temperature swing).  The devices used
+-in conventional PC motherboards and single board computers, however,
+-often have initial set errors up to 150 ppm, and will vary 5 ppm over
+-the course of a day-night cycle in a pseudo-air-conditioned space.
+-
+-[Operating system software can sometimes exacerbate the problem.  I
+-have seen some i686 Red Hat 7.3 systems run the clock at 512 Hz, or 953
+-microseconds per tick, giving a built in 64 ppm error.  Even the normally
+-exemplary DEC Alpha has, when run with Linux, a truly awful calibration
+-scheme; Linux runs it with a nominal ticks per second of 1024, which
+-gives a tick value of 977, theoretical additional error -448 ppm, actual
+-frequency observed -443.7 ppm.]
+-
+-Still, the pattern is clear: the first and largest error of a crystal
+-is its initial set error.  I strongly urge the calibration of each computer,
+-and storing its frequency error in a non-volatile medium, before you
+-do anything else with time setting and locking.  While you could do it
+-in a few seconds using an accurate frequency counter, below I show a
+-software-only method using ntpclient and a high quality NTP server.
+-
+-To perform the activities described, you need a way to control and monitor
+-your system's clock -- both its frequency and value.  On Linux, the
+-kernel API is described in adjtimex(2).  There are two programs that
+-I know of that provide shell-level access to this interface, both called
+-adjtimex(1).
+-
+-One is written by Steven Dick and Jim Van Zandt, see the adjtimex* files in
+-http://metalab.unc.edu/pub/Linux/system/admin/time/
+-It uses long options, and includes some interesting functionality beyond
+-the basic exposure of adjtimex(2).
+-
+-I (Larry Doolittle) wrote the other; it uses short options, and has no
+-bloat^H^H^H^H^Hextra features.  I include the code here for a standalone
+-version; it is also incorporated into busybox (http://www.busybox.net),
+-although you may have to select it at compile time, like any other component.
+-
+-Fortunately (and not coincidentally) the core functions of the two adjtimex
+-programs can be used interchangeably, as long as you only use the short option
+-variant of the Dick/Van Zandt adjtimex.  The options discussed here are:
+-       -f    frequency (integer kernel units)
+-       -o    time offset in microseconds
+-       -t    kernel tick (microseconds per jiffy)
+-
+-First, set the time approximately right, as root:
+-   ntpclient -s -h $NTPHOST
+-You should see a single line printed like
+-36765 4980.373    1341.0     39.7  956761.4    839.2  0
+-Get used to this line: column headers are
+- 1. day since 1900
+- 2. seconds since midnight
+- 3. elapsed time for NTP transaction (microseconds)
+- 4. internal server delay (microseconds)
+- 5. clock difference between your computer and the NTP server (microseconds)
+- 6. dispersion reported by server (microseconds)
+- 7. your computer's adjtimex frequency (ppm * 65536)
+-So in the example above, your computer's clock was a bit more than
+-0.95 seconds fast, compared to the clock on $NTPHOST.
+-Now check that the clock setting worked.
+-   ntpclient -c 1 -h $NTPHOST
+-36765 4993.512    1345.0     40.9    3615.3    839.2  0
+-So now the time difference is only a few milliseconds.
+-
+-On to measure the frequency calibration for your system.
+-If you're in a hurry, it's OK to only spend 20 minutes on this step.
+-    ntpclient -i 60 -c 20 -h $NTPHOST >$(hostname).ntp.log &
+-
+-Otherwise, you will learn much more about your system and its communication
+-with the NTP server by letting the log run for 24 hours.
+-    ntpclient -i 300 -c 288 -h $NTPHOST >$(hostname).ntp.log &
+-
+-Things to watch for in the above log:
+-
+-If the last column (kernel frequency fine tune) ever changes, you haven't
+-turned off other time adjustment programs.  AFAIK the only programs around
+-that would move this number are ntpclient and xntpd.  On most out-of-the-box
+-systems, that last column should start zero and stay zero.
+-
+-Use gnuplot to plot the resulting file as follows:
+-   plot "HOSTNAME.ntp.log" using (($1-36765)*86400+$2):5:($3+$6-$4) with yerrorbars
+-This shows time error (microseconds) as a function of elapsed time (seconds).
+-The error bars show the uncertainty in the measurement.  Ideally, it would
+-be a smooth, straight line, where the slope represents the frequency error
+-of your crystal.
+-
+-If an occasional point is both off-center and has a large error bar, it shows
+-a transaction got delayed somewhere in the process, either inside the server,
+-or one of the two UDP packet propagation steps.  This is normal, and ntpclient
+-can deal with those quite well.  If points are not evenly spaced on the
+-horizontal axis, packets were actually lost; this is less common, but still OK.
+-
+-If the error bar becomes suddenly large, and takes a few minutes to slowly
+-recover, your NTP host (presumably xntpd) had problems communicating with
+-_its_ server, and reported that problem to you by increasing its "dispersion"
+-(this is a hack, required by xntpd's core incorrect assumption that errors
+-in network delays have Gaussian statistics; ntpclient does not have this flaw).
+-
+-If there are sudden large, persistent steps in error, some other program is
+-making step changes to time.  Check for, e.g., ntpdate run as a cron job.
+-If your client machine is OK, check for problems on the _host_ machine.
+-
+-Assuming the graph above is clean, and has non-garbled data for the first
+-and last points, you can run it through the enclosed awk script (rate.awk)
+-to determine the appropriate frequency value.
+-$ awk -f rate.awk <test.dat
+-delta-t 119400 seconds
+-delta-o -142308 useconds
+-slope -1.19186 ppm
+-old frequency -1240000 ( -18.9209 ppm)
+-new frequency -1318109 ( -20.1127 ppm)
+-$
+-
+-For now, you should plug in the new frequency value
+-   adjtimex -f -1318109
+-Then reset the clock
+-   ntpclient -s -h $NTPHOST
+-and ponder how it makes sense in _your_ (possibly embedded) environment
+-to have the number -1318109 applied via adjtimex every time your machine
+-boots.  Or, simpler still, combine these two steps using a post-2005 version:
+-   ntpclient -f -1318109 -s -h $NTPHOST
+-
+-If the frequency offset (absolute value) is greater than about 230 ppm
+-(15073280), you have a problem: you may be able to fix it with the -t
+-option to adjtimex, or you need to hack phaselock.c, that has a maximum
+-adjustment extent of +/- 250 ppm built in (change the #define MAX_CORRECT
+-and rebuild ntpclient).  I'd like to suggest that you replace the defective
+-crystal instead, but I understand that is rarely practical.
+-
+-On to ntpclient -l.  This is actually easy, if you performed and understood
+-the previous steps.  Run
+-  ntpclient -l -h $NTPHOST
+-in the background.  It will make small (probably less than 3 ppm) adjustments
+-to the system frequency to keep the clocks locked.  Typical performance over
+-Ethernet (even through a few routers) is a worst case error of +/- 10 ms.
+-
+-I won't try to tell you _where_ to put the boot time commands.  They should
+-boil down to:
+-   adjtimex -f $NONVOLATILE_MEMORY_VALUE
+-   ntpclient -s -i 15 -g 10000 -h $NTPHOST
+-   ntpclient -l -h $NTPHOST >some_log_file
+-The second line makes explicit the retries that may be required for this
+-UDP-based time protocol.  If the first time request takes longer than 10000
+-microseconds to resolve, or the packets get lost, it instructs ntpclient to
+-try again 15 seconds later (the minimum retry period mandated by RFC-4330),
+-and it won't exit until it gets such a suitable response.
+-
+-As of 2006, ntpclient can in theory combine the three lines above into one:
+-   ntpclient -f $NONVOLATILE_MEMORY_VALUE -s -l -i 600 -g 10000 -h $NTPHOST >some_log_file
+-This can streamline the startup process, since you may be able to avoid a
+-layer of shell scripting.  On the other hand, it is less tested, and there
+-is no (current) means to independently set the packet interval for the
+-set and lock phases.
+-
+-It's an interesting question how sensitive the boot process should be
+-to the time set process.  If you have a battery backed hardware clock,
+-there's not much problem running for a while without a network-accurate
+-system clock.  In that case you could put both ntpclient commands into a
+-background script, and the only possible issue is the sudden (but probably
+-small) warp of the clock at the indefinite time in the boot sequence when
+-ntpclient gets its acceptable answer.  On the other hand, some embedded
+-computers have no clue what time it is until the network responds.  Any
+-files created will be marked Jan 1 1970, and other application-dependent
+-issues may arise if there is a nonsense time on the system during later
+-parts of the boot sequence.  Then you may well want to enforce completion
+-of the first ntpclient before starting your application.  If this is too
+-drastic for you, and you want a fallback mode when the time server is dead,
+-add a "-c 5" switch to the end of that ntpclient command, giving at most 5
+-retries, if something goes wrong with the time set.  For that approach to be
+-useful, consider patching the source to lower the minimum packet send
+-interval from the RFC-4330-mandated 15 seconds.
+diff --recursive --unified --new-file --no-dereference orig/Makefile src/Makefile
+--- orig/Makefile	2016-01-01 04:53:42.000000000 +0000
++++ src/Makefile	2023-11-28 15:20:53.000000000 +0000
+@@ -16,28 +16,34 @@
+ # but as of ntpclient-2015, I cleaned up those casts enough to make both
+ # gcc-4.9.2 and clang-3.5.0 happy without it.
+ 
+-CFLAGS += -std=c99  # should also still work with -std=c89
+ CFLAGS += -D_POSIX_C_SOURCE=199309 -D_BSD_SOURCE
+ CFLAGS += -W -Wall  # -W is spelled -Wextra these days, but -W is stilli
+                     # valid and works with older compilers.
+ CFLAGS += -O2
+ CFLAGS += -DPRECISION_SIOCGSTAMP
+ CFLAGS += -DENABLE_DEBUG
+-CFLAGS += -DENABLE_REPLAY
++# CFLAGS += -DENABLE_REPLAY
++CFLAGS += -DNTP_MAX_SERVERS="(4)"
+ # CFLAGS += -DUSE_OBSOLETE_GETTIMEOFDAY
+ 
+-LOADLIBES += -lrt
++LDFLAGS += -lrt -lblobmsg_json -lubox -lubus -luci
++
++ifneq (,$(findstring MOBILE_SUPPORT,$(CFLAGS)))
++        LDFLAGS += -lgsm
++endif
+ 
+ all: ntpclient
+ 
+ test: ntpclient
+ 	./ntpclient -d -r <test.dat
+ 
+-ntpclient: ntpclient.o phaselock.o
++ntpclient: src/ntpclient.o src/phaselock.o src/net.o
++	$(CC) $(LDFLAGS) -o $@ $^
+ 
+-ntpclient.o phaselock.o: ntpclient.h
++src/ntpclient.o src/phaselock.o src/net.o: src/ntpclient.h src/net.h
+ 
+-adjtimex: adjtimex.o
++adjtimex: src/adjtimex.o
++	$(CC) $(LDFLAGS) -o $@ $^
+ 
+ clean:
+-	rm -f ntpclient adjtimex *.o
++	rm -f ntpclient adjtimex src/*.o
+diff --recursive --unified --new-file --no-dereference orig/README src/README
+--- orig/README	2016-01-01 04:51:11.000000000 +0000
++++ src/README	1970-01-01 00:00:00.000000000 +0000
+@@ -1,201 +0,0 @@
+-ntpclient is an NTP (RFC-1305, RFC-4330) client for unix-alike computers.
+-Its functionality is a small subset of xntpd, but IMHO performs
+-better (or at least has the potential to function better) within
+-that limited scope.  Since it is much smaller than xntpd, it is
+-also more relevant for embedded computers.
+-
+-ntpclient is Copyright 1997-2015 Larry Doolittle,
+-and may be freely copied and modified according to the terms of the GNU
+-General Public License, version 2.  If you want to distribute ntpclient
+-under other terms, contact me.  I might agree to some other arrangement,
+-if you talk to me _before_ you start violating GPL terms.
+-
+-ntpclient home page: http://doolittle.icarus.com/ntpclient/
+-
+-Joachim Nilsson created a fork of ntpclient that he maintains at
+-http://vmlinux.org/jocke/ntpclient.shtml.  We don't have the same
+-maintainance and build system sensibilities; some people may prefer his.
+-In particular, he has converted his ntpclient to daemon and syslog.
+-The basic functionality of the two versions should be identical.
+-
+-I found three forks of ntpclient on github:
+-  https://github.com/wlach/ntpclient-android
+-    Android-specific fork of Larry Doolittle's ntpclient program
+-  https://github.com/troglobit/ntpclient
+-    Fork of Larry Doolittle's ntpclient with damon and syslog support
+-  https://github.com/ChristophGr/ntpclient
+-    This is a fork starting with the code provided by Larry Doolittle
+-
+-To build on Linux, type "make".  Solaris and other Unix users will
+-probably need to adjust the Makefile slightly.  It's not complex.
+-For changing the system clock frequency, only the Linux adjtimex(2)
+-interface is implemented at this time.  Non-Linux systems can only
+-use ntpclient to measure time differences and set the system clock,
+-by way of the POSIX 1003.1-2001 standard routines clock_gettime() and
+-clock_settime().  Also see "Bugs", below.
+-
+-There are a few compile-time configurations possible, which require
+-editing the Makefile.  Either do or don't define
+-  ENABLE_DEBUG
+-  ENABLE_REPLAY
+-  USE_OBSOLETE_GETTIMEOFDAY
+-  PRECISION_SIOCGSTAMP
+-Try it first without changing the default: that will give you a full-
+-featured ntpclient, that uses modern POSIX time functions, and works
+-reasonably with all Linux kernels I have access to in 2015.  There are
+-comments in ntpclient.c that you should read before experimenting with
+-PRECISION_SIOCGSTAMP.
+-
+-Some older but otherwise (almost) serviceable Linux systems (e.g., Red Hat
+-EL-3.0 and Ubuntu 4.10) have a totally broken POSIX clock_settime()
+-implementation.  If you get "clock_settime: Invalid argument" when you
+-run ntpclient -s, rebuild with -DUSE_OBSOLETE_GETTIMEOFDAY.  Linux systems
+-that are even older won't even compile without that switch set.
+-
+-Usage: ntpclient [options]
+-options:
+- -c count     stop after count time measurements (default 0 means go forever)
+- -d           print diagnostics (feature can be disabled at compile time)
+- -g goodness  causes ntpclient to stop after getting a result more accurate
+-                   than goodness (microseconds, default 0 means go forever)
+- -h hostname  (mandatory) NTP server, against which to measure system time
+- -i interval  check time every interval seconds (default 600)
+- -l           attempt to lock local clock to server using adjtimex(2)
+- -p port      local NTP client UDP port (default 0 means "any available")
+- -q min_delay minimum packet delay for transaction (default 800 microseconds)
+- -r           replay analysis code based on stdin
+- -s           simple clock set (implies -c 1)
+- -t           trust network and server, no RFC-4330 recommended cross-checks
+-
+-Mortal users can use this program for monitoring, but not clock setting
+-(with the -s or -l switches).  The -l switch is designed to be robust
+-in any network environment, but has seen the most extensive testing in
+-a low latency (less than 2 ms) Ethernet environment.  Users in other
+-environments should study ntpclient's behavior, and be prepared to adjust
+-internal tuning parameters.  A long description of how and why to use
+-ntpclient is in the HOWTO file.  ntpclient always sends packets to the
+-server's UDP port 123.
+-
+-One commonly needed tuning parameter for lock mode is min_delay, the
+-shortest possible round-trip transaction time.  This can be set with the
+-command line -q switch.  The historical default of 800 microseconds was
+-good for local Ethernet hardware a few years ago.  If it is set too high,
+-you will get a lot of "inconsistent" lines in the log file when time locking
+-(-l switch).  The only true future-proof value is 0, but that will cause the
+-local time to wander more than it should.  I use 200 on my workstation.
+-
+-The test.dat file has 200 lines of sample output.  Its first few lines,
+-with the output column headers that are shown when the -d option is
+-chosen, are:
+- day   second     elapsed    stall     skew  dispersion  freq
+-36765 00180.386    1398.0     40.3  953773.9    793.5  -1240000
+-36765 00780.382    1358.0     41.3  954329.0    915.5  -1240000
+-36765 01380.381    1439.0     56.0  954871.3    915.5  -1240000
+-
+-day, second: time of measurement, UTC, relative to NTP epoch (Jan 1, 1900)
+-elapsed:     total time from query to response (microseconds)
+-stall:       time the server reports that it sat on the request (microseconds)
+-skew:        difference between local time and server time (microseconds)
+-dispersion:  reported by server, see RFC-1305 (microseconds)
+-freq:        local clock frequency adjustment (Linux only, ppm*65536)
+-
+-A relatively new feature is a series of sanity checks on
+-UDP packets received, generally as recommended by RFC-4330.  If it
+-fails one of these tests, the line described above is replaced by
+-36765 01380.381  rejected packet
+-or, if ENABLE_DEBUG was selected at compile time, one of
+-36765 01380.381  rejected packet: LI==3
+-36765 01380.381  rejected packet: VN<3
+-36765 01380.381  rejected packet: MODE!=3
+-36765 01380.381  rejected packet: ORG!=sent
+-36765 01380.381  rejected packet: XMT==0
+-36765 01380.381  rejected packet: abs(DELAY)>65536
+-36765 01380.381  rejected packet: abs(DISP)>65536
+-36765 01380.381  rejected packet: STRATUM==0
+-To see the actual values of the rejected packet, start ntpclient with the
+--d option; this will give a human-readable printout of every packet received,
+-including the rejected ones.  To skip these checks, use the -t switch.
+-
+-test.dat is suitable for piping into ntpclient -r.  I have over 200000
+-samples (lines) archived for study, that I don't include here.
+-They are generally spaced 10 minutes apart, representing over three
+-years of data logging (from a variety of machines, and not continuous,
+-unfortunately).
+-
+-As a special, added bonus, I also include my adjtimex(1) program.
+-See its man page and the HOWTO file for more information.
+-
+-envelope is a perl script that I have used for my lock studies.
+-It's kind of a hack and not worth documenting here.
+-
+-Changes since the widely distributed ntpclient_2000_345 version:
+- -- new -g option (has had limited testing)
+- -- changed max frequency adjustment from 91 ppm to 150 ppm
+- -- fixed "inconsistent" bug in phaselock.c triggered by large freq errors
+- -- new files: HOWTO, adjtimex.c, adjtimex.1, rate.awk, log2date.pl
+- -- minor source code cleanups
+- -- source is now as 64-bit clean as practical; tested on Alpha
+- -- optional patches provided by Andy Warner, see andyw.patch
+- -- optional patches provided by Linksys, see linksys.patch
+- -- removed unreasonable 15020 day offset in date column (xntpd has this
+-      offset, which turns days-since-1900-epoch into Modified Julian Day)
+-
+-Changes since the widely distributed ntpclient_2003_194 version:
+- -- default build is now -std=c99, but c89 sill works too
+- -- switch default compile from gettimeofday() to POSIX clock_gettime()
+- -- more sanity checking on the NTP reply packet, reference RFC-4330
+- -- fractional second printing in debug output changed to traditional decimal
+- -- new -f switch to set initial frequency
+- -- works to specify both -s and -l, will jump-set first and then phase lock
+- -- bug fix for select() error handling, thanks to Walter Harms
+- -- new man page, contributed by Walter Harms
+- -- most subroutines are now flagged static to the compiler
+- -- structural changes to the code, such as the new ntpclient.h file
+- -- dropped (mostly) obsolete patches from Linksys and Andy Warner
+-
+-Changes since ntpclient_2006_318:
+- -- adjustable min_delay parameter, used to be hard-coded 800 microseconds
+- -- remove useless listen() call, thanks to Alexander Indenbaum
+- -- fix length passed to recvfrom(), thanks to Alexander Indenbaum
+- -- tidy up 32-bit integer declarations, prodding from Brian McAllister
+- -- added rate2.awk, contributed by Lou Sortman
+- -- provide easy way to override 15 second MIN_INTERVAL at compile time
+- -- relax MIN_INTERVAL enforcement for one-shot use, thanks to Mihai Buha
+-
+-Changes since ntpclient_2007_365:
+- -- fixed type of sa_xmit_len, thanks vapier
+- -- dropped underscores in spelling of adjtimex(2), might make uClibc happier
+- -- include netdb.h and always define _BSD_SOURCE to get prototype for herror
+- -- minor formatting to align with Nilsson's fork
+- -- add -fno-strict-aliasing as needed by traditional network coding style
+-
+-Changes since ntpclient_2010_365:
+- -- fixed and re-enabled -DPRECISION_SIOCGSTAMP, seems to work properly with
+-      modern (e.g., 3.x or 4.x) Linux kernel
+- -- tweak coding style to work better with modern compilers (e.g.,
+-      gcc-gcc-4.9.2 and clang-3.5.0)
+- -- make c99 the default
+- -- list more warning flags in disabled part of Makefile
+- -- minor whitespace, parenthesis, and spelling changes in source files
+- -- use LDLIBES instad of LDFLAGS for -lrt in Makefile (thanks, ChristophGr)
+- -- move _POSIX_C_SOURCE and _BSD_SOURCE to Makefile
+-
+-Bugs:
+- -- Doesn't understand the LI (Leap second Indicator) field of an NTP packet
+- -- Doesn't interact with adjtimex(2) status value
+- -- Can't query multiple servers
+- -- IPv4 only
+- -- Requires Linux-style select() semantics, where timeout value is modified
+- -- Always returns success (0)
+-
+-Adherence to RFC-4330 chapter 10, Best practices:
+- 1.  enforced, unless someone tinkers with the source code
+- 2.  no backoff, but no retry either; this isn't TCP
+- 3.  not in scope for the upstream source
+- 4.  not in scope for the upstream source
+- 5.  not in scope for the upstream source
+- 6.  supported
+- 7.  not supported
+- 8.  not supported (scary opportunity to DOS the _client_)
+-
+-       - Larry Doolittle  <larry@doolittle.boa.org>
+diff --recursive --unified --new-file --no-dereference orig/adjtimex.1 src/adjtimex.1
+--- orig/adjtimex.1	2007-12-31 17:13:09.000000000 +0000
++++ src/adjtimex.1	1970-01-01 00:00:00.000000000 +0000
+@@ -1,60 +0,0 @@
+-.TH ADJTIMEX 1 "Oct 2000" local "Linux Programmer's Manual"
+-.SH NAME
+-adjtimex \- access to kernel time controls and readouts
+-.SH SYNOPSIS
+-.B adjtimex
+-.RB [ -q ]
+-.RB [ -o
+-.IR offset ]
+-.RB [ -f
+-.IR freq ]
+-.RB [ -p
+-.IR pll-time-constant ]
+-.SH DESCRIPTION
+-.B adjtimex
+-reads and optionally sets adjustment parameters for the Linux system clock.
+-This program provides shell-level access
+-to the system call
+-.I adjtimex(2),
+-which actually manipulates the
+-.I timex
+-structure.  All parameters are left alone unless asked to change
+-with the corresponding option.  By default, the values of the
+-.I timex
+-structure on return from
+-.I adjtimex(2)
+-are printed, along with helpful
+-hints about what
+-.I adjtimex(1)
+-switches control them.
+-
+-Mortal users may view all these parameters; only the superuser may change them.
+-.SH OPTIONS
+-.TP 8
+-.B -q
+-quiet mode - do not print
+-.TP 8
+-.BI \-o " offset"
+-Time offset in microseconds.
+-.TP 8
+-.BI \-f " freq"
+-Frequency adjust, in integer kernel units (65536 units is one part-per-million)
+-Positive values make the system clock run fast.
+-.TP 8
+-.BI \-t " tick"
+-Microseconds per tick, nominally 10000.  Coarse corrections (within
+-100 ppm) to clock frequency are better made here than with -f.
+-.TP 8
+-.BI \-p " timeconstant"
+-rate
+-.SH SEE ALSO
+-adjtimex(2), tickadj(1), /usr/include/linux/timex.h.
+-An independent implementation of similar functionality was
+-written by Steven Dick and Jim Van Zandt, see
+-http://metalab.unc.edu/pub/Linux/system/admin/time/adjtimex*
+-.SH BUGS
+-Every writable member of the
+-.I timex
+-structure should be settable from this program.
+-.SH AUTHOR
+-Larry Doolittle <larry@doolittle.boa.org>
+diff --recursive --unified --new-file --no-dereference orig/adjtimex.c src/adjtimex.c
+--- orig/adjtimex.c	2016-01-01 04:47:00.000000000 +0000
++++ src/adjtimex.c	1970-01-01 00:00:00.000000000 +0000
+@@ -1,155 +0,0 @@
+-/*
+- * adjtimex_1.c - read, and possibly modify, the Linux kernel `timex' variables.
+- *
+- * Originally written: October 1997
+- * Last hack: May 2003
+- * Copyright 1997, 2000, 2003 Larry Doolittle <larry@doolittle.boa.org>
+- *
+- *  This program is free software; you can redistribute it and/or modify
+- *  it under the terms of the GNU General Public License (Version 2,
+- *  June 1991) as published by the Free Software Foundation.  At the
+- *  time of writing, that license was published by the FSF with the URL
+- *  http://www.gnu.org/copyleft/gpl.html, and is incorporated herein by
+- *  reference.
+- *
+- *  This program is distributed in the hope that it will be useful,
+- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+- *  GNU General Public License for more details.
+- *
+- * This adjtimex(1) is very similar in intent to adjtimex(8) by Steven
+- * Dick <ssd@nevets.oau.org> and Jim Van Zandt <jrv@vanzandt.mv.com>
+- * (see http://metalab.unc.edu/pub/Linux/system/admin/time/adjtimex*).
+- * That version predates this one, and is _much_ bigger and more
+- * featureful.  My independently written version was very similar to
+- * Steven's from the start, because they both follow the kernel timex
+- * structure.  I further tweaked this version to be equivalent to Steven's
+- * where possible, but I don't like getopt_long, so the actual usage
+- * syntax is incompatible.
+- *
+- * Amazingly enough, my Red Hat 5.2 sys/timex (and sub-includes)
+- * don't actually give a prototype for adjtimex(2), so building
+- * this code (with -Wall) gives a warning.  Later versions of
+- * glibc fix this issue.
+- *
+- * This program is too simple for a Makefile, just build with:
+- *  gcc -Wall -O adjtimex_1.c -o adjtimex
+- */
+-
+-#include <stdio.h>
+-#include <sys/types.h>
+-#include <stdlib.h>
+-#include <unistd.h>
+-#include <sys/timex.h>
+-
+-static struct {int bit; const char *name;} statlist[] = {
+-	{ STA_PLL,       "PLL"       },
+-	{ STA_PPSFREQ,   "PPSFREQ"   },
+-	{ STA_PPSTIME,   "PPSTIME"   },
+-	{ STA_FLL,       "FFL"       },
+-	{ STA_INS,       "INS"       },
+-	{ STA_DEL,       "DEL"       },
+-	{ STA_UNSYNC,    "UNSYNC"    },
+-	{ STA_FREQHOLD,  "FREQHOLD"  },
+-	{ STA_PPSSIGNAL, "PPSSIGNAL" },
+-	{ STA_PPSJITTER, "PPSJITTER" },
+-	{ STA_PPSWANDER, "PPSWANDER" },
+-	{ STA_PPSERROR,  "PPSERROR"  },
+-	{ STA_CLOCKERR,  "CLOCKERR"  },
+-	{ 0, NULL } };
+-
+-static const char *ret_code_descript[] = {
+-	"clock synchronized",
+-	"insert leap second",
+-	"delete leap second",
+-	"leap second in progress",
+-	"leap second has occurred",
+-	"clock not synchronized" };
+-
+-static void usage(char *prog)
+-{
+-	fprintf(stderr,
+-		"Usage: %s [ -q ] [ -o offset ] [ -f frequency ] [ -p timeconstant ] [ -t tick ]\n",
+-		prog);
+-}
+-
+-int main(int argc, char ** argv)
+-{
+-	struct timex txc;
+-	int quiet=0;
+-	int c, i, ret, sep;
+-	txc.modes=0;
+-	for (;;) {
+-		c = getopt( argc, argv, "qo:f:p:t:");
+-		if (c == EOF) break;
+-		switch (c) {
+-			case 'q':
+-				quiet=1;
+-				break;
+-			case 'o':
+-				txc.offset = atoi(optarg);
+-				txc.modes |= ADJ_OFFSET_SINGLESHOT;
+-				break;
+-			case 'f':
+-				txc.freq = atoi(optarg);
+-				txc.modes |= ADJ_FREQUENCY;
+-				break;
+-			case 'p':
+-				txc.constant = atoi(optarg);
+-				txc.modes |= ADJ_TIMECONST;
+-				break;
+-			case 't':
+-				txc.tick = atoi(optarg);
+-				txc.modes |= ADJ_TICK;
+-				break;
+-			default:
+-				usage(argv[0]);
+-				exit(1);
+-		}
+-	}
+-	if (argc != optind) { /* no valid non-option parameters */
+-		usage(argv[0]);
+-		exit(1);
+-	}
+-
+-	ret = adjtimex(&txc);
+-
+-	if (ret < 0) perror("adjtimex");
+-
+-	if (!quiet && ret>=0) {
+-		printf(
+-			"    mode:         %d\n"
+-			"-o  offset:       %ld\n"
+-			"-f  frequency:    %ld\n"
+-			"    maxerror:     %ld\n"
+-			"    esterror:     %ld\n"
+-			"    status:       %d ( ",
+-		txc.modes, txc.offset, txc.freq, txc.maxerror,
+-		txc.esterror, txc.status);
+-
+-		/* representative output of next code fragment:
+-		   "PLL | PPSTIME" */
+-		sep=0;
+-		for (i=0; statlist[i].name; i++) {
+-			if (txc.status & statlist[i].bit) {
+-				if (sep) fputs(" | ",stdout);
+-				fputs(statlist[i].name,stdout);
+-				sep=1;
+-			}
+-		}
+-
+-		printf(" )\n"
+-			"-p  timeconstant: %ld\n"
+-			"    precision:    %ld\n"
+-			"    tolerance:    %ld\n"
+-			"-t  tick:         %ld\n"
+-			"    time.tv_sec:  %ld\n"
+-			"    time.tv_usec: %ld\n"
+-			"    return value: %d (%s)\n",
+-		txc.constant,
+-		txc.precision, txc.tolerance, txc.tick,
+-		txc.time.tv_sec, txc.time.tv_usec, ret,
+-		(ret >= 0 && ret <= 5) ? ret_code_descript[ret] : "error" );
+-	}
+-	return (ret<0);
+-}
+diff --recursive --unified --new-file --no-dereference orig/envelope src/envelope
+--- orig/envelope	2007-12-31 17:21:37.000000000 +0000
++++ src/envelope	1970-01-01 00:00:00.000000000 +0000
+@@ -1,75 +0,0 @@
+-#!/usr/bin/perl
+-
+-# print $ENV{"TIME_LOG_FILE"},"\n";
+-open(D, "awk '{\$3=\$3-800;print \$0}' $ENV{TIME_LOG_FILE} | ./ntpclient -d -r|") || die;
+-
+-open(GC,"|gnuplot") || die;
+-$oldfh=select(GC); $|=1; select($oldfh);
+-print GC "$ARGV[0]\n";
+-shift(@ARGV);
+-
+-$rawplot=0;
+-
+-sub closeout {
+-	print LN "$maxxs $maxxo\n";
+-	print LX "$maxxs $maxxo\n";
+-	close MN;
+-	close MX;
+-	close RN;
+-	close RX;
+-	close LN;
+-	close LX;
+-	close LP;
+-	if ($rawplot) { $cmd = "plot \"rawmax.dat\", \"rawmin.dat\"$xplots$nplots\n"; }
+-	      # else    { $cmd = "plot \"max.dat\", \"min.dat\", \"rawmax.dat\", \"rawmin.dat\", \"loop.dat\"\n"; }
+-	      else    { $cmd = "plot \"max.dat\", \"min.dat\", \"loop.dat\" with lines, 0.9*x>0.3?-(x-0.3)*6000:-x*600, 0.9*x<-0.3?-(x+0.3)*6000:-x*600\n"; }
+-
+-	if ($use) {
+-		print GC $cmd || die;
+-		$user=<>;
+-		print GC $user;
+-	}
+-	$use=0;
+-	$nplots="";
+-	$xplots="";
+-}
+-
+-sub bound_write {
+-	($FD, $slope, $offset) = @_;
+-	if ($FD eq "MX" && $slope < $maxxs && $slope > $minxs) {
+-		print MN "$slope $offset\n" || die;
+-	}
+-	if ($FD eq "MN" && $slope < $maxxs && $slope > $minxs) {
+-		print MN "$slope $offset\n" || die;
+-	}
+-}
+-$first=1;
+-$use=0;
+-$nplots="";
+-$xplots="";
+-$scale=0.001;    # make raw and envelope fit on same scale
+-$scale=1.0  if ($rawplot);
+-while(<D>) {
+-	chomp();
+-	@A=split();
+-	if (/^contemplate/) {
+-		if (!$first) { closeout(); }
+-		$first=0;
+-		open(MN, ">min.dat")     || die;
+-		open(MX, ">max.dat")     || die;
+-		open(RN, ">rawmin.dat")  || die;
+-		open(RX, ">rawmax.dat")  || die;
+-		open(LN, ">loopmin.dat") || die;
+-		open(LX, ">loopmax.dat") || die;
+-		open(LP, ">loop.dat")    || die;
+-	}
+-	if (/^minseg/) {$use=1; $nplots .= ", $A[2]*x+$A[4]"; print MN "$A[2] $A[4]\n" || die; }
+-	if (/^maxseg/) {$use=1; $xplots .= ", $A[2]*x+$A[4]"; print MX "$A[2] $A[4]\n" || die; }
+-	if (/^mincro/) {$use=1; $xplots .= ", $A[1]*x+$A[3] title 'mincross'"; $minxs=$A[1]; $minxo=$A[3]; print LN "$A[1] $A[3]\n"; print LX "$A[1] $A[3]\n";}
+-	if (/^maxcro/) {$use=1; $nplots .= ", $A[1]*x+$A[3] title 'maxcross'"; $maxxs=$A[1]; $maxxo=$A[3]; }
+-	if (/^interp/ && $A[2]>$minxs && $A[2]<$maxxs) {$use=1; print LN "$A[2] $A[3]\n"; print LX "$A[2] $A[4]\n";}
+-	if (/^hist/)   { $st=$A[2]*$scale; print RN "$st $A[4]\n"; print RX "$st $A[5]\n";}
+-	if (/^loop/)   { print LP "$A[1] $A[2]\n"; }
+-	if (/^xontemplate/ || /^delta_f/ || /^find_df_center/) { print "$_\n"; }
+-}
+-closeout();
+diff --recursive --unified --new-file --no-dereference orig/files/ntpclient.config src/files/ntpclient.config
+--- orig/files/ntpclient.config	1970-01-01 00:00:00.000000000 +0000
++++ src/files/ntpclient.config	2023-11-28 15:20:53.000000000 +0000
+@@ -0,0 +1,19 @@
++config ntpserver '1'
++	option hostname '0.openwrt.pool.ntp.org'
++
++config ntpserver '2'
++	option hostname '1.openwrt.pool.ntp.org'
++
++config ntpserver '3'
++	option hostname '2.openwrt.pool.ntp.org'
++
++config ntpserver '4'
++	option hostname '3.openwrt.pool.ntp.org'
++
++config ntpdrift 'ntpdrift'
++	option freq '0'
++
++config ntpclient 'ntpclient'
++	option enabled '1'
++	option interval '86400'
++	option zoneName 'UTC'
+diff --recursive --unified --new-file --no-dereference orig/files/ntpclient.hotplug src/files/ntpclient.hotplug
+--- orig/files/ntpclient.hotplug	1970-01-01 00:00:00.000000000 +0000
++++ src/files/ntpclient.hotplug	2023-11-28 15:20:53.000000000 +0000
+@@ -0,0 +1,23 @@
++#!/bin/sh
++# Copyright (C) 2006-2014 OpenWrt.org
++
++#ntpclient won't start without active interface, so doing reload here.
++
++exclude_ifaces()
++{
++	case "$DEVICE" in
++		lo|br-*|gre4-*)
++			return 1
++		;;
++	esac
++
++	return 0
++}
++
++case "${ACTION:-ifup}" in
++	ifup)
++		exclude_ifaces && {
++			/etc/init.d/ntpclient restart
++		}
++	;;
++esac
+diff --recursive --unified --new-file --no-dereference orig/files/ntpclient.init src/files/ntpclient.init
+--- orig/files/ntpclient.init	1970-01-01 00:00:00.000000000 +0000
++++ src/files/ntpclient.init	2023-11-28 15:20:53.000000000 +0000
+@@ -0,0 +1,35 @@
++#!/bin/sh /etc/rc.common
++
++# Copyright (C) 2021 Teltonika
++
++START=99
++USE_PROCD=1
++
++set_drift() {
++	config_get freq $1 freq
++	[ -n "$freq" ] && adjtimex -f $freq >/dev/null
++}
++
++start_client() {
++	local enabled
++
++	config_get enabled $1 enabled 0
++	[ "$enabled" != "0" ] || return
++
++	config_foreach set_drift ntpdrift
++
++	procd_open_instance
++	procd_set_param command /usr/sbin/ntpclient -s -l -e "/usr/sbin/ntpd-hotplug"
++	procd_set_param file /etc/config/ntpclient
++	procd_set_param stderr 1
++	procd_close_instance
++}
++
++service_triggers() {
++	procd_add_reload_trigger "ntpclient"
++}
++
++start_service() {
++	config_load ntpclient
++	config_foreach start_client ntpclient
++}
+diff --recursive --unified --new-file --no-dereference orig/log2date.pl src/log2date.pl
+--- orig/log2date.pl	2003-07-05 19:51:19.000000000 +0000
++++ src/log2date.pl	1970-01-01 00:00:00.000000000 +0000
+@@ -1,15 +0,0 @@
+-# Adds human-readable UTC stamps at the end of
+-# ntpclient log files
+-while (<>) {
+-	if (/^ *#/) {
+-		print $_;
+-	} else {
+-		chomp();
+-		@A=split();
+-		# 15020: mysterious, got rid of it in ntpclient_2003
+-		# 25567:  Jan 1970 - Jan 1900
+-		$second = ($A[0]-25567)*86400+$A[1];
+-		$ss = gmtime($second);
+-		print "$_ $ss\n";
+-	}
+-}
+diff --recursive --unified --new-file --no-dereference orig/ntpclient.1 src/ntpclient.1
+--- orig/ntpclient.1	2007-12-31 17:11:56.000000000 +0000
++++ src/ntpclient.1	1970-01-01 00:00:00.000000000 +0000
+@@ -1,100 +0,0 @@
+-.\" man page for Larry Doolittle's ntpclient
+-.\" distributed under GPL
+-.\" originally written by Walter Harms
+-.TH ntpclient 3 "2005-28-07-05" "" "ntpclient"
+-.SH NAME
+-ntpclient \- client to get time from NTP server
+-.SH SYNOPSIS
+-.B ntpclient -h hostname [-c count] [-d] [-f frequency] [-g goodness]
+-.in 14
+-.B             [-i interval] [-l] [-p port] [-r] [-s]
+-.SH DESCRIPTION
+-.B ntpclient
+-is an NTP (RFC-1305) client for unix-alike computers.
+-Its functionality is a small subset of xntpd, but has the potential
+-to function better within
+-that limited scope.  Since it is much smaller than xntpd, it is
+-also more relevant for embedded computers.
+-.PP
+-Without any argument (except -h) the program produces output
+-similar to this:
+-.sp
+-.nf
+- day   second     elapsed    stall     skew  dispersion  freq
+-36765 00180.386    1398.0     40.3  953773.9    793.5  -1240000
+-36765 00780.382    1358.0     41.3  954329.0    915.5  -1240000
+-36765 01380.381    1439.0     56.0  954871.3    915.5  -1240000
+-.fi
+-.sp
+-The columns have the following meaning:
+-.nf
+-day, second: time of measurement, UTC, relative to NTP epoch (Jan 1, 1900)
+-elapsed:     total time from query to response (microseconds)
+-stall:       time the server reports that it sat on the request (microseconds)
+-skew:        difference between local time and server time (microseconds)
+-dispersion:  reported by server, see RFC-1305 (microseconds)
+-freq:        local clock frequency adjustment (Linux only, ppm*65536)
+-.fi
+-.SS "Options"
+-.TP
+-.BI  -h " hostname"
+-(mandatory) NTP server, against which to measure system time
+-.TP
+-.BI -c " count"
+-top after count time measurements (default 0 means go forever)
+-.TP
+-.B  -d
+-.br
+-print diagnostics (feature can be disabled at compile time)
+-.TP
+-.BI  -g " goodness"
+-causes ntpclient to stop after getting a result more accurate
+-than goodness (microseconds, default 0 means go forever)
+-.TP
+-.BI  -i " interval"
+-check time every interval seconds (default 600)
+-.TP
+-.BI -p " port"
+-local NTP client UDP port (default 0 means "any available")
+-.TP
+-.BI  -q " min_delay"
+-minimum packet delay for transaction (default 800 microseconds)
+-.TP
+-.B  -r
+-.br
+-replay analysis code based on stdin (feature can be disabled at compile time)
+-.TP
+-.BI -f " frequency"
+-.br
+-initialize the frequency offset (Linux only, requires root access)
+-.TP
+-.B -s
+-.br
+-simple clock set (implies -c 1)
+-(requires root access)
+-.TP
+-.B  -l
+-.br
+-attempt to lock local clock to server using
+-.BR adjtimex (2)
+-(requires root access)
+-.TP
+-.B -t
+-.br
+-trust network and server, no RFC-4330 recommended cross-checks
+-
+-.SH AUTHOR
+- Larry Doolittle
+- ntpclient home page: http://doolittle.icarus.com/ntpclient/
+-.SH COPYRIGHT
+-ntpclient is Copyright 1997, 1999, 2000, 2003, 2006, 2007 Larry Doolittle, and
+-may be freely copied and modified according to the terms of the GNU
+-General Public License, version 2.  If you want to distribute ntpclient
+-under other terms, contact me.  I might agree to some other arrangement,
+-if you talk to me
+-.I before
+-you start violating GPL terms.
+-
+-.SH "SEE ALSO"
+-.BR adjtimex (2),
+-.BR www.ntp.org
+diff --recursive --unified --new-file --no-dereference orig/ntpclient.c src/ntpclient.c
+--- orig/ntpclient.c	2016-01-01 04:46:15.000000000 +0000
++++ src/ntpclient.c	1970-01-01 00:00:00.000000000 +0000
+@@ -1,710 +0,0 @@
+-/*
+- * ntpclient.c - NTP client
+- *
+- * Copyright (C) 1997, 1999, 2000, 2003, 2006, 2007, 2010, 2015  Larry Doolittle  <larry@doolittle.boa.org>
+- *
+- *  This program is free software; you can redistribute it and/or modify
+- *  it under the terms of the GNU General Public License (Version 2,
+- *  June 1991) as published by the Free Software Foundation.  At the
+- *  time of writing, that license was published by the FSF with the URL
+- *  http://www.gnu.org/copyleft/gpl.html, and is incorporated herein by
+- *  reference.
+- *
+- *  This program is distributed in the hope that it will be useful,
+- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+- *  GNU General Public License for more details.
+- *
+- *  Possible future improvements:
+- *      - Write more documentation  :-(
+- *      - Support leap second processing
+- *      - Support IPv6
+- *      - Support multiple (interleaved) servers
+- *
+- *  Compile with -DPRECISION_SIOCGSTAMP if your machine really has it.
+- *  Older kernels (before the tickless era, pre 3.0?) only give an answer
+- *  to the nearest jiffy (1/100 second), not so interesting for us.
+- *
+- *  If the compile gives you any flak, check below in the section
+- *  labelled "XXX fixme - non-automatic build configuration".
+- */
+-
+-#include <stdio.h>
+-#include <stdlib.h>
+-#include <string.h>
+-#include <sys/types.h>
+-#include <sys/socket.h>
+-#include <netinet/in.h>
+-#include <netdb.h>     /* gethostbyname */
+-#include <arpa/inet.h>
+-#include <time.h>
+-#include <unistd.h>
+-#include <errno.h>
+-#ifdef PRECISION_SIOCGSTAMP
+-#include <sys/ioctl.h>
+-#endif
+-#ifdef USE_OBSOLETE_GETTIMEOFDAY
+-#include <sys/time.h>
+-#endif
+-
+-#include "ntpclient.h"
+-
+-/* Default to the RFC-4330 specified value */
+-#ifndef MIN_INTERVAL
+-#define MIN_INTERVAL 15
+-#endif
+-
+-#ifdef ENABLE_DEBUG
+-#define DEBUG_OPTION "d"
+-int debug=0;
+-#else
+-#define DEBUG_OPTION
+-#endif
+-
+-#ifdef ENABLE_REPLAY
+-#define  REPLAY_OPTION   "r"
+-#else
+-#define  REPLAY_OPTION
+-#endif
+-
+-extern char *optarg;  /* according to man 2 getopt */
+-
+-#include <stdint.h>
+-typedef uint32_t u32;  /* universal for C99 */
+-/* typedef u_int32_t u32;   older Linux installs? */
+-
+-/* XXX fixme - non-automatic build configuration */
+-#ifdef __linux__
+-#include <sys/utsname.h>
+-#include <sys/time.h>
+-#include <sys/timex.h>
+-#include <netdb.h>
+-#else
+-extern struct hostent *gethostbyname(const char *name);
+-extern int h_errno;
+-#define herror(hostname) \
+-	fprintf(stderr,"Error %d looking up hostname %s\n", h_errno,hostname)
+-#endif
+-/* end configuration for host systems */
+-
+-#define JAN_1970        0x83aa7e80      /* 2208988800 1970 - 1900 in seconds */
+-#define NTP_PORT (123)
+-
+-/* How to multiply by 4294.967296 quickly (and not quite exactly)
+- * without using floating point or greater than 32-bit integers.
+- * If you want to fix the last 12 microseconds of error, add in
+- * (2911*(x))>>28)
+- */
+-#define NTPFRAC(x) ( 4294*(x) + ( (1981*(x))>>11 ) )
+-
+-/* The reverse of the above, needed if we want to set our microsecond
+- * clock (via clock_settime) based on the incoming time in NTP format.
+- * Basically exact.
+- */
+-#define USEC(x) ( ( (x) >> 12 ) - 759 * ( ( ( (x) >> 10 ) + 32768 ) >> 16 ) )
+-
+-/* Converts NTP delay and dispersion, apparently in seconds scaled
+- * by 65536, to microseconds.  RFC-1305 states this time is in seconds,
+- * doesn't mention the scaling.
+- * Should somehow be the same as 1000000 * x / 65536
+- */
+-#define sec2u(x) ( (x) * 15.2587890625 )
+-
+-struct ntptime {
+-	unsigned int coarse;
+-	unsigned int fine;
+-};
+-
+-struct ntp_control {
+-	u32 time_of_send[2];
+-	int live;
+-	int set_clock;   /* non-zero presumably needs root privs */
+-	int probe_count;
+-	int cycle_time;
+-	int goodness;
+-	int cross_check;
+-	char serv_addr[4];
+-};
+-
+-/* prototypes for some local routines */
+-static void send_packet(int usd, u32 time_sent[2]);
+-static int rfc1305print(u32 *data, struct ntptime *arrival, struct ntp_control *ntpc, int *error);
+-/* static void udp_handle(int usd, char *data, int data_len, struct sockaddr *sa_source, int sa_len); */
+-
+-static int get_current_freq(void)
+-{
+-	/* OS dependent routine to get the current value of clock frequency.
+-	 */
+-#ifdef __linux__
+-	struct timex txc;
+-	txc.modes=0;
+-	if (adjtimex(&txc) < 0) {
+-		perror("adjtimex");
+-		exit(1);
+-	}
+-	return txc.freq;
+-#else
+-	return 0;
+-#endif
+-}
+-
+-static int set_freq(int new_freq)
+-{
+-	/* OS dependent routine to set a new value of clock frequency.
+-	 */
+-#ifdef __linux__
+-	struct timex txc;
+-	txc.modes = ADJ_FREQUENCY;
+-	txc.freq = new_freq;
+-	if (adjtimex(&txc) < 0) {
+-		perror("adjtimex");
+-		exit(1);
+-	}
+-	return txc.freq;
+-#else
+-	return 0;
+-#endif
+-}
+-
+-static void set_time(struct ntptime *new)
+-{
+-#ifndef USE_OBSOLETE_GETTIMEOFDAY
+-	/* POSIX 1003.1-2001 way to set the system clock
+-	 */
+-	struct timespec tv_set;
+-	/* it would be even better to subtract half the slop */
+-	tv_set.tv_sec  = new->coarse - JAN_1970;
+-	/* divide xmttime.fine by 4294.967296 */
+-	tv_set.tv_nsec = USEC(new->fine)*1000;
+-	if (clock_settime(CLOCK_REALTIME, &tv_set)<0) {
+-		perror("clock_settime");
+-		exit(1);
+-	}
+-	if (debug) {
+-		printf("set time to %lu.%.9lu\n", tv_set.tv_sec, tv_set.tv_nsec);
+-	}
+-#else
+-	/* Traditional Linux way to set the system clock
+-	 */
+-	struct timeval tv_set;
+-	/* it would be even better to subtract half the slop */
+-	tv_set.tv_sec  = new->coarse - JAN_1970;
+-	/* divide xmttime.fine by 4294.967296 */
+-	tv_set.tv_usec = USEC(new->fine);
+-	if (settimeofday(&tv_set,NULL)<0) {
+-		perror("settimeofday");
+-		exit(1);
+-	}
+-	if (debug) {
+-		printf("set time to %lu.%.6lu\n", tv_set.tv_sec, tv_set.tv_usec);
+-	}
+-#endif
+-}
+-
+-static void ntpc_gettime(u32 *time_coarse, u32 *time_fine)
+-{
+-#ifndef USE_OBSOLETE_GETTIMEOFDAY
+-	/* POSIX 1003.1-2001 way to get the system time
+-	 */
+-	struct timespec now;
+-	clock_gettime(CLOCK_REALTIME, &now);
+-	*time_coarse = now.tv_sec + JAN_1970;
+-	*time_fine   = NTPFRAC(now.tv_nsec/1000);
+-#else
+-	/* Traditional Linux way to get the system time
+-	 */
+-	struct timeval now;
+-	gettimeofday(&now, NULL);
+-	*time_coarse = now.tv_sec + JAN_1970;
+-	*time_fine   = NTPFRAC(now.tv_usec);
+-#endif
+-}
+-
+-static void send_packet(int usd, u32 time_sent[2])
+-{
+-	u32 data[12];
+-#define LI 0
+-#define VN 3
+-#define MODE 3
+-#define STRATUM 0
+-#define POLL 4
+-#define PREC -6
+-
+-	if (debug) fprintf(stderr,"Sending ...\n");
+-	if (sizeof data != 48) {
+-		fprintf(stderr,"size error\n");
+-		return;
+-	}
+-	memset(data, 0, sizeof data);
+-	data[0] = htonl (
+-		( LI << 30 ) | ( VN << 27 ) | ( MODE << 24 ) |
+-		( STRATUM << 16) | ( POLL << 8 ) | ( PREC & 0xff ) );
+-	data[1] = htonl(1<<16);  /* Root Delay (seconds) */
+-	data[2] = htonl(1<<16);  /* Root Dispersion (seconds) */
+-	ntpc_gettime(time_sent, time_sent+1);
+-	data[10] = htonl(time_sent[0]); /* Transmit Timestamp coarse */
+-	data[11] = htonl(time_sent[1]); /* Transmit Timestamp fine   */
+-	send(usd,data,48,0);
+-}
+-
+-static void get_packet_timestamp(int usd, struct ntptime *udp_arrival_ntp)
+-{
+-#ifdef PRECISION_SIOCGSTAMP
+-	struct timeval udp_arrival;
+-	if ( ioctl(usd, SIOCGSTAMP, &udp_arrival) < 0 ) {
+-		perror("ioctl-SIOCGSTAMP");
+-		ntpc_gettime(&udp_arrival_ntp->coarse, &udp_arrival_ntp->fine);
+-	} else {
+-		udp_arrival_ntp->coarse = udp_arrival.tv_sec + JAN_1970;
+-		udp_arrival_ntp->fine   = NTPFRAC(udp_arrival.tv_usec);
+-	}
+-#else
+-	(void) usd;  /* not used */
+-	ntpc_gettime(&udp_arrival_ntp->coarse, &udp_arrival_ntp->fine);
+-#endif
+-}
+-
+-static int check_source(int data_len, struct sockaddr_in *sa_in, unsigned int sa_len, struct ntp_control *ntpc)
+-{
+-	struct sockaddr *sa_source = (struct sockaddr *) sa_in;
+-	(void) sa_len;  /* not used */
+-	if (debug) {
+-		printf("packet of length %d received\n",data_len);
+-		if (sa_source->sa_family==AF_INET) {
+-			printf("Source: INET Port %d host %s\n",
+-				ntohs(sa_in->sin_port),inet_ntoa(sa_in->sin_addr));
+-		} else {
+-			printf("Source: Address family %d\n",sa_source->sa_family);
+-		}
+-	}
+-	/* we could check that the source is the server we expect, but
+-	 * Denys Vlasenko recommends against it: multihomed hosts get it
+-	 * wrong too often. */
+-#if 0
+-	if (memcmp(ntpc->serv_addr, &(sa_in->sin_addr), 4)!=0) {
+-		return 1;  /* fault */
+-	}
+-#else
+-	(void) ntpc; /* not used */
+-#endif
+-	if (NTP_PORT != ntohs(sa_in->sin_port)) {
+-		return 1;  /* fault */
+-	}
+-	return 0;
+-}
+-
+-static double ntpdiff( struct ntptime *start, struct ntptime *stop)
+-{
+-	int a;
+-	unsigned int b;
+-	a = stop->coarse - start->coarse;
+-	if (stop->fine >= start->fine) {
+-		b = stop->fine - start->fine;
+-	} else {
+-		b = start->fine - stop->fine;
+-		b = ~b;
+-		a -= 1;
+-	}
+-
+-	return a*1.e6 + b * (1.e6/4294967296.0);
+-}
+-
+-/* Does more than print, so this name is bogus.
+- * It also makes time adjustments, both sudden (-s)
+- * and phase-locking (-l).
+- * sets *error to the number of microseconds uncertainty in answer
+- * returns 0 normally, 1 if the message fails sanity checks
+- */
+-static int rfc1305print(u32 *data, struct ntptime *arrival, struct ntp_control *ntpc, int *error)
+-{
+-/* straight out of RFC-1305 Appendix A */
+-	int li, vn, mode, stratum, poll, prec;
+-	int delay, disp, refid;
+-	struct ntptime reftime, orgtime, rectime, xmttime;
+-	double el_time,st_time,skew1,skew2;
+-	int freq;
+-#ifdef ENABLE_DEBUG
+-	const char *drop_reason=NULL;
+-#endif
+-
+-#define Data(i) ntohl(((u32 *)data)[i])
+-	li      = Data(0) >> 30 & 0x03;
+-	vn      = Data(0) >> 27 & 0x07;
+-	mode    = Data(0) >> 24 & 0x07;
+-	stratum = Data(0) >> 16 & 0xff;
+-	poll    = Data(0) >>  8 & 0xff;
+-	prec    = Data(0)       & 0xff;
+-	if (prec & 0x80) prec|=0xffffff00;
+-	delay   = Data(1);
+-	disp    = Data(2);
+-	refid   = Data(3);
+-	reftime.coarse = Data(4);
+-	reftime.fine   = Data(5);
+-	orgtime.coarse = Data(6);
+-	orgtime.fine   = Data(7);
+-	rectime.coarse = Data(8);
+-	rectime.fine   = Data(9);
+-	xmttime.coarse = Data(10);
+-	xmttime.fine   = Data(11);
+-#undef Data
+-
+-	if (debug) {
+-	printf("LI=%d  VN=%d  Mode=%d  Stratum=%d  Poll=%d  Precision=%d\n",
+-		li, vn, mode, stratum, poll, prec);
+-	printf("Delay=%.1f  Dispersion=%.1f  Refid=%u.%u.%u.%u\n",
+-		sec2u(delay),sec2u(disp),
+-		refid>>24&0xff, refid>>16&0xff, refid>>8&0xff, refid&0xff);
+-	printf("Reference %u.%.6u\n", reftime.coarse, USEC(reftime.fine));
+-	printf("(sent)    %u.%.6u\n", ntpc->time_of_send[0], USEC(ntpc->time_of_send[1]));
+-	printf("Originate %u.%.6u\n", orgtime.coarse, USEC(orgtime.fine));
+-	printf("Receive   %u.%.6u\n", rectime.coarse, USEC(rectime.fine));
+-	printf("Transmit  %u.%.6u\n", xmttime.coarse, USEC(xmttime.fine));
+-	printf("Our recv  %u.%.6u\n", arrival->coarse, USEC(arrival->fine));
+-	}
+-	el_time=ntpdiff(&orgtime,arrival);   /* elapsed */
+-	st_time=ntpdiff(&rectime,&xmttime);  /* stall */
+-	skew1=ntpdiff(&orgtime,&rectime);
+-	skew2=ntpdiff(&xmttime,arrival);
+-	freq=get_current_freq();
+-	if (debug) {
+-	printf("Total elapsed: %9.2f\n"
+-	       "Server stall:  %9.2f\n"
+-	       "Slop:          %9.2f\n",
+-		el_time, st_time, el_time-st_time);
+-	printf("Skew:          %9.2f\n"
+-	       "Frequency:     %9d\n"
+-	       " day   second     elapsed    stall     skew  dispersion  freq\n",
+-		(skew1-skew2)/2, freq);
+-	}
+-
+-	/* error checking, see RFC-4330 section 5 */
+-#ifdef ENABLE_DEBUG
+-#define FAIL(x) do { drop_reason=(x); goto fail;} while (0)
+-#else
+-#define FAIL(x) goto fail;
+-#endif
+-	if (ntpc->cross_check) {
+-		if (li == 3) FAIL("LI==3");  /* unsynchronized */
+-		if (vn < 3) FAIL("VN<3");   /* RFC-4330 documents SNTP v4, but we interoperate with NTP v3 */
+-		if (mode != 4) FAIL("MODE!=3");
+-		if (orgtime.coarse != ntpc->time_of_send[0] ||
+-		    orgtime.fine   != ntpc->time_of_send[1] ) FAIL("ORG!=sent");
+-		if (xmttime.coarse == 0 && xmttime.fine == 0) FAIL("XMT==0");
+-		if (delay > 65536 || delay < -65536) FAIL("abs(DELAY)>65536");
+-		if (disp  > 65536 || disp  < -65536) FAIL("abs(DISP)>65536");
+-		if (stratum == 0) FAIL("STRATUM==0");  /* kiss o' death */
+-#undef FAIL
+-	}
+-
+-	/* XXX should I do this if debug flag is set? */
+-	if (ntpc->set_clock) { /* you'd better be root, or ntpclient will exit here! */
+-		set_time(&xmttime);
+-	}
+-
+-	/* Not the ideal order for printing, but we want to be sure
+-	 * to do all the time-sensitive thinking (and time setting)
+-	 * before we start the output, especially fflush() (which
+-	 * could be slow).  Of course, if debug is turned on, speed
+-	 * has gone down the drain anyway. */
+-	if (ntpc->live) {
+-		int new_freq;
+-		new_freq = contemplate_data(arrival->coarse, (skew1-skew2)/2,
+-			el_time+sec2u(disp), freq);
+-		if (!debug && new_freq != freq) set_freq(new_freq);
+-	}
+-	printf("%d %.5d.%.3d  %8.1f %8.1f  %8.1f %8.1f %9d\n",
+-		arrival->coarse/86400, arrival->coarse%86400,
+-		arrival->fine/4294967, el_time, st_time,
+-		(skew1-skew2)/2, sec2u(disp), freq);
+-	fflush(stdout);
+-	*error = el_time-st_time;
+-
+-	return 0;
+-fail:
+-#ifdef ENABLE_DEBUG
+-	printf("%d %.5d.%.3d  rejected packet: %s\n",
+-		arrival->coarse/86400, arrival->coarse%86400,
+-		arrival->fine/4294967, drop_reason);
+-#else
+-	printf("%d %.5d.%.3d  rejected packet\n",
+-		arrival->coarse/86400, arrival->coarse%86400,
+-		arrival->fine/4294967);
+-#endif
+-	return 1;
+-}
+-
+-static void stuff_net_addr(struct in_addr *p, char *hostname)
+-{
+-	struct hostent *ntpserver;
+-	ntpserver=gethostbyname(hostname);
+-	if (ntpserver == NULL) {
+-		herror(hostname);
+-		exit(1);
+-	}
+-	if (ntpserver->h_length != 4) {
+-		/* IPv4 only, until I get a chance to test IPv6 */
+-		fprintf(stderr,"oops %d\n",ntpserver->h_length);
+-		exit(1);
+-	}
+-	memcpy(&(p->s_addr),ntpserver->h_addr_list[0],4);
+-}
+-
+-static void setup_receive(int usd, unsigned int interface, short port)
+-{
+-	struct sockaddr_in sa_rcvr;
+-	memset(&sa_rcvr, 0, sizeof sa_rcvr);
+-	sa_rcvr.sin_family=AF_INET;
+-	sa_rcvr.sin_addr.s_addr=htonl(interface);
+-	sa_rcvr.sin_port=htons(port);
+-	if(bind(usd,(struct sockaddr *) &sa_rcvr,sizeof sa_rcvr) == -1) {
+-		perror("bind");
+-		fprintf(stderr,"could not bind to udp port %d\n",port);
+-		exit(1);
+-	}
+-	/* listen(usd,3); this isn't TCP; thanks Alexander! */
+-}
+-
+-static void setup_transmit(int usd, char *host, short port, struct ntp_control *ntpc)
+-{
+-	struct sockaddr_in sa_dest;
+-	memset(&sa_dest, 0, sizeof sa_dest);
+-	sa_dest.sin_family=AF_INET;
+-	stuff_net_addr(&(sa_dest.sin_addr),host);
+-	memcpy(ntpc->serv_addr,&(sa_dest.sin_addr),4); /* XXX asumes IPv4 */
+-	sa_dest.sin_port=htons(port);
+-	if (connect(usd,(struct sockaddr *)&sa_dest,sizeof sa_dest)==-1)
+-		{perror("connect");exit(1);}
+-}
+-
+-static void primary_loop(int usd, struct ntp_control *ntpc)
+-{
+-	fd_set fds;
+-	struct sockaddr_in sa_xmit_in;
+-	int i, pack_len, probes_sent, error;
+-	socklen_t sa_xmit_len;
+-	struct timeval to;
+-	struct ntptime udp_arrival_ntp;
+-	static u32 incoming_word[325];
+-#define incoming ((char *) incoming_word)
+-#define sizeof_incoming (sizeof incoming_word)
+-
+-	if (debug) printf("Listening...\n");
+-
+-	probes_sent=0;
+-	sa_xmit_len=sizeof sa_xmit_in;
+-	to.tv_sec=0;
+-	to.tv_usec=0;
+-	for (;;) {
+-		FD_ZERO(&fds);
+-		FD_SET(usd, &fds);
+-		i = select(usd+1, &fds, NULL, NULL, &to);  /* Wait on read or error */
+-		if ((i!=1)||(!FD_ISSET(usd,&fds))) {
+-			if (i < 0) {
+-				if (errno != EINTR) perror("select");
+-				continue;
+-			}
+-			if (to.tv_sec == 0) {
+-				if (probes_sent >= ntpc->probe_count &&
+-					ntpc->probe_count != 0) break;
+-				send_packet(usd,ntpc->time_of_send);
+-				++probes_sent;
+-				to.tv_sec=ntpc->cycle_time;
+-				to.tv_usec=0;
+-			}
+-			continue;
+-		}
+-		pack_len=recvfrom(usd,incoming,sizeof_incoming,0,
+-		                  (struct sockaddr *) &sa_xmit_in,&sa_xmit_len);
+-		error = ntpc->goodness;
+-		if (pack_len<0) {
+-			perror("recvfrom");
+-		} else if (pack_len>0 && (unsigned)pack_len<sizeof_incoming){
+-			get_packet_timestamp(usd, &udp_arrival_ntp);
+-			if (check_source(pack_len, &sa_xmit_in, sa_xmit_len, ntpc)!=0) continue;
+-			if (rfc1305print(incoming_word, &udp_arrival_ntp, ntpc, &error)!=0) continue;
+-			/* udp_handle(usd,incoming,pack_len,&sa_xmit,sa_xmit_len); */
+-		} else {
+-			printf("Ooops.  pack_len=%d\n",pack_len);
+-			fflush(stdout);
+-		}
+-		/* best rollover option: specify -g, -s, and -l.
+-		 * simpler rollover option: specify -s and -l, which
+-		 * triggers a magic -c 1 */
+-		if ((error < ntpc->goodness && ntpc->goodness != 0) ||
+-		    (probes_sent >= ntpc->probe_count && ntpc->probe_count != 0)) {
+-			ntpc->set_clock = 0;
+-			if (!ntpc->live) break;
+-		}
+-	}
+-#undef incoming
+-#undef sizeof_incoming
+-}
+-
+-#ifdef ENABLE_REPLAY
+-static void do_replay(void)
+-{
+-	char line[100];
+-	int n, day, freq, absolute;
+-	float sec, el_time, st_time, disp;
+-	double skew, errorbar;
+-	int simulated_freq = 0;
+-	unsigned int last_fake_time = 0;
+-	double fake_delta_time = 0.0;
+-
+-	while (fgets(line,sizeof line,stdin)) {
+-		n=sscanf(line,"%d %f %f %f %lf %f %d",
+-			&day, &sec, &el_time, &st_time, &skew, &disp, &freq);
+-		if (n==7) {
+-			fputs(line,stdout);
+-			absolute=day*86400+(int)sec;
+-			errorbar=el_time+disp;
+-			if (debug) printf("contemplate %u %.1f %.1f %d\n",
+-				absolute,skew,errorbar,freq);
+-			if (last_fake_time==0) simulated_freq=freq;
+-			fake_delta_time += (absolute-last_fake_time)*((double)(freq-simulated_freq))/65536;
+-			if (debug) printf("fake %f %d \n", fake_delta_time, simulated_freq);
+-			skew += fake_delta_time;
+-			freq = simulated_freq;
+-			last_fake_time = absolute;
+-			simulated_freq = contemplate_data(absolute, skew, errorbar, freq);
+-		} else {
+-			fprintf(stderr,"Replay input error\n");
+-			exit(2);
+-		}
+-	}
+-}
+-#endif
+-
+-static void usage(char *argv0)
+-{
+-	fprintf(stderr,
+-	"Usage: %s [-c count]"
+-#ifdef ENABLE_DEBUG
+-	" [-d]"
+-#endif
+-	" [-f frequency] [-g goodness] -h hostname\n"
+-	"\t[-i interval] [-l] [-p port] [-q min_delay]"
+-#ifdef ENABLE_REPLAY
+-	" [-r]"
+-#endif
+-	" [-s] [-t]\n",
+-	argv0);
+-}
+-
+-int main(int argc, char *argv[]) {
+-	int usd;  /* socket */
+-	int c;
+-	/* These parameters are settable from the command line
+-	   the initializations here provide default behavior */
+-	short int udp_local_port=0;   /* default of 0 means kernel chooses */
+-	char *hostname=NULL;          /* must be set */
+-	int initial_freq;             /* initial freq value to use */
+-	struct ntp_control ntpc;
+-	ntpc.live=0;
+-	ntpc.set_clock=0;
+-	ntpc.probe_count=0;           /* default of 0 means loop forever */
+-	ntpc.cycle_time=600;          /* seconds */
+-	ntpc.goodness=0;
+-	ntpc.cross_check=1;
+-
+-	for (;;) {
+-		c = getopt( argc, argv, "c:" DEBUG_OPTION "f:g:h:i:lp:q:" REPLAY_OPTION "st");
+-		if (c == EOF) break;
+-		switch (c) {
+-			case 'c':
+-				ntpc.probe_count = atoi(optarg);
+-				break;
+-#ifdef ENABLE_DEBUG
+-			case 'd':
+-				++debug;
+-				break;
+-#endif
+-			case 'f':
+-				initial_freq = atoi(optarg);
+-				if (debug) printf("initial frequency %d\n",
+-						initial_freq);
+-				set_freq(initial_freq);
+-				break;
+-			case 'g':
+-				ntpc.goodness = atoi(optarg);
+-				break;
+-			case 'h':
+-				hostname = optarg;
+-				break;
+-			case 'i':
+-				ntpc.cycle_time = atoi(optarg);
+-				break;
+-			case 'l':
+-				(ntpc.live)++;
+-				break;
+-			case 'p':
+-				udp_local_port = atoi(optarg);
+-				break;
+-			case 'q':
+-				min_delay = atof(optarg);
+-				break;
+-#ifdef ENABLE_REPLAY
+-			case 'r':
+-				do_replay();
+-				exit(0);
+-				break;
+-#endif
+-			case 's':
+-				ntpc.set_clock++;
+-				break;
+-
+-			case 't':
+-				ntpc.cross_check = 0;
+-				break;
+-
+-			default:
+-				usage(argv[0]);
+-				exit(1);
+-		}
+-	}
+-	if (hostname == NULL) {
+-		usage(argv[0]);
+-		exit(1);
+-	}
+-
+-	if (ntpc.set_clock && !ntpc.live && !ntpc.goodness && !ntpc.probe_count) {
+-		ntpc.probe_count = 1;
+-	}
+-
+-	/* respect only applicable MUST of RFC-4330 */
+-	if (ntpc.probe_count != 1 && ntpc.cycle_time < MIN_INTERVAL) {
+-		ntpc.cycle_time = MIN_INTERVAL;
+-	}
+-
+-	if (debug) {
+-		printf("Configuration:\n"
+-		"  -c probe_count %d\n"
+-		"  -d (debug)     %d\n"
+-		"  -g goodness    %d\n"
+-		"  -h hostname    %s\n"
+-		"  -i interval    %d\n"
+-		"  -l live        %d\n"
+-		"  -p local_port  %d\n"
+-		"  -q min_delay   %f\n"
+-		"  -s set_clock   %d\n"
+-		"  -x cross_check %d\n",
+-		ntpc.probe_count, debug, ntpc.goodness,
+-		hostname, ntpc.cycle_time, ntpc.live, udp_local_port, min_delay,
+-		ntpc.set_clock, ntpc.cross_check );
+-	}
+-
+-	/* Startup sequence */
+-	if ((usd=socket(AF_INET,SOCK_DGRAM,IPPROTO_UDP))==-1) {
+-		perror ("socket");
+-		exit(1);
+-	}
+-
+-	setup_receive(usd, INADDR_ANY, udp_local_port);
+-
+-	setup_transmit(usd, hostname, NTP_PORT, &ntpc);
+-
+-	primary_loop(usd, &ntpc);
+-
+-	close(usd);
+-	return 0;
+-}
+diff --recursive --unified --new-file --no-dereference orig/ntpclient.h src/ntpclient.h
+--- orig/ntpclient.h	2010-12-28 06:13:28.000000000 +0000
++++ src/ntpclient.h	1970-01-01 00:00:00.000000000 +0000
+@@ -1,17 +0,0 @@
+-#ifndef NTPCLIENT_H
+-#define NTPCLIENT_H
+-
+-/* when present, debug is a true global */
+-#ifdef ENABLE_DEBUG
+-extern int debug;
+-#else
+-#define debug 0
+-#endif
+-
+-/* global tuning parameter */
+-extern double min_delay;
+-
+-/* prototype for function defined in phaselock.c */
+-int contemplate_data(unsigned int absolute, double skew, double errorbar, int freq);
+-
+-#endif
+diff --recursive --unified --new-file --no-dereference orig/phaselock.c src/phaselock.c
+--- orig/phaselock.c	2015-12-29 21:49:28.000000000 +0000
++++ src/phaselock.c	1970-01-01 00:00:00.000000000 +0000
+@@ -1,334 +0,0 @@
+-/*
+- * phaselock.c - Phase locking for NTP client
+- *
+- * Copyright (C) 2000, 2007  Larry Doolittle  <larry@doolittle.boa.org>
+- * Last hack: 30 December, 2007
+- *
+- *  This program is free software; you can redistribute it and/or modify
+- *  it under the terms of the GNU General Public License (Version 2,
+- *  June 1991) as published by the Free Software Foundation.  At the
+- *  time of writing, that license was published by the FSF with the URL
+- *  http://www.gnu.org/copyleft/gpl.html, and is incorporated herein by
+- *  reference.
+- *
+- *  This program is distributed in the hope that it will be useful,
+- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+- *  GNU General Public License for more details.
+- *
+- *  Possible future improvements:
+- *      - Subtract configurable amount from errorbar
+- *      - Build in general run-time access to tune parameters
+- *      - Sculpt code so it's legible, this version is out of control
+- *      - Write documentation  :-(
+- */
+-
+-#include <stdio.h>
+-#include "ntpclient.h"
+-
+-double min_delay = 800.0;  /* global, user-changeable, units are microseconds */
+-
+-#define RING_SIZE 16
+-#define MAX_CORRECT 250   /* ppm change to system clock */
+-#define MAX_C (MAX_CORRECT)*65536
+-static struct datum {
+-	unsigned int absolute;
+-	double skew;
+-	double errorbar;
+-	int freq;
+-	/* s.s.min and s.s.max (skews) are "corrected" to what they would
+-	 * have been if freq had been constant at its current value during
+-	 * the measurements.
+-	 */
+-	union {
+-		struct { double min; double max; } s;
+-		double ss[2];
+-	} s;
+-	/*
+-	double smin;
+-	double smax;
+-	 */
+-} d_ring[(RING_SIZE)];
+-
+-static struct _seg {
+-	double slope;
+-	double offset;
+-} maxseg[(RING_SIZE)+1], minseg[(RING_SIZE)+1];
+-
+-#if 0
+-/* draw a line from a to c, what the offset is of that line
+- * where that line matches b's slope coordinate.
+- */
+-static double interpolate(struct _seg *a, struct _seg *b, struct _seg *c)
+-{
+-	double x, y;
+-	x = (b->slope - a->slope) / (c->slope  - a->slope) ;
+-	y =         a->offset + x * (c->offset - a->offset);
+-	return y;
+-}
+-#endif
+-
+-static int next_up(int i) { int r = i+1; if (r>=(RING_SIZE)) r=0; return r;}
+-static int next_dn(int i) { int r = i-1; if (r<0) r=(RING_SIZE)-1; return r;}
+-
+-/* Looks at the line segments that start at point j, that end at
+- * all following points (ending at index rp).  The initial point
+- * is on curve s0, the ending point is on curve s1.  The curve choice
+- * (s.min vs. s.max) is based on the index in ss[].  The scan
+- * looks for the largest (sign=0) or smallest (sign=1) slope.
+- */
+-static int search(int rp, int j, int s0, int s1, int sign, struct _seg *answer)
+-{
+-	double dt, slope;
+-	int n, nextj=0, cinit=1;
+-	for (n=next_up(j); n!=next_up(rp); n=next_up(n)) {
+-		if (0 && debug) printf("d_ring[%d].s.ss[%d]=%f d_ring[%d].s.ss[%d]=%f\n",
+-			n, s0, d_ring[n].s.ss[s0], j, s1, d_ring[j].s.ss[s1]);
+-		dt = d_ring[n].absolute - d_ring[j].absolute;
+-		slope = (d_ring[n].s.ss[s0] - d_ring[j].s.ss[s1]) / dt;
+-		if (0 && debug) printf("slope %d%d%d [%d,%d] = %f\n",
+-			s0, s1, sign, j, n, slope);
+-		if (cinit || (slope < answer->slope) ^ sign) {
+-			answer->slope = slope;
+-			answer->offset = d_ring[n].s.ss[s0] +
+-				slope*(d_ring[rp].absolute - d_ring[n].absolute);
+-			cinit = 0;
+-			nextj = n;
+-		}
+-	}
+-	return nextj;
+-}
+-
+-/* Pseudo-class for finding consistent frequency shift */
+-#define MIN_INIT 20
+-static struct _polygon {
+-	double l_min;
+-	double r_min;
+-} df;
+-
+-static void polygon_reset(void)
+-{
+-	df.l_min = (MIN_INIT);
+-	df.r_min = (MIN_INIT);
+-}
+-
+-static double find_df(int *flag)
+-{
+-	if (df.l_min == 0.0) {
+-		if (df.r_min == 0.0) {
+-			return 0.0;   /* every point was OK */
+-		} else {
+-			return -df.r_min;
+-		}
+-	} else {
+-		if (df.r_min == 0.0) {
+-			return df.l_min;
+-		} else {
+-			if (flag) *flag=1;
+-			return 0.0;   /* some points on each side,
+-			               * or no data at all */
+-		}
+-	}
+-}
+-
+-/* Finds the amount of delta-f required to move a point onto a
+- * target line in delta-f/delta-t phase space.  Any line is OK
+- * as long as it's not convex and never returns greater than
+- * MIN_INIT. */
+-static double find_shift(double slope, double offset)
+-{
+-	double shift  = slope - offset/600.0;
+-	double shift2 = slope + 0.3 - offset/6000.0;
+-	if (shift2 < shift) shift = shift2;
+-	if (debug) printf("find_shift %f %f -> %f\n", slope, offset, shift);
+-	if (shift  < 0) return 0.0;
+-	return shift;
+-}
+-
+-static void polygon_point(struct _seg *s)
+-{
+-	double l, r;
+-	if (debug) printf("loop %f %f\n", s->slope, s->offset);
+-	l = find_shift(- s->slope,   s->offset);
+-	r = find_shift(  s->slope, - s->offset);
+-	if (l < df.l_min) df.l_min = l;
+-	if (r < df.r_min) df.r_min = r;
+-	if (debug) {
+-		printf("constraint left:  %f %f \n", l, df.l_min);
+-		printf("constraint right: %f %f \n", r, df.r_min);
+-	}
+-}
+-
+-/* Something like linear feedback to be used when we are "close" to
+- * phase lock.  Not really used at the moment:  the logic in find_df()
+- * never sets the flag. */
+-static double find_df_center(struct _seg *min, struct _seg *max, double gross_df)
+-{
+-	const double crit_time=1000.0;
+-	double slope  = 0.5 * (max->slope  + min->slope)+gross_df;
+-	double dslope =       (max->slope  - min->slope);
+-	double offset = 0.5 * (max->offset + min->offset);
+-	double doffset =      (max->offset - min->offset);
+-	double delta1 = -offset/ 600.0 - slope;
+-	double delta2 = -offset/1800.0 - slope;
+-	double delta  = 0.0;
+-	double factor = crit_time/(crit_time+doffset+dslope*1200.0);
+-	if (offset <  0 && delta2 > 0) delta = delta2;
+-	if (offset <  0 && delta1 < 0) delta = delta1;
+-	if (offset >= 0 && delta1 > 0) delta = delta1;
+-	if (offset >= 0 && delta2 < 0) delta = delta2;
+-	if (max->offset < -crit_time || min->offset > crit_time) return 0.0;
+-	if (debug) printf("find_df_center %f %f\n", delta, factor);
+-	return factor*delta;
+-}
+-
+-int contemplate_data(unsigned int absolute, double skew, double errorbar, int freq)
+-{
+-	/*  Here is the actual phase lock loop.
+-	 *  Need to keep a ring buffer of points to make a rational
+-	 *  decision how to proceed.  if (debug) print a lot.
+-	 */
+-	static int rp=0, valid=0;
+-	int both_sides_now=0;
+-	int j, n, c, max_avail, min_avail, dinit;
+-	int nextj=0;  /* initialization not needed; but gcc can't figure out my logic */
+-	double cum;
+-	struct _seg check, save_min, save_max;
+-	double last_slope;
+-	int delta_freq;
+-	double delta_f;
+-	int inconsistent=0, max_imax, max_imin=0, min_imax, min_imin=0;
+-	int computed_freq=freq;
+-
+-	if (debug) printf("xontemplate %u %.1f %.1f %d\n",absolute,skew,errorbar,freq);
+-	d_ring[rp].absolute = absolute;
+-	d_ring[rp].skew     = skew;
+-	d_ring[rp].errorbar = errorbar - min_delay;   /* quick hack to speed things up */
+-	d_ring[rp].freq     = freq;
+-
+-	if (valid<(RING_SIZE)) ++valid;
+-	if (valid==(RING_SIZE)) {
+-		/*
+-		 * Pass 1: correct for wandering freq's */
+-		cum = 0.0;
+-		if (debug) printf("\n");
+-		for (j=rp; ; j=n) {
+-			d_ring[j].s.s.max = d_ring[j].skew - cum + d_ring[j].errorbar;
+-			d_ring[j].s.s.min = d_ring[j].skew - cum - d_ring[j].errorbar;
+-			if (debug) printf("hist %d %d %f %f %f\n",j,d_ring[j].absolute-absolute,
+-				cum,d_ring[j].s.s.min,d_ring[j].s.s.max);
+-			n=next_dn(j);
+-			if (n == rp) break;
+-			/* Assume the freq change took place immediately after
+-			 * the data was taken; this is valid for the case where
+-			 * this program was responsible for the change.
+-			 */
+-			cum = cum + (d_ring[j].absolute-d_ring[n].absolute) *
+-				(double)(d_ring[j].freq-freq)/65536;
+-		}
+-		/*
+-		 * Pass 2: find the convex down envelope of s.max, composed of
+-		 * line segments in s.max vs. absolute space, which are
+-		 * points in freq vs. dt space.  Find points in order of increasing
+-		 * slope == freq */
+-		dinit=1; last_slope=-2*(MAX_CORRECT);
+-		for (c=1, j=next_up(rp); ; j=nextj) {
+-			nextj = search(rp, j, 1, 1, 0, &maxseg[c]);
+-			        search(rp, j, 0, 1, 1, &check);
+-			if (check.slope < maxseg[c].slope && check.slope > last_slope &&
+-			    (dinit || check.slope < save_min.slope)) {dinit=0; save_min=check; }
+-			if (debug) printf("maxseg[%d] = %f *x+ %f\n",
+-				 c, maxseg[c].slope, maxseg[c].offset);
+-			last_slope = maxseg[c].slope;
+-			c++;
+-			if (nextj == rp) break;
+-		}
+-		if (dinit==1) inconsistent=1;
+-		if (debug && dinit==0) printf ("mincross %f *x+ %f\n", save_min.slope, save_min.offset);
+-		max_avail=c;
+-		/*
+-		 * Pass 3: find the convex up envelope of s.min, composed of
+-		 * line segments in s.min vs. absolute space, which are
+-		 * points in freq vs. dt space.  These points are found in
+-		 * order of decreasing slope. */
+-		dinit=1; last_slope=+2*(MAX_CORRECT);
+-		for (c=1, j=next_up(rp); ; j=nextj) {
+-			nextj = search(rp, j, 0, 0, 1, &minseg[c]);
+-			        search(rp, j, 1, 0, 0, &check);
+-			if (check.slope > minseg[c].slope && check.slope < last_slope &&
+-			    (dinit || check.slope < save_max.slope)) {dinit=0; save_max=check; }
+-			if (debug) printf("minseg[%d] = %f *x+ %f\n",
+-				 c, minseg[c].slope, minseg[c].offset);
+-			last_slope = minseg[c].slope;
+-			c++;
+-			if (nextj == rp) break;
+-		}
+-		if (dinit==1) inconsistent=1;
+-		if (debug && dinit==0) printf ("maxcross %f *x+ %f\n", save_max.slope, save_max.offset);
+-		min_avail=c;
+-		/*
+-		 * Pass 4: splice together the convex polygon that forms
+-		 * the envelope of slope/offset coordinates that are consistent
+-		 * with the observed data.  The order of calls to polygon_point
+-		 * doesn't matter for the frequency shift determination, but
+-		 * the order chosen is nice for visual display. */
+-		if (!inconsistent) {
+-		polygon_reset();
+-		polygon_point(&save_min);
+-		for (dinit=1, c=1; c<max_avail; c++) {
+-			if (dinit && maxseg[c].slope > save_min.slope) {
+-				max_imin = c-1;
+-				maxseg[max_imin] = save_min;
+-				dinit = 0;
+-			}
+-			if (maxseg[c].slope > save_max.slope)
+-				break;
+-			if (dinit==0) polygon_point(&maxseg[c]);
+-		}
+-		if (dinit && debug) printf("found maxseg vs. save_min inconsistency\n");
+-		if (dinit) inconsistent=1;
+-		max_imax = c;
+-		maxseg[max_imax] = save_max;
+-
+-		polygon_point(&save_max);
+-		for (dinit=1, c=1; c<min_avail; c++) {
+-			if (dinit && minseg[c].slope < save_max.slope) {
+-				max_imin = c-1;
+-				minseg[min_imin] = save_max;
+-				dinit = 0;
+-			}
+-			if (minseg[c].slope < save_min.slope)
+-				break;
+-			if (dinit==0) polygon_point(&minseg[c]);
+-		}
+-		if (dinit && debug) printf("found minseg vs. save_max inconsistency\n");
+-		if (dinit) inconsistent=1;
+-		min_imax = c;
+-		minseg[min_imax] = save_max;
+-
+-		/* not needed for analysis, but shouldn't hurt either */
+-		if (debug) polygon_point(&save_min);
+-		} /* !inconsistent */
+-
+-		/*
+-		 * Pass 5: decide on a new freq */
+-		if (inconsistent) {
+-			printf("# inconsistent\n");
+-		} else {
+-			delta_f = find_df(&both_sides_now);
+-			if (debug) printf("find_df() = %e\n", delta_f);
+-			delta_f += find_df_center(&save_min,&save_max, delta_f);
+-			delta_freq = delta_f*65536+.5;
+-			if (debug) printf("delta_f %f  delta_freq %d  bsn %d\n", delta_f, delta_freq, both_sides_now);
+-			computed_freq -= delta_freq;
+-			printf ("# box [( %.3f , %.1f ) ",  save_min.slope, save_min.offset);
+-			printf (      " ( %.3f , %.1f )] ", save_max.slope, save_max.offset);
+-			printf (" delta_f %.3f  computed_freq %d\n", delta_f, computed_freq);
+-
+-			if (computed_freq < -(MAX_C)) computed_freq=-(MAX_C);
+-			if (computed_freq >  (MAX_C)) computed_freq= (MAX_C);
+-		}
+-	}
+-	rp = (rp+1)%(RING_SIZE);
+-	return computed_freq;
+-}
+diff --recursive --unified --new-file --no-dereference orig/rate.awk src/rate.awk
+--- orig/rate.awk	2003-07-14 03:52:52.000000000 +0000
++++ src/rate.awk	1970-01-01 00:00:00.000000000 +0000
+@@ -1,18 +0,0 @@
+-(FNR==1){ day_off=$1;        t1=$2; o1=$5; f1=$7}
+-        { t2=($1-day_off)*86400+$2; o2=$5; f2=$7; if (f2!=f1) fwarn=1}
+-
+-END{
+-  print "delta-t",t2-t1,"seconds"
+-  print "delta-o",o2-o1,"useconds"
+-  if (fwarn) print " *** frequency changed in the middle - don't use ***"
+-  slope=(o2-o1)/(t2-t1)
+-  print "slope",slope,"ppm"
+-  print "old frequency",f1,"(",f1/65536,"ppm)"
+-  f3=f1+int(slope*65536);
+-  print "new frequency",f3,"(",f3/65536,"ppm)"
+-}
+-
+-# the final value is what you should push into the adjtimex(2) field.
+-# i.e., if the last line shows
+-# new frequency -1318109 ( -20.1127 ppm)
+-# you put -1318109 into the -f switch of adjtimex (e.g., adjtimex -f -1318109)
+diff --recursive --unified --new-file --no-dereference orig/rate2.awk src/rate2.awk
+--- orig/rate2.awk	2015-08-27 13:59:34.000000000 +0000
++++ src/rate2.awk	1970-01-01 00:00:00.000000000 +0000
+@@ -1,193 +0,0 @@
+-#!/usr/bin/awk -f
+-
+-# There are more comments below the following BEGIN block.
+-
+-BEGIN {
+-	# This value is in seconds.
+-	# It must match the -i interval used with ntpclient if not
+-	# the default of 10 minutes.
+-	td = 10 * 60;
+-
+-	# How many milliseconds may a sample be off by (system time) and
+-	# still be counted?
+-	# This check (with the above td) is here to tell you if you have
+-	# several ntpclient processes logging to the same file.
+-	tderr = 100;
+-
+-	# How many ppm may one sample's computed frequency differ from the
+-	# previous one and still be counted?
+-	# This check filters out records resulting from an NTP server glitch.
+-	freq_diff = 5;
+-
+-	# How many milliseconds may it take to get an answer from the
+-	# ntp server?
+-	# Long replies often produce glitchy results.
+-	ntp_delay = 100;
+-}
+-
+-# This script is to determine what your /etc/ntp.adj should be
+-# It is invoked thusly:
+-#     awk -f rate2.awk < /var/lib/ntp.log
+-# Unlike the original rate.awk script supplied with ntpclient,
+-# this one can be run against the log of a running ntpclient which
+-# is adjusting the adjtimex frequency.  The alternative is a drag
+-# because it means you cannot be keeping time while you are determining
+-# a suitable adjtimex frequency.  You, of course, can do that with
+-# this program too; you just don't have to.  Given a file that works
+-# with the original rate.awk, this script should produce similar
+-# results.  You may have to increase the above thresholds to keep
+-# records from being ignored so you get the same answers.
+-
+-# It is assumed that nothing besides ntpclient is adjusting that
+-# value for the duration of the creation of the log file.
+-
+-# It is recommended that you collect lots of log entries.
+-# It is further recommended that you collect logs for roughly an
+-# integer number of days to even out daily cycles (temperature, etc.)
+-
+-
+-# No tweaking necessary below here, I hope.
+-
+-function pretty_time(ss, dd, hh, mm, ret, f) {
+-	ss += 0;
+-	if(ss < 0) {
+-		ret = "-";
+-		ss = -ss;
+-	} else {
+-		ret = "";
+-	}
+-	mm = int(ss / 60); ss -= (mm * 60);
+-	hh = int(mm / 60); mm -= (hh * 60);
+-	dd = int(hh / 24); hh -= (dd * 24);
+-
+-	if(dd != 0) {
+-		ret = sprintf("%s%d+", ret, dd);
+-	}
+-	if(ret != "" || hh != 0) {
+-		ret = sprintf("%s%02d:", ret, hh);
+-	}
+-	if(ret != "" || mm != 0) {
+-		ret = sprintf("%s%02d:", ret, mm);
+-	}
+-	ss = sprintf("%06.3f", ss); sub(/0+$/, "", ss); sub(/\.$/, "", ss);
+-	if(ret != "" || (ss + 0) != 0) {
+-		ret = sprintf("%s%s", ret, ss);
+-	} else {
+-		ret = "0";
+-	}
+-	return ret;
+-}
+-
+-function abs(a) {
+-	a += 0;
+-	if(a < 0) {
+-		return -a;
+-	}
+-	else {
+-		return a;
+-	}
+-}
+-
+-function round(a, p) {
+-	p += 0;
+-	if(p == 0) {
+-		return int(a + 0.5);
+-	} else {
+-		return int((a / p) + 0.5) * p;
+-	}
+-}
+-
+-BEGIN {
+-	f1 = "";
+-	tderr = tderr / 1000;
+-	tdmin = td - tderr;
+-	tdmax = td + tderr;
+-	freq_diff = freq_diff * 65536;
+-	ntp_delay = ntp_delay * 1000;
+-	c = 0;
+-	ignored = 0;
+-	delta_o = 0;
+-	delta_t = 0;
+-	sum_f2 = 0;
+-	min_f2 = "init";
+-	max_f2 = "init";
+-	prev_f2 = "init";
+-}
+-
+-/^[0-9]/ {
+-	if(f1 == "") {
+-		t1 = $1 * 86400 + $2;
+-		o1 = $5;
+-		f1 = $7;
+-
+-		t2 = ts = t1;
+-		o2 = o1;
+-		fs = f1;
+-
+-		c++;
+-	} else {
+-		t2 = $1 * 86400 + $2;
+-		o2 = $5;
+-
+-		td = t2 - t1;
+-		od = o2 - o1;
+-		if($3 > ntp_delay) {
+-			print "Ignoring: ntp delay (" $3 / 1000 " ms) out of spec in line " FNR ".";
+-			ignored++;
+-		} else {
+-			if(td < tdmin || td > tdmax) {
+-				print "Ignoring: time difference (" pretty_time(td) ") out of spec in line " FNR ".";
+-				ignored++;
+-			} else {
+-				f2 = f1 + (65536 * od / td);
+-				if(prev_f2 == "init") {prev_f2 = f2;}
+-				if(abs(f2 - prev_f2) > freq_diff) {
+-					print "Ignoring: target frequency adjustment (" (f2 - prev_f2) / 65536 " ppm) out of spec in line " FNR ".";
+-					ignored++;
+-				} else {
+-					# weighted average
+-					sum_f2 += f2 * td;
+-					delta_o += od;
+-					delta_t += td;
+-
+-					# minimum / maximum
+-					if(min_f2 == "init") { min_f2 = f2; }
+-					else { if(f2 < min_f2) { min_f2 = f2; }}
+-					if(max_f2 == "init") { max_f2 = f2; }
+-					else { if(f2 > max_f2) { max_f2 = f2; }}
+-
+-					c++;
+-				}
+-				prev_f2 = f2;
+-			}
+-		}
+-
+-		t1 = t2;
+-		o1 = o2;
+-		f1 = $7;
+-	}
+-}
+-
+-END {
+-	if(ignored > 0) {
+-		print "";
+-	}
+-	print "total time:",pretty_time(round(delta_t));
+-	print "number of samples:",c;
+-	if(ignored > 0) {
+-		print "ignored samples:", ignored, "(" round(100 * ignored / (ignored + c)) "%)";
+-	}
+-	if(delta_t >= tdmin) {
+-		print "";
+-		slope = delta_o / delta_t;
+-		f2 = sum_f2 / delta_t;
+-		print "delta-t", delta_t, "seconds"
+-		print "delta-o", delta_o, "useconds"
+-		print "slope:", slope, "ppm";
+-		print "old frequency:", fs, "(" fs / 65536,"ppm)";
+-		#print "min frequency:", int(min_f2 + .5), "(" min_f2 / 65536,"ppm)";
+-		#print "max frequency:", int(max_f2 + .5), "(" max_f2 / 65536,"ppm)";
+-		print "new frequency:", int(f2 + .5), "(" f2 / 65536,"ppm)";
+-	}
+-}
+-
+diff --recursive --unified --new-file --no-dereference orig/src/HOWTO src/src/HOWTO
+--- orig/src/HOWTO	1970-01-01 00:00:00.000000000 +0000
++++ src/src/HOWTO	2023-11-28 15:20:53.000000000 +0000
+@@ -0,0 +1,176 @@
++The goal of ntpclient is not only to set your computer's clock
++right once, but keep it there.
++
++First, a note on typical 1990's and 2000's computer crystals.  They
++are truly pathetic.  A "real" crystal oscillator (TCXO) usually has
++an initial set error of less than 5 ppm, and variation over time, voltage,
++and temperature measured in tenths of a ppm (and an OCXO can reach ±0.3 ppm
++stability over ten years and 85°C temperature swing).  The devices used
++in conventional PC motherboards and single board computers, however,
++often have initial set errors up to 150 ppm, and will vary 5 ppm over
++the course of a day-night cycle in a pseudo-air-conditioned space.
++
++[Operating system software can sometimes exacerbate the problem.  I
++have seen some i686 Red Hat 7.3 systems run the clock at 512 Hz, or 953
++microseconds per tick, giving a built in 64 ppm error.  Even the normally
++exemplary DEC Alpha has, when run with Linux, a truly awful calibration
++scheme; Linux runs it with a nominal ticks per second of 1024, which
++gives a tick value of 977, theoretical additional error -448 ppm, actual
++frequency observed -443.7 ppm.]
++
++Still, the pattern is clear: the first and largest error of a crystal
++is its initial set error.  I strongly urge the calibration of each computer,
++and storing its frequency error in a non-volatile medium, before you
++do anything else with time setting and locking.  While you could do it
++in a few seconds using an accurate frequency counter, below I show a
++software-only method using ntpclient and a high quality NTP server.
++
++To perform the activities described, you need a way to control and monitor
++your system's clock -- both its frequency and value.  On Linux, the
++kernel API is described in adjtimex(2).  There are two programs that
++I know of that provide shell-level access to this interface, both called
++adjtimex(1).
++
++One is written by Steven Dick and Jim Van Zandt, see the adjtimex* files in
++http://metalab.unc.edu/pub/Linux/system/admin/time/
++It uses long options, and includes some interesting functionality beyond
++the basic exposure of adjtimex(2).
++
++I (Larry Doolittle) wrote the other; it uses short options, and has no
++bloat^H^H^H^H^Hextra features.  I include the code here for a standalone
++version; it is also incorporated into busybox (http://www.busybox.net),
++although you may have to select it at compile time, like any other component.
++
++Fortunately (and not coincidentally) the core functions of the two adjtimex
++programs can be used interchangeably, as long as you only use the short option
++variant of the Dick/Van Zandt adjtimex.  The options discussed here are:
++       -f    frequency (integer kernel units)
++       -o    time offset in microseconds
++       -t    kernel tick (microseconds per jiffy)
++
++First, set the time approximately right, as root:
++   ntpclient -s -h $NTPHOST
++You should see a single line printed like
++36765 4980.373    1341.0     39.7  956761.4    839.2  0
++Get used to this line: column headers are
++ 1. day since 1900
++ 2. seconds since midnight
++ 3. elapsed time for NTP transaction (microseconds)
++ 4. internal server delay (microseconds)
++ 5. clock difference between your computer and the NTP server (microseconds)
++ 6. dispersion reported by server (microseconds)
++ 7. your computer's adjtimex frequency (ppm * 65536)
++So in the example above, your computer's clock was a bit more than
++0.95 seconds fast, compared to the clock on $NTPHOST.
++Now check that the clock setting worked.
++   ntpclient -c 1 -h $NTPHOST
++36765 4993.512    1345.0     40.9    3615.3    839.2  0
++So now the time difference is only a few milliseconds.
++
++On to measure the frequency calibration for your system.
++If you're in a hurry, it's OK to only spend 20 minutes on this step.
++    ntpclient -i 60 -c 20 -h $NTPHOST >$(hostname).ntp.log &
++
++Otherwise, you will learn much more about your system and its communication
++with the NTP server by letting the log run for 24 hours.
++    ntpclient -i 300 -c 288 -h $NTPHOST >$(hostname).ntp.log &
++
++Things to watch for in the above log:
++
++If the last column (kernel frequency fine tune) ever changes, you haven't
++turned off other time adjustment programs.  AFAIK the only programs around
++that would move this number are ntpclient and xntpd.  On most out-of-the-box
++systems, that last column should start zero and stay zero.
++
++Use gnuplot to plot the resulting file as follows:
++   plot "HOSTNAME.ntp.log" using (($1-36765)*86400+$2):5:($3+$6-$4) with yerrorbars
++This shows time error (microseconds) as a function of elapsed time (seconds).
++The error bars show the uncertainty in the measurement.  Ideally, it would
++be a smooth, straight line, where the slope represents the frequency error
++of your crystal.
++
++If an occasional point is both off-center and has a large error bar, it shows
++a transaction got delayed somewhere in the process, either inside the server,
++or one of the two UDP packet propagation steps.  This is normal, and ntpclient
++can deal with those quite well.  If points are not evenly spaced on the
++horizontal axis, packets were actually lost; this is less common, but still OK.
++
++If the error bar becomes suddenly large, and takes a few minutes to slowly
++recover, your NTP host (presumably xntpd) had problems communicating with
++_its_ server, and reported that problem to you by increasing its "dispersion"
++(this is a hack, required by xntpd's core incorrect assumption that errors
++in network delays have Gaussian statistics; ntpclient does not have this flaw).
++
++If there are sudden large, persistent steps in error, some other program is
++making step changes to time.  Check for, e.g., ntpdate run as a cron job.
++If your client machine is OK, check for problems on the _host_ machine.
++
++Assuming the graph above is clean, and has non-garbled data for the first
++and last points, you can run it through the enclosed awk script (rate.awk)
++to determine the appropriate frequency value.
++$ awk -f rate.awk <test.dat
++delta-t 119400 seconds
++delta-o -142308 useconds
++slope -1.19186 ppm
++old frequency -1240000 ( -18.9209 ppm)
++new frequency -1318109 ( -20.1127 ppm)
++$
++
++For now, you should plug in the new frequency value
++   adjtimex -f -1318109
++Then reset the clock
++   ntpclient -s -h $NTPHOST
++and ponder how it makes sense in _your_ (possibly embedded) environment
++to have the number -1318109 applied via adjtimex every time your machine
++boots.  Or, simpler still, combine these two steps using a post-2005 version:
++   ntpclient -f -1318109 -s -h $NTPHOST
++
++If the frequency offset (absolute value) is greater than about 230 ppm
++(15073280), you have a problem: you may be able to fix it with the -t
++option to adjtimex, or you need to hack phaselock.c, that has a maximum
++adjustment extent of +/- 250 ppm built in (change the #define MAX_CORRECT
++and rebuild ntpclient).  I'd like to suggest that you replace the defective
++crystal instead, but I understand that is rarely practical.
++
++On to ntpclient -l.  This is actually easy, if you performed and understood
++the previous steps.  Run
++  ntpclient -l -h $NTPHOST
++in the background.  It will make small (probably less than 3 ppm) adjustments
++to the system frequency to keep the clocks locked.  Typical performance over
++Ethernet (even through a few routers) is a worst case error of +/- 10 ms.
++
++I won't try to tell you _where_ to put the boot time commands.  They should
++boil down to:
++   adjtimex -f $NONVOLATILE_MEMORY_VALUE
++   ntpclient -s -i 15 -g 10000 -h $NTPHOST
++   ntpclient -l -h $NTPHOST >some_log_file
++The second line makes explicit the retries that may be required for this
++UDP-based time protocol.  If the first time request takes longer than 10000
++microseconds to resolve, or the packets get lost, it instructs ntpclient to
++try again 15 seconds later (the minimum retry period mandated by RFC-4330),
++and it won't exit until it gets such a suitable response.
++
++As of 2006, ntpclient can in theory combine the three lines above into one:
++   ntpclient -f $NONVOLATILE_MEMORY_VALUE -s -l -i 600 -g 10000 -h $NTPHOST >some_log_file
++This can streamline the startup process, since you may be able to avoid a
++layer of shell scripting.  On the other hand, it is less tested, and there
++is no (current) means to independently set the packet interval for the
++set and lock phases.
++
++It's an interesting question how sensitive the boot process should be
++to the time set process.  If you have a battery backed hardware clock,
++there's not much problem running for a while without a network-accurate
++system clock.  In that case you could put both ntpclient commands into a
++background script, and the only possible issue is the sudden (but probably
++small) warp of the clock at the indefinite time in the boot sequence when
++ntpclient gets its acceptable answer.  On the other hand, some embedded
++computers have no clue what time it is until the network responds.  Any
++files created will be marked Jan 1 1970, and other application-dependent
++issues may arise if there is a nonsense time on the system during later
++parts of the boot sequence.  Then you may well want to enforce completion
++of the first ntpclient before starting your application.  If this is too
++drastic for you, and you want a fallback mode when the time server is dead,
++add a "-c 5" switch to the end of that ntpclient command, giving at most 5
++retries, if something goes wrong with the time set.  For that approach to be
++useful, consider patching the source to lower the minimum packet send
++interval from the RFC-4330-mandated 15 seconds.
+diff --recursive --unified --new-file --no-dereference orig/src/README src/src/README
+--- orig/src/README	1970-01-01 00:00:00.000000000 +0000
++++ src/src/README	2023-11-28 15:20:53.000000000 +0000
+@@ -0,0 +1,201 @@
++ntpclient is an NTP (RFC-1305, RFC-4330) client for unix-alike computers.
++Its functionality is a small subset of xntpd, but IMHO performs
++better (or at least has the potential to function better) within
++that limited scope.  Since it is much smaller than xntpd, it is
++also more relevant for embedded computers.
++
++ntpclient is Copyright 1997-2015 Larry Doolittle,
++and may be freely copied and modified according to the terms of the GNU
++General Public License, version 2.  If you want to distribute ntpclient
++under other terms, contact me.  I might agree to some other arrangement,
++if you talk to me _before_ you start violating GPL terms.
++
++ntpclient home page: http://doolittle.icarus.com/ntpclient/
++
++Joachim Nilsson created a fork of ntpclient that he maintains at
++http://vmlinux.org/jocke/ntpclient.shtml.  We don't have the same
++maintainance and build system sensibilities; some people may prefer his.
++In particular, he has converted his ntpclient to daemon and syslog.
++The basic functionality of the two versions should be identical.
++
++I found three forks of ntpclient on github:
++  https://github.com/wlach/ntpclient-android
++    Android-specific fork of Larry Doolittle's ntpclient program
++  https://github.com/troglobit/ntpclient
++    Fork of Larry Doolittle's ntpclient with damon and syslog support
++  https://github.com/ChristophGr/ntpclient
++    This is a fork starting with the code provided by Larry Doolittle
++
++To build on Linux, type "make".  Solaris and other Unix users will
++probably need to adjust the Makefile slightly.  It's not complex.
++For changing the system clock frequency, only the Linux adjtimex(2)
++interface is implemented at this time.  Non-Linux systems can only
++use ntpclient to measure time differences and set the system clock,
++by way of the POSIX 1003.1-2001 standard routines clock_gettime() and
++clock_settime().  Also see "Bugs", below.
++
++There are a few compile-time configurations possible, which require
++editing the Makefile.  Either do or don't define
++  ENABLE_DEBUG
++  ENABLE_REPLAY
++  USE_OBSOLETE_GETTIMEOFDAY
++  PRECISION_SIOCGSTAMP
++Try it first without changing the default: that will give you a full-
++featured ntpclient, that uses modern POSIX time functions, and works
++reasonably with all Linux kernels I have access to in 2015.  There are
++comments in ntpclient.c that you should read before experimenting with
++PRECISION_SIOCGSTAMP.
++
++Some older but otherwise (almost) serviceable Linux systems (e.g., Red Hat
++EL-3.0 and Ubuntu 4.10) have a totally broken POSIX clock_settime()
++implementation.  If you get "clock_settime: Invalid argument" when you
++run ntpclient -s, rebuild with -DUSE_OBSOLETE_GETTIMEOFDAY.  Linux systems
++that are even older won't even compile without that switch set.
++
++Usage: ntpclient [options]
++options:
++ -c count     stop after count time measurements (default 0 means go forever)
++ -d           print diagnostics (feature can be disabled at compile time)
++ -g goodness  causes ntpclient to stop after getting a result more accurate
++                   than goodness (microseconds, default 0 means go forever)
++ -h hostname  (mandatory) NTP server, against which to measure system time
++ -i interval  check time every interval seconds (default 600)
++ -l           attempt to lock local clock to server using adjtimex(2)
++ -p port      local NTP client UDP port (default 0 means "any available")
++ -q min_delay minimum packet delay for transaction (default 800 microseconds)
++ -r           replay analysis code based on stdin
++ -s           simple clock set (implies -c 1)
++ -t           trust network and server, no RFC-4330 recommended cross-checks
++
++Mortal users can use this program for monitoring, but not clock setting
++(with the -s or -l switches).  The -l switch is designed to be robust
++in any network environment, but has seen the most extensive testing in
++a low latency (less than 2 ms) Ethernet environment.  Users in other
++environments should study ntpclient's behavior, and be prepared to adjust
++internal tuning parameters.  A long description of how and why to use
++ntpclient is in the HOWTO file.  ntpclient always sends packets to the
++server's UDP port 123.
++
++One commonly needed tuning parameter for lock mode is min_delay, the
++shortest possible round-trip transaction time.  This can be set with the
++command line -q switch.  The historical default of 800 microseconds was
++good for local Ethernet hardware a few years ago.  If it is set too high,
++you will get a lot of "inconsistent" lines in the log file when time locking
++(-l switch).  The only true future-proof value is 0, but that will cause the
++local time to wander more than it should.  I use 200 on my workstation.
++
++The test.dat file has 200 lines of sample output.  Its first few lines,
++with the output column headers that are shown when the -d option is
++chosen, are:
++ day   second     elapsed    stall     skew  dispersion  freq
++36765 00180.386    1398.0     40.3  953773.9    793.5  -1240000
++36765 00780.382    1358.0     41.3  954329.0    915.5  -1240000
++36765 01380.381    1439.0     56.0  954871.3    915.5  -1240000
++
++day, second: time of measurement, UTC, relative to NTP epoch (Jan 1, 1900)
++elapsed:     total time from query to response (microseconds)
++stall:       time the server reports that it sat on the request (microseconds)
++skew:        difference between local time and server time (microseconds)
++dispersion:  reported by server, see RFC-1305 (microseconds)
++freq:        local clock frequency adjustment (Linux only, ppm*65536)
++
++A relatively new feature is a series of sanity checks on
++UDP packets received, generally as recommended by RFC-4330.  If it
++fails one of these tests, the line described above is replaced by
++36765 01380.381  rejected packet
++or, if ENABLE_DEBUG was selected at compile time, one of
++36765 01380.381  rejected packet: LI==3
++36765 01380.381  rejected packet: VN<3
++36765 01380.381  rejected packet: MODE!=3
++36765 01380.381  rejected packet: ORG!=sent
++36765 01380.381  rejected packet: XMT==0
++36765 01380.381  rejected packet: abs(DELAY)>65536
++36765 01380.381  rejected packet: abs(DISP)>65536
++36765 01380.381  rejected packet: STRATUM==0
++To see the actual values of the rejected packet, start ntpclient with the
++-d option; this will give a human-readable printout of every packet received,
++including the rejected ones.  To skip these checks, use the -t switch.
++
++test.dat is suitable for piping into ntpclient -r.  I have over 200000
++samples (lines) archived for study, that I don't include here.
++They are generally spaced 10 minutes apart, representing over three
++years of data logging (from a variety of machines, and not continuous,
++unfortunately).
++
++As a special, added bonus, I also include my adjtimex(1) program.
++See its man page and the HOWTO file for more information.
++
++envelope is a perl script that I have used for my lock studies.
++It's kind of a hack and not worth documenting here.
++
++Changes since the widely distributed ntpclient_2000_345 version:
++ -- new -g option (has had limited testing)
++ -- changed max frequency adjustment from 91 ppm to 150 ppm
++ -- fixed "inconsistent" bug in phaselock.c triggered by large freq errors
++ -- new files: HOWTO, adjtimex.c, adjtimex.1, rate.awk, log2date.pl
++ -- minor source code cleanups
++ -- source is now as 64-bit clean as practical; tested on Alpha
++ -- optional patches provided by Andy Warner, see andyw.patch
++ -- optional patches provided by Linksys, see linksys.patch
++ -- removed unreasonable 15020 day offset in date column (xntpd has this
++      offset, which turns days-since-1900-epoch into Modified Julian Day)
++
++Changes since the widely distributed ntpclient_2003_194 version:
++ -- default build is now -std=c99, but c89 sill works too
++ -- switch default compile from gettimeofday() to POSIX clock_gettime()
++ -- more sanity checking on the NTP reply packet, reference RFC-4330
++ -- fractional second printing in debug output changed to traditional decimal
++ -- new -f switch to set initial frequency
++ -- works to specify both -s and -l, will jump-set first and then phase lock
++ -- bug fix for select() error handling, thanks to Walter Harms
++ -- new man page, contributed by Walter Harms
++ -- most subroutines are now flagged static to the compiler
++ -- structural changes to the code, such as the new ntpclient.h file
++ -- dropped (mostly) obsolete patches from Linksys and Andy Warner
++
++Changes since ntpclient_2006_318:
++ -- adjustable min_delay parameter, used to be hard-coded 800 microseconds
++ -- remove useless listen() call, thanks to Alexander Indenbaum
++ -- fix length passed to recvfrom(), thanks to Alexander Indenbaum
++ -- tidy up 32-bit integer declarations, prodding from Brian McAllister
++ -- added rate2.awk, contributed by Lou Sortman
++ -- provide easy way to override 15 second MIN_INTERVAL at compile time
++ -- relax MIN_INTERVAL enforcement for one-shot use, thanks to Mihai Buha
++
++Changes since ntpclient_2007_365:
++ -- fixed type of sa_xmit_len, thanks vapier
++ -- dropped underscores in spelling of adjtimex(2), might make uClibc happier
++ -- include netdb.h and always define _BSD_SOURCE to get prototype for herror
++ -- minor formatting to align with Nilsson's fork
++ -- add -fno-strict-aliasing as needed by traditional network coding style
++
++Changes since ntpclient_2010_365:
++ -- fixed and re-enabled -DPRECISION_SIOCGSTAMP, seems to work properly with
++      modern (e.g., 3.x or 4.x) Linux kernel
++ -- tweak coding style to work better with modern compilers (e.g.,
++      gcc-gcc-4.9.2 and clang-3.5.0)
++ -- make c99 the default
++ -- list more warning flags in disabled part of Makefile
++ -- minor whitespace, parenthesis, and spelling changes in source files
++ -- use LDLIBES instad of LDFLAGS for -lrt in Makefile (thanks, ChristophGr)
++ -- move _POSIX_C_SOURCE and _BSD_SOURCE to Makefile
++
++Bugs:
++ -- Doesn't understand the LI (Leap second Indicator) field of an NTP packet
++ -- Doesn't interact with adjtimex(2) status value
++ -- Can't query multiple servers
++ -- IPv4 only
++ -- Requires Linux-style select() semantics, where timeout value is modified
++ -- Always returns success (0)
++
++Adherence to RFC-4330 chapter 10, Best practices:
++ 1.  enforced, unless someone tinkers with the source code
++ 2.  no backoff, but no retry either; this isn't TCP
++ 3.  not in scope for the upstream source
++ 4.  not in scope for the upstream source
++ 5.  not in scope for the upstream source
++ 6.  supported
++ 7.  not supported
++ 8.  not supported (scary opportunity to DOS the _client_)
++
++       - Larry Doolittle  <larry@doolittle.boa.org>
+diff --recursive --unified --new-file --no-dereference orig/src/adjtimex.c src/src/adjtimex.c
+--- orig/src/adjtimex.c	1970-01-01 00:00:00.000000000 +0000
++++ src/src/adjtimex.c	2023-11-28 15:20:53.000000000 +0000
+@@ -0,0 +1,153 @@
++/*
++ * adjtimex_1.c - read, and possibly modify, the Linux kernel `timex' variables.
++ *
++ * Originally written: October 1997
++ * Last hack: May 2003
++ * Copyright 1997, 2000, 2003 Larry Doolittle <larry@doolittle.boa.org>
++ *
++ *  This program is free software; you can redistribute it and/or modify
++ *  it under the terms of the GNU General Public License (Version 2,
++ *  June 1991) as published by the Free Software Foundation.  At the
++ *  time of writing, that license was published by the FSF with the URL
++ *  http://www.gnu.org/copyleft/gpl.html, and is incorporated herein by
++ *  reference.
++ *
++ *  This program is distributed in the hope that it will be useful,
++ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ *  GNU General Public License for more details.
++ *
++ * This adjtimex(1) is very similar in intent to adjtimex(8) by Steven
++ * Dick <ssd@nevets.oau.org> and Jim Van Zandt <jrv@vanzandt.mv.com>
++ * (see http://metalab.unc.edu/pub/Linux/system/admin/time/adjtimex*).
++ * That version predates this one, and is _much_ bigger and more
++ * featureful.  My independently written version was very similar to
++ * Steven's from the start, because they both follow the kernel timex
++ * structure.  I further tweaked this version to be equivalent to Steven's
++ * where possible, but I don't like getopt_long, so the actual usage
++ * syntax is incompatible.
++ *
++ * Amazingly enough, my Red Hat 5.2 sys/timex (and sub-includes)
++ * don't actually give a prototype for adjtimex(2), so building
++ * this code (with -Wall) gives a warning.  Later versions of
++ * glibc fix this issue.
++ *
++ * This program is too simple for a Makefile, just build with:
++ *  gcc -Wall -O adjtimex_1.c -o adjtimex
++ */
++
++#include <inttypes.h>
++#include <stdio.h>
++#include <sys/types.h>
++#include <stdlib.h>
++#include <unistd.h>
++#include <sys/timex.h>
++
++static struct {
++	int bit;
++	const char *name;
++} statlist[] = { { STA_PLL, "PLL" },
++		 { STA_PPSFREQ, "PPSFREQ" },
++		 { STA_PPSTIME, "PPSTIME" },
++		 { STA_FLL, "FFL" },
++		 { STA_INS, "INS" },
++		 { STA_DEL, "DEL" },
++		 { STA_UNSYNC, "UNSYNC" },
++		 { STA_FREQHOLD, "FREQHOLD" },
++		 { STA_PPSSIGNAL, "PPSSIGNAL" },
++		 { STA_PPSJITTER, "PPSJITTER" },
++		 { STA_PPSWANDER, "PPSWANDER" },
++		 { STA_PPSERROR, "PPSERROR" },
++		 { STA_CLOCKERR, "CLOCKERR" },
++		 { 0, NULL } };
++
++static const char *ret_code_descript[] = { "clock synchronized",       "insert leap second",
++					   "delete leap second",       "leap second in progress",
++					   "leap second has occurred", "clock not synchronized" };
++
++static void usage(char *prog)
++{
++	fprintf(stderr, "Usage: %s [ -q ] [ -o offset ] [ -f frequency ] [ -p timeconstant ] [ -t tick ]\n",
++		prog);
++}
++
++int main(int argc, char **argv)
++{
++	struct timex txc;
++	int quiet = 0;
++	int c, i, ret, sep;
++	txc.modes = 0;
++	for (;;) {
++		c = getopt(argc, argv, "qo:f:p:t:");
++		if (c == EOF)
++			break;
++		switch (c) {
++		case 'q':
++			quiet = 1;
++			break;
++		case 'o':
++			txc.offset = atoi(optarg);
++			txc.modes |= ADJ_OFFSET_SINGLESHOT;
++			break;
++		case 'f':
++			txc.freq = atoi(optarg);
++			txc.modes |= ADJ_FREQUENCY;
++			break;
++		case 'p':
++			txc.constant = atoi(optarg);
++			txc.modes |= ADJ_TIMECONST;
++			break;
++		case 't':
++			txc.tick = atoi(optarg);
++			txc.modes |= ADJ_TICK;
++			break;
++		default:
++			usage(argv[0]);
++			exit(1);
++		}
++	}
++	if (argc != optind) { /* no valid non-option parameters */
++		usage(argv[0]);
++		exit(1);
++	}
++
++	ret = adjtimex(&txc);
++
++	if (ret < 0)
++		perror("adjtimex");
++
++	if (!quiet && ret >= 0) {
++		printf("    mode:         %d\n"
++		       "-o  offset:       %ld\n"
++		       "-f  frequency:    %ld\n"
++		       "    maxerror:     %ld\n"
++		       "    esterror:     %ld\n"
++		       "    status:       %d ( ",
++		       txc.modes, txc.offset, txc.freq, txc.maxerror, txc.esterror, txc.status);
++
++		/* representative output of next code fragment:
++		   "PLL | PPSTIME" */
++		sep = 0;
++		for (i = 0; statlist[i].name; i++) {
++			if (txc.status & statlist[i].bit) {
++				if (sep)
++					fputs(" | ", stdout);
++				fputs(statlist[i].name, stdout);
++				sep = 1;
++			}
++		}
++
++		printf(" )\n"
++		       "-p  timeconstant: %ld\n"
++		       "    precision:    %ld\n"
++		       "    tolerance:    %ld\n"
++		       "-t  tick:         %ld\n"
++		       "    time.tv_sec:  %" PRId64 "\n"
++		       "    time.tv_usec: %" PRId64 "\n"
++		       "    return value: %d (%s)\n",
++		       txc.constant, txc.precision, txc.tolerance, txc.tick, (int64_t)txc.time.tv_sec,
++		       (int64_t)txc.time.tv_usec, ret,
++		       (ret >= 0 && ret <= 5) ? ret_code_descript[ret] : "error");
++	}
++	return (ret < 0);
++}
+diff --recursive --unified --new-file --no-dereference orig/src/debug.h src/src/debug.h
+--- orig/src/debug.h	1970-01-01 00:00:00.000000000 +0000
++++ src/src/debug.h	2023-11-28 15:20:53.000000000 +0000
+@@ -0,0 +1,11 @@
++#ifndef _DEBUG_H_
++#define _DEBUG_H_
++
++/* when present, debug is a true global */
++#ifdef ENABLE_DEBUG
++extern int g_debug;
++#else
++#define debug 0
++#endif
++
++#endif
+\ No newline at end of file
+diff --recursive --unified --new-file --no-dereference orig/src/envelope src/src/envelope
+--- orig/src/envelope	1970-01-01 00:00:00.000000000 +0000
++++ src/src/envelope	2023-11-28 15:20:53.000000000 +0000
+@@ -0,0 +1,75 @@
++#!/usr/bin/perl
++
++# print $ENV{"TIME_LOG_FILE"},"\n";
++open(D, "awk '{\$3=\$3-800;print \$0}' $ENV{TIME_LOG_FILE} | ./ntpclient -d -r|") || die;
++
++open(GC,"|gnuplot") || die;
++$oldfh=select(GC); $|=1; select($oldfh);
++print GC "$ARGV[0]\n";
++shift(@ARGV);
++
++$rawplot=0;
++
++sub closeout {
++	print LN "$maxxs $maxxo\n";
++	print LX "$maxxs $maxxo\n";
++	close MN;
++	close MX;
++	close RN;
++	close RX;
++	close LN;
++	close LX;
++	close LP;
++	if ($rawplot) { $cmd = "plot \"rawmax.dat\", \"rawmin.dat\"$xplots$nplots\n"; }
++	      # else    { $cmd = "plot \"max.dat\", \"min.dat\", \"rawmax.dat\", \"rawmin.dat\", \"loop.dat\"\n"; }
++	      else    { $cmd = "plot \"max.dat\", \"min.dat\", \"loop.dat\" with lines, 0.9*x>0.3?-(x-0.3)*6000:-x*600, 0.9*x<-0.3?-(x+0.3)*6000:-x*600\n"; }
++
++	if ($use) {
++		print GC $cmd || die;
++		$user=<>;
++		print GC $user;
++	}
++	$use=0;
++	$nplots="";
++	$xplots="";
++}
++
++sub bound_write {
++	($FD, $slope, $offset) = @_;
++	if ($FD eq "MX" && $slope < $maxxs && $slope > $minxs) {
++		print MN "$slope $offset\n" || die;
++	}
++	if ($FD eq "MN" && $slope < $maxxs && $slope > $minxs) {
++		print MN "$slope $offset\n" || die;
++	}
++}
++$first=1;
++$use=0;
++$nplots="";
++$xplots="";
++$scale=0.001;    # make raw and envelope fit on same scale
++$scale=1.0  if ($rawplot);
++while(<D>) {
++	chomp();
++	@A=split();
++	if (/^contemplate/) {
++		if (!$first) { closeout(); }
++		$first=0;
++		open(MN, ">min.dat")     || die;
++		open(MX, ">max.dat")     || die;
++		open(RN, ">rawmin.dat")  || die;
++		open(RX, ">rawmax.dat")  || die;
++		open(LN, ">loopmin.dat") || die;
++		open(LX, ">loopmax.dat") || die;
++		open(LP, ">loop.dat")    || die;
++	}
++	if (/^minseg/) {$use=1; $nplots .= ", $A[2]*x+$A[4]"; print MN "$A[2] $A[4]\n" || die; }
++	if (/^maxseg/) {$use=1; $xplots .= ", $A[2]*x+$A[4]"; print MX "$A[2] $A[4]\n" || die; }
++	if (/^mincro/) {$use=1; $xplots .= ", $A[1]*x+$A[3] title 'mincross'"; $minxs=$A[1]; $minxo=$A[3]; print LN "$A[1] $A[3]\n"; print LX "$A[1] $A[3]\n";}
++	if (/^maxcro/) {$use=1; $nplots .= ", $A[1]*x+$A[3] title 'maxcross'"; $maxxs=$A[1]; $maxxo=$A[3]; }
++	if (/^interp/ && $A[2]>$minxs && $A[2]<$maxxs) {$use=1; print LN "$A[2] $A[3]\n"; print LX "$A[2] $A[4]\n";}
++	if (/^hist/)   { $st=$A[2]*$scale; print RN "$st $A[4]\n"; print RX "$st $A[5]\n";}
++	if (/^loop/)   { print LP "$A[1] $A[2]\n"; }
++	if (/^xontemplate/ || /^delta_f/ || /^find_df_center/) { print "$_\n"; }
++}
++closeout();
+diff --recursive --unified --new-file --no-dereference orig/src/log.h src/src/log.h
+--- orig/src/log.h	1970-01-01 00:00:00.000000000 +0000
++++ src/src/log.h	2023-11-28 15:20:53.000000000 +0000
+@@ -0,0 +1,24 @@
++#ifndef _LOG_H_
++#define _LOG_H_
++
++#define LOG(fmt, ...)                                                                                        \
++	do {                                                                                                 \
++		fprintf(stdout, fmt "\n", ##__VA_ARGS__);                                                    \
++		fflush(stdout);                                                                              \
++	} while (0);
++
++#define ERR(fmt, ...)                                                                                        \
++	do {                                                                                                 \
++		fprintf(stderr, "[%30s:%4d] error: " fmt "\n", __func__, __LINE__, ##__VA_ARGS__);           \
++		fflush(stderr);                                                                              \
++	} while (0);
++
++#define DBG(fmt, ...)                                                                                        \
++	if (g_debug) {                                                                                       \
++		do {                                                                                         \
++			fprintf(stdout, "[%30s:%4d] " fmt "\n", __func__, __LINE__, ##__VA_ARGS__);          \
++			fflush(stdout);                                                                      \
++		} while (0);                                                                                 \
++	}
++
++#endif // _LOG_H_
+diff --recursive --unified --new-file --no-dereference orig/src/log2date.pl src/src/log2date.pl
+--- orig/src/log2date.pl	1970-01-01 00:00:00.000000000 +0000
++++ src/src/log2date.pl	2023-11-28 15:20:53.000000000 +0000
+@@ -0,0 +1,15 @@
++# Adds human-readable UTC stamps at the end of
++# ntpclient log files
++while (<>) {
++	if (/^ *#/) {
++		print $_;
++	} else {
++		chomp();
++		@A=split();
++		# 15020: mysterious, got rid of it in ntpclient_2003
++		# 25567:  Jan 1970 - Jan 1900
++		$second = ($A[0]-25567)*86400+$A[1];
++		$ss = gmtime($second);
++		print "$_ $ss\n";
++	}
++}
+diff --recursive --unified --new-file --no-dereference orig/src/net.c src/src/net.c
+--- orig/src/net.c	1970-01-01 00:00:00.000000000 +0000
++++ src/src/net.c	2023-11-28 15:20:53.000000000 +0000
+@@ -0,0 +1,96 @@
++#include "debug.h"
++#include "log.h"
++
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
++#include <sys/socket.h>
++#include <netdb.h> /* gethostbyname */
++
++static int stuff_net_addr(struct in_addr *p, char *hostname)
++{
++	int ret = 0;
++	struct hostent *ntpserver;
++	ntpserver = gethostbyname(hostname);
++	if (ntpserver == NULL) {
++		LOG("Could not resolve %s", hostname);
++		ret = -1;
++		goto end;
++	}
++	if (ntpserver->h_length != 4) {
++		/* IPv4 only, until I get a chance to test IPv6 */
++		LOG("oops %d", ntpserver->h_length);
++		ret = -1;
++		goto end;
++	}
++	memcpy(&(p->s_addr), ntpserver->h_addr_list[0], 4);
++end:
++	return ret;
++}
++
++static int setup_receive(int usd, unsigned int inaddr, short port)
++{
++	struct sockaddr_in sa_rcvr;
++	int ret = 0;
++
++	memset(&sa_rcvr, 0, sizeof sa_rcvr);
++	sa_rcvr.sin_family	= AF_INET;
++	sa_rcvr.sin_addr.s_addr = htonl(inaddr);
++	sa_rcvr.sin_port	= htons(port);
++	if (bind(usd, (struct sockaddr *)&sa_rcvr, sizeof sa_rcvr) == -1) {
++		LOG("Could not bind to udp port %d", port);
++		ret = -1;
++		goto end;
++	}
++end:
++	return ret;
++}
++
++static int setup_transmit(int usd, char *host, short port)
++{
++	struct sockaddr_in sa_dest;
++	int ret = 0;
++
++	memset(&sa_dest, 0, sizeof sa_dest);
++	sa_dest.sin_family = AF_INET;
++	if (stuff_net_addr(&(sa_dest.sin_addr), host) != 0) {
++		ret = -1;
++		goto end;
++	}
++
++	sa_dest.sin_port = htons(port);
++	if (connect(usd, (struct sockaddr *)&sa_dest, sizeof sa_dest) == -1) {
++		LOG("Could not connect to %s", host);
++		ret = -1;
++		goto end;
++	}
++end:
++	return ret;
++}
++
++int net_setup(char *host, short port, short local_port)
++{
++	int ret = -1;
++
++	int usd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
++	if (usd == -1) {
++		LOG("Could not create socket");
++		goto end;
++	}
++	if (setup_receive(usd, INADDR_ANY, local_port)) {
++		ret = -2;
++		goto end;
++	}
++	if (setup_transmit(usd, host, port)) {
++		ret = -2;
++		goto end;
++	}
++
++	ret = 0;
++end:
++	if (ret < -1) {
++		close(usd);
++	}
++	usd = ret < 0 ? -1 : usd;
++	return usd;
++}
+diff --recursive --unified --new-file --no-dereference orig/src/net.h src/src/net.h
+--- orig/src/net.h	1970-01-01 00:00:00.000000000 +0000
++++ src/src/net.h	2023-11-28 15:20:53.000000000 +0000
+@@ -0,0 +1,6 @@
++#ifndef _NET_H_
++#define _NET_H_
++
++int net_setup(char *host, short port, short local_port);
++
++#endif
+diff --recursive --unified --new-file --no-dereference orig/src/ntpclient.c src/src/ntpclient.c
+--- orig/src/ntpclient.c	1970-01-01 00:00:00.000000000 +0000
++++ src/src/ntpclient.c	2023-11-28 15:20:53.000000000 +0000
+@@ -0,0 +1,1117 @@
++/*
++ * ntpclient.c - NTP client
++ *
++ * Copyright (C) 1997, 1999, 2000, 2003, 2006, 2007, 2010, 2015  Larry Doolittle  <larry@doolittle.boa.org>
++ *
++ *  This program is free software; you can redistribute it and/or modify
++ *  it under the terms of the GNU General Public License (Version 2,
++ *  June 1991) as published by the Free Software Foundation.  At the
++ *  time of writing, that license was published by the FSF with the URL
++ *  http://www.gnu.org/copyleft/gpl.html, and is incorporated herein by
++ *  reference.
++ *
++ *  This program is distributed in the hope that it will be useful,
++ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ *  GNU General Public License for more details.
++ *
++ *  Possible future improvements:
++ *      - Write more documentation  :-(
++ *      - Support leap second processing
++ *      - Support IPv6
++ *      - Support multiple (interleaved) servers
++ *
++ *  Compile with -DPRECISION_SIOCGSTAMP if your machine really has it.
++ *  Older kernels (before the tickless era, pre 3.0?) only give an answer
++ *  to the nearest jiffy (1/100 second), not so interesting for us.
++ *
++ *  If the compile gives you any flak, check below in the section
++ *  labelled "XXX fixme - non-automatic build configuration".
++ */
++
++#include "phaselock.h"
++#include "ntpclient.h"
++#include "net.h"
++#include "debug.h"
++#include "log.h"
++
++#include <libubus.h>
++#include <uci.h>
++
++#include <math.h> // trunc()
++#include <inttypes.h>
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
++#include <signal.h>
++#include <sys/types.h>
++#include <sys/socket.h>
++#include <netinet/in.h>
++#include <netdb.h> /* gethostbyname */
++#include <arpa/inet.h>
++#include <time.h>
++#include <unistd.h>
++#include <errno.h>
++#include <utime.h>
++
++#ifdef MOBILE_SUPPORT
++#include <libgsm.h>
++#endif
++
++#ifdef PRECISION_SIOCGSTAMP
++#include <sys/ioctl.h>
++#ifdef __GLIBC__
++#include <linux/sockios.h>
++#endif
++#endif
++#ifdef USE_OBSOLETE_GETTIMEOFDAY
++#include <sys/time.h>
++#endif
++
++/* Default to the RFC-4330 specified value */
++#ifndef MIN_INTERVAL
++#define MIN_INTERVAL (60)
++#endif
++
++#define RETRY_INTERVAL (60)
++
++#ifdef ENABLE_DEBUG
++#define DEBUG_OPTION "d"
++int g_debug = 0;
++#else
++#define DEBUG_OPTION
++#endif
++
++#ifdef ENABLE_REPLAY
++#define REPLAY_OPTION "r"
++#else
++#define REPLAY_OPTION
++#endif
++
++#include <stdint.h>
++
++/* XXX fixme - non-automatic build configuration */
++#ifdef __linux__
++#include <sys/utsname.h>
++#include <sys/time.h>
++#include <sys/timex.h>
++#include <netdb.h>
++#else
++extern struct hostent *gethostbyname(const char *name);
++extern int h_errno;
++#define herror(hostname) ERR("Error %d looking up hostname %s", h_errno, hostname)
++#endif
++/* end configuration for host systems */
++
++#define JAN_1970 0x83aa7e80 /* 2208988800 1970 - 1900 in seconds */
++#define NTP_PORT (123)
++
++/* How to multiply by 4294.967296 quickly (and not quite exactly)
++ * without using floating point or greater than 32-bit integers.
++ * If you want to fix the last 12 microseconds of error, add in
++ * (2911*(x))>>28)
++ */
++#define NTPFRAC(x) (4294 * (x) + ((1981 * (x)) >> 11))
++
++/* The reverse of the above, needed if we want to set our microsecond
++ * clock (via clock_settime) based on the incoming time in NTP format.
++ * Basically exact.
++ */
++#define USEC(x) (((x) >> 12) - 759 * ((((x) >> 10) + 32768) >> 16))
++
++/* Converts NTP delay and dispersion, apparently in seconds scaled
++ * by 65536, to microseconds.  RFC-1305 states this time is in seconds,
++ * doesn't mention the scaling.
++ * Should somehow be the same as 1000000 * x / 65536
++ */
++#define sec2u(x) ((x)*15.2587890625)
++
++#define SYSFIXTIME_PATH "/etc/init.d/sysfixtime"
++
++#ifdef MOBILE_SUPPORT
++#define OPTION_PATH_NTPCLIENT	"ntpclient.@ntpclient[0].zoneName"
++#define OPTION_PATH_SYSTEM_TMZ	"system.system.timezone"
++#define OPTION_PATH_SYSTEM	"system.system.zoneName"
++#define TIMEZONE_FILE_PATH	"/tmp/TZ"
++#define TIMEZONE_STR_LEN	(16)
++#define ETC_ZONENAME		"Etc/GMT"
++#endif
++
++static int get_current_freq(void)
++{
++	/* OS dependent routine to get the current value of clock frequency.
++	 */
++#ifdef __linux__
++	struct timex txc;
++	txc.modes = 0;
++	if (adjtimex(&txc) < 0) {
++		perror("adjtimex");
++		exit(1);
++	}
++	return txc.freq;
++#else
++	return 0;
++#endif
++}
++
++static int set_freq(int new_freq)
++{
++	/* OS dependent routine to set a new value of clock frequency.
++	 */
++#ifdef __linux__
++	struct timex txc;
++	txc.modes = ADJ_FREQUENCY;
++	txc.freq  = new_freq;
++	if (adjtimex(&txc) < 0) {
++		perror("adjtimex");
++		exit(1);
++	}
++	return txc.freq;
++#else
++	return 0;
++#endif
++}
++
++static void run_script(char *hotplug_script)
++{
++	pid_t pid;
++	char *envp[] = { "ACTION=stratum", NULL };
++
++	if (!hotplug_script) {
++		DBG("No hotplug script provided");
++		return;
++	}
++
++	if (access(hotplug_script, F_OK)) {
++		DBG("Cannot find hotplug script %s", hotplug_script);
++		return;
++	}
++
++	pid = fork();
++
++	if (pid == 0) {
++		execvpe(hotplug_script, NULL, envp);
++		exit(EXIT_SUCCESS);
++	} else if (pid == -1) {
++		DBG("Hotplug script fork failed");
++	}
++}
++
++static void set_time(struct ntptime *new, struct ntp_control *ntpc)
++{
++#ifndef USE_OBSOLETE_GETTIMEOFDAY
++	/* POSIX 1003.1-2001 way to set the system clock
++	 */
++	struct timespec tv_set;
++	/* it would be even better to subtract half the slop */
++	tv_set.tv_sec = new->coarse - JAN_1970;
++	/* divide xmttime.fine by 4294.967296 */
++	tv_set.tv_nsec = USEC(new->fine) * 1000;
++	if (clock_settime(CLOCK_REALTIME, &tv_set) < 0) {
++		perror("clock_settime");
++		exit(1);
++	}
++	/* Save time in case correct power-off sequence is skipped */
++	if (ntpc->save_time == 1) {
++		utime(SYSFIXTIME_PATH, NULL);
++	}
++	run_script(ntpc->hotplug_script);
++	DBG("set time to %" PRId64 ".%.9" PRId64 "", (int64_t)tv_set.tv_sec, (int64_t)tv_set.tv_nsec);
++#else
++	/* Traditional Linux way to set the system clock
++	 */
++	struct timeval tv_set;
++	/* it would be even better to subtract half the slop */
++	tv_set.tv_sec = new->coarse - JAN_1970;
++	/* divide xmttime.fine by 4294.967296 */
++	tv_set.tv_usec = USEC(new->fine);
++	if (settimeofday(&tv_set, NULL) < 0) {
++		perror("settimeofday");
++		exit(1);
++	}
++	/* Save time in case correct power-off sequence is skipped */
++	if (ntpc->save_time == 1) {
++		utime(SYSFIXTIME_PATH, NULL);
++	}
++	run_script(ntpc->hotplug_script);
++	DBG("set time to %" PRId64 ".%.6" PRId64 "", (int64_t)tv_set.tv_sec, (int64_t)tv_set.tv_usec);
++#endif
++}
++
++static void ntpc_gettime(uint32_t *time_coarse, uint32_t *time_fine)
++{
++#ifndef USE_OBSOLETE_GETTIMEOFDAY
++	/* POSIX 1003.1-2001 way to get the system time
++	 */
++	struct timespec now;
++	clock_gettime(CLOCK_REALTIME, &now);
++	*time_coarse = now.tv_sec + JAN_1970;
++	*time_fine   = NTPFRAC(now.tv_nsec / 1000);
++#else
++	/* Traditional Linux way to get the system time
++	 */
++	struct timeval now;
++	gettimeofday(&now, NULL);
++	*time_coarse = now.tv_sec + JAN_1970;
++	*time_fine   = NTPFRAC(now.tv_usec);
++#endif
++}
++
++static void get_packet_timestamp(int usd, struct ntptime *udp_arrival_ntp)
++{
++#ifdef PRECISION_SIOCGSTAMP
++	struct timeval udp_arrival;
++	if (ioctl(usd, SIOCGSTAMP, &udp_arrival) < 0) {
++		perror("ioctl-SIOCGSTAMP");
++		ntpc_gettime(&udp_arrival_ntp->coarse, &udp_arrival_ntp->fine);
++	} else {
++		udp_arrival_ntp->coarse = udp_arrival.tv_sec + JAN_1970;
++		udp_arrival_ntp->fine	= NTPFRAC(udp_arrival.tv_usec);
++	}
++#else
++	(void)usd; /* not used */
++	ntpc_gettime(&udp_arrival_ntp->coarse, &udp_arrival_ntp->fine);
++#endif
++}
++
++static int check_source(int data_len, struct sockaddr_in *sa_in, unsigned int sa_len,
++			struct ntp_control *ntpc)
++{
++	struct sockaddr *sa_source = (struct sockaddr *)sa_in;
++	(void)sa_len; /* not used */
++	DBG("packet of length %d received", data_len);
++	if (sa_source->sa_family == AF_INET) {
++		DBG("Source: INET Port %d host %s", ntohs(sa_in->sin_port), inet_ntoa(sa_in->sin_addr));
++	} else {
++		DBG("Source: Address family %d", sa_source->sa_family);
++	}
++	/* we could check that the source is the server we expect, but
++	 * Denys Vlasenko recommends against it: multihomed hosts get it
++	 * wrong too often. */
++#if 0
++	if (memcmp(ntpc->serv_addr, &(sa_in->sin_addr), 4)!=0) {
++		return 1;  /* fault */
++	}
++#else
++	(void)ntpc; /* not used */
++#endif
++	if (NTP_PORT != ntohs(sa_in->sin_port)) {
++		return 1; /* fault */
++	}
++	return 0;
++}
++
++static double ntpdiff(struct ntptime *start, struct ntptime *stop)
++{
++	int a;
++	unsigned int b;
++	a = stop->coarse - start->coarse;
++	if (stop->fine >= start->fine) {
++		b = stop->fine - start->fine;
++	} else {
++		b = start->fine - stop->fine;
++		b = ~b;
++		a -= 1;
++	}
++
++	return a * 1.e6 + b * (1.e6 / 4294967296.0);
++}
++
++/* Does more than print, so this name is bogus.
++ * It also makes time adjustments, both sudden (-s)
++ * and phase-locking (-l).
++ * sets *error to the number of microseconds uncertainty in answer
++ * returns 0 normally, 1 if the message fails sanity checks
++ */
++static int rfc1305print(uint32_t *data, struct ntptime *arrival, struct ntp_control *ntpc, int *error)
++{
++	/* straight out of RFC-1305 Appendix A */
++	int li, vn, mode, stratum, poll, prec;
++	int delay, disp, refid;
++	struct ntptime reftime, orgtime, rectime, xmttime;
++	double el_time, st_time, skew1, skew2;
++	int freq;
++#ifdef ENABLE_DEBUG
++	const char *drop_reason = NULL;
++#endif
++
++#define Data(i) ntohl(((uint32_t *)data)[i])
++	li	= Data(0) >> 30 & 0x03;
++	vn	= Data(0) >> 27 & 0x07;
++	mode	= Data(0) >> 24 & 0x07;
++	stratum = Data(0) >> 16 & 0xff;
++	poll	= Data(0) >> 8 & 0xff;
++	prec	= Data(0) & 0xff;
++	if (prec & 0x80)
++		prec |= 0xffffff00;
++	delay	       = Data(1);
++	disp	       = Data(2);
++	refid	       = Data(3);
++	reftime.coarse = Data(4);
++	reftime.fine   = Data(5);
++	orgtime.coarse = Data(6);
++	orgtime.fine   = Data(7);
++	rectime.coarse = Data(8);
++	rectime.fine   = Data(9);
++	xmttime.coarse = Data(10);
++	xmttime.fine   = Data(11);
++#undef Data
++
++	DBG("LI=%d  VN=%d  Mode=%d  Stratum=%d  Poll=%d  Precision=%d", li, vn, mode, stratum, poll, prec);
++	DBG("Delay=%.1f  Dispersion=%.1f  Refid=%u.%u.%u.%u", sec2u(delay), sec2u(disp), refid >> 24 & 0xff,
++	    refid >> 16 & 0xff, refid >> 8 & 0xff, refid & 0xff);
++	DBG("Reference %u.%.6u", reftime.coarse, USEC(reftime.fine));
++	DBG("(sent)    %u.%.6u", ntpc->time_of_send[0], USEC(ntpc->time_of_send[1]));
++	DBG("Originate %u.%.6u", orgtime.coarse, USEC(orgtime.fine));
++	DBG("Receive   %u.%.6u", rectime.coarse, USEC(rectime.fine));
++	DBG("Transmit  %u.%.6u", xmttime.coarse, USEC(xmttime.fine));
++	DBG("Our recv  %u.%.6u", arrival->coarse, USEC(arrival->fine));
++
++	el_time = ntpdiff(&orgtime, arrival); /* elapsed */
++	st_time = ntpdiff(&rectime, &xmttime); /* stall */
++	skew1	= ntpdiff(&orgtime, &rectime);
++	skew2	= ntpdiff(&xmttime, arrival);
++	freq	= get_current_freq();
++	DBG("Total elapsed: %9.2f\n"
++	    "Server stall:  %9.2f\n"
++	    "Slop:          %9.2f",
++	    el_time, st_time, el_time - st_time);
++	DBG("Skew:          %9.2f\n"
++	    "Frequency:     %9d\n"
++	    " day   second     elapsed    stall     skew  dispersion  freq",
++	    (skew1 - skew2) / 2, freq);
++
++	/* error checking, see RFC-4330 section 5 */
++#ifdef ENABLE_DEBUG
++#define FAIL(x)                                                                                              \
++	do {                                                                                                 \
++		drop_reason = (x);                                                                           \
++		goto fail;                                                                                   \
++	} while (0)
++#else
++#define FAIL(x) goto fail;
++#endif
++	if (ntpc->cross_check) {
++		if (li == 3)
++			FAIL("LI==3"); /* unsynchronized */
++		if (vn < 3)
++			FAIL("VN<3"); /* RFC-4330 documents SNTP v4, but we interoperate with NTP v3 */
++		if (mode != 4)
++			FAIL("MODE!=3");
++		if (orgtime.coarse != ntpc->time_of_send[0] || orgtime.fine != ntpc->time_of_send[1])
++			FAIL("ORG!=sent");
++		if (xmttime.coarse == 0 && xmttime.fine == 0)
++			FAIL("XMT==0");
++		if (delay > 65536 || delay < -65536)
++			FAIL("abs(DELAY)>65536");
++		if (disp > 65536 || disp < -65536)
++			FAIL("abs(DISP)>65536");
++		if (stratum == 0)
++			FAIL("STRATUM==0"); /* kiss o' death */
++#undef FAIL
++	}
++
++	/* XXX should I do this if debug flag is set? */
++	if (ntpc->set_clock) { /* you'd better be root, or ntpclient will exit here! */
++		set_time(&xmttime, ntpc);
++	}
++
++	/* Not the ideal order for printing, but we want to be sure
++	 * to do all the time-sensitive thinking (and time setting)
++	 * before we start the output, especially fflush() (which
++	 * could be slow).  Of course, if debug is turned on, speed
++	 * has gone down the drain anyway. */
++	if (ntpc->live) {
++		int new_freq;
++		new_freq =
++			contemplate_data(arrival->coarse, (skew1 - skew2) / 2, el_time + sec2u(disp), freq);
++		if (!g_debug && new_freq != freq)
++			set_freq(new_freq);
++	}
++	LOG("%d %.5d.%.3d  %8.1f %8.1f  %8.1f %8.1f %9d", arrival->coarse / 86400, arrival->coarse % 86400,
++	    arrival->fine / 4294967, el_time, st_time, (skew1 - skew2) / 2, sec2u(disp), freq);
++	*error = el_time - st_time;
++
++	return 0;
++fail:
++#ifdef ENABLE_DEBUG
++	LOG("%d %.5d.%.3d  rejected packet: %s", arrival->coarse / 86400, arrival->coarse % 86400,
++	    arrival->fine / 4294967, drop_reason);
++#else
++	LOG("%d %.5d.%.3d  rejected packet", arrival->coarse / 86400, arrival->coarse % 86400,
++	    arrival->fine / 4294967);
++#endif
++	return 1;
++}
++
++static void send_packet(int usd, uint32_t time_sent[2])
++{
++	uint32_t data[12];
++#define LI	0
++#define VN	3
++#define MODE	3
++#define STRATUM 0
++#define POLL	4
++#define PREC	-6
++
++	DBG("Sending ...");
++	if (sizeof data != 48) {
++		ERR("size error");
++		return;
++	}
++	memset(data, 0, sizeof data);
++	data[0] =
++		htonl((LI << 30) | (VN << 27) | (MODE << 24) | (STRATUM << 16) | (POLL << 8) | (PREC & 0xff));
++	data[1] = htonl(1 << 16); /* Root Delay (seconds) */
++	data[2] = htonl(1 << 16); /* Root Dispersion (seconds) */
++	ntpc_gettime(time_sent, time_sent + 1);
++	data[10] = htonl(time_sent[0]); /* Transmit Timestamp coarse */
++	data[11] = htonl(time_sent[1]); /* Transmit Timestamp fine   */
++	send(usd, data, 48, 0);
++}
++
++static int find_server(struct ntp_control *ntpc)
++{
++	int socket = -1;
++
++	for (int i = 0; i < ntpc->hosts; i++) {
++		socket = net_setup(ntpc->hostnames[i], NTP_PORT, ntpc->udp_local_port);
++		if (socket > -1) {
++			LOG("Working with server %s", ntpc->hostnames[i]);
++			break;
++		}
++	}
++	return socket;
++}
++
++static void ntpc_sleep(time_t seconds)
++{
++	struct timeval tv;
++	int i;
++	tv.tv_sec  = seconds;
++	tv.tv_usec = 0;
++	do {
++		i = select(1, NULL, NULL, NULL, &tv);
++	} while (i == -1 && errno == EINTR);
++}
++
++#ifdef MOBILE_SUPPORT
++static int format_timezone(int tmz, char *timezone, char *zonename)
++{
++	// 'double' type to have a negative 0 when offset is only negative minutes (e.g. -0:45)
++	double gmt_offset_hours = trunc((double)tmz / 4);
++	int gmt_offset_minutes = abs(tmz % 4 * 15);
++
++	if (sprintf(timezone, "<%+.0f%02d>%.0f:%02d", gmt_offset_hours, gmt_offset_minutes,
++		    -1 * gmt_offset_hours, gmt_offset_minutes) < 0) {
++		ERR("Could not format GMT timezone");
++		return 1;
++	}
++
++	if (gmt_offset_minutes != 0) {
++		// There are no generic zonenames for timezones with 15 minute increments, so set it to exact offset value
++		if (sprintf(zonename, "%+.0f:%02d", gmt_offset_hours, gmt_offset_minutes) < 0) {
++			goto err;
++		}
++	} else if (gmt_offset_hours == 0) {
++		strcpy(zonename, ETC_ZONENAME);
++	} else if (sprintf(zonename, ETC_ZONENAME "%+.0f", -1 * gmt_offset_hours) < 0) {
++		goto err;
++	}
++
++	return 0;
++
++err:
++	ERR("Could not format zonename");
++	return 2;
++}
++
++static void uci_set_value(struct uci_context *uci_ctx, const char *option_path, const char *value)
++{
++	int ret;
++	struct uci_ptr ptr = { 0 };
++
++	char *path = strdup(option_path);
++	if (!path) {
++		ERR("Out of memory");
++		return;
++	}
++
++	ret = uci_lookup_ptr(uci_ctx, &ptr, path, strchr(option_path, '@') != NULL);
++	if (ret != UCI_OK) {
++		ERR("Failed to lookup uci pointer for '%s'; ret=%d", option_path, ret);
++		goto out;
++	}
++
++	ptr.value = value;
++
++	ret = uci_set(uci_ctx, &ptr);
++	if (ret != UCI_OK) {
++		ERR("Failed to set '%s=%s'; ret=%d", option_path, value, ret);
++		goto out;
++	}
++
++	ret = uci_commit(uci_ctx, &ptr.p, false);
++	if (ret != UCI_OK) {
++		ERR("Failed to commit uci changes for '%s'; ret=%d", option_path, ret);
++		goto out;
++	}
++
++out:
++	free(path);
++}
++
++static void set_timezone_from_modem(struct modem_sync *modem_data)
++{
++	char *timezone_str = calloc(TIMEZONE_STR_LEN, sizeof(char));
++	char *zonename_str = calloc(TIMEZONE_STR_LEN, sizeof(char));
++
++	if (!timezone_str || !zonename_str) {
++		ERR("Failed to allocate buffer");
++		goto out;
++	}
++
++	if (format_timezone(modem_data->modem_time->time_zone, timezone_str, zonename_str) ||
++	    !timezone_str[0]) {
++		ERR("Failed to parse timezone value=%d", modem_data->modem_time->time_zone);
++		goto out;
++	}
++
++	DBG("Setting timezone to |%s|", timezone_str);
++	FILE *fp = fopen(TIMEZONE_FILE_PATH, "w");
++	if (!fp) {
++		ERR("Could not open file %s", TIMEZONE_FILE_PATH);
++		goto out;
++	}
++	fprintf(fp, "%s\n", timezone_str);
++	fclose(fp);
++
++	if (!modem_data->uci_ctx && !(modem_data->uci_ctx = uci_alloc_context())) {
++		ERR("Failed to initialize the uci");
++		goto out;
++	}
++
++	DBG("Setting zonename to |%s|", zonename_str);
++	uci_set_value(modem_data->uci_ctx, OPTION_PATH_NTPCLIENT, zonename_str);
++	uci_set_value(modem_data->uci_ctx, OPTION_PATH_SYSTEM, zonename_str);
++	uci_set_value(modem_data->uci_ctx, OPTION_PATH_SYSTEM_TMZ, timezone_str);
++
++out:
++	free(timezone_str);
++	free(zonename_str);
++}
++
++static void set_datetime_from_modem(struct ntp_control *ntpc)
++{
++	struct tm modem_time_tm = { 0 };
++
++	DBG("Time string from modem: %s", ntpc->modem_sync.modem_time->time);
++	strptime(ntpc->modem_sync.modem_time->time, "%y/%m/%d,%H:%M:%S", &modem_time_tm);
++
++	// Convert GMT to local time
++	modem_time_tm.tm_hour += ntpc->modem_sync.modem_time->time_zone / 4;
++	modem_time_tm.tm_min += ntpc->modem_sync.modem_time->time_zone % 4 * 15;
++
++	DBG("Parsed local time: %.24s", asctime(&modem_time_tm)); // .24 to not print '\n' at the end
++
++	struct ntptime ntp_time = {
++		// Add JAN_1970 to make compatible with set_time()
++		.coarse = mktime(&modem_time_tm) + JAN_1970,
++		.fine	= 0,
++	};
++	DBG("coarse=%d fine=%d", ntp_time.coarse, ntp_time.fine);
++
++	set_time(&ntp_time, ntpc);
++}
++
++static void get_time_from_modem(struct ubus_context *ubus_ctx, lgsm_time_t **modem_time)
++{
++	lgsm_structed_info_t rsp = { 0 };
++	lgsm_err_t ret		 = LGSM_SUCCESS;
++
++	for (uint32_t i = 0; i < 12; i++) {
++		ret = lgsm_get_time(ubus_ctx, TIME_MODE_GMT, i, &rsp);
++		if (ret == LGSM_SUCCESS && rsp.label != LGSM_LABEL_ERROR) {
++			break;
++		}
++	}
++
++	if (ret != LGSM_SUCCESS || rsp.label == LGSM_LABEL_ERROR) {
++		ERR("Failed to get proper datetime from operator station: %s", lgsm_strerror(ret));
++		goto end;
++	}
++
++	if (!*modem_time && !(*modem_time = calloc(1, sizeof(lgsm_time_t)))) {
++		ERR("Couldn't allocate memory");
++		goto end;
++	}
++
++	memcpy(*modem_time, &rsp.data.time, sizeof(lgsm_time_t));
++
++end:
++	handle_gsm_structed_info_free(&rsp);
++}
++#endif // MOBILE_SUPPORT
++
++static int ntpc_handle_timeout(struct ntp_control *ntpc)
++{
++	// Don't sync from mobile if count of syncs is specified
++	if (ntpc->probe_count) {
++		return ntpc->probes_sent >= ntpc->probe_count;
++	}
++
++#ifdef MOBILE_SUPPORT
++	if (!ntpc->modem_sync.modem_time || !ntpc->modem_sync.time_sync_enabled ||
++	    ntpc->probes_sent < ntpc->failover_cnt) {
++		return 0;
++	}
++
++	DBG("Will sync time from mobile operator");
++	set_datetime_from_modem(ntpc);
++#endif
++
++	return 0;
++}
++
++static void primary_loop(struct ntp_control *ntpc)
++{
++	fd_set fds;
++	struct sockaddr_in sa_xmit_in;
++	int i, pack_len, error;
++	socklen_t sa_xmit_len;
++	struct timeval to;
++	struct ntptime udp_arrival_ntp;
++	static uint32_t incoming_word[325];
++#define incoming	((char *)incoming_word)
++#define sizeof_incoming (sizeof incoming_word)
++
++	ntpc->probes_sent = 0;
++	sa_xmit_len	  = sizeof sa_xmit_in;
++	to.tv_sec	  = 0;
++	to.tv_usec	  = 0;
++
++	int usd	       = -1;
++	int sleep_time = ntpc->retry_interval;
++
++	for (;;) {
++#ifdef MOBILE_SUPPORT
++		if (ntpc->modem_sync.time_sync_enabled || ntpc->modem_sync.timezone_sync_enabled) {
++			get_time_from_modem(ntpc->modem_sync.ubus_ctx, &ntpc->modem_sync.modem_time);
++			DBG("Datetime received from GSM modem: |%s|", ntpc->modem_sync.modem_time->time);
++		}
++
++		DBG("sleep_time = %d", sleep_time);
++		DBG("cycle_time = %d", ntpc->cycle_time);
++		DBG("retry_interval = %d", ntpc->retry_interval);
++		DBG("Finding server...");
++#endif
++		usd = find_server(ntpc);
++		if (usd < 0) {
++			ntpc->probes_sent++;
++			if (ntpc_handle_timeout(ntpc)) {
++				break;
++			}
++			sleep_time = ntpc->retry_interval;
++			goto loopend;
++		}
++
++		//We have socket here
++		send_packet(usd, ntpc->time_of_send);
++		++ntpc->probes_sent;
++
++		//Wait for reply
++		to.tv_sec  = sleep_time;
++		to.tv_usec = 0;
++		FD_ZERO(&fds);
++		FD_SET(usd, &fds);
++		do {
++			i = select(usd + 1, &fds, NULL, NULL, &to); // Wait on read or error
++		} while (i == -1 && errno == EINTR);
++
++		if (i == -1) {
++			//real error here
++			sleep_time = ntpc->retry_interval;
++			goto loopend;
++		}
++
++		if (i == 0) {
++			//timeout
++			if (ntpc_handle_timeout(ntpc)) {
++				break;
++			}
++			sleep_time = ntpc->retry_interval;
++			goto loopend;
++		}
++
++		// We have something to read here.
++		DBG("Receiving...");
++		pack_len   = recvfrom(usd, incoming, sizeof_incoming, 0, (struct sockaddr *)&sa_xmit_in,
++				      &sa_xmit_len);
++		error	   = ntpc->goodness;
++		sleep_time = ntpc->retry_interval;
++		sleep_time = 0;
++		if (pack_len < 0) {
++			ERR("recvfrom error");
++		} else if (pack_len > 0 && (unsigned)pack_len < sizeof_incoming) {
++			#ifdef MOBILE_SUPPORT
++			if (ntpc->modem_sync.time_sync_enabled && ntpc->failover_cnt) {
++				ntpc->probes_sent = 0;
++			}
++			#else
++			if (ntpc->failover_cnt) {
++				ntpc->probes_sent = 0;
++			}
++			#endif
++			get_packet_timestamp(usd, &udp_arrival_ntp);
++
++			if (check_source(pack_len, &sa_xmit_in, sa_xmit_len, ntpc) != 0 ||
++			    rfc1305print(incoming_word, &udp_arrival_ntp, ntpc, &error) != 0) {
++				goto loopend;
++			}
++
++			sleep_time	     = ntpc->cycle_time;
++			ntpc->retry_interval = RETRY_INTERVAL;
++		} else {
++			LOG("Ooops.  pack_len=%d", pack_len);
++		}
++		/* best rollover option: specify -g, -s, and -l.
++		 * simpler rollover option: specify -s and -l, which
++		 * triggers a magic -c 1 */
++		if ((error < ntpc->goodness && ntpc->goodness != 0) ||
++		    (ntpc->probes_sent >= ntpc->probe_count && ntpc->probe_count != 0)) {
++			if (ntpc->failover_cnt) {
++				ntpc->probes_sent = 0;
++			}
++			ntpc->set_clock = 0;
++			if (!ntpc->live) {
++				break;
++			}
++		}
++
++loopend:
++#ifdef MOBILE_SUPPORT
++		if (ntpc->modem_sync.modem_time && ntpc->modem_sync.timezone_sync_enabled) {
++			set_timezone_from_modem(&ntpc->modem_sync);
++		}
++#endif
++		close(usd);
++		DBG("Probes sent: %d", ntpc->probes_sent);
++		DBG("Going to sleep %d sec.", sleep_time);
++		ntpc_sleep(sleep_time);
++		if (sleep_time < ntpc->cycle_time) {
++			ntpc->retry_interval <<= 1;
++			if (ntpc->retry_interval > ntpc->cycle_time) {
++				ntpc->retry_interval = ntpc->cycle_time;
++			}
++		}
++	} //for(;;)
++	close(usd);
++#undef incoming
++#undef sizeof_incoming
++}
++
++#ifdef ENABLE_REPLAY
++static void do_replay(void)
++{
++	char line[100];
++	int n, day, freq, absolute;
++	float sec, el_time, st_time, disp;
++	double skew, errorbar;
++	int simulated_freq	    = 0;
++	unsigned int last_fake_time = 0;
++	double fake_delta_time	    = 0.0;
++
++	while (fgets(line, sizeof line, stdin)) {
++		n = sscanf(line, "%d %f %f %f %lf %f %d", &day, &sec, &el_time, &st_time, &skew, &disp,
++			   &freq);
++		if (n == 7) {
++			fputs(line, stdout);
++			absolute = day * 86400 + (int)sec;
++			errorbar = el_time + disp;
++			DBG("contemplate %u %.1f %.1f %d", absolute, skew, errorbar, freq);
++			if (last_fake_time == 0)
++				simulated_freq = freq;
++			fake_delta_time +=
++				(absolute - last_fake_time) * ((double)(freq - simulated_freq)) / 65536;
++			DBG("fake %f %d ", fake_delta_time, simulated_freq);
++			skew += fake_delta_time;
++			freq	       = simulated_freq;
++			last_fake_time = absolute;
++			simulated_freq = contemplate_data(absolute, skew, errorbar, freq);
++		} else {
++			ERR("Replay input error");
++			exit(2);
++		}
++	}
++}
++#endif
++
++static void usage(char *argv0)
++{
++	LOG("Usage: %s"
++#ifdef ENABLE_DEBUG
++	    " [-d]"
++#endif
++	    " [-f frequency] [-g goodness] \n"
++	    "\t[-l] [-p port] [-q min_delay]"
++#ifdef ENABLE_REPLAY
++	    " [-r]"
++#endif
++	    " [-s] [-e hotplug_script]\n",
++	    argv0);
++}
++
++static void read_config_ntpserver(struct uci_context *uci, struct uci_section *sec, struct ntp_control *ntpc)
++{
++	if (strcmp(sec->type, "ntpserver") || ntpc->hosts >= NTP_MAX_SERVERS) {
++		return;
++	}
++
++	if (!(ntpc->hostnames[ntpc->hosts] = (char *)uci_lookup_option_string(uci, sec, "hostname"))) {
++		ERR("Could not read NTP server hostname");
++		return;
++	}
++
++	ntpc->hosts++;
++}
++
++static void read_config_ntpclient(struct uci_context *uci, struct uci_section *sec, struct ntp_control *ntpc)
++{
++	const char *str = NULL;
++	errno		= 0;
++
++	if (strcmp(sec->type, "ntpclient")) {
++		return;
++	}
++
++	if ((str = uci_lookup_option_string(uci, sec, "interval"))) {
++		ntpc->cycle_time = strtol(str, NULL, 10);
++		if (errno || ntpc->cycle_time < 60 || ntpc->cycle_time > 2147483647) {
++			LOG("Could not get interval or it does not fall into a range (60 to 2147483647) "
++			    "- resorting to default (10min)");
++			ntpc->cycle_time = 600;
++		}
++	}
++
++	if ((str = uci_lookup_option_string(uci, sec, "force")) && !strcmp(str, "1")) {
++		ntpc->cross_check = 0;
++	}
++
++	if ((str = uci_lookup_option_string(uci, sec, "save")) && !strcmp(str, "1")) {
++		ntpc->save_time = 1;
++	}
++
++	if ((str = uci_lookup_option_string(uci, sec, "count"))) {
++		ntpc->probe_count = strtol(str, NULL, 10) + 1;
++		if (errno) {
++			LOG("Could not get probe count - setting to infinite");
++			ntpc->probe_count = 0;
++			errno = 0;
++		}
++	}
++
++#ifdef MOBILE_SUPPORT
++	if ((str = uci_lookup_option_string(uci, sec, "sync_enabled")) && !strcmp(str, "1")) {
++		ntpc->modem_sync.time_sync_enabled = 1;
++	}
++
++	if ((str = uci_lookup_option_string(uci, sec, "failover"))) {
++		ntpc->failover_cnt = strtol(str, NULL, 10);
++		if (errno) {
++			LOG("Could not get failover count - setting to default 5");
++			ntpc->failover_cnt = 5;
++			errno = 0;
++		}
++	}
++
++	if ((str = uci_lookup_option_string(uci, sec, "tmz_sync_enabled")) && !strcmp(str, "1")) {
++		ntpc->modem_sync.timezone_sync_enabled = 1;
++	}
++#endif
++}
++
++static int read_config(struct ntp_control *ntpc)
++{
++	struct uci_context *uci = NULL;
++	struct uci_package *pkg = NULL;
++	struct uci_element *e	= NULL;
++	int ret = EXIT_FAILURE;
++
++	uci = uci_alloc_context();
++	if (!uci) {
++		ERR("Unable to allocate UCI context");
++		return EXIT_FAILURE;
++	}
++
++	pkg = uci_lookup_package(uci, "ntpclient");
++	if (pkg) {
++		uci_unload(uci, pkg);
++	}
++
++	if (uci_load(uci, "ntpclient", &pkg)) {
++		ERR("Failed to load ntpclient config");
++		goto end;
++	}
++
++	uci_foreach_element (&pkg->sections, e) {
++		struct uci_section *sec = uci_to_section(e);
++		read_config_ntpserver(uci, sec, ntpc);
++		read_config_ntpclient(uci, sec, ntpc);
++	}
++
++	ret = EXIT_SUCCESS;
++end:
++	uci_free_context(uci);
++
++	return ret;
++}
++
++int main(int argc, char *argv[])
++{
++	int c;
++	int ret = EXIT_FAILURE;
++	/* These parameters are settable from the command line
++	   the initializations here provide default behavior */
++	int initial_freq; /* initial freq value to use */
++	struct ntp_control ntpc		      = { 0 };
++	ntpc.udp_local_port		      = 0; /* default of 0 means kernel chooses */
++	ntpc.live			      = 0;
++	ntpc.set_clock			      = 0;
++	ntpc.probe_count		      = 0; /* default of 0 means loop forever */
++	ntpc.failover_cnt		      = 5;
++	ntpc.cycle_time			      = 600; /* seconds */
++	ntpc.retry_interval		      = RETRY_INTERVAL;
++	ntpc.goodness			      = 0;
++	ntpc.cross_check		      = 1;
++	ntpc.hosts			      = 0;
++	ntpc.save_time			      = 0;
++#ifdef MOBILE_SUPPORT
++	ntpc.modem_sync.time_sync_enabled     = 0;
++	ntpc.modem_sync.timezone_sync_enabled = 0;
++	ntpc.modem_sync.ubus_ctx	      = NULL;
++	ntpc.modem_sync.uci_ctx		      = NULL;
++#endif
++	memset(ntpc.hostnames, 0, sizeof(ntpc.hostnames));
++
++	for (;;) {
++		c = getopt(argc, argv, DEBUG_OPTION "f:e:g:lp:q:" REPLAY_OPTION "sD");
++		if (c == EOF)
++			break;
++		switch (c) {
++#ifdef ENABLE_DEBUG
++		case 'd':
++			++g_debug;
++			break;
++#endif
++		case 'e':
++			ntpc.hotplug_script = optarg;
++			break;
++		case 'f':
++			initial_freq = atoi(optarg);
++			DBG("initial frequency %d", initial_freq);
++			set_freq(initial_freq);
++			break;
++		case 'g':
++			ntpc.goodness = atoi(optarg);
++			break;
++		case 'l':
++			(ntpc.live)++;
++			break;
++		case 'p':
++			ntpc.udp_local_port = atoi(optarg);
++			break;
++		case 'q':
++			min_delay = atof(optarg);
++			break;
++#ifdef ENABLE_REPLAY
++		case 'r':
++			do_replay();
++			exit(0);
++			break;
++#endif
++		case 's':
++			ntpc.set_clock++;
++			break;
++		case 'D':
++			daemon(0, 0);
++			break;
++		default:
++			usage(argv[0]);
++			ret = 1;
++			goto end;
++		}
++	}
++
++	if (read_config(&ntpc)) {
++		ret = EXIT_FAILURE;
++		goto end;
++	}
++
++	if (!ntpc.hosts) {
++		ntpc.failover_cnt = 0;
++	}
++
++#ifdef MOBILE_SUPPORT
++	if (!(ntpc.modem_sync.ubus_ctx = ubus_connect(NULL))) {
++		ERR("Couldn't connect to ubus");
++		goto end;
++	}
++#endif
++
++	if (ntpc.set_clock && !ntpc.live && !ntpc.goodness && !ntpc.probe_count) {
++		ntpc.probe_count = 1;
++	}
++
++	/* respect only applicable MUST of RFC-4330 */
++	if (ntpc.probe_count != 1 && ntpc.cycle_time < MIN_INTERVAL) {
++		ntpc.cycle_time = MIN_INTERVAL;
++	}
++
++	DBG("Configuration:\n"
++	    " -d (debug)                 %d\n"
++	    " -g goodness                %d\n"
++	    " -l live                    %d\n"
++	    " -p local_port              %d\n"
++	    " -q min_delay               %f\n"
++	    " -s set_clock               %d\n"
++	    " -e hotplug_script          %s\n"
++	    "    probe_count             %d\n"
++	    "    interval                %d\n"
++	    "    cross_check             %d\n"
++	    "    failover_count          %d\n"
++#ifdef MOBILE_SUPPORT
++	    "    time_sync_enabled       %d\n"
++	    "    timezone_sync_enabled   %d\n"
++#endif
++	    "    save_time               %d",
++	    g_debug, ntpc.goodness, ntpc.live, ntpc.udp_local_port, min_delay, ntpc.set_clock,
++	    ntpc.hotplug_script ? ntpc.hotplug_script : "n/a", ntpc.probe_count, ntpc.cycle_time,
++	    ntpc.cross_check, ntpc.failover_cnt,
++#ifdef MOBILE_SUPPORT
++	    ntpc.modem_sync.time_sync_enabled, ntpc.modem_sync.timezone_sync_enabled,
++#endif
++	    ntpc.save_time);
++	DBG("Hosts:");
++	for (int i = 0; i < ntpc.hosts && ntpc.hostnames[i]; i++) {
++		DBG("  %d. %s", i + 1, ntpc.hostnames[i]);
++	}
++	DBG("Compiled with NTP_MAX_SERVERS = %d", NTP_MAX_SERVERS);
++
++	signal(SIGINT, exit);
++	signal(SIGTERM, exit);
++
++	primary_loop(&ntpc);
++
++	ret = EXIT_SUCCESS;
++end:
++#ifdef MOBILE_SUPPORT
++	if (ntpc.modem_sync.ubus_ctx) {
++		ubus_free(ntpc.modem_sync.ubus_ctx);
++	}
++	if (ntpc.modem_sync.uci_ctx) {
++		uci_free_context(ntpc.modem_sync.uci_ctx);
++	}
++	free(ntpc.modem_sync.modem_time);
++#endif
++	return ret;
++}
+diff --recursive --unified --new-file --no-dereference orig/src/ntpclient.h src/src/ntpclient.h
+--- orig/src/ntpclient.h	1970-01-01 00:00:00.000000000 +0000
++++ src/src/ntpclient.h	2023-11-28 15:20:53.000000000 +0000
+@@ -0,0 +1,54 @@
++#ifndef NTPCLIENT_H
++#define NTPCLIENT_H
++
++#ifndef NTP_MAX_SERVERS
++#define NTP_MAX_SERVERS (1)
++#endif
++
++#include <libubus.h>
++#include <uci.h>
++
++#ifdef MOBILE_SUPPORT
++#include <libgsm.h>
++#endif
++
++struct ntptime {
++	unsigned int coarse;
++	unsigned int fine;
++};
++
++#ifdef MOBILE_SUPPORT
++struct modem_sync {
++	struct ubus_context *ubus_ctx;
++	struct uci_context *uci_ctx;
++	int time_sync_enabled;
++	int timezone_sync_enabled;
++	lgsm_time_t *modem_time;
++};
++#endif
++
++struct ntp_control {
++	short int udp_local_port;
++	int probes_sent;
++	int live;
++	int set_clock; /* non-zero presumably needs root privs */
++	int probe_count;
++	int failover_cnt;
++	int cycle_time;
++	int retry_interval;
++	int goodness;
++	int cross_check;
++	int hosts;
++	int save_time;
++#ifdef MOBILE_SUPPORT
++	struct modem_sync modem_sync;
++#endif
++	uint32_t time_of_send[2];
++	char *hostnames[NTP_MAX_SERVERS];
++	char *hotplug_script;
++};
++
++/* global tuning parameter */
++extern double min_delay;
++
++#endif
+diff --recursive --unified --new-file --no-dereference orig/src/phaselock.c src/src/phaselock.c
+--- orig/src/phaselock.c	1970-01-01 00:00:00.000000000 +0000
++++ src/src/phaselock.c	2023-11-28 15:20:53.000000000 +0000
+@@ -0,0 +1,382 @@
++/*
++ * phaselock.c - Phase locking for NTP client
++ *
++ * Copyright (C) 2000, 2007  Larry Doolittle  <larry@doolittle.boa.org>
++ * Last hack: 30 December, 2007
++ *
++ *  This program is free software; you can redistribute it and/or modify
++ *  it under the terms of the GNU General Public License (Version 2,
++ *  June 1991) as published by the Free Software Foundation.  At the
++ *  time of writing, that license was published by the FSF with the URL
++ *  http://www.gnu.org/copyleft/gpl.html, and is incorporated herein by
++ *  reference.
++ *
++ *  This program is distributed in the hope that it will be useful,
++ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ *  GNU General Public License for more details.
++ *
++ *  Possible future improvements:
++ *      - Subtract configurable amount from errorbar
++ *      - Build in general run-time access to tune parameters
++ *      - Sculpt code so it's legible, this version is out of control
++ *      - Write documentation  :-(
++ */
++#include "debug.h"
++#include "log.h"
++
++#include <stdio.h>
++
++double min_delay = 800.0; /* global, user-changeable, units are microseconds */
++
++#define RING_SIZE   16
++#define MAX_CORRECT 250 /* ppm change to system clock */
++#define MAX_C	    (MAX_CORRECT) * 65536
++static struct datum {
++	unsigned int absolute;
++	double skew;
++	double errorbar;
++	int freq;
++	/* s.s.min and s.s.max (skews) are "corrected" to what they would
++	 * have been if freq had been constant at its current value during
++	 * the measurements.
++	 */
++	union {
++		struct {
++			double min;
++			double max;
++		} s;
++		double ss[2];
++	} s;
++	/*
++	double smin;
++	double smax;
++	 */
++} d_ring[(RING_SIZE)];
++
++static struct _seg {
++	double slope;
++	double offset;
++} maxseg[(RING_SIZE) + 1], minseg[(RING_SIZE) + 1];
++
++#if 0
++/* draw a line from a to c, what the offset is of that line
++ * where that line matches b's slope coordinate.
++ */
++static double interpolate(struct _seg *a, struct _seg *b, struct _seg *c)
++{
++	double x, y;
++	x = (b->slope - a->slope) / (c->slope  - a->slope) ;
++	y =         a->offset + x * (c->offset - a->offset);
++	return y;
++}
++#endif
++
++static int next_up(int i)
++{
++	int r = i + 1;
++	if (r >= (RING_SIZE))
++		r = 0;
++	return r;
++}
++static int next_dn(int i)
++{
++	int r = i - 1;
++	if (r < 0)
++		r = (RING_SIZE)-1;
++	return r;
++}
++
++/* Looks at the line segments that start at point j, that end at
++ * all following points (ending at index rp).  The initial point
++ * is on curve s0, the ending point is on curve s1.  The curve choice
++ * (s.min vs. s.max) is based on the index in ss[].  The scan
++ * looks for the largest (sign=0) or smallest (sign=1) slope.
++ */
++static int search(int rp, int j, int s0, int s1, int sign, struct _seg *answer)
++{
++	double dt, slope;
++	int n, nextj = 0, cinit = 1;
++	for (n = next_up(j); n != next_up(rp); n = next_up(n)) {
++		if (0)
++			DBG("d_ring[%d].s.ss[%d]=%f d_ring[%d].s.ss[%d]=%f\n", n, s0, d_ring[n].s.ss[s0], j,
++			    s1, d_ring[j].s.ss[s1]);
++		dt    = d_ring[n].absolute - d_ring[j].absolute;
++		slope = (d_ring[n].s.ss[s0] - d_ring[j].s.ss[s1]) / dt;
++		if (0)
++			DBG("slope %d%d%d [%d,%d] = %f\n", s0, s1, sign, j, n, slope);
++		if (cinit || (slope < answer->slope) ^ sign) {
++			answer->slope = slope;
++			answer->offset =
++				d_ring[n].s.ss[s0] + slope * (d_ring[rp].absolute - d_ring[n].absolute);
++			cinit = 0;
++			nextj = n;
++		}
++	}
++	return nextj;
++}
++
++/* Pseudo-class for finding consistent frequency shift */
++#define MIN_INIT 20
++static struct _polygon {
++	double l_min;
++	double r_min;
++} df;
++
++static void polygon_reset(void)
++{
++	df.l_min = (MIN_INIT);
++	df.r_min = (MIN_INIT);
++}
++
++static double find_df(int *flag)
++{
++	if (df.l_min == 0.0) {
++		if (df.r_min == 0.0) {
++			return 0.0; /* every point was OK */
++		} else {
++			return -df.r_min;
++		}
++	} else {
++		if (df.r_min == 0.0) {
++			return df.l_min;
++		} else {
++			if (flag)
++				*flag = 1;
++			return 0.0; /* some points on each side,
++			               * or no data at all */
++		}
++	}
++}
++
++/* Finds the amount of delta-f required to move a point onto a
++ * target line in delta-f/delta-t phase space.  Any line is OK
++ * as long as it's not convex and never returns greater than
++ * MIN_INIT. */
++static double find_shift(double slope, double offset)
++{
++	double shift  = slope - offset / 600.0;
++	double shift2 = slope + 0.3 - offset / 6000.0;
++	if (shift2 < shift)
++		shift = shift2;
++	DBG("find_shift %f %f -> %f\n", slope, offset, shift);
++	if (shift < 0)
++		return 0.0;
++	return shift;
++}
++
++static void polygon_point(struct _seg *s)
++{
++	double l, r;
++	DBG("loop %f %f\n", s->slope, s->offset);
++	l = find_shift(-s->slope, s->offset);
++	r = find_shift(s->slope, -s->offset);
++	if (l < df.l_min)
++		df.l_min = l;
++	if (r < df.r_min)
++		df.r_min = r;
++	DBG("constraint left:  %f %f \n", l, df.l_min);
++	DBG("constraint right: %f %f \n", r, df.r_min);
++}
++
++/* Something like linear feedback to be used when we are "close" to
++ * phase lock.  Not really used at the moment:  the logic in find_df()
++ * never sets the flag. */
++static double find_df_center(struct _seg *min, struct _seg *max, double gross_df)
++{
++	const double crit_time = 1000.0;
++	double slope	       = 0.5 * (max->slope + min->slope) + gross_df;
++	double dslope	       = (max->slope - min->slope);
++	double offset	       = 0.5 * (max->offset + min->offset);
++	double doffset	       = (max->offset - min->offset);
++	double delta1	       = -offset / 600.0 - slope;
++	double delta2	       = -offset / 1800.0 - slope;
++	double delta	       = 0.0;
++	double factor	       = crit_time / (crit_time + doffset + dslope * 1200.0);
++	if (offset < 0 && delta2 > 0)
++		delta = delta2;
++	if (offset < 0 && delta1 < 0)
++		delta = delta1;
++	if (offset >= 0 && delta1 > 0)
++		delta = delta1;
++	if (offset >= 0 && delta2 < 0)
++		delta = delta2;
++	if (max->offset < -crit_time || min->offset > crit_time)
++		return 0.0;
++	DBG("find_df_center %f %f\n", delta, factor);
++	return factor * delta;
++}
++
++int contemplate_data(unsigned int absolute, double skew, double errorbar, int freq)
++{
++	/*  Here is the actual phase lock loop.
++	 *  Need to keep a ring buffer of points to make a rational
++	 *  decision how to proceed.  if (debug) print a lot.
++	 */
++	static int rp = 0, valid = 0;
++	int both_sides_now = 0;
++	int j, n, c, max_avail, min_avail, dinit;
++	int nextj = 0; /* initialization not needed; but gcc can't figure out my logic */
++	double cum;
++	struct _seg check, save_min, save_max;
++	double last_slope;
++	int delta_freq;
++	double delta_f;
++	int inconsistent = 0, max_imax, max_imin = 0, min_imax, min_imin = 0;
++	int computed_freq = freq;
++
++	DBG("xontemplate %u %.1f %.1f %d\n", absolute, skew, errorbar, freq);
++	d_ring[rp].absolute = absolute;
++	d_ring[rp].skew	    = skew;
++	d_ring[rp].errorbar = errorbar - min_delay; /* quick hack to speed things up */
++	d_ring[rp].freq	    = freq;
++
++	if (valid < (RING_SIZE))
++		++valid;
++	if (valid == (RING_SIZE)) {
++		/*
++		 * Pass 1: correct for wandering freq's */
++		cum = 0.0;
++		DBG("\n");
++		for (j = rp;; j = n) {
++			d_ring[j].s.s.max = d_ring[j].skew - cum + d_ring[j].errorbar;
++			d_ring[j].s.s.min = d_ring[j].skew - cum - d_ring[j].errorbar;
++			DBG("hist %d %d %f %f %f\n", j, d_ring[j].absolute - absolute, cum, d_ring[j].s.s.min,
++			    d_ring[j].s.s.max);
++			n = next_dn(j);
++			if (n == rp)
++				break;
++			/* Assume the freq change took place immediately after
++			 * the data was taken; this is valid for the case where
++			 * this program was responsible for the change.
++			 */
++			cum = cum + (d_ring[j].absolute - d_ring[n].absolute) *
++					    (double)(d_ring[j].freq - freq) / 65536;
++		}
++		/*
++		 * Pass 2: find the convex down envelope of s.max, composed of
++		 * line segments in s.max vs. absolute space, which are
++		 * points in freq vs. dt space.  Find points in order of increasing
++		 * slope == freq */
++		dinit	   = 1;
++		last_slope = -2 * (MAX_CORRECT);
++		for (c = 1, j = next_up(rp);; j = nextj) {
++			nextj = search(rp, j, 1, 1, 0, &maxseg[c]);
++			search(rp, j, 0, 1, 1, &check);
++			if (check.slope < maxseg[c].slope && check.slope > last_slope &&
++			    (dinit || check.slope < save_min.slope)) {
++				dinit	 = 0;
++				save_min = check;
++			}
++			DBG("maxseg[%d] = %f *x+ %f\n", c, maxseg[c].slope, maxseg[c].offset);
++			last_slope = maxseg[c].slope;
++			c++;
++			if (nextj == rp)
++				break;
++		}
++		if (dinit == 1)
++			inconsistent = 1;
++		if (dinit == 0)
++			DBG("mincross %f *x+ %f\n", save_min.slope, save_min.offset);
++		max_avail = c;
++		/*
++		 * Pass 3: find the convex up envelope of s.min, composed of
++		 * line segments in s.min vs. absolute space, which are
++		 * points in freq vs. dt space.  These points are found in
++		 * order of decreasing slope. */
++		dinit	   = 1;
++		last_slope = +2 * (MAX_CORRECT);
++		for (c = 1, j = next_up(rp);; j = nextj) {
++			nextj = search(rp, j, 0, 0, 1, &minseg[c]);
++			search(rp, j, 1, 0, 0, &check);
++			if (check.slope > minseg[c].slope && check.slope < last_slope &&
++			    (dinit || check.slope < save_max.slope)) {
++				dinit	 = 0;
++				save_max = check;
++			}
++			DBG("minseg[%d] = %f *x+ %f\n", c, minseg[c].slope, minseg[c].offset);
++			last_slope = minseg[c].slope;
++			c++;
++			if (nextj == rp)
++				break;
++		}
++		if (dinit == 1)
++			inconsistent = 1;
++		if (dinit == 0)
++			DBG("maxcross %f *x+ %f\n", save_max.slope, save_max.offset);
++		min_avail = c;
++		/*
++		 * Pass 4: splice together the convex polygon that forms
++		 * the envelope of slope/offset coordinates that are consistent
++		 * with the observed data.  The order of calls to polygon_point
++		 * doesn't matter for the frequency shift determination, but
++		 * the order chosen is nice for visual display. */
++		if (!inconsistent) {
++			polygon_reset();
++			polygon_point(&save_min);
++			for (dinit = 1, c = 1; c < max_avail; c++) {
++				if (dinit && maxseg[c].slope > save_min.slope) {
++					max_imin	 = c - 1;
++					maxseg[max_imin] = save_min;
++					dinit		 = 0;
++				}
++				if (maxseg[c].slope > save_max.slope)
++					break;
++				if (dinit == 0)
++					polygon_point(&maxseg[c]);
++			}
++			if (dinit)
++				DBG("found maxseg vs. save_min inconsistency\n");
++			if (dinit)
++				inconsistent = 1;
++			max_imax	 = c;
++			maxseg[max_imax] = save_max;
++
++			polygon_point(&save_max);
++			for (dinit = 1, c = 1; c < min_avail; c++) {
++				if (dinit && minseg[c].slope < save_max.slope) {
++					max_imin	 = c - 1;
++					minseg[min_imin] = save_max;
++					dinit		 = 0;
++				}
++				if (minseg[c].slope < save_min.slope)
++					break;
++				if (dinit == 0)
++					polygon_point(&minseg[c]);
++			}
++			if (dinit)
++				DBG("found minseg vs. save_max inconsistency\n");
++			if (dinit)
++				inconsistent = 1;
++			min_imax	 = c;
++			minseg[min_imax] = save_max;
++
++			/* not needed for analysis, but shouldn't hurt either */
++			if (g_debug)
++				polygon_point(&save_min);
++		} /* !inconsistent */
++
++		/*
++		 * Pass 5: decide on a new freq */
++		if (inconsistent) {
++			LOG("# inconsistent\n");
++		} else {
++			delta_f = find_df(&both_sides_now);
++			DBG("find_df() = %e\n", delta_f);
++			delta_f += find_df_center(&save_min, &save_max, delta_f);
++			delta_freq = delta_f * 65536 + .5;
++			DBG("delta_f %f  delta_freq %d  bsn %d\n", delta_f, delta_freq, both_sides_now);
++			computed_freq -= delta_freq;
++			LOG("# box [( %.3f , %.1f ) ", save_min.slope, save_min.offset);
++			LOG(" ( %.3f , %.1f )] ", save_max.slope, save_max.offset);
++			LOG(" delta_f %.3f  computed_freq %d\n", delta_f, computed_freq);
++
++			if (computed_freq < -(MAX_C))
++				computed_freq = -(MAX_C);
++			if (computed_freq > (MAX_C))
++				computed_freq = (MAX_C);
++		}
++	}
++	rp = (rp + 1) % (RING_SIZE);
++	return computed_freq;
++}
+diff --recursive --unified --new-file --no-dereference orig/src/phaselock.h src/src/phaselock.h
+--- orig/src/phaselock.h	1970-01-01 00:00:00.000000000 +0000
++++ src/src/phaselock.h	2023-11-28 15:20:53.000000000 +0000
+@@ -0,0 +1,6 @@
++#ifndef _PHASELOCK_H_
++#define _PHASELOCK_H_
++
++int contemplate_data(unsigned int absolute, double skew, double errorbar, int freq);
++
++#endif
+\ No newline at end of file
+diff --recursive --unified --new-file --no-dereference orig/src/rate.awk src/src/rate.awk
+--- orig/src/rate.awk	1970-01-01 00:00:00.000000000 +0000
++++ src/src/rate.awk	2023-11-28 15:20:53.000000000 +0000
+@@ -0,0 +1,18 @@
++(FNR==1){ day_off=$1;        t1=$2; o1=$5; f1=$7}
++        { t2=($1-day_off)*86400+$2; o2=$5; f2=$7; if (f2!=f1) fwarn=1}
++
++END{
++  print "delta-t",t2-t1,"seconds"
++  print "delta-o",o2-o1,"useconds"
++  if (fwarn) print " *** frequency changed in the middle - don't use ***"
++  slope=(o2-o1)/(t2-t1)
++  print "slope",slope,"ppm"
++  print "old frequency",f1,"(",f1/65536,"ppm)"
++  f3=f1+int(slope*65536);
++  print "new frequency",f3,"(",f3/65536,"ppm)"
++}
++
++# the final value is what you should push into the adjtimex(2) field.
++# i.e., if the last line shows
++# new frequency -1318109 ( -20.1127 ppm)
++# you put -1318109 into the -f switch of adjtimex (e.g., adjtimex -f -1318109)
+diff --recursive --unified --new-file --no-dereference orig/src/rate2.awk src/src/rate2.awk
+--- orig/src/rate2.awk	1970-01-01 00:00:00.000000000 +0000
++++ src/src/rate2.awk	2023-11-28 15:20:53.000000000 +0000
+@@ -0,0 +1,193 @@
++#!/usr/bin/awk -f
++
++# There are more comments below the following BEGIN block.
++
++BEGIN {
++	# This value is in seconds.
++	# It must match the -i interval used with ntpclient if not
++	# the default of 10 minutes.
++	td = 10 * 60;
++
++	# How many milliseconds may a sample be off by (system time) and
++	# still be counted?
++	# This check (with the above td) is here to tell you if you have
++	# several ntpclient processes logging to the same file.
++	tderr = 100;
++
++	# How many ppm may one sample's computed frequency differ from the
++	# previous one and still be counted?
++	# This check filters out records resulting from an NTP server glitch.
++	freq_diff = 5;
++
++	# How many milliseconds may it take to get an answer from the
++	# ntp server?
++	# Long replies often produce glitchy results.
++	ntp_delay = 100;
++}
++
++# This script is to determine what your /etc/ntp.adj should be
++# It is invoked thusly:
++#     awk -f rate2.awk < /var/lib/ntp.log
++# Unlike the original rate.awk script supplied with ntpclient,
++# this one can be run against the log of a running ntpclient which
++# is adjusting the adjtimex frequency.  The alternative is a drag
++# because it means you cannot be keeping time while you are determining
++# a suitable adjtimex frequency.  You, of course, can do that with
++# this program too; you just don't have to.  Given a file that works
++# with the original rate.awk, this script should produce similar
++# results.  You may have to increase the above thresholds to keep
++# records from being ignored so you get the same answers.
++
++# It is assumed that nothing besides ntpclient is adjusting that
++# value for the duration of the creation of the log file.
++
++# It is recommended that you collect lots of log entries.
++# It is further recommended that you collect logs for roughly an
++# integer number of days to even out daily cycles (temperature, etc.)
++
++
++# No tweaking necessary below here, I hope.
++
++function pretty_time(ss, dd, hh, mm, ret, f) {
++	ss += 0;
++	if(ss < 0) {
++		ret = "-";
++		ss = -ss;
++	} else {
++		ret = "";
++	}
++	mm = int(ss / 60); ss -= (mm * 60);
++	hh = int(mm / 60); mm -= (hh * 60);
++	dd = int(hh / 24); hh -= (dd * 24);
++
++	if(dd != 0) {
++		ret = sprintf("%s%d+", ret, dd);
++	}
++	if(ret != "" || hh != 0) {
++		ret = sprintf("%s%02d:", ret, hh);
++	}
++	if(ret != "" || mm != 0) {
++		ret = sprintf("%s%02d:", ret, mm);
++	}
++	ss = sprintf("%06.3f", ss); sub(/0+$/, "", ss); sub(/\.$/, "", ss);
++	if(ret != "" || (ss + 0) != 0) {
++		ret = sprintf("%s%s", ret, ss);
++	} else {
++		ret = "0";
++	}
++	return ret;
++}
++
++function abs(a) {
++	a += 0;
++	if(a < 0) {
++		return -a;
++	}
++	else {
++		return a;
++	}
++}
++
++function round(a, p) {
++	p += 0;
++	if(p == 0) {
++		return int(a + 0.5);
++	} else {
++		return int((a / p) + 0.5) * p;
++	}
++}
++
++BEGIN {
++	f1 = "";
++	tderr = tderr / 1000;
++	tdmin = td - tderr;
++	tdmax = td + tderr;
++	freq_diff = freq_diff * 65536;
++	ntp_delay = ntp_delay * 1000;
++	c = 0;
++	ignored = 0;
++	delta_o = 0;
++	delta_t = 0;
++	sum_f2 = 0;
++	min_f2 = "init";
++	max_f2 = "init";
++	prev_f2 = "init";
++}
++
++/^[0-9]/ {
++	if(f1 == "") {
++		t1 = $1 * 86400 + $2;
++		o1 = $5;
++		f1 = $7;
++
++		t2 = ts = t1;
++		o2 = o1;
++		fs = f1;
++
++		c++;
++	} else {
++		t2 = $1 * 86400 + $2;
++		o2 = $5;
++
++		td = t2 - t1;
++		od = o2 - o1;
++		if($3 > ntp_delay) {
++			print "Ignoring: ntp delay (" $3 / 1000 " ms) out of spec in line " FNR ".";
++			ignored++;
++		} else {
++			if(td < tdmin || td > tdmax) {
++				print "Ignoring: time difference (" pretty_time(td) ") out of spec in line " FNR ".";
++				ignored++;
++			} else {
++				f2 = f1 + (65536 * od / td);
++				if(prev_f2 == "init") {prev_f2 = f2;}
++				if(abs(f2 - prev_f2) > freq_diff) {
++					print "Ignoring: target frequency adjustment (" (f2 - prev_f2) / 65536 " ppm) out of spec in line " FNR ".";
++					ignored++;
++				} else {
++					# weighted average
++					sum_f2 += f2 * td;
++					delta_o += od;
++					delta_t += td;
++
++					# minimum / maximum
++					if(min_f2 == "init") { min_f2 = f2; }
++					else { if(f2 < min_f2) { min_f2 = f2; }}
++					if(max_f2 == "init") { max_f2 = f2; }
++					else { if(f2 > max_f2) { max_f2 = f2; }}
++
++					c++;
++				}
++				prev_f2 = f2;
++			}
++		}
++
++		t1 = t2;
++		o1 = o2;
++		f1 = $7;
++	}
++}
++
++END {
++	if(ignored > 0) {
++		print "";
++	}
++	print "total time:",pretty_time(round(delta_t));
++	print "number of samples:",c;
++	if(ignored > 0) {
++		print "ignored samples:", ignored, "(" round(100 * ignored / (ignored + c)) "%)";
++	}
++	if(delta_t >= tdmin) {
++		print "";
++		slope = delta_o / delta_t;
++		f2 = sum_f2 / delta_t;
++		print "delta-t", delta_t, "seconds"
++		print "delta-o", delta_o, "useconds"
++		print "slope:", slope, "ppm";
++		print "old frequency:", fs, "(" fs / 65536,"ppm)";
++		#print "min frequency:", int(min_f2 + .5), "(" min_f2 / 65536,"ppm)";
++		#print "max frequency:", int(max_f2 + .5), "(" max_f2 / 65536,"ppm)";
++		print "new frequency:", int(f2 + .5), "(" f2 / 65536,"ppm)";
++	}
++}
++
+diff --recursive --unified --new-file --no-dereference orig/src/test.dat src/src/test.dat
+--- orig/src/test.dat	1970-01-01 00:00:00.000000000 +0000
++++ src/src/test.dat	2023-11-28 15:20:53.000000000 +0000
+@@ -0,0 +1,200 @@
++36765 180.386    1398.0     40.3  953773.9    793.5  -1240000
++36765 780.382    1358.0     41.3  954329.0    915.5  -1240000
++36765 1380.381    1439.0     56.0  954871.3    915.5  -1240000
++36765 1980.379    1224.0     40.7  955201.2    915.5  -1240000
++36765 2580.378    1352.0     40.5  955566.2    915.5  -1240000
++36765 3180.377    1544.0     41.1  955903.9    701.9  -1240000
++36765 3780.376    1449.0     39.4  956244.1    701.9  -1240000
++36765 4380.374    1391.0     40.9  956440.7    534.1  -1240000
++36765 4980.373    1341.0     39.7  956761.4    839.2  -1240000
++36765 5580.371    1494.0     40.2  956896.7    839.2  -1240000
++36765 6180.370    1364.0     40.3  957000.4    656.1  -1240000
++36765 6780.369    1345.0     40.2  956728.3    656.1  -1240000
++36765 7380.367    1451.0     39.8  956602.9   1007.1  -1240000
++36765 7980.366    1368.0     40.4  956284.6    915.5  -1240000
++36765 8580.365    1525.0     59.1  956022.4    915.5  -1240000
++36765 9180.363    1589.0     42.4  955579.0    900.3  -1240000
++36765 9780.362    1390.0     39.2  955093.5    900.3  -1240000
++36765 10380.360    1233.0     40.9  954706.6    824.0  -1240000
++36765 10980.359    1450.0     39.3  954136.1    824.0  -1240000
++36765 11580.358    1368.0    106.2  953572.5    839.2  -1240000
++36765 12180.356    1256.0     41.0  952916.3    778.2  -1240000
++36765 12780.355    1784.0     67.3  952424.6    778.2  -1240000
++36765 13380.354    1442.0     38.9  951538.6   1037.6  -1240000
++36765 13980.352    1440.0     39.0  950896.5   1037.6  -1240000
++36765 14580.351    1464.0     40.5  950265.9   1068.1  -1240000
++36765 15180.350    1704.0     41.6  949640.5    839.2  -1240000
++36765 15780.348    1630.0     85.2  948911.3   1510.6  -1240000
++36765 16380.347    1417.0     39.7  948169.1   1419.1  -1240000
++36765 16980.346    1540.0     40.6  947520.4    900.3  -1240000
++36765 17580.344    1490.0     41.2  946712.9   1037.6  -1240000
++36765 18180.343    1510.0     55.7  946021.7   1297.0  -1240000
++36765 18780.342    1701.0     81.1  945409.4    671.4  -1240000
++36765 19380.340    1613.0     42.0  944507.0    549.3  -1240000
++36765 19980.339    1422.0     39.9  943734.0    640.9  -1240000
++36765 20580.337    1475.0     39.2  942894.0    793.5  -1240000
++36765 21180.336    1441.0     41.0  942099.1    976.6  -1240000
++36765 21780.335    1552.0     39.8  941060.7    671.4  -1240000
++36765 22380.333    1392.0     40.0  940260.6    762.9  -1240000
++36765 22980.332    1538.0     38.9  939286.9    839.2  -1240000
++36765 23580.331    1493.0     39.0  938504.0    976.6  -1240000
++36765 24180.330    1831.0     42.0  937593.4    915.5  -1240000
++36765 24780.328    1525.0    117.1  936596.0    625.6  -1240000
++36765 25380.327    1772.0     39.4  935892.4   1449.6  -1240000
++36765 25980.325    1380.0     40.4  934613.8   1052.9  -1240000
++36765 26580.324    1667.0     42.4  933470.5    869.8  -1240000
++36765 27180.322    1493.0     41.2  932096.1    305.2  -1240000
++36765 27780.322    2938.0     95.7  931425.9   2044.7  -1240000
++36765 28380.320    1409.0     40.1  929695.8   1358.0  -1240000
++36765 28980.318    1569.0    127.0  928623.0   1205.4  -1240000
++36765 29580.317    1457.0     57.9  927572.9   1190.2  -1240000
++36765 30180.316    2400.0     41.9  926934.0   5752.6  -1240000
++36765 30780.314    1393.0     39.9  925503.8  40481.6  -1240000
++36765 31380.313    1504.0     40.1  924310.4  55404.7  -1240000
++36765 31980.311    1505.0     39.8  922958.0  95443.7  -1240000
++36765 32580.311    2111.0    105.1  921726.4  62133.8  -1240000
++36765 33180.309    1704.0     39.1  920437.9  55084.2  -1240000
++36765 33780.308    1676.0     39.3  919440.1  24841.3  -1240000
++36765 34380.306    1458.0     40.5  918315.6  24841.3  -1240000
++36765 34980.305    1379.0     40.9  917182.6  12939.5  -1240000
++36765 35580.303    1537.0    101.5  915995.9  12939.5  -1240000
++36765 36180.302    1398.0     40.1  914772.5   7309.0  -1240000
++36765 36780.301    1755.0     41.0  913392.9   4287.7  -1240000
++36765 37380.299    1576.0     41.7  912317.9   4287.7  -1240000
++36765 37980.298    1582.0     94.0  911086.9   3402.7  -1240000
++36765 38580.297    1588.0     41.0  909836.8   3402.7  -1240000
++36765 39180.296    2262.0     43.2  908969.3   2197.3  -1240000
++36765 39780.297    4338.0     97.1  906050.6   2197.3  -1240000
++36765 40380.293    1623.0     40.3  906168.3   3646.9  -1240000
++36765 40980.301    1663.0     40.0  904893.8   3402.7  -1240000
++36765 41580.300    1533.0     42.3  903739.0   3402.7  -1240000
++36765 42180.299    1743.0     53.5  902408.1   3356.9  -1240000
++36765 42780.297    1285.0     40.5  901196.4   3356.9  -1240000
++36765 43380.296    1501.0     40.2  900003.4   3601.1  -1240000
++36765 43980.294    1585.0     41.1  898710.0   3830.0  -1240000
++36765 44580.293    1544.0     91.1  897524.8   3158.6  -1240000
++36765 45180.291    1439.0     41.3  896256.0   3952.0  -1240000
++36765 45780.292    3341.0     43.2  896823.7   3021.2  -1240000
++36765 46380.289    1532.0     41.3  896050.0   1541.1  -1240000
++36765 46980.287    1417.0     41.1  895141.2    824.0  -1240000
++36765 47580.287    2495.0     41.5  894562.1    839.2  -1240000
++36765 48180.285    1639.0     41.2  892762.2   1281.7  -1240000
++36765 48780.283    1398.0     65.5  891754.2   1281.7  -1240000
++36765 49380.282    1667.0     78.8  890665.1   1419.1  -1240000
++36765 49980.280    1355.0     40.0  889649.8    808.7  -1240000
++36765 50580.279    1310.0     39.6  888696.4   1297.0  -1240000
++36765 51180.278    1404.0     39.6  887925.1   1098.6  -1240000
++36765 51780.277    1631.0     40.3  887040.9    595.1  -1240000
++36765 52380.275    1534.0     41.1  886139.6    915.5  -1240000
++36765 52980.274    1393.0     42.3  885339.7    762.9  -1240000
++36765 53580.272    1562.0     40.1  884569.1    747.7  -1240000
++36765 54180.271    1273.0     39.0  883701.0    595.1  -1240000
++36765 54780.270    1465.0     40.4  882850.3    854.5  -1240000
++36765 55380.268    1315.0     40.6  882150.8    824.0  -1240000
++36765 55980.267    1441.0     40.3  881339.3   1129.2  -1240000
++36765 56580.265    1363.0    114.3  880438.2   1480.1  -1240000
++36765 57180.265    2444.0     43.1  880225.9   1602.2  -1240000
++36765 57780.263    1407.0     40.6  878964.8   1602.2  -1240000
++36765 58380.262    1642.0     93.3  878258.9   1571.7  -1240000
++36765 58980.260    1388.0     39.7  877444.1   1541.1  -1240000
++36765 59580.259    1710.0    130.5  876926.3   1541.1  -1240000
++36765 60180.257    1310.0     40.5  876275.2   1983.6  -1240000
++36765 60780.256    1447.0     41.4  875837.7   1983.6  -1240000
++36765 61380.255    1425.0     39.9  875384.8   1922.6  -1240000
++36765 61980.253    1312.0     39.5  874853.4   1922.6  -1240000
++36765 62580.252    1347.0     39.6  874412.1   1281.7  -1240000
++36765 63180.250    1434.0     40.8  874075.5   1190.2  -1240000
++36765 63780.249    1694.0     41.2  873772.9    961.3  -1240000
++36765 64380.248    1645.0     40.5  873446.2    747.7  -1240000
++36765 64980.246    1527.0     40.6  872731.2   1113.9  -1240000
++36765 65580.245    1434.0     41.1  872210.9    656.1  -1240000
++36765 66180.244    1483.0     76.0  871836.7   1281.7  -1240000
++36765 66780.242    1368.0     53.7  871421.7    900.3  -1240000
++36765 67380.241    1332.0     39.2  871015.6   1541.1  -1240000
++36765 67980.240    1505.0     40.4  870532.4   1373.3  -1240000
++36765 68580.238    1447.0    103.0  870126.4   1754.8  -1240000
++36765 69180.237    1532.0     39.6  869551.7   1098.6  -1240000
++36765 69780.235    1304.0     41.4  868979.4   1144.4  -1240000
++36765 70380.234    1400.0     40.3  868518.1    640.9  -1240000
++36765 70980.233    1412.0     40.6  868117.4    701.9  -1240000
++36765 71580.231    1332.0     40.2  867546.5   1022.3  -1240000
++36765 72180.230    1444.0     40.6  867123.4   1052.9  -1240000
++36765 72780.229    1407.0     40.3  866755.0    778.2  -1240000
++36765 73380.227    1443.0     39.4  866398.3    961.3  -1240000
++36765 73980.226    1271.0     41.1  866013.9   1236.0  -1240000
++36765 74580.225    1440.0     41.1  865821.3    885.0  -1240000
++36765 75180.223    1483.0     40.7  865365.5   1403.8  -1240000
++36765 75780.222    1378.0     41.3  864983.0    839.2  -1240000
++36765 76380.220    1287.0     39.3  864491.3    839.2  -1240000
++36765 76980.219    1674.0     42.4  864295.1   1159.7  -1240000
++36765 77580.220    3376.0     42.0  864655.8   1159.7  -1240000
++36765 78180.216    1334.0     41.6  863257.2   1403.8  -1240000
++36765 78780.215    1822.0     40.2  862960.6   1068.1  -1240000
++36765 79380.214    1335.0     40.3  862239.1   1068.1  -1240000
++36765 79980.212    1608.0     53.6  861925.8   1480.1  -1240000
++36765 80580.211    1725.0     92.0  861630.2   1480.1  -1240000
++36765 81180.210    1472.0     40.8  861288.3   1342.8  -1240000
++36765 81780.208    1550.0     41.0  861057.6   1556.4  -1240000
++36765 82380.207    1401.0     40.9  861078.9   1449.6  -1240000
++36765 82980.216    1632.0     41.4  861667.3   1174.9  -1240000
++36765 83580.214    1533.0     40.8  861963.9    839.2  -1240000
++36765 84180.213    1412.0     40.5  861896.0   1266.5  -1240000
++36765 84780.212    1539.0     65.0  862159.4    701.9  -1240000
++36765 85380.210    1570.0     39.5  861939.6    701.9  -1240000
++36765 85980.209    1506.0     40.1  861570.6    396.7  -1240000
++36766 180.207    1311.0     39.5  861527.4    961.3  -1240000
++36766 780.206    1349.0    116.6  861354.9    915.5  -1240000
++36766 1380.204    1254.0     39.9  861167.1   1037.6  -1240000
++36766 1980.203    1486.0     40.8  860973.9   1419.1  -1240000
++36766 2580.202    1394.0     41.6  860692.1   1022.3  -1240000
++36766 3180.201    1465.0     41.9  860557.0   1083.4  -1240000
++36766 3780.199    1589.0     42.2  860389.3    976.6  -1240000
++36766 4380.198    1275.0     41.5  860026.0    808.7  -1240000
++36766 4980.196    1315.0     42.7  859693.6    442.5  -1240000
++36766 5580.196    2676.0     41.5  859977.4    701.9  -1240000
++36766 6180.194    1508.0     41.2  858754.8    701.9  -1240000
++36766 6780.192    1316.0     40.6  857892.9    930.8  -1240000
++36766 7380.191    1324.0     41.4  857159.4    930.8  -1240000
++36766 7980.190    1393.0     41.9  856343.1    534.1  -1240000
++36766 8580.188    1326.0     40.1  855352.1    534.1  -1240000
++36766 9180.187    1289.0     40.2  854476.3    534.1  -1240000
++36766 9780.186    1896.0     40.8  853726.1    854.5  -1240000
++36766 10380.184    1381.0     39.2  852535.0    854.5  -1240000
++36766 10980.183    1419.0     41.0  851623.3   1052.9  -1240000
++36766 11580.181    1338.0     41.0  850522.6   1052.9  -1240000
++36766 12180.180    1303.0     40.8  849472.4    701.9  -1240000
++36766 12780.179    1550.0     41.2  848451.8    778.2  -1240000
++36766 13380.177    1493.0     77.7  847222.5    778.2  -1240000
++36766 13980.176    1615.0     40.4  846049.9    885.0  -1240000
++36766 14580.175    1725.0     39.6  845228.5    885.0  -1240000
++36766 15180.173    1379.0     41.8  843992.8    991.8  -1240000
++36766 15780.172    1627.0    103.3  842911.9    991.8  -1240000
++36766 16380.170    1438.0     40.2  841808.8    793.5  -1240000
++36766 16980.169    1459.0     41.4  840781.0    885.0  -1240000
++36766 17580.168    1441.0     40.2  839756.8   1251.2  -1240000
++36766 18180.166    1491.0     39.9  838921.2   1449.6  -1240000
++36766 18780.165    1672.0     64.9  837827.5   1083.4  -1240000
++36766 19380.164    1398.0     41.8  836844.2    518.8  -1240000
++36766 19980.162    1543.0     75.0  835839.8   1007.1  -1240000
++36766 20580.161    1523.0     41.2  834823.5   1098.6  -1240000
++36766 21180.160    1383.0    104.6  833755.9   1083.4  -1240000
++36766 21780.159    1935.0     85.9  832768.4   1449.6  -1240000
++36766 22380.157    1403.0     40.8  831734.1   1205.4  -1240000
++36766 22980.156    1718.0     41.1  830751.5    854.5  -1240000
++36766 23580.154    1423.0     41.3  829687.8   2182.0  -1240000
++36766 24180.153    1576.0     63.5  828487.2   1419.1  -1240000
++36766 24780.151    1362.0    100.1  827432.9    869.8  -1240000
++36766 25380.150    1542.0     42.0  826275.5   1174.9  -1240000
++36766 25980.149    1385.0     40.7  825205.0    686.6  -1240000
++36766 26580.147    1545.0     71.6  824036.2    808.7  -1240000
++36766 27180.146    1723.0    104.3  822937.0   1434.3  -1240000
++36766 27780.145    1574.0     39.4  821774.7   1327.5  -1240000
++36766 28380.144    1736.0    117.3  820620.7   2151.5  -1240000
++36766 28980.142    1746.0     41.4  819616.4   1434.3  -1240000
++36766 29580.141    1731.0     59.6  818419.2    885.0  -1240000
++36766 30180.139    1516.0     41.1  817231.2   2014.2  -1240000
++36766 30780.138    1881.0     40.8  816197.7   3402.7  -1240000
++36766 31380.136    1507.0     57.5  815003.6   2059.9  -1240000
++36766 31980.136    2498.0     41.8  814294.2   2029.4  -1240000
++36766 32580.134    1697.0     40.0  812781.0   2059.9  -1240000
++36766 33180.132    1607.0     39.9  811465.7   2059.9  -1240000
+diff --recursive --unified --new-file --no-dereference orig/src/todo src/src/todo
+--- orig/src/todo	1970-01-01 00:00:00.000000000 +0000
++++ src/src/todo	2023-11-28 15:20:53.000000000 +0000
+@@ -0,0 +1,18 @@
++Ask on newsgroup about making sanity checks mandatory, default, or optional
++   Rob Landley says disable checks with CONFIG to save space
++   good to know why something fails
++   Denis Vlasenko recommends not checking UDP source, since that can
++     break on multihomed server, confirmed for ntpd
++   Denis also says "Give a message. You may make it configurable:
++     ntpclient: dropped malformed packet[: <optionally what's wrong>]
++Ask for pre-release comments from Walter Harms and others
++Exit without warning if -f is the only option
++
++Leap second, crib from openntpd?  worthless!  Look at wikipedia "unix time" article
++IPv6?
++Multiple (interleaved) servers
++   compile-time option for unlimited (malloc) or limited (no-malloc,
++   for hard-embedded use) number of servers
++Test handle laptop suspend?
++Drift file - read on startup, save on SIGxxxx
++
+diff --recursive --unified --new-file --no-dereference orig/test.dat src/test.dat
+--- orig/test.dat	2006-10-28 01:22:21.000000000 +0000
++++ src/test.dat	1970-01-01 00:00:00.000000000 +0000
+@@ -1,200 +0,0 @@
+-36765 180.386    1398.0     40.3  953773.9    793.5  -1240000
+-36765 780.382    1358.0     41.3  954329.0    915.5  -1240000
+-36765 1380.381    1439.0     56.0  954871.3    915.5  -1240000
+-36765 1980.379    1224.0     40.7  955201.2    915.5  -1240000
+-36765 2580.378    1352.0     40.5  955566.2    915.5  -1240000
+-36765 3180.377    1544.0     41.1  955903.9    701.9  -1240000
+-36765 3780.376    1449.0     39.4  956244.1    701.9  -1240000
+-36765 4380.374    1391.0     40.9  956440.7    534.1  -1240000
+-36765 4980.373    1341.0     39.7  956761.4    839.2  -1240000
+-36765 5580.371    1494.0     40.2  956896.7    839.2  -1240000
+-36765 6180.370    1364.0     40.3  957000.4    656.1  -1240000
+-36765 6780.369    1345.0     40.2  956728.3    656.1  -1240000
+-36765 7380.367    1451.0     39.8  956602.9   1007.1  -1240000
+-36765 7980.366    1368.0     40.4  956284.6    915.5  -1240000
+-36765 8580.365    1525.0     59.1  956022.4    915.5  -1240000
+-36765 9180.363    1589.0     42.4  955579.0    900.3  -1240000
+-36765 9780.362    1390.0     39.2  955093.5    900.3  -1240000
+-36765 10380.360    1233.0     40.9  954706.6    824.0  -1240000
+-36765 10980.359    1450.0     39.3  954136.1    824.0  -1240000
+-36765 11580.358    1368.0    106.2  953572.5    839.2  -1240000
+-36765 12180.356    1256.0     41.0  952916.3    778.2  -1240000
+-36765 12780.355    1784.0     67.3  952424.6    778.2  -1240000
+-36765 13380.354    1442.0     38.9  951538.6   1037.6  -1240000
+-36765 13980.352    1440.0     39.0  950896.5   1037.6  -1240000
+-36765 14580.351    1464.0     40.5  950265.9   1068.1  -1240000
+-36765 15180.350    1704.0     41.6  949640.5    839.2  -1240000
+-36765 15780.348    1630.0     85.2  948911.3   1510.6  -1240000
+-36765 16380.347    1417.0     39.7  948169.1   1419.1  -1240000
+-36765 16980.346    1540.0     40.6  947520.4    900.3  -1240000
+-36765 17580.344    1490.0     41.2  946712.9   1037.6  -1240000
+-36765 18180.343    1510.0     55.7  946021.7   1297.0  -1240000
+-36765 18780.342    1701.0     81.1  945409.4    671.4  -1240000
+-36765 19380.340    1613.0     42.0  944507.0    549.3  -1240000
+-36765 19980.339    1422.0     39.9  943734.0    640.9  -1240000
+-36765 20580.337    1475.0     39.2  942894.0    793.5  -1240000
+-36765 21180.336    1441.0     41.0  942099.1    976.6  -1240000
+-36765 21780.335    1552.0     39.8  941060.7    671.4  -1240000
+-36765 22380.333    1392.0     40.0  940260.6    762.9  -1240000
+-36765 22980.332    1538.0     38.9  939286.9    839.2  -1240000
+-36765 23580.331    1493.0     39.0  938504.0    976.6  -1240000
+-36765 24180.330    1831.0     42.0  937593.4    915.5  -1240000
+-36765 24780.328    1525.0    117.1  936596.0    625.6  -1240000
+-36765 25380.327    1772.0     39.4  935892.4   1449.6  -1240000
+-36765 25980.325    1380.0     40.4  934613.8   1052.9  -1240000
+-36765 26580.324    1667.0     42.4  933470.5    869.8  -1240000
+-36765 27180.322    1493.0     41.2  932096.1    305.2  -1240000
+-36765 27780.322    2938.0     95.7  931425.9   2044.7  -1240000
+-36765 28380.320    1409.0     40.1  929695.8   1358.0  -1240000
+-36765 28980.318    1569.0    127.0  928623.0   1205.4  -1240000
+-36765 29580.317    1457.0     57.9  927572.9   1190.2  -1240000
+-36765 30180.316    2400.0     41.9  926934.0   5752.6  -1240000
+-36765 30780.314    1393.0     39.9  925503.8  40481.6  -1240000
+-36765 31380.313    1504.0     40.1  924310.4  55404.7  -1240000
+-36765 31980.311    1505.0     39.8  922958.0  95443.7  -1240000
+-36765 32580.311    2111.0    105.1  921726.4  62133.8  -1240000
+-36765 33180.309    1704.0     39.1  920437.9  55084.2  -1240000
+-36765 33780.308    1676.0     39.3  919440.1  24841.3  -1240000
+-36765 34380.306    1458.0     40.5  918315.6  24841.3  -1240000
+-36765 34980.305    1379.0     40.9  917182.6  12939.5  -1240000
+-36765 35580.303    1537.0    101.5  915995.9  12939.5  -1240000
+-36765 36180.302    1398.0     40.1  914772.5   7309.0  -1240000
+-36765 36780.301    1755.0     41.0  913392.9   4287.7  -1240000
+-36765 37380.299    1576.0     41.7  912317.9   4287.7  -1240000
+-36765 37980.298    1582.0     94.0  911086.9   3402.7  -1240000
+-36765 38580.297    1588.0     41.0  909836.8   3402.7  -1240000
+-36765 39180.296    2262.0     43.2  908969.3   2197.3  -1240000
+-36765 39780.297    4338.0     97.1  906050.6   2197.3  -1240000
+-36765 40380.293    1623.0     40.3  906168.3   3646.9  -1240000
+-36765 40980.301    1663.0     40.0  904893.8   3402.7  -1240000
+-36765 41580.300    1533.0     42.3  903739.0   3402.7  -1240000
+-36765 42180.299    1743.0     53.5  902408.1   3356.9  -1240000
+-36765 42780.297    1285.0     40.5  901196.4   3356.9  -1240000
+-36765 43380.296    1501.0     40.2  900003.4   3601.1  -1240000
+-36765 43980.294    1585.0     41.1  898710.0   3830.0  -1240000
+-36765 44580.293    1544.0     91.1  897524.8   3158.6  -1240000
+-36765 45180.291    1439.0     41.3  896256.0   3952.0  -1240000
+-36765 45780.292    3341.0     43.2  896823.7   3021.2  -1240000
+-36765 46380.289    1532.0     41.3  896050.0   1541.1  -1240000
+-36765 46980.287    1417.0     41.1  895141.2    824.0  -1240000
+-36765 47580.287    2495.0     41.5  894562.1    839.2  -1240000
+-36765 48180.285    1639.0     41.2  892762.2   1281.7  -1240000
+-36765 48780.283    1398.0     65.5  891754.2   1281.7  -1240000
+-36765 49380.282    1667.0     78.8  890665.1   1419.1  -1240000
+-36765 49980.280    1355.0     40.0  889649.8    808.7  -1240000
+-36765 50580.279    1310.0     39.6  888696.4   1297.0  -1240000
+-36765 51180.278    1404.0     39.6  887925.1   1098.6  -1240000
+-36765 51780.277    1631.0     40.3  887040.9    595.1  -1240000
+-36765 52380.275    1534.0     41.1  886139.6    915.5  -1240000
+-36765 52980.274    1393.0     42.3  885339.7    762.9  -1240000
+-36765 53580.272    1562.0     40.1  884569.1    747.7  -1240000
+-36765 54180.271    1273.0     39.0  883701.0    595.1  -1240000
+-36765 54780.270    1465.0     40.4  882850.3    854.5  -1240000
+-36765 55380.268    1315.0     40.6  882150.8    824.0  -1240000
+-36765 55980.267    1441.0     40.3  881339.3   1129.2  -1240000
+-36765 56580.265    1363.0    114.3  880438.2   1480.1  -1240000
+-36765 57180.265    2444.0     43.1  880225.9   1602.2  -1240000
+-36765 57780.263    1407.0     40.6  878964.8   1602.2  -1240000
+-36765 58380.262    1642.0     93.3  878258.9   1571.7  -1240000
+-36765 58980.260    1388.0     39.7  877444.1   1541.1  -1240000
+-36765 59580.259    1710.0    130.5  876926.3   1541.1  -1240000
+-36765 60180.257    1310.0     40.5  876275.2   1983.6  -1240000
+-36765 60780.256    1447.0     41.4  875837.7   1983.6  -1240000
+-36765 61380.255    1425.0     39.9  875384.8   1922.6  -1240000
+-36765 61980.253    1312.0     39.5  874853.4   1922.6  -1240000
+-36765 62580.252    1347.0     39.6  874412.1   1281.7  -1240000
+-36765 63180.250    1434.0     40.8  874075.5   1190.2  -1240000
+-36765 63780.249    1694.0     41.2  873772.9    961.3  -1240000
+-36765 64380.248    1645.0     40.5  873446.2    747.7  -1240000
+-36765 64980.246    1527.0     40.6  872731.2   1113.9  -1240000
+-36765 65580.245    1434.0     41.1  872210.9    656.1  -1240000
+-36765 66180.244    1483.0     76.0  871836.7   1281.7  -1240000
+-36765 66780.242    1368.0     53.7  871421.7    900.3  -1240000
+-36765 67380.241    1332.0     39.2  871015.6   1541.1  -1240000
+-36765 67980.240    1505.0     40.4  870532.4   1373.3  -1240000
+-36765 68580.238    1447.0    103.0  870126.4   1754.8  -1240000
+-36765 69180.237    1532.0     39.6  869551.7   1098.6  -1240000
+-36765 69780.235    1304.0     41.4  868979.4   1144.4  -1240000
+-36765 70380.234    1400.0     40.3  868518.1    640.9  -1240000
+-36765 70980.233    1412.0     40.6  868117.4    701.9  -1240000
+-36765 71580.231    1332.0     40.2  867546.5   1022.3  -1240000
+-36765 72180.230    1444.0     40.6  867123.4   1052.9  -1240000
+-36765 72780.229    1407.0     40.3  866755.0    778.2  -1240000
+-36765 73380.227    1443.0     39.4  866398.3    961.3  -1240000
+-36765 73980.226    1271.0     41.1  866013.9   1236.0  -1240000
+-36765 74580.225    1440.0     41.1  865821.3    885.0  -1240000
+-36765 75180.223    1483.0     40.7  865365.5   1403.8  -1240000
+-36765 75780.222    1378.0     41.3  864983.0    839.2  -1240000
+-36765 76380.220    1287.0     39.3  864491.3    839.2  -1240000
+-36765 76980.219    1674.0     42.4  864295.1   1159.7  -1240000
+-36765 77580.220    3376.0     42.0  864655.8   1159.7  -1240000
+-36765 78180.216    1334.0     41.6  863257.2   1403.8  -1240000
+-36765 78780.215    1822.0     40.2  862960.6   1068.1  -1240000
+-36765 79380.214    1335.0     40.3  862239.1   1068.1  -1240000
+-36765 79980.212    1608.0     53.6  861925.8   1480.1  -1240000
+-36765 80580.211    1725.0     92.0  861630.2   1480.1  -1240000
+-36765 81180.210    1472.0     40.8  861288.3   1342.8  -1240000
+-36765 81780.208    1550.0     41.0  861057.6   1556.4  -1240000
+-36765 82380.207    1401.0     40.9  861078.9   1449.6  -1240000
+-36765 82980.216    1632.0     41.4  861667.3   1174.9  -1240000
+-36765 83580.214    1533.0     40.8  861963.9    839.2  -1240000
+-36765 84180.213    1412.0     40.5  861896.0   1266.5  -1240000
+-36765 84780.212    1539.0     65.0  862159.4    701.9  -1240000
+-36765 85380.210    1570.0     39.5  861939.6    701.9  -1240000
+-36765 85980.209    1506.0     40.1  861570.6    396.7  -1240000
+-36766 180.207    1311.0     39.5  861527.4    961.3  -1240000
+-36766 780.206    1349.0    116.6  861354.9    915.5  -1240000
+-36766 1380.204    1254.0     39.9  861167.1   1037.6  -1240000
+-36766 1980.203    1486.0     40.8  860973.9   1419.1  -1240000
+-36766 2580.202    1394.0     41.6  860692.1   1022.3  -1240000
+-36766 3180.201    1465.0     41.9  860557.0   1083.4  -1240000
+-36766 3780.199    1589.0     42.2  860389.3    976.6  -1240000
+-36766 4380.198    1275.0     41.5  860026.0    808.7  -1240000
+-36766 4980.196    1315.0     42.7  859693.6    442.5  -1240000
+-36766 5580.196    2676.0     41.5  859977.4    701.9  -1240000
+-36766 6180.194    1508.0     41.2  858754.8    701.9  -1240000
+-36766 6780.192    1316.0     40.6  857892.9    930.8  -1240000
+-36766 7380.191    1324.0     41.4  857159.4    930.8  -1240000
+-36766 7980.190    1393.0     41.9  856343.1    534.1  -1240000
+-36766 8580.188    1326.0     40.1  855352.1    534.1  -1240000
+-36766 9180.187    1289.0     40.2  854476.3    534.1  -1240000
+-36766 9780.186    1896.0     40.8  853726.1    854.5  -1240000
+-36766 10380.184    1381.0     39.2  852535.0    854.5  -1240000
+-36766 10980.183    1419.0     41.0  851623.3   1052.9  -1240000
+-36766 11580.181    1338.0     41.0  850522.6   1052.9  -1240000
+-36766 12180.180    1303.0     40.8  849472.4    701.9  -1240000
+-36766 12780.179    1550.0     41.2  848451.8    778.2  -1240000
+-36766 13380.177    1493.0     77.7  847222.5    778.2  -1240000
+-36766 13980.176    1615.0     40.4  846049.9    885.0  -1240000
+-36766 14580.175    1725.0     39.6  845228.5    885.0  -1240000
+-36766 15180.173    1379.0     41.8  843992.8    991.8  -1240000
+-36766 15780.172    1627.0    103.3  842911.9    991.8  -1240000
+-36766 16380.170    1438.0     40.2  841808.8    793.5  -1240000
+-36766 16980.169    1459.0     41.4  840781.0    885.0  -1240000
+-36766 17580.168    1441.0     40.2  839756.8   1251.2  -1240000
+-36766 18180.166    1491.0     39.9  838921.2   1449.6  -1240000
+-36766 18780.165    1672.0     64.9  837827.5   1083.4  -1240000
+-36766 19380.164    1398.0     41.8  836844.2    518.8  -1240000
+-36766 19980.162    1543.0     75.0  835839.8   1007.1  -1240000
+-36766 20580.161    1523.0     41.2  834823.5   1098.6  -1240000
+-36766 21180.160    1383.0    104.6  833755.9   1083.4  -1240000
+-36766 21780.159    1935.0     85.9  832768.4   1449.6  -1240000
+-36766 22380.157    1403.0     40.8  831734.1   1205.4  -1240000
+-36766 22980.156    1718.0     41.1  830751.5    854.5  -1240000
+-36766 23580.154    1423.0     41.3  829687.8   2182.0  -1240000
+-36766 24180.153    1576.0     63.5  828487.2   1419.1  -1240000
+-36766 24780.151    1362.0    100.1  827432.9    869.8  -1240000
+-36766 25380.150    1542.0     42.0  826275.5   1174.9  -1240000
+-36766 25980.149    1385.0     40.7  825205.0    686.6  -1240000
+-36766 26580.147    1545.0     71.6  824036.2    808.7  -1240000
+-36766 27180.146    1723.0    104.3  822937.0   1434.3  -1240000
+-36766 27780.145    1574.0     39.4  821774.7   1327.5  -1240000
+-36766 28380.144    1736.0    117.3  820620.7   2151.5  -1240000
+-36766 28980.142    1746.0     41.4  819616.4   1434.3  -1240000
+-36766 29580.141    1731.0     59.6  818419.2    885.0  -1240000
+-36766 30180.139    1516.0     41.1  817231.2   2014.2  -1240000
+-36766 30780.138    1881.0     40.8  816197.7   3402.7  -1240000
+-36766 31380.136    1507.0     57.5  815003.6   2059.9  -1240000
+-36766 31980.136    2498.0     41.8  814294.2   2029.4  -1240000
+-36766 32580.134    1697.0     40.0  812781.0   2059.9  -1240000
+-36766 33180.132    1607.0     39.9  811465.7   2059.9  -1240000
+diff --recursive --unified --new-file --no-dereference orig/todo src/todo
+--- orig/todo	2007-12-31 17:10:50.000000000 +0000
++++ src/todo	1970-01-01 00:00:00.000000000 +0000
+@@ -1,18 +0,0 @@
+-Ask on newsgroup about making sanity checks mandatory, default, or optional
+-   Rob Landley says disable checks with CONFIG to save space
+-   good to know why something fails
+-   Denis Vlasenko recommends not checking UDP source, since that can
+-     break on multihomed server, confirmed for ntpd
+-   Denis also says "Give a message. You may make it configurable:
+-     ntpclient: dropped malformed packet[: <optionally what's wrong>]
+-Ask for pre-release comments from Walter Harms and others
+-Exit without warning if -f is the only option
+-
+-Leap second, crib from openntpd?  worthless!  Look at wikipedia "unix time" article
+-IPv6?
+-Multiple (interleaved) servers
+-   compile-time option for unlimited (malloc) or limited (no-malloc,
+-   for hard-embedded use) number of servers
+-Test handle laptop suspend?
+-Drift file - read on startup, save on SIGxxxx
+-

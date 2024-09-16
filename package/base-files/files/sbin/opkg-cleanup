@@ -39,24 +39,22 @@ OPKG_STATUS_TMP_FILE="/tmp/tmp_status.txt"
 
 for PACKAGE_FILE in $PACKAGE_FILES
 do
-    for FILE in "/overlay$PACKAGE_FILE" "/overlay/upper$PACKAGE_FILE"
-    do
-        if [ -f "$FILE" ] || [ -L "$FILE" ]
-        then
-            log "removing $FILE"
-            rm -f "$FILE"
-        fi
-        if [ -d "$FILE" ]
-        then
-            rmdir "$FILE"
-        fi
-    done
+    if [ -f "$PACKAGE_FILE" ] || [ -L "$PACKAGE_FILE" ]
+    then
+        log "removing file: '$PACKAGE_FILE'"
+        rm -f "$PACKAGE_FILE"
+    fi
+    if [ -d "$PACKAGE_FILE" ]
+    then
+        log "removing dir: '$PACKAGE_FILE'"
+        rmdir "$PACKAGE_FILE"
+    fi
 done
 
 CONTROL_FILES=$(ls /usr/lib/opkg/info/"$PKG_NAME"* 2> /dev/null || true)
 for CONTROL_FILE in $CONTROL_FILES
 do
-    log "removing $CONTROL_FILE"
+    log "removing control file: '$CONTROL_FILE'"
     rm "$CONTROL_FILE"
 done
 

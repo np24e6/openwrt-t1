@@ -24,15 +24,6 @@
 #include <stdlib.h>
 
 #include "qmi-message.h"
-#include "qmi-wds-error-types.c"
-
-#define LOG(...) do { \
-	fprintf(stdout, ##__VA_ARGS__); fflush(stdout); \
-} while (0);
-
-#define DD LOG("DD[***%s:%d]\n", __func__, __LINE__)
-
-#define ERROR_VERBOSE_STR "QMI call error, reason type"
 
 static uint8_t buf[QMI_BUFFER_LEN];
 static unsigned int buf_ofs;
@@ -182,32 +173,4 @@ void *qmi_msg_get_tlv_buf(struct qmi_msg *qm, int *tlv_len)
 	return ptr;
 }
 
-char *qmi_wds_verbose_call_end_reason_get_string (QmiWdsVerboseCallEndReasonType type, uint16_t reason)
-{
-	switch (type) {
-	case QMI_WDS_VERBOSE_CALL_END_REASON_TYPE_MIP:
-		LOG("%s MIP: \"", ERROR_VERBOSE_STR);
-	        return qmi_wds_verbose_call_end_reason_mip_get_string ((QmiWdsVerboseCallEndReasonMip)reason);
-	case QMI_WDS_VERBOSE_CALL_END_REASON_TYPE_INTERNAL:
-		LOG("%s INTERNAL: \"", ERROR_VERBOSE_STR);
-	        return qmi_wds_verbose_call_end_reason_internal_get_string ((QmiWdsVerboseCallEndReasonInternal)reason);
-	case QMI_WDS_VERBOSE_CALL_END_REASON_TYPE_CM:
-		LOG("%s CM: \"", ERROR_VERBOSE_STR);
-	        return qmi_wds_verbose_call_end_reason_cm_get_string ((QmiWdsVerboseCallEndReasonCm)reason);
-	case QMI_WDS_VERBOSE_CALL_END_REASON_TYPE_3GPP:
-		LOG("%s 3GPP: \"", ERROR_VERBOSE_STR);
-	        return qmi_wds_verbose_call_end_reason_3gpp_get_string ((QmiWdsVerboseCallEndReason3gpp)reason);
-	case QMI_WDS_VERBOSE_CALL_END_REASON_TYPE_PPP:
-		LOG("%s PPP: \"", ERROR_VERBOSE_STR);
-	        return qmi_wds_verbose_call_end_reason_ppp_get_string ((QmiWdsVerboseCallEndReasonPpp)reason);
-	case QMI_WDS_VERBOSE_CALL_END_REASON_TYPE_EHRPD:
-		LOG("%s EHRPD: \"", ERROR_VERBOSE_STR);
-	        return qmi_wds_verbose_call_end_reason_ehrpd_get_string ((QmiWdsVerboseCallEndReasonEhrpd)reason);
-	case QMI_WDS_VERBOSE_CALL_END_REASON_TYPE_IPV6:
-		LOG("%s IPV6: \"", ERROR_VERBOSE_STR);
-	        return qmi_wds_verbose_call_end_reason_ipv6_get_string ((QmiWdsVerboseCallEndReasonIpv6)reason);
-	default:
-        return "Reason type not found";
-	}
-	return NULL;
-}
+

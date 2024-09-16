@@ -3,8 +3,31 @@
 START=35
 STOP=85
 USE_PROCD=1
+DHCPV6_ENABLED=0
+
+check_dhcpv6() {
+	local dhcp ignore dhcpv6 ndp ra
+	dhcp="$1"
+
+	config_get_bool ignore "$dhcp" ignore "0"
+	[ "$ignore" -eq 1 ] && return
+
+	config_get dhcpv6 "$dhcp" dhcpv6 ""
+	config_get ra "$dhcp" ra ""
+	config_get ndp "$dhcp" ndp ""
+
+	[ -z "$dhcpv6" ] && [ -z "$ra" ] && [ -z "$ndp" ] && return
+
+	DHCPV6_ENABLED=1
+	break
+}
 
 start_service() {
+	config_load dhcp
+	config_foreach check_dhcpv6 dhcp
+
+	[ "$DHCPV6_ENABLED" -eq 1 ] || return
+
 	procd_open_instance
 	procd_set_param command /usr/sbin/odhcpd
 	procd_set_param respawn

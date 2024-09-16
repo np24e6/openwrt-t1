@@ -1,0 +1,48 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+MODBUS_CONFIG=modbus_client
+DLMS_CONFIG=dlms_client
+OPCUA_CONFIG=opcua_client
+
+MAIN_SECTION=main
+
+disable_section() {
+	local section=$1
+	local cfg=$2
+	uci_set "$cfg" "$section" "enabled" "0"
+}
+
+MAIN_ENABLED=0
+
+config_load "$MODBUS_CONFIG"
+config_get MAIN_ENABLED $MAIN_SECTION enabled 0
+
+if [ "$MAIN_ENABLED" = "0" ]; then
+	config_foreach disable_section tcp_server $MODBUS_CONFIG
+	config_foreach disable_section rtu_server $MODBUS_CONFIG
+fi
+
+uci_commit "$MODBUS_CONFIG"
+
+config_load "$DLMS_CONFIG"
+config_get MAIN_ENABLED $MAIN_SECTION enabled 0
+
+if [ "$MAIN_ENABLED" = "0" ]; then
+	config_foreach disable_section cosem_group $DLMS_CONFIG
+fi
+
+uci_commit "$DLMS_CONFIG"
+
+config_load "$OPCUA_CONFIG"
+config_get MAIN_ENABLED $MAIN_SECTION enabled 0
+
+if [ "$MAIN_ENABLED" = "0" ]; then
+	config_foreach disable_section value_group $OPCUA_CONFIG
+fi
+
+uci_commit "$OPCUA_CONFIG"
+
+exit 0
+

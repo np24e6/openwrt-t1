@@ -58,6 +58,18 @@
 
 		uci_set "sms_utils" "$1" "message" "$message"
 		uci_commit "sms_utils"
+
+		# update config file in default profile template
+		local profiles="/etc/profiles"
+		local config="/etc/config/sms_utils"
+
+		tar xzf "${profiles}/template.tar.gz" -C "$profiles"
+		cp "$config" "${profiles}${config}"
+		tar czf "${profiles}/template.tar.gz" etc -C "$profiles"
+		rm -rf "${profiles}/etc"
+
+		sed -i '/\/etc\/config\/sms_utils/d' "${profiles}/template.md5"
+		md5sum "$config" >> "${profiles}/template.md5"
 	}
 
 	IO_MAP_RUTOS='{

@@ -5,28 +5,24 @@
 bname=$(basename $0)
 alias logger="logger -s -t $bname"
 
-if [ "$mmc" = "1" ]; then
-	msd="$(cat /tmp/.fmt-mmc-msd_last 2>&-)"
-	msd1=$msd"p1"
-elif [ -n "$msd" ]; then
-	msd="$(tr -d '0-9' <<-EOF
-		$msd
-		EOF
-	)"
-	msd1=$msd"1"
-else
-	msd="$(cat /tmp/.fmt-usb-msd_last 2>&-)"
-	msd1=$msd"1"
-fi
-
 usage() {
 	echo -e "\
 Usage:
-	$bname exfat|ext4 [label]           format last inserted USB MSD, partition label is optional
-	$bname target                       print the block device that would be used for formatting
-	$bname unmountable                  get unmountable USB MSD list in json format
+	$bname exfat|ext4 device [label]    format last inserted USB MSD, partition label is optional
+	$bname devices                      list USB MSDs in json
 	$bname unmount [device|mountpoint]  unmount an USB MSD
 "
+}
+
+strstr() {
+	[ "${1#*$2*}" != "$1" ]
+}
+
+# list of all external blockdevs
+blockdevs() {
+	for f in $(find -L /sys/block -maxdepth 3 -name 'io_timeout'); do
+		basename ${f%/*/io_timeout}
+	done
 }
 
 refresh_msd() {
@@ -38,7 +34,7 @@ refresh_msd() {
 msdos_pt() {
 	sync
 	for dev in $msd*; do
-		umount -f $dev
+		[ -e $dev ] && umount -f $dev
 	done
 
 	dd if=/dev/zero of=$msd bs=1M count=16 conv=fsync || {
@@ -69,17 +65,44 @@ msdos_pt() {
 	return 1
 }
 
-msd_is_overlay() {
-	local info=$(block info | grep -m 1 $msd)
-	eval local "${info/*: /}"
-	[ "$MOUNT" = "/overlay" ]
+is_sdcard() {
+	[ "$(cat /sys/block/$1/device/type 2>&-)" = 'SD' ]
 }
 
-last_inserted_ok() {
-	[ ! -b "$msd" ] || msd_is_overlay && {
-		logger "storage device unavailable"
+basedev() {
+	local dev="$(readlink -f /sys/class/block/$(basename $1))"
+	if [ ! -e "$dev/device" ]; then
+		dev="$(readlink -f "$dev/..")"
+	fi
+	echo -n "$(basename "$dev")"
+}
+
+validate_set_msd() {
+	local bd="$(basedev $1)" bi="$(block info | grep -m 1 $1)"
+
+	local MOUNT="${bi##*MOUNT=\"}"
+	MOUNT="${MOUNT%%\"*}"
+
+	msd="/dev/$bd"
+	if is_sdcard $bd; then
+		msd1=$msd"p1"
+	else
+		msd1=$msd"1"
+	fi
+
+	[ ! -b "$msd" ] || [ "$MOUNT" = "/overlay" ] && {
+		logger "'$1' storage device unavailable"
 		return 1
 	}
+	is_in_use "$MOUNT" samba smbd && {
+		logger "'$1' storage device in use by samba"
+		return 2
+	}
+	is_in_use "$MOUNT" minidlna minidlna && {
+		logger "'$1' storage device in use by minidlna"
+		return 3
+	}
+
 	return 0
 }
 
@@ -108,8 +131,44 @@ is_in_use() {
 	grep -q $1 /etc/config/$2 2>&- && killall -0 $3 2>&-
 }
 
+add_description() {
+	local path="/sys/block/$1/device"
+	local d t
+
+	if is_sdcard $1; then
+		d="$(cat $path/name) $(cat $path/date)"
+		t='sd'
+	else
+		d="$(cat $path/model)"
+		t='usb'
+	fi
+
+	d="${d#${d%%[![:space:]]*}}"
+	d="${d%${d##*[![:space:]]}}"
+
+	json_add_string type $t
+	json_add_string description "$d"
+}
+
+extract_field() {
+	local field="$1"
+	local line="$2"
+
+	strstr "$line" "$field" || return
+
+	local value="${line#*${field}=\"}"
+	value="${value%%\"*}"
+
+	echo "$value"
+}
+
 add_unmountable() {
-	eval local $1
+	local line="$1"
+	local DEVICE=$(extract_field DEVICE $line)
+	local UUID=$(extract_field UUID $line)
+	local MOUNT=$(extract_field MOUNT $line)
+	local TYPE=$(extract_field TYPE $line)
+	local LABEL=$(extract_field LABEL $line)
 
 	# if not overlay and not mounted on /mnt/*, return
 	local overlay_uuid="$(uci -q get fstab.overlay.uuid)"
@@ -121,9 +180,12 @@ add_unmountable() {
 		local is_overlay=0
 	fi
 
-	json_add_object $DEVICE
+	local bn=$(basename $DEVICE)
+	local bd=$(basedev $bn)
+	json_add_object $bn
 		json_add_string mountpoint $MOUNT
 		json_add_string dev $DEVICE
+		add_description $bd
 		add_space_consumption $DEVICE
 		[ -n "$TYPE" ] && json_add_string fs $TYPE
 		[ -n "$LABEL" ] && json_add_string label $LABEL
@@ -132,17 +194,31 @@ add_unmountable() {
 			is_in_use $MOUNT samba smbd && json_add_string in_use samba
 			is_in_use $MOUNT minidlna minidlna && json_add_string in_use dlna
 		}
+		json_add_string status mounted
 	json_close_object
 }
 
-unmountable() {
+devices() {
 	local IFS=$'\n' bi="$(block info)"
 
 	[ -z "$bi" ] && return 1
 
+	local bd=$(blockdevs)
 	json_init
 	for line in $bi; do
-		add_unmountable "DEVICE=${line/:*/} ${line/*: /}"
+		for d in $bd; do
+			strstr "$line" "$d" || continue
+			bd=${bd%$d*}${bd#*$d}
+			break
+		done
+		add_unmountable "DEVICE=\"${line/:*/}\" ${line/*: /}"
+	done
+	for d in $bd; do
+		json_add_object $d
+			json_add_string dev /dev/$d
+			add_description $d
+			json_add_string status unformatted
+		json_close_object
 	done
 	json_close_object
 
@@ -152,10 +228,24 @@ unmountable() {
 unmount() {
 	local info=$(block info | grep -m 1 $1)
 	[ -z "$info" ] && return 1
-	eval local "${info/*: /}"
+
+	local MOUNT="${info##*MOUNT=\"}"
+	MOUNT="${MOUNT%%\"*}"
 	[ -z "$MOUNT" ] && return 2
 
-	umount $MOUNT || umount -l $MOUNT && rmdir $MOUNT
+	umount $MOUNT || return 3
+	rmdir $MOUNT
+
+	local eject="$(readlink -f /sys/class/block/$(basename $1))"
+	local subdir='/device/delete'
+	local part="$eject/..$subdir"
+	local unpart="$eject$subdir"
+	if [ -e "$part" ]; then
+		eject="$part"
+	else
+		eject="$unpart"
+	fi
+	echo 1 > "$eject"
 }
 
 blockdev_hotplug_pause() {
@@ -171,10 +261,10 @@ blockdev_hotplug_pause() {
 
 case $1 in
 	ntfs|exfat)
-		last_inserted_ok || return
+		validate_set_msd $2 || return
 		blockdev_hotplug_pause 1
 		msdos_pt $1 || return
-		mkfs.exfat -L "$2" $msd1 || {
+		mkfs.exfat -L "$3" $msd1 || {
 			logger "exfat volume creation failed"
 			return 1
 		}
@@ -183,10 +273,10 @@ case $1 in
 		blockdev_hotplug_pause 0
 	;;
 	ext?)
-		last_inserted_ok || return
+		validate_set_msd $2 || return
 		blockdev_hotplug_pause 1
 		msdos_pt $1 || return
-		mkfs.ext4 -O ^has_journal -F -L "$2" $msd1 || {
+		mkfs.ext4 -O ^has_journal -F -L "$3" $msd1 || {
 			logger "EXT4 volume creation failed"
 			return 1
 		}
@@ -194,18 +284,18 @@ case $1 in
 		block mount
 		blockdev_hotplug_pause 0
 	;;
-	target)
-		last_inserted_ok || return
-		echo $msd
-		return 0
-	;;
-	unmountable)
-		unmountable
+	devices)
+		devices
 		return
 	;;
 	unmount)
 		[ -z "$2" ] && { usage; return 1; }
 		unmount $2
+		return
+	;;
+	basedev)
+		validate_set_msd $2 || return
+		echo "$msd"
 		return
 	;;
 	*)

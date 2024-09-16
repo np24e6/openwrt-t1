@@ -14,48 +14,15 @@ config TLT_VERSIONING_PREFIX
 	default TCR1 if TARGET_ath79_24kc_DEVICE_teltonika_tcr1xx
 	default RUT9 if TARGET_ath79_74kc_DEVICE_teltonika_rut9xx
 	default RUT9M if TARGET_ramips_mt76x8_DEVICE_teltonika_rut9m
+	default RUT14X if TARGET_ramips_mt76x8_DEVICE_teltonika_rut14x
 	default RUT30X if TARGET_ath79_24kc_DEVICE_teltonika_rut30x
 	default RUT301 if TARGET_ramips_mt76x8_DEVICE_teltonika_rut301
 	default RUT36X if TARGET_ath79_24kc_DEVICE_teltonika_rut36x
 	default RUT361 if TARGET_ramips_mt76x8_DEVICE_teltonika_rut361
 	default OTD140 if TARGET_ramips_mt76x8_DEVICE_teltonika_otd140
-	default TRB5 if TARGET_sdxprairie_DEVICE_teltonika_trb5xx
-	default TRB1 if TARGET_mdm9x07_DEVICE_trb1400
-	default TRB1 if TARGET_mdm9x07_DEVICE_trb1401
-	default TRB1 if TARGET_mdm9x07_DEVICE_trb1404
-	default TRB1 if TARGET_mdm9x07_DEVICE_trb1410
-	default TRB1 if TARGET_mdm9x07_DEVICE_trb1411
-	default TRB1 if TARGET_mdm9x07_DEVICE_trb1412
-	default TRB1 if TARGET_mdm9x07_DEVICE_trb1414
-	default TRB1 if TARGET_mdm9x07_DEVICE_trb1420
-	default TRB1 if TARGET_mdm9x07_DEVICE_trb1421
-	default TRB1 if TARGET_mdm9x07_DEVICE_trb1422
-	default TRB1 if TARGET_mdm9x07_DEVICE_trb1423
-	default TRB1 if TARGET_mdm9x07_DEVICE_trb1424
-	default TRB1 if TARGET_mdm9x07_DEVICE_trb1430
-	default TRB1 if TARGET_mdm9x07_DEVICE_trb1434
-	default TRB1 if TARGET_mdm9x07_DEVICE_trb1450
-	default TRB1 if TARGET_mdm9x07_DEVICE_trb1451
-	default TRB1 if TARGET_mdm9x07_DEVICE_trb1452
-	default TRB1 if TARGET_mdm9x07_DEVICE_trb1454
-	default TRB1 if TARGET_DEVICE_mdm9x07_DEVICE_trb1400
-	default TRB1 if TARGET_DEVICE_mdm9x07_DEVICE_trb1401
-	default TRB1 if TARGET_DEVICE_mdm9x07_DEVICE_trb1404
-	default TRB1 if TARGET_DEVICE_mdm9x07_DEVICE_trb1410
-	default TRB1 if TARGET_DEVICE_mdm9x07_DEVICE_trb1411
-	default TRB1 if TARGET_DEVICE_mdm9x07_DEVICE_trb1412
-	default TRB1 if TARGET_DEVICE_mdm9x07_DEVICE_trb1414
-	default TRB1 if TARGET_DEVICE_mdm9x07_DEVICE_trb1420
-	default TRB1 if TARGET_DEVICE_mdm9x07_DEVICE_trb1421
-	default TRB1 if TARGET_DEVICE_mdm9x07_DEVICE_trb1422
-	default TRB1 if TARGET_DEVICE_mdm9x07_DEVICE_trb1423
-	default TRB1 if TARGET_DEVICE_mdm9x07_DEVICE_trb1424
-	default TRB1 if TARGET_DEVICE_mdm9x07_DEVICE_trb1430
-	default TRB1 if TARGET_DEVICE_mdm9x07_DEVICE_trb1434
-	default TRB1 if TARGET_DEVICE_mdm9x07_DEVICE_trb1450
-	default TRB1 if TARGET_DEVICE_mdm9x07_DEVICE_trb1451
-	default TRB1 if TARGET_DEVICE_mdm9x07_DEVICE_trb1452
-	default TRB1 if TARGET_DEVICE_mdm9x07_DEVICE_trb1454
+	default TRB500 if TARGET_sdxprairie_DEVICE_teltonika_trb500
+	default TRB501 if TARGET_sdxlemur_DEVICE_teltonika_trb501
+	default TRB1 if TARGET_mdm9x07
 	default X86-64 if TARGET_x86_64_DEVICE_teltonika_x86_64
 
 config TLT_VERSIONING_CLIENT

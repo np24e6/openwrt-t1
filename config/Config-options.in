@@ -11,21 +11,4 @@ config DEVICE_DEFAULT_IP
 	default "192.168.33.1" if x86_64
 	default "192.168.1.1"
 
-config DEVICE_DEFAULT_LOG_PARTITION
-	string "Default log partition"
-	default "mtdblock6" if TARGET_ramips_mt76x8_DEVICE_teltonika_rut301 ||\
-				TARGET_ramips_mt76x8_DEVICE_teltonika_otd140 ||\
-				TARGET_ramips_mt76x8_DEVICE_teltonika_trb2m
-	default "mtdblock7"
-
-config DEVICE_DEFAULT_CYPRESS_SERIAL_KMOD_ARGS
-	string "Default cypress usb to serial converter module arguments"
-	depends on SERIAL
-	default "path_only=1-1.3" if TARGET_ath79_74kc_DEVICE_teltonika_rut9xx ||\
-				TARGET_ramips_mt76x8_DEVICE_teltonika_rut9m ||\
-				TARGET_ath79_24kc_DEVICE_teltonika_trb2xx ||\
-				TARGET_ramips_mt76x8_DEVICE_teltonika_trb2m ||\
-				TARGET_ipq40xx_generic_DEVICE_teltonika_rutx
-	default "cdc=y"
-
 endmenu

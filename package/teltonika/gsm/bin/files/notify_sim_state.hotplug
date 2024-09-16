@@ -1,0 +1,19 @@
+#!/bin/sh
+
+[ "$EVENT_NAME" = "pin_state" ] || exit 0
+
+. /usr/share/libubox/jshn.sh
+. /lib/functions/mobile.sh
+
+json_load "$DATA"
+json_get_var PIN_STATE pin_state
+
+# Only NOT inserted event
+[ "$PIN_STATE" = "10" ] || exit 0
+
+ubus call log write_ext "{
+	\"event\": \"SIM state changed to not inserted ($(get_modem_type "$MODEM_ID") modem)\",
+	\"sender\": \"SIM status\",
+	\"table\": 0,
+	\"write_db\": 1
+}"

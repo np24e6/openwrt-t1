@@ -53,7 +53,7 @@ define Package/dropbear
   SECTION:=net
   CATEGORY:=Base system
   TITLE:=Small SSH2 client/server
-  DEPENDS:= +DROPBEAR_ZLIB:zlib +libubus +libubox +liblog
+  DEPENDS:= +DROPBEAR_ZLIB:zlib +libubus +libubox +liblog +libuci
   ALTERNATIVES:=
   $(if $(CONFIG_DROPBEAR_SCP),ALTERNATIVES+= \
 	  100:/usr/bin/scp:/usr/sbin/dropbear,)

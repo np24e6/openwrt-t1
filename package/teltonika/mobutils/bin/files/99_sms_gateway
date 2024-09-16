@@ -1,0 +1,4 @@
+#!/bin/sh
+
+sed -i -E "s/(config fwd_to_)([a-z]+)(.*)/config fwd \'to_\2\'/" /etc/config/sms_gateway
+sed -i -E "s/(config reply)(.*)/config fwd 'reply'\2/" /etc/config/sms_gateway

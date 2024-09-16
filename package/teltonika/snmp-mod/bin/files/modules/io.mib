@@ -11,7 +11,8 @@ ioGroup OBJECT-GROUP
 		  ioInput,
 		  ioInverted,
 		  ioCurrent,
-		  ioPercentage }
+		  ioPercentage,
+		  ioStateNumeric }
 	STATUS current
 	DESCRIPTION "I/O SNMP group defined according to RFC 2580"
 	::= { teltonikaSnmpGroups 6 }
@@ -51,7 +52,8 @@ IOEntry ::=
 	ioInput	INTEGER,
 	ioInverted	INTEGER,
 	ioCurrent	DisplayString,
-	ioPercentage	DisplayString
+	ioPercentage	DisplayString,
+	ioStateNumeric	INTEGER
 	}
 
 ioIndex OBJECT-TYPE
@@ -123,3 +125,10 @@ ioPercentage OBJECT-TYPE
 	STATUS		current
 	DESCRIPTION	"Percentage of ACL."
 	::= { ioEntry 10 }
+
+ioStateNumeric OBJECT-TYPE
+	SYNTAX		INTEGER {na(-1), low(0), high(1)}
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION	"Numeric state of I/O."
+	::= { ioEntry 11 }

@@ -138,6 +138,8 @@ EOF
 proto_l2tp_teardown() {
 	local interface="$1"
 	local optfile="/tmp/l2tp/options.${interface}"
+	local server defaultroute
+	json_get_vars server defaultroute
 
 	rm -f ${optfile}
 	if [ -p /var/run/xl2tpd/l2tp-control ]; then
@@ -146,10 +148,16 @@ proto_l2tp_teardown() {
 		}
 	fi
 	# Wait for interface to go down
-        while [ -d /sys/class/net/l2tp-${interface} ]; do
+	while [ -d /sys/class/net/l2tp-${interface} ]; do
 		sleep 1
 	done
 
+	if [ -n "$defaultroute" ]; then
+		hosts=$(resolveip -t 5 "${server%:*}")
+		for ip in $hosts; do
+			ip route delete "$ip"
+		done
+	fi
 	[ -f "/tmp/l2tp/default-status" ] && rm "/tmp/l2tp/default-status" >/dev/null 2>&1
 }
 

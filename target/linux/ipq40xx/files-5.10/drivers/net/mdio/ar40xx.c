@@ -980,7 +980,7 @@ ar40xx_sw_get_port_link(struct switch_dev *dev, int port,
 }
 
 static int ar40xx_sw_delay_reset(struct switch_dev *dev, const struct switch_attr *attr,
-				 struct switch_val *value)
+			struct switch_val *value)
 {
 	struct ar40xx_priv *priv = swdev_to_ar40xx(dev);
 	struct mii_bus *bus;
@@ -990,28 +990,27 @@ static int ar40xx_sw_delay_reset(struct switch_dev *dev, const struct switch_att
 	bus = priv->mii_bus;
 
 	for (i = 0; i < AR40XX_NUM_PORTS - 2; i++) {
-		mdiobus_write(bus, i, MII_CTRL1000, 0);
-		mdiobus_write(bus, i, MII_ADVERTISE, 0);
-		mdiobus_write(bus, i, MII_BMCR, BMCR_RESET | BMCR_ANENABLE);
-		ar40xx_phy_dbg_read(priv, i, AR40XX_PHY_DEBUG_0, &val);
-		val |= AR40XX_PHY_MANU_CTRL_EN;
-		ar40xx_phy_dbg_write(priv, i, AR40XX_PHY_DEBUG_0, val);
-		/* disable transmit */
-		ar40xx_phy_dbg_read(priv, i, AR40XX_PHY_DEBUG_2, &val);
-		val &= 0xf00f;
-		ar40xx_phy_dbg_write(priv, i, AR40XX_PHY_DEBUG_2, val);
+		mdiobus_write(bus, i, MII_BMCR, BMCR_PDOWN);
+
+		ar40xx_phy_dbg_read(priv, i, 0x3d, &val);
+		val &= ~0x0040;
+		ar40xx_phy_dbg_write(priv, i, 0x3d, val);
+
+		ar40xx_phy_dbg_read(priv, i, 0x0b, &val);
+		val &= ~0x2400;
+		ar40xx_phy_dbg_write(priv, i, 0x0b, val);
 	}
 
 	msleep(1000 * value->value.i);
 
 	for (i = 0; i < AR40XX_NUM_PORTS - 2; i++) {
+		mdiobus_write(bus, i, MII_ADVERTISE,
+			      ADVERTISE_ALL | ADVERTISE_PAUSE_CAP | ADVERTISE_PAUSE_ASYM);
+		mdiobus_write(bus, i, MII_CTRL1000, CTL1000_PREFER_MASTER | ADVERTISE_1000FULL);
+		mdiobus_write(bus, i, MII_BMCR, BMCR_RESET | BMCR_ANENABLE);
 		ar40xx_phy_dbg_read(priv, i, AR40XX_PHY_DEBUG_0, &val);
 		val &= ~AR40XX_PHY_MANU_CTRL_EN;
 		ar40xx_phy_dbg_write(priv, i, AR40XX_PHY_DEBUG_0, val);
-		mdiobus_write(bus, i, MII_ADVERTISE,
-			      ADVERTISE_ALL | ADVERTISE_PAUSE_CAP | ADVERTISE_PAUSE_ASYM);
-		mdiobus_write(bus, i, MII_CTRL1000, ADVERTISE_1000FULL);
-		mdiobus_write(bus, i, MII_BMCR, BMCR_RESET | BMCR_ANENABLE);
 	}
 
 	ar40xx_phy_poll_reset(priv);
@@ -1265,19 +1264,19 @@ ar40xx_get_port_speed_advertisement(struct switch_dev *dev,
 	reg_advert1000 = mdiobus_read(bus, val->port_vlan - 1, MII_CTRL1000);
 
 	if (reg_advert100 & ADVERTISE_100FULL) {
-		advert |= PRINT_ADVERTISE_100FULL;
+		advert |= ADVERT_100FULL;
 	}
 	if (reg_advert100 & ADVERTISE_100HALF) {
-		advert |= PRINT_ADVERTISE_100HALF;
+		advert |= ADVERT_100HALF;
 	}
 	if (reg_advert100 & ADVERTISE_10FULL) {
-		advert |= PRINT_ADVERTISE_10FULL;
+		advert |= ADVERT_10FULL;
 	}
 	if (reg_advert100 & ADVERTISE_10HALF) {
-		advert |= PRINT_ADVERTISE_10HALF;
+		advert |= ADVERT_10HALF;
 	}
 	if (reg_advert1000 & ADVERTISE_1000FULL){
-		advert |= PRINT_ADVERTISE_1000FULL;
+		advert |= ADVERT_1000FULL;
 	}
 
 	val->len     = snprintf(priv->buf2, sizeof(priv->buf2), "0x%x", advert);
@@ -1313,61 +1312,15 @@ static int ar40xx_set_port_speed_advertisement(struct switch_dev *dev, const str
 	}
 	kstrtol(val->value.s, 16, &advert);
 
-	switch (advert) {
-	case ADVERT_NOTHING:
-		break;
-	case ADVERT_10_H:
-		reg_advert100 |= ADVERTISE_10HALF;
-		break;
-	case ADVERT_10_F:
-		reg_advert100 |= ADVERTISE_10FULL;
-		break;
-	case ADVERT_10_HF:
-		reg_advert100 |= ADVERTISE_10HALF | ADVERTISE_10FULL;
-		break;
-	case ADVERT_100_H:
-		reg_advert100 |= ADVERTISE_100HALF;
-		break;
-	case ADVERT_10_H_100_H:
-		reg_advert100 |= ADVERTISE_10HALF | ADVERTISE_100HALF;
-		break;
-	case ADVERT_10_F_100_H:
-		reg_advert100 |= ADVERTISE_10FULL | ADVERTISE_100HALF;
-		break;
-	case ADVERT_10_HF_100_H:
-		reg_advert100 |= ADVERTISE_10HALF | ADVERTISE_10FULL | ADVERTISE_100HALF;
-		break;
-	case ADVERT_100_F:
-		reg_advert100 |= ADVERTISE_100FULL;
-		break;
-	case ADVERT_10_H_100_F:
-		reg_advert100 |= ADVERTISE_10HALF | ADVERTISE_100FULL;
-		break;
-	case ADVERT_10_F_100_F:
-		reg_advert100 |= ADVERTISE_10FULL | ADVERTISE_100FULL;
-		break;
-	case ADVERT_10_HF_100_F:
-		reg_advert100 |= ADVERTISE_10HALF | ADVERTISE_10FULL | ADVERTISE_100FULL;
-		break;
-	case ADVERT_100_HF:
-		reg_advert100 |= ADVERTISE_100HALF | ADVERTISE_100FULL;
-		break;
-	case ADVERT_10_H_100_HF:
-		reg_advert100 |= ADVERTISE_10HALF | ADVERTISE_100HALF | ADVERTISE_100FULL;
-		break;
-	case ADVERT_10_F_100_HF:
-		reg_advert100 |= ADVERTISE_10FULL | ADVERTISE_100HALF | ADVERTISE_100FULL;
-		break;
-	case ADVERT_10_HF_100_HF:
-		reg_advert100 |= ADVERTISE_10HALF | ADVERTISE_10FULL | ADVERTISE_100HALF | ADVERTISE_100FULL;
-		break;
-	case ADVERT_10_HF_100_HF_1000_HF:
-		reg_advert100 |= ADVERTISE_10HALF | ADVERTISE_10FULL | ADVERTISE_100HALF | ADVERTISE_100FULL;
-		reg_advert1000 |= ADVERTISE_1000FULL;
-		break;
-	default:
+	if (advert & ~ADVERT_ALL) {
 		return -EINVAL;
 	}
+
+	reg_advert100 |= advert & ADVERT_10HALF ? ADVERTISE_10HALF : 0;
+	reg_advert100 |= advert & ADVERT_10FULL ? ADVERTISE_10FULL : 0;
+	reg_advert100 |= advert & ADVERT_100HALF ? ADVERTISE_100HALF : 0;
+	reg_advert100 |= advert & ADVERT_100FULL ? ADVERTISE_100FULL : 0;
+	reg_advert1000 |= advert & ADVERT_1000FULL ? ADVERTISE_1000FULL : 0;
 
 	mdiobus_write(bus, val->port_vlan - 1, MII_ADVERTISE, reg_advert100);
 	mdiobus_write(bus, val->port_vlan - 1, MII_CTRL1000, reg_advert1000);
@@ -1988,6 +1941,27 @@ int ar40xx_get_qm_status(struct ar40xx_priv *priv,
 	return 0;
 }
 
+static int qca_qm_error_check(struct ar40xx_priv *priv)
+{
+	u32 reg_val = 0, qm_err_int=0;
+
+	reg_val = ar40xx_read(priv, 0x24);
+	qm_err_int = reg_val & BIT(14);
+
+	if(qm_err_int){
+		pr_info("ar40xx qm_err_int bit is set\n");
+		return 1;
+	}
+
+	ar40xx_write(priv, 0x820, 0);
+	reg_val = ar40xx_read(priv, 0x824);
+
+	if(reg_val)
+		pr_info("ar40xx qm_debug val is not zero\n");
+
+	return reg_val;
+}
+
 static void
 ar40xx_sw_mac_polling_task(struct ar40xx_priv *priv)
 {
@@ -2002,6 +1976,11 @@ ar40xx_sw_mac_polling_task(struct ar40xx_priv *priv)
 	struct mii_bus *bus = NULL;
 
 	if (!priv || !priv->mii_bus)
+		return;
+
+	value = qca_qm_error_check(priv);
+
+	if(value)
 		return;
 
 	bus = priv->mii_bus;
@@ -2030,31 +2009,6 @@ ar40xx_sw_mac_polling_task(struct ar40xx_priv *priv)
 				ar40xx_rmw(priv, reg,
 						AR40XX_PORT_AUTO_LINK_EN, 0);
 
-				/* Check queue buffer */
-				qm_err_cnt[i] = 0;
-				ar40xx_get_qm_status(priv, i, &qm_buffer_err);
-				if (qm_buffer_err) {
-					priv->ar40xx_port_qm_buf[i] =
-						AR40XX_QM_NOT_EMPTY;
-				} else {
-					u16 phy_val = 0;
-
-					priv->ar40xx_port_qm_buf[i] =
-						AR40XX_QM_EMPTY;
-					ar40xx_force_1g_full(priv, i);
-					/* Ref:QCA8337 Datasheet,Clearing
-					 * MENU_CTRL_EN prevents phy to
-					 * stuck in 100BT mode when
-					 * bringing up the link
-					 */
-					ar40xx_phy_dbg_read(priv, i-1,
-							    AR40XX_PHY_DEBUG_0,
-							    &phy_val);
-					phy_val &= (~AR40XX_PHY_MANU_CTRL_EN);
-					ar40xx_phy_dbg_write(priv, i-1,
-							     AR40XX_PHY_DEBUG_0,
-							     phy_val);
-				}
 				priv->ar40xx_port_old_link[i] = link;
 			} else if ((priv->ar40xx_port_old_link[i] ==
 						AR40XX_PORT_LINK_DOWN) &&
@@ -2062,6 +2016,9 @@ ar40xx_sw_mac_polling_task(struct ar40xx_priv *priv)
 				/* Down --> Up */
 				if (priv->port_link_up[i] < 1) {
 					++priv->port_link_up[i];
+					ar40xx_get_qm_status(priv, i, &qm_buffer_err);
+					if (qm_buffer_err)
+						return;
 				} else {
 					/* Change port status */
 					reset_control_assert(priv->ess_mac_rst[i-1]);
@@ -2082,27 +2039,13 @@ ar40xx_sw_mac_polling_task(struct ar40xx_priv *priv)
 
 					value |= AR40XX_PORT_AUTO_LINK_EN;
 					ar40xx_write(priv, reg, value);
+
+					reset_control_deassert(priv->ess_mac_rst[i-1]);
 					/* HW need such time to make sure link
 					* stable before enable MAC
 					*/
 					usleep_range(100, 200);
 
-					reset_control_deassert(priv->ess_mac_rst[i-1]);
-
-					if (speed == AR40XX_PORT_SPEED_100M) {
-						u16 phy_val = 0;
-						/* Enable @100M, if down to 10M
-						 * clock will change smoothly
-						 */
-						ar40xx_phy_dbg_read(priv, i-1,
-								    0,
-								    &phy_val);
-						phy_val |=
-							AR40XX_PHY_MANU_CTRL_EN;
-						ar40xx_phy_dbg_write(priv, i-1,
-								     0,
-								     phy_val);
-					}
 					priv->ar40xx_port_old_link[i] = link;
 				}
 			}

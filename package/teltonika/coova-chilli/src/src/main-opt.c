@@ -20,8 +20,6 @@
 
 #define MAIN_FILE
 
-#include <libgsm_utils.h>
-
 #include "cmdline.h"
 #include "system.h"
 #include "chilli.h"
@@ -64,9 +62,6 @@ static const char *compile_options = "Compiled with "
 #endif
 #ifdef ENABLE_CHILLIQUERY
     "ENABLE_CHILLIQUERY "
-#endif
-#ifdef ENABLE_UBUS
-"ENABLE_UBUS "
 #endif
 #ifdef ENABLE_CHILLIPROXY
     "ENABLE_CHILLIPROXY "
@@ -260,12 +255,6 @@ static const char *compile_options = "Compiled with "
 #ifdef USING_POLL
     "USING_POLL "
 #endif
-#ifdef  ENABLE_DATABASE
-    "ENABLE_DATABASE "
-#endif
-#ifdef  ENABLE_GSM
-    "ENABLE_GSM "
-#endif
 #ifdef EX_OPT_FEATURES
 #include EX_OPT_FEATURES
 #endif
@@ -446,51 +435,6 @@ int main(int argc, char **argv) {
   _options.defbandwidthmaxdown = args_info.defbandwidthmaxdown_arg;
   _options.defbandwidthmaxup = args_info.defbandwidthmaxup_arg;
   _options.defidletimeout = args_info.defidletimeout_arg;
-  _options.defmaxdownload = args_info.defmaxdownload_arg;
-  _options.defmaxupload = args_info.defmaxupload_arg;
-  _options.defwarning = args_info.defwarning_arg;
-  _options.deflimitperiod = args_info.deflimitperiod_arg;
-  _options.deflimitstart = args_info.deflimitstart_arg;
-  _options.defexpirationtime = args_info.defexpirationtime_arg;
-
-  if (args_info.dynsessiontimeout_orig) {
-    _options.dynsessiontimeout = (uint64_t)atoll(args_info.dynsessiontimeout_orig);
-  }
-  if (args_info.dynbandwidthmaxdown_orig) {
-    _options.dynbandwidthmaxdown = (uint64_t)atoll(args_info.dynbandwidthmaxdown_orig);
-  }
-  if (args_info.dynbandwidthmaxup_orig) {
-    _options.dynbandwidthmaxup = (uint64_t)atoll(args_info.dynbandwidthmaxup_orig);
-  }
-  if (args_info.dynmaxdownload_orig) {
-    _options.dynmaxdownload = (uint64_t)atoll(args_info.dynmaxdownload_orig);
-  }
-  if (args_info.dynwarning_orig) {
-    _options.dynwarning = (uint64_t)atoll(args_info.dynwarning_orig);
-  }
-  if (args_info.dynmaxupload_orig) {
-    _options.dynmaxupload = (uint64_t)atoll(args_info.dynmaxupload_orig);
-  }
-  if (args_info.dynexpirationtime_orig) {
-    _options.dynexpirationtime = (uint64_t)atoll(args_info.dynexpirationtime_orig);
-  }
-  _options.dyninteriminterval = args_info.dyninteriminterval_arg;
-  _options.dynidletimeout = args_info.dynidletimeout_arg;
-  _options.dynlimitperiod = args_info.dynlimitperiod_arg;
-  _options.dynlimitstart = args_info.dynlimitstart_arg;
-
-  _options.trialsessiontimeout = args_info.trialsessiontimeout_arg;
-  _options.trialinteriminterval = args_info.trialinteriminterval_arg;
-  _options.trialbandwidthmaxdown = args_info.trialbandwidthmaxdown_arg;
-  _options.trialbandwidthmaxup = args_info.trialbandwidthmaxup_arg;
-  _options.trialidletimeout = args_info.trialidletimeout_arg;
-  _options.trialmaxdownload = args_info.trialmaxdownload_arg;
-  _options.trialmaxupload = args_info.trialmaxupload_arg;
-  _options.trialwarning = args_info.trialwarning_arg;
-  _options.triallimitperiod = args_info.triallimitperiod_arg;
-  _options.triallimitstart = args_info.triallimitstart_arg;
-  _options.trialexpirationtime = args_info.dynexpirationtime_arg;
-
   _options.radiusnasporttype = args_info.radiusnasporttype_arg;
   _options.radiusauthport = args_info.radiusauthport_arg;
   _options.radiusacctport = args_info.radiusacctport_arg;
@@ -525,7 +469,6 @@ int main(int argc, char **argv) {
   _options.dhcp_broadcast = args_info.dhcpbroadcast_flag;
   _options.dhcpgwport = args_info.dhcpgatewayport_arg;
   _options.noc2c = args_info.noc2c_flag;
-  _options.noc2c = args_info.noc2c_flag;
   _options.tcpwin = args_info.tcpwin_arg;
   _options.tcpmss = args_info.tcpmss_arg;
   _options.max_clients = args_info.maxclients_arg;
@@ -538,7 +481,6 @@ int main(int argc, char **argv) {
   _options.redirurl = args_info.redirurl_flag;
   _options.statusfilesave = args_info.statusfilesave_flag;
   _options.dhcpnotidle = args_info.dhcpnotidle_flag;
-  _options.successuserurl = args_info.successuserurl_flag;
 #if(_debug_ && !defined(ENABLE_CHILLIREDIR))
   if (_options.redir)
     syslog(LOG_ERR, "chilli_redir not implemented. build with --enable-chilliredir");
@@ -1467,43 +1409,6 @@ int main(int argc, char **argv) {
   _options.locationupdate = STRDUP(args_info.locationupdate_arg);
 #endif
   _options.nochallenge = args_info.nochallenge_flag;
-  _options.successurlcustom = STRDUP(args_info.successurlcustom_arg);
-  _options.dbpath = STRDUP(args_info.dbpath_arg);
-  _options.usersdbpath = STRDUP(args_info.usersdbpath_arg);
-  _options.smsusers = args_info.smsusers_flag;
-  _options.duplicateusers = args_info.duplicateusers_flag;
-  _options.macusers = args_info.macusers_flag;
-  _options.trialusers = args_info.trialusers_flag;
-  _options.usersignup = STRDUP(args_info.usersignup_arg);
-  _options.macpass = STRDUP(args_info.macpass_arg);
-  _options.tos = args_info.tos_flag;
-  _options.registerusers = args_info.registerusers_flag;
-
-  _options.paramuamip = STRDUP(args_info.paramuamip_arg);
-  _options.paramuamport = STRDUP(args_info.paramuamport_arg);
-  _options.paramcalled  = STRDUP(args_info.paramcalled_arg);
-  _options.parammac = STRDUP(args_info.parammac_arg);
-  _options.paramip = STRDUP(args_info.paramip_arg);
-  _options.paramnasid = STRDUP(args_info.paramnasid_arg);
-  _options.paramsessionid = STRDUP(args_info.paramsessionid_arg);
-  _options.paramuserurl = STRDUP(args_info.paramuserurl_arg);
-  _options.paramchallenge = STRDUP(args_info.paramchallenge_arg);
-  _options.param1 = STRDUP(args_info.param1_arg);
-  _options.param1value = STRDUP(args_info.param1value_arg);
-  _options.param2  = STRDUP(args_info.param2_arg);
-  _options.param2value = STRDUP(args_info.param2value_arg);
-
-  _options.testtime = args_info.testtime_flag;
-#ifdef ENABLE_GSM
-  _options.modemid = STRDUP(args_info.modemid_arg);
-  if (!_options.modemid) {
-  	struct ubus_context *ubus;
-  	if ((ubus = ubus_connect(NULL))) {
-  		_options.modemid = STRDUP(lgsmu_get_default_modem_id(ubus));
-  		ubus_shutdown(ubus);
-  	}
-  }
-#endif
 #ifdef EX_OPT_MAIN
 #include EX_OPT_MAIN
 #endif

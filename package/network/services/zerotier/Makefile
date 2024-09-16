@@ -35,7 +35,9 @@ define Package/zerotier
 endef
 
 define Package/zerotier/description
-	ZeroTier creates a global provider-independent virtual private cloud network.
+	ZeroTier package can establish Peer to Peer VPN (P2PVPN) connection
+	between various devices running various operating systems. It also provides
+	network management possibilities such as routing and creating firewall rules.
 endef
 
 define Package/zerotier/config

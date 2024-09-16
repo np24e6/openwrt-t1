@@ -1,11 +1,20 @@
-stages:
-  - check
+include:
+  - project: teltonika/ci-templates
+    file:
+      - /templates/semgrep.yml
 
-code-security-check:
-  stage: check
-  image: ${CI_REGISTRY}/docker/security-checker:latest
-  allow_failure: false
-  script:
-    - bash /app/security-checker/run_codechecker.sh
-  tags:
-    - check
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_PIPELINE_SOURCE == "web"
+    - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
+      when: never
+    - if: $CI_COMMIT_BRANCH
+
+semgrep_errors:
+  extends: .semgrep_errors
+
+semgrep_info:
+  extends: .semgrep_info
+  needs:
+    - job: semgrep_errors

@@ -1,0 +1,7 @@
+if PACKAGE_libuci
+
+config UCI_LOG_SUPPORT
+	bool "Enable UCI logging support"
+	default n
+
+endif

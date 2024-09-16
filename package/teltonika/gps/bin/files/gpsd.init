@@ -21,6 +21,17 @@ start_service() {
 	procd_close_instance
 }
 
+stop_service() {
+	config_load gps
+	config_get enabled gpsd enabled "0"
+	config_get interval gpsd interval ""
+
+	[ "$enabled" = "1" ] || return
+	[ "$interval" = "" ] && return
+
+	ubus call mctl reboot '{"id":"1.1-4"}'
+}
+
 service_triggers()
 {
 	procd_add_reload_trigger "gps"

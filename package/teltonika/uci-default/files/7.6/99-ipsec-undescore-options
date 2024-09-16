@@ -1,0 +1,20 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+rename_option() {
+	SECTION="$1"
+	TYPE="$2"
+	case $TYPE in
+		remote)
+			uci_rename "ipsec" "$SECTION" "_multiple_secrets" "multiple_secrets" &>/dev/null;;
+		connection)
+			uci_rename "ipsec" "$SECTION" "_dpd" "dpd" &>/dev/null;;
+	esac
+}
+
+config_load "ipsec"
+config_foreach "rename_option" "remote" "remote"
+config_foreach "rename_option" "connection" "connection"
+uci_commit "ipsec"
+

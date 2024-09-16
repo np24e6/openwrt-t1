@@ -1,0 +1,23 @@
+Index: hostapd-2023-06-22-599d00be/src/ap/ieee802_11.c
+===================================================================
+--- hostapd-2023-06-22-599d00be.orig/src/ap/ieee802_11.c
++++ hostapd-2023-06-22-599d00be/src/ap/ieee802_11.c
+@@ -2260,9 +2260,15 @@ static int ieee802_11_allowed_address(st
+ 	res = hostapd_allowed_address(hapd, addr, msg, len, info, 0);
+ 
+ 	if (res == HOSTAPD_ACL_REJECT) {
+-		wpa_printf(MSG_DEBUG, "Station " MACSTR
+-			   " not allowed to authenticate",
+-			   MAC2STR(addr));
++		if (!hapd->conf || !hapd->iconf || !hapd->iconf->bss[0]) {
++			return HOSTAPD_ACL_REJECT;
++		}
++
++		// Check syslog level from phy*.conf file
++		if (hapd->iconf->bss[0]->logger_syslog_level >= 3) {
++			wpa_printf(MSG_INFO, "Station " MACSTR " not allowed to authenticate to '%s'", MAC2STR(addr),
++				   wpa_ssid_txt(hapd->conf->ssid.ssid, hapd->conf->ssid.ssid_len));
++		}
+ 		return HOSTAPD_ACL_REJECT;
+ 	}
+ 

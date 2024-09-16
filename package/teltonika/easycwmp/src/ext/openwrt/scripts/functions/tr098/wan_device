@@ -25,7 +25,7 @@ entry_execute_method_root_WANDevice() {
 sub_entry_wandevice_wanconnectiondevice() {
 	local j="$2"
 	local iface="$3"
- 	local protocol="$4"
+	local protocol="$4"
 	local default="$5"
 	case_param "$1" belongto "$DMROOT.WANDevice.1.WANConnectionDevice.$j." && {
 		common_execute_method_obj "$DMROOT.WANDevice.1.WANConnectionDevice.$j." "0"
@@ -38,12 +38,11 @@ sub_entry_wandevice_wanconnectiondevice() {
 			common_execute_method_param "$DMROOT.WANDevice.1.WANConnectionDevice.$j.WANIPConnection.1.MACAddress" "0" "wan_device_get_ipcx_macaddr $iface"
 			;;
 			PPP)
-			local ifname=`$UCI_GET network.$iface.ifname`
 			common_execute_method_obj "$DMROOT.WANDevice.1.WANConnectionDevice.$j.WANPPPConnection." "0"
 			common_execute_method_obj "$DMROOT.WANDevice.1.WANConnectionDevice.$j.WANPPPConnection.1." "0"
-			common_execute_method_param "$DMROOT.WANDevice.1.WANConnectionDevice.$j.WANPPPConnection.1.Enable" "0" "wan_device_get_wan_ppp_enable $iface" "" "xsd:boolean"
-			common_execute_method_param "$DMROOT.WANDevice.1.WANConnectionDevice.$j.WANPPPConnection.1.APN" "0" "$UCI_GET network.ppp.apn" ""
-			common_execute_method_param "$DMROOT.WANDevice.1.WANConnectionDevice.$j.WANPPPConnection.1.ExternalIPAddress" "0" "gsmctl -p $ifname " ""
+			common_execute_method_param "$DMROOT.WANDevice.1.WANConnectionDevice.$j.WANPPPConnection.1.Enable" "1" "wan_device_get_ipcx_macaddr $iface" "wan_device_set_wan_ppp_enable $iface" "xsd:boolean"
+			common_execute_method_param "$DMROOT.WANDevice.1.WANConnectionDevice.$j.WANPPPConnection.1.Username" "1" "$UCI_GET network.$iface.username" "wan_device_set_wan_ppp_cfg network.$iface.username"
+			common_execute_method_param "$DMROOT.WANDevice.1.WANConnectionDevice.$j.WANPPPConnection.1.Password" "1" "" "wan_device_set_wan_ppp_cfg network.$iface.password"
 			;;
 		esac
 		return 0
@@ -75,16 +74,7 @@ wan_device_browse_instances_wancxdev() {
 
 wan_device_get_interface_maps() {
 	#should return a list like this: "<interface1>:<instance1>:<protocol>:<default interface? 1 : 0> <interface2>:<instance>:<protocol>:<default interface? 1 : 0>"
-	local ifname=`$UCI_GET network.wan.ifname`
-	if [ -n "$ifname" ]; then
-		if [ "$ifname" == "wwan0" ]; then
-			echo "wan:1:PPP:1"
-		else
-			echo "wan:1:IP:1"
-		fi
-	else
-		echo "wan:1:PPP:1"
-	fi
+	echo "mng:1:IP:1 wan:2:PPP:0"
 }
 
 wan_device_get_ipcx_status() {
@@ -99,9 +89,8 @@ wan_device_get_ipcx_ipaddr() {
 
 wan_device_get_ipcx_macaddr() {
 	local val iface="$1"
-	local ifname=`$UCI_GET network.$iface.ifname`
-	if [ -z "$default_wan_device_mng_interface_mac" -a -n "$ifname" ]; then
-		val=`cat /sys/class/net/$ifname/address`
+	if [ -z "$default_wan_device_mng_interface_mac" ]; then
+		val=`$UCI_GET network.$iface.macaddr`
 	else
 		val=$default_wan_device_mng_interface_mac
 	fi
@@ -109,8 +98,8 @@ wan_device_get_ipcx_macaddr() {
 }
 
 wan_device_get_wan_ppp_enable() {
-	local ifname=`$UCI_GET network.$1.ifname`
-	local val=`$UCI_GET network.$ifname.enabled`
+	local iface="$1"
+	local val=`$UCI_GET network.$iface.auto`
 	echo ${val:-1}
 }
 

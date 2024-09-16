@@ -294,12 +294,19 @@ fwtool_check_backup() {
 
 	local this_device_fw_version=$(cat /etc/version)
 	local fw_version_in_new_config=$(uci -q -c "${backup_dir}/etc/config" get system.system.device_fw_version)
-	if [ "${#fw_version_in_new_config}" -lt 12 ] ||
-			[ $(expr "${this_device_fw_version##*_}" \< "${fw_version_in_new_config##*_}") -eq 1 ]; then
-		return 2
-	fi
+	[ "${#fw_version_in_new_config}" -lt 12 ] && return 2
 
-    return 0
+	local stripped_backup="${fw_version_in_new_config##*_}"
+	local stripped_device="${this_device_fw_version##*_}"
+
+	[ "$stripped_device" = "$stripped_backup" ] && return 0
+
+	local before=$(printf "%s\n" "$stripped_device" "$stripped_backup")
+	local sorted=$(echo "$before" | sort -V)
+
+	[ "$before" = "$sorted" ] && return 2
+
+	return 0
 }
 
 fwtool_check_upgrade_type() {

@@ -7,9 +7,9 @@ include $(INCLUDE_DIR)/download.mk
 PKG_RELEASE:=1
 
 PKG_NAME:=networkmap
-PKG_VERSION:=2023-08-31
+PKG_VERSION:=2023-11-20
 
-PKG_SOURCE_VERSION:=1.0
+PKG_SOURCE_VERSION:=1.1
 
 include $(INCLUDE_DIR)/package.mk
 

@@ -28,8 +28,6 @@
 #include "qmi-errors.h"
 #include "qmi-errors.c"
 #include "mbim.h"
-#include "commands-wds.h"
-#include "libuqmi.h"
 
 bool cancel_all_requests = false;
 
@@ -38,6 +36,19 @@ static const uint8_t qmi_services[__QMI_SERVICE_LAST] = {
 	__qmi_services
 };
 #undef __qmi_service
+
+#ifdef DEBUG_PACKET
+void dump_packet(const char *prefix, void *ptr, int len)
+{
+	unsigned char *data = ptr;
+	int i;
+
+	fprintf(stderr, "%s:", prefix);
+	for (i = 0; i < len; i++)
+		fprintf(stderr, " %02x", data[i]);
+	fprintf(stderr, "\n");
+}
+#endif
 
 static int
 qmi_get_service_idx(QmiService svc)
@@ -65,19 +76,14 @@ static void __qmi_request_complete(struct qmi_dev *qmi, struct qmi_request *req,
 	if (msg) {
 		tlv_buf = qmi_msg_get_tlv_buf(msg, &tlv_len);
 		req->ret = qmi_check_message_status(tlv_buf, tlv_len);
-
-		if (req->ret) {
-			if (req->cb != cmd_wds_start_network_cb)
-				msg = NULL;
-		}
+		if (req->ret)
+			msg = NULL;
 	} else {
 		req->ret = QMI_ERROR_CANCELLED;
 	}
 
-	if ((req->cb && (msg || !req->no_error_cb))
-		|| (req->cb == cmd_wds_start_network_cb)) {
+	if (req->cb && (msg || !req->no_error_cb))
 		req->cb(qmi, req, msg);
-	}
 
 	if (req->complete) {
 		*req->complete = true;
@@ -358,7 +364,6 @@ int qmi_device_open(struct qmi_dev *qmi, const char *path)
 	INIT_LIST_HEAD(&qmi->req);
 	qmi->ctl_tid = 1;
 	qmi->buf = msgbuf.u.buf;
-	qmi->fd_path = path;
 
 	return 0;
 }

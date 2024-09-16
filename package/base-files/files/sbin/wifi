@@ -304,14 +304,23 @@ turn_on_all_wifi() {
 
 wifi_dev=""
 
-get_wifi_device_name() {
-	local wifi_device=$1
+check_device_name() {
+        local section_name="$1"
+        local device_name="$2"
+        config_get hwmode "$section_name" hwmode
 
-	if [ "$wifi_device" = "2g" ]; then
-		wifi_dev="radio0"
-	elif [ "$wifi_device" = "5g" ]; then
-		wifi_dev="radio1"
-	fi
+        if [ "$device_name" = "2g" ] && [ "$hwmode" = "11g" ]; then
+                wifi_dev=$section_name
+        elif [ "$device_name" = "5g" ] && { [ "$hwmode" = "11a" ] || [ "$hwmode" = "11ad" ]; }; then
+                wifi_dev=$section_name
+        fi
+}
+
+get_wifi_device_name() {
+        local wifi_device=$1
+
+        config_load wireless
+        config_foreach check_device_name wifi-device "$wifi_device"
 }
 
 turn_off_hotspot() {

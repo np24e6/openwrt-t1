@@ -61,14 +61,13 @@ struct Service {
   const char *group;
   const char *cwd;
   const char *cmdline;
-  const char *portRange;
 };
 
 extern struct Service **services;
 extern int            numServices;
 
 void initService(struct Service *service, const char *arg);
-struct Service *newService(const char *arg, const char *portRange);
+struct Service *newService(const char *arg);
 void destroyService(struct Service *service);
 void deleteService(struct Service *service);
 void destroyServiceHashEntry(void *arg, char *key, char *value);

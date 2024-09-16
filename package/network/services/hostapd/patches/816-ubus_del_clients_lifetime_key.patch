@@ -1,6 +1,8 @@
---- a/src/ap/ubus.c
-+++ b/src/ap/ubus.c
-@@ -167,7 +167,7 @@
+Index: hostapd-2023-09-08-e5ccbfc6/src/ap/ubus.c
+===================================================================
+--- hostapd-2023-09-08-e5ccbfc6.orig/src/ap/ubus.c	2023-11-06 11:30:51.727681374 +0200
++++ hostapd-2023-09-08-e5ccbfc6/src/ap/ubus.c	2023-11-06 11:30:51.723681395 +0200
+@@ -129,7 +129,7 @@
  }
  
  static void
@@ -9,7 +11,7 @@
  {
  	struct ubus_banned_client *ban;
  
-@@ -176,7 +176,7 @@
+@@ -138,7 +138,7 @@
  
  	ban = avl_find_element(&hapd->ubus.banned, addr, ban, avl);
  	if (!ban) {
@@ -18,7 +20,7 @@
  			return;
  
  		ban = os_zalloc(sizeof(*ban));
-@@ -184,14 +184,17 @@
+@@ -146,14 +146,17 @@
  		ban->avl.key = ban->addr;
  		avl_insert(&hapd->ubus.banned, &ban->avl);
  	} else {
@@ -26,7 +28,7 @@
 -		if (!time) {
 -			hostapd_bss_del_ban(ban, hapd);
 -			return;
-+		if(!lifetime) {
++		if (!lifetime) {
 +			eloop_cancel_timeout(hostapd_bss_del_ban, ban, hapd);
 +			if (!time) {
 +				hostapd_bss_del_ban(ban, hapd);
@@ -36,12 +38,12 @@
  	}
  
 -	eloop_register_timeout(0, time * 1000, hostapd_bss_del_ban, ban, hapd);
-+	if(!lifetime)
++	if (!lifetime)
 +		eloop_register_timeout(0, time * 1000, hostapd_bss_del_ban, ban, hapd);
  }
  
  static int
-@@ -447,6 +450,7 @@
+@@ -459,6 +462,7 @@
  	DEL_CLIENT_REASON,
  	DEL_CLIENT_DEAUTH,
  	DEL_CLIENT_BAN_TIME,
@@ -49,7 +51,7 @@
  	__DEL_CLIENT_MAX
  };
  
-@@ -455,6 +459,7 @@
+@@ -467,6 +471,7 @@
  	[DEL_CLIENT_REASON] = { "reason", BLOBMSG_TYPE_INT32 },
  	[DEL_CLIENT_DEAUTH] = { "deauth", BLOBMSG_TYPE_INT8 },
  	[DEL_CLIENT_BAN_TIME] = { "ban_time", BLOBMSG_TYPE_INT32 },
@@ -57,7 +59,7 @@
  };
  
  static int
-@@ -466,6 +471,8 @@
+@@ -478,6 +483,8 @@
  	struct hostapd_data *hapd = container_of(obj, struct hostapd_data, ubus.obj);
  	struct sta_info *sta;
  	bool deauth = false;
@@ -66,20 +68,20 @@
  	int reason;
  	u8 addr[ETH_ALEN];
  
-@@ -482,6 +489,12 @@
- 
+@@ -495,6 +502,12 @@
  	if (tb[DEL_CLIENT_DEAUTH])
  		deauth = blobmsg_get_bool(tb[DEL_CLIENT_DEAUTH]);
-+
+ 
 +	if (tb[DEL_CLIENT_BAN_TIME])
 +		ban_time = blobmsg_get_u32(tb[DEL_CLIENT_BAN_TIME]);
 +
 +	if (tb[DEL_CLIENT_LIFETIME])
 +		lifetime = blobmsg_get_bool(tb[DEL_CLIENT_LIFETIME]);
- 
++
  	sta = ap_get_sta(hapd, addr);
  	if (sta) {
-@@ -494,8 +507,7 @@
+ 		if (deauth) {
+@@ -506,8 +519,7 @@
  		}
  	}
  
@@ -89,4 +91,3 @@
  
  	return 0;
  }
-

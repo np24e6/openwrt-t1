@@ -8,7 +8,7 @@
 	"ep_iface": 4,
 	"dl_max_size": 16384,
 	"dl_max_datagrams": 32,
-	"ul_max_size": 8912,
+	"ul_max_size": 8192,
 	"ul_max_datagrams": 11,
 	"power_off_ms": 800,
 	"reset_ms": 300

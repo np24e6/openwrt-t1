@@ -17,6 +17,8 @@ config CORE_PACKAGES
 	imply PACKAGE_cgi-io
 	imply PACKAGE_uci-default
 	imply BUSYBOX_CONFIG_PASSWD
+	imply UCI_LOG_SUPPORT
+	imply PACKAGE_curl if !(AP_DEVICE || x86_64)
 
 config PROFILES_SUPPORT
 	bool
@@ -60,10 +62,10 @@ config FOTA_SUPPORT
 
 config LED_SUPPORT
 	bool
-	depends on !BASIC_ROUTER
+	depends on !x86_64
 	default y
-	imply PACKAGE_ledman if AP_DEVICE && !LEDMAN_FULL
-	imply PACKAGE_ledman-full if !AP_DEVICE || LEDMAN_FULL
+	imply PACKAGE_ledman if LEDMAN_LITE
+	imply PACKAGE_ledman-full if !LEDMAN_LITE
 
 config POE_SUPPORT
 	bool
@@ -87,7 +89,7 @@ config CRYPTO
 	imply PACKAGE_kmod-crypto-crc32c
 	imply PACKAGE_kmod-crypto-sha512
 	imply PACKAGE_kmod-crypto-gcm
-
+	
 config HNAT
 	bool
 	imply PACKAGE_qssdk-hnat
@@ -244,6 +246,13 @@ config WIREGUARD_SUPPORT
 	imply PACKAGE_wireguard if !HAS_DOWNSTREAM_KERNEL
 	imply PACKAGE_wireguard-trb5 if HAS_DOWNSTREAM_KERNEL
 
+config TAILSCALE_SUPPORT
+	tristate
+	depends on !SMALL_FLASH && PKG_SUPPORT
+	default m
+	imply PACKAGE_tailscale
+	imply PACKAGE_vuci-app-tailscale-ui
+
 #
 # network routing
 #
@@ -273,6 +282,7 @@ config FRR_SUPPORT
 	imply PACKAGE_frr-ospfd
 	imply PACKAGE_frr-eigrpd
 	imply PACKAGE_frr-bgpd
+	imply PACKAGE_frr-nhrp
 
 config FRR_VTYSH_SUPPORT
 	tristate
@@ -292,6 +302,7 @@ config FRR5_SUPPORT
 	imply PACKAGE_frr5-ospfd
 	imply PACKAGE_frr5-eigrpd
 	imply PACKAGE_frr5-bgpd
+	imply PACKAGE_frr5-nhrp
 
 config VRR_SUPPORT
 	tristate
@@ -359,6 +370,8 @@ config NTPD_SUPPORT
 	depends on PKG_SUPPORT
 	default m
 	imply PACKAGE_ntpd
+	imply BUSYBOX_DEFAULT_NTPD
+	imply BUSYBOX_DEFAULT_FEATURE_NTPD_SERVER
 
 config NF_LOGGING_SUPPORT
 	tristate
@@ -488,8 +501,6 @@ config THINGWORX_SUPPORT
 
 config MOBILE_SUPPORT
 	bool
-	depends on !AP_DEVICE
-	default y
 	imply PACKAGE_gsmctl
 	imply PACKAGE_mobifd
 	imply PACKAGE_apn_db
@@ -501,11 +512,13 @@ config MOBILE_SUPPORT
 	imply PACKAGE_qmi-utils if BYPASS_OFFLOAD_FEATURE
 	imply PACKAGE_vuci-app-mobile-ui
 	imply PACKAGE_vuci-app-mobile-utilities-ui
+	imply PACKAGE_vuci-app-mobile-usage-ui
 	imply PACKAGE_dfota if !BASEBAND_SUPPORT
 	imply PACKAGE_post-get
 	imply PACKAGE_post-get-mobile
 	imply PACKAGE_mctl
 	imply PACKAGE_urcd
+	imply BUSYBOX_CONFIG_FEATURE_NETIFD
 
 config MODEM_UPDATER_SUPPORT
 	tristate
@@ -518,7 +531,7 @@ config MOBILE_UTILS_SUPPORT
 	depends on MOBILE_SUPPORT
 	default y
 	imply PACKAGE_mobutils
-	imply PACKAGE_mobutils-call_utilities
+	imply PACKAGE_mobutils-call_utilities if !BYPASS_OFFLOAD_FEATURE
 	imply PACKAGE_mobutils-sms_utilities
 	imply SMS_UTILS_HANDLER_IO if IO_SUPPORT
 	imply SMS_UTILS_HANDLER_WIFI if WIFI_SUPPORT
@@ -575,8 +588,7 @@ config WIFI_SUPPORT
 	imply PACKAGE_vuci-app-channel-analysis-ui
 	imply PACKAGE_wpad-openssl if !USES_VENDOR_WIFI_DRIVER
 	imply PACKAGE_wpa-cli if !USES_VENDOR_WIFI_DRIVER
-	imply PACKAGE_vuci-app-wireless-ui if !AP_DEVICE
-	imply PACKAGE_vuci-app-wireless-tap-ui if AP_DEVICE
+	imply PACKAGE_vuci-app-wireless-ui
 	imply PACKAGE_vuci-app-multi-ap-ui
 	imply PACKAGE_multiple_ap if !AP_DEVICE
 
@@ -681,6 +693,7 @@ config SERIAL_SUPPORT
 	imply PACKAGE_vuci-app-getty-ui
 	imply PACKAGE_vuci-app-modem-control-ui
 	imply PACKAGE_usb-reboot if SERIAL_RESET_QUIRK
+	imply BUSYBOX_DEFAULT_STTY
 
 
 config SERIAL_USB_DRIVERS
@@ -811,6 +824,12 @@ config OPCUA
 	default m
 	imply PACKAGE_opcua_client
 
+config OPCUA_SERVER
+	tristate
+	depends on PKG_SUPPORT
+	default m
+	imply PACKAGE_opcua_server
+
 config DLMS_SUPPORT
 	tristate
 	depends on PKG_SUPPORT
@@ -853,7 +872,6 @@ config NORMAL_SERVICES_WEBUI
 	depends on !AP_DEVICE
 	default y
 	imply PACKAGE_vuci-app-multiusers-ui
-	imply PACKAGE_vuci-app-mobile-usage-ui
 	imply PACKAGE_vuci-app-network-ui
 	imply PACKAGE_vuci-app-overview-ui
 	imply PACKAGE_vuci-app-side-widget-ui

@@ -115,10 +115,6 @@ Sets the max input data limit of the session.
 Sets the max output data limit of the session.
 
 .TP
-.BI warningoctets " <number-of-bytes>"
-Sets the data threshold for the session over which an SMS warning is sent.
-
-.TP
 .BI maxbwup " <bandwidth>"
 Sets the max up bandwidth of the session.
 

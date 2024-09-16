@@ -1,0 +1,142 @@
+--- a/Makefile
++++ b/Makefile
+@@ -607,6 +607,11 @@
+ ifdef CONFIG_FEATURE_IP_BLOCKD
+ CONFIG_EXTRA_LDLIBS:=ubus ubox uci log
+ endif
++
++ifdef CONFIG_FEATURE_NETIFD
++CONFIG_EXTRA_LDLIBS+=netifd
++endif
++
+ # Rule to link busybox - also used during CONFIG_KALLSYMS
+ # May be overridden by arch/$(ARCH)/Makefile
+ quiet_cmd_busybox__ ?= LINK    $@
+
+--- a/networking/udhcp/common.h
++++ b/networking/udhcp/common.h
+@@ -366,4 +366,8 @@
+
+ POP_SAVED_FUNCTION_VISIBILITY
+
++#ifdef CONFIG_FEATURE_NETIFD
++void reload_mobifd(char *interface);
++#endif
++
+ #endif
+
+--- a/networking/udhcp/common.c
++++ b/networking/udhcp/common.c
+@@ -6,6 +6,11 @@
+  */
+ #include "common.h"
+
++#ifdef CONFIG_FEATURE_NETIFD
++#include <libubus.h>
++#include <libnetifd.h>
++#endif
++
+ #if defined CONFIG_UDHCP_DEBUG && CONFIG_UDHCP_DEBUG >= 1
+ unsigned dhcp_verbose;
+ #endif
+@@ -718,3 +723,42 @@
+ 		hexstrbuf + 7 * 4
+ 	);
+ }
++
++#ifdef CONFIG_FEATURE_NETIFD
++void reload_mobifd(char *interface){
++	uint8_t state		= 0;
++	uint32_t id		= 0;
++	struct ubus_context *ctx = ubus_connect(NULL);
++	lnetifd_arr_t netifd_ifaces = { 0 };
++	lnetifd_err_t err;
++	if (!ctx) {
++		return;
++	}
++
++	if ((err = lnetifd_iface_list(ctx, &netifd_ifaces))) {
++		goto end;
++	}
++
++	for (int i = 0; i < netifd_ifaces.length; i++) {
++		if (!strcmp(interface, netifd_ifaces.iface[i].l3_dev) &&
++		    netifd_ifaces.iface[i].static_mobile) {
++			goto found;
++		}
++	}
++
++	goto end;
++
++found:
++	if (ubus_lookup_id(ctx, "mobifd", &id)) {
++		goto end;
++	}
++
++	ubus_invoke(ctx, id, "reload", NULL, NULL, NULL, 10000);
++
++end:
++	if (netifd_ifaces.iface) {
++		free(netifd_ifaces.iface);
++	}
++	ubus_free(ctx);
++}
++#endif
+
+
+--- a/networking/udhcp/dhcpc.c
++++ b/networking/udhcp/dhcpc.c
+@@ -17,6 +17,12 @@
+  * along with this program; if not, write to the Free Software
+  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+  */
++//config:config FEATURE_NETIFD
++//config:	bool "Support for libnetifd"
++//config:	default y
++//config:	depends on UDHCPC
++//config:
++
+ //applet:IF_UDHCPC(APPLET(udhcpc, BB_DIR_SBIN, BB_SUID_DROP))
+
+ //kbuild:lib-$(CONFIG_UDHCPC) += common.o packet.o signalpipe.o socket.o
+@@ -1570,7 +1576,12 @@
+ 				change_listen_mode(LISTEN_NONE);
+ 				bb_simple_info_msg("lease lost, entering init state");
+ 				d4_run_script_deconfig();
+-				client_data.state = INIT_SELECTING;
++
++#ifdef CONFIG_FEATURE_NETIFD
++				reload_mobifd(client_data.interface);
++#endif
++
++				client_data.state      = INIT_SELECTING;
+ 				client_data.first_secs = 0; /* make secs field count from 0 */
+ 				timeout = 0;
+ 				packet_num = 0;
+
+--- a/networking/udhcp/d6_dhcpc.c
++++ b/networking/udhcp/d6_dhcpc.c
+@@ -44,6 +44,11 @@
+ //config:	help
+ //config:	You can request bootfile-url with "-O bootfile_url" and
+ //config:	bootfile-params with "-O bootfile_params".
++//config:config FEATURE_NETIFD
++//config:	bool "Support for libnetifd"
++//config:	default y
++//config:	depends on UDHCPC
++//config:
+
+ //applet:IF_UDHCPC6(APPLET(udhcpc6, BB_DIR_USR_BIN, BB_SUID_DROP))
+
+@@ -1495,6 +1500,11 @@
+ 				change_listen_mode(LISTEN_NONE);
+ 				bb_simple_info_msg("lease lost, entering init state");
+ 				d6_run_script_no_option("deconfig");
++
++#ifdef CONFIG_FEATURE_NETIFD
++				reload_mobifd(client_data.interface);
++#endif
++
+ 				client_data.state = INIT_SELECTING;
+ 				client_data.first_secs = 0; /* make secs field count from 0 */
+ 				timeout = 0;

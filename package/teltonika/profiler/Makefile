@@ -6,9 +6,8 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=profiler
-PKG_VERSION:=2023-08-31
 
-PKG_SOURCE_VERSION:=2.11
+PKG_SOURCE_VERSION:=2.12
 
 include $(INCLUDE_DIR)/package.mk
 

@@ -14,7 +14,7 @@
  		map->btf_value_type_id = attr->btf_value_type_id;
 --- a/kernel/bpf/verifier.c
 +++ b/kernel/bpf/verifier.c
-@@ -9050,6 +9050,11 @@ static int check_btf_info(struct bpf_ver
+@@ -9192,6 +9192,11 @@ static int check_btf_info(struct bpf_ver
  	btf = btf_get_by_fd(attr->prog_btf_fd);
  	if (IS_ERR(btf))
  		return PTR_ERR(btf);
@@ -60,7 +60,7 @@
  	return !t || btf_type_nosize(t);
 --- a/include/uapi/linux/bpf.h
 +++ b/include/uapi/linux/bpf.h
-@@ -4419,6 +4419,7 @@ struct bpf_btf_info {
+@@ -4421,6 +4421,7 @@ struct bpf_btf_info {
  	__aligned_u64 btf;
  	__u32 btf_size;
  	__u32 id;

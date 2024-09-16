@@ -690,13 +690,6 @@ static int qca807x_config(struct phy_device *phydev)
 			linkmode_set_bit(ETHTOOL_LINK_MODE_FIBRE_BIT, phydev->supported);
 			linkmode_set_bit(ETHTOOL_LINK_MODE_FIBRE_BIT, phydev->advertising);
 		}
-
-		/* Prevent PSGMII going into hibernation via PSGMII self test */
-		psgmii_serdes = phy_read_mmd(phydev, MDIO_MMD_PCS, PSGMII_MMD3_SERDES_CONTROL);
-		psgmii_serdes &= ~BIT(1);
-		ret = phy_write_mmd(phydev, MDIO_MMD_PCS,
-				    PSGMII_MMD3_SERDES_CONTROL,
-				    psgmii_serdes);
 	}
 
 	if (!of_property_read_u32(node, "qcom,control-dac", &of_control_dac)) {
@@ -725,6 +718,18 @@ static int qca807x_probe(struct phy_device *phydev)
 {
 	struct device_node *node = phydev->mdio.dev.of_node;
 	int ret = 0;
+
+		/* Check for Combo port */
+	if (phy_read(phydev, QCA807X_CHIP_CONFIGURATION)) {
+		int psgmii_serdes;
+
+		/* Prevent PSGMII going into hibernation via PSGMII self test */
+		psgmii_serdes = phy_read_mmd(phydev, MDIO_MMD_PCS, PSGMII_MMD3_SERDES_CONTROL);
+		psgmii_serdes &= ~BIT(1);
+		ret = phy_write_mmd(phydev, MDIO_MMD_PCS,
+				    PSGMII_MMD3_SERDES_CONTROL,
+				    psgmii_serdes);
+	}
 
 	if (IS_ENABLED(CONFIG_GPIOLIB)) {
 		/* Do not register a GPIO controller unless flagged for it */

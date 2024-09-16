@@ -1,0 +1,21 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+CONFIG="rs_overip"
+
+rename_no_leading_zeros() {
+	local section="$1"
+	local no_leading_zeros
+
+	config_get no_leading_zeros "$section" "no_leading_zeros" "0"
+	if [ "$no_leading_zeros" = "1" ]; then
+		uci_set "$CONFIG" "$section" remove_all_zeros "1"
+	fi
+	uci_remove "$CONFIG" "$section" "no_leading_zeros"
+}
+
+config_load "$CONFIG"
+config_foreach rename_no_leading_zeros
+uci_commit "$CONFIG"
+

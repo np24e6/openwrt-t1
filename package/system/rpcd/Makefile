@@ -85,7 +85,7 @@ define Package/rpcd/install
 		$(SED) "/%%USER_SCRIPTS_HOTSPOT%%/d" $(1)/etc/config/rpcd; \
 	fi
 
-	if [ ! $(TLT_PLATFORM_RUT30X) ]; then \
+	if [ $(CONFIG_MOBILE_SUPPORT) ]; then \
 		$(SED) "s@%%MOBILE_UTILS_SMS_SEND%%@list read 'services/mobile_utilities/sms_messages/send'@g" \
 			$(1)/etc/config/rpcd; \
 	else \

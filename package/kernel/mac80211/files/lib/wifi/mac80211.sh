@@ -48,6 +48,96 @@ find_mac80211_phy() {
 	return 0
 }
 
+__get_band_defaults() {
+	local phy="$1"
+
+	( iw phy "$phy" info; echo ) | awk '
+BEGIN {
+        bands = ""
+}
+
+($1 == "Band" || $1 == "") && band {
+        if (channel) {
+		mode="NOHT"
+		if (ht) mode="HT20"
+		if (vht && band != "1:") mode="VHT80"
+		if (he) mode="HE80"
+		if (he && band == "1:") mode="HE20"
+                sub("\\[", "", channel)
+                sub("\\]", "", channel)
+                bands = bands band channel ":" mode " "
+        }
+        band=""
+}
+
+$1 == "Band" {
+        band = $2
+        channel = ""
+	vht = ""
+	ht = ""
+	he = ""
+}
+
+$0 ~ "Capabilities:" {
+	ht=1
+}
+
+$0 ~ "VHT Capabilities" {
+	vht=1
+}
+
+$0 ~ "HE Iftypes" {
+	he=1
+}
+
+$1 == "*" && $3 == "MHz" && $0 !~ /disabled/ && band && !channel {
+        channel = $4
+}
+
+END {
+        print bands
+}'
+}
+
+get_band_defaults() {
+	local phy="$1"
+
+	for c in $(__get_band_defaults "$phy"); do
+		local band="${c%%:*}"
+		c="${c#*:}"
+		local chan="${c%%:*}"
+		c="${c#*:}"
+		local mode="${c%%:*}"
+
+		case "$band" in
+			1) band=2g
+			   hw_mode_band=g
+			   chan=auto
+			;;
+			2) band=5g
+			   hw_mode_band=a
+			;;
+			3) band=60g
+			   hw_mode_band=a
+			;;
+			4) band=6g
+			   hw_mode_band=a
+			;;
+			*) band=""
+			   hw_mode_band=g
+			   chan=auto
+			;;
+		esac
+
+		[ -n "$band" ] || continue
+		[ -n "$mode_band" -a "$band" = "6g" ] && return
+
+		mode_band="$band"
+		channel="$chan"
+		htmode="$mode"
+	done
+}
+
 check_mac80211_device() {
 	config_get phy "$1" phy
 	[ -z "$phy" ] && {
@@ -216,6 +306,7 @@ is_mt7615() {
 	local vid="$(cat /sys/class/ieee80211/${dev}/device/vendor)"
 	local pid="$(cat /sys/class/ieee80211/${dev}/device/device)"
 
+	[ -n "$vid" ] || [ -n "$pid" ] || return 1
 	# MT7615
 	[ "$vid" == "0x14c3" ] && [ "$pid" == "0x7615" ] && return 0
 
@@ -270,26 +361,13 @@ detect_mac80211() {
 			continue
 		}
 
-		mode_band="g"
+		mode_band=""
 		channel="auto"
 		htmode=""
+		hw_mode_band=""
 		ht_capab=""
 
-		iw phy "$dev" info | grep -q 'Capabilities:' && htmode=HT20
-
-		iw phy "$dev" info | grep -q '\* 5... MHz \[' &&
-		[ ! "$(iw phy "$dev" info | grep -c 'Capabilities:')" -gt 1 ] &&
-		{
-			mode_band="a"
-			channel=$(iw phy "$dev" info | grep '\* 5... MHz \[' | grep '(disabled)' -v -m 1 | sed 's/[^[]*\[\|\].*//g')
-			iw phy "$dev" info | grep -q 'VHT Capabilities' && htmode="VHT80"
-		}
-
-		iw phy "$dev" info | grep -q '\* 5.... MHz \[' && {
-			mode_band="ad"
-			channel=$(iw phy "$dev" info | grep '\* 5.... MHz \[' | grep '(disabled)' -v -m 1 | sed 's/[^[]*\[\|\|\].*//g')
-			iw phy "$dev" info | grep -q 'Capabilities:' && htmode="HT20"
-		}
+		get_band_defaults "$dev"
 
 		[ -n "$htmode" ] && ht_capab="set wireless.radio${devidx}.htmode=$htmode"
 
@@ -328,9 +406,9 @@ detect_mac80211() {
 			if [ "$dual_band_ssid" != "true" ]; then
 				ssid="${model:0:6}_${router_mac_end}"
 			else
-				if [ "$mode_band" = "g" ]; then
+				if [ "$mode_band" = "2g" ]; then
 					ssid="${model:0:3}_${router_mac_end}_2G"
-				elif [ "$mode_band" = "a"  ]; then
+				elif [ "$mode_band" = "5g"  ]; then
 					ssid="${model:0:3}_${router_mac_end}_5G"
 				fi
 			fi
@@ -353,7 +431,7 @@ EOF
 			set wireless.radio${devidx}=wifi-device
 			set wireless.radio${devidx}.type=mac80211
 			set wireless.radio${devidx}.channel=${channel}
-			set wireless.radio${devidx}.hwmode=11${mode_band}
+			set wireless.radio${devidx}.hwmode=11${hw_mode_band}
 			${dev_id}
 			${ht_capab}
 			set wireless.radio${devidx}.country=US

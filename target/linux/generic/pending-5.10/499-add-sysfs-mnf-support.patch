@@ -1,0 +1,17 @@
+--- a/drivers/spi/Makefile
++++ b/drivers/spi/Makefile
+@@ -135,3 +135,5 @@ obj-$(CONFIG_SPI_AMD)			+= spi-amd.o
+ # SPI slave protocol handlers
+ obj-$(CONFIG_SPI_SLAVE_TIME)		+= spi-slave-time.o
+ obj-$(CONFIG_SPI_SLAVE_SYSTEM_CONTROL)	+= spi-slave-system-control.o
++
++obj-$(CONFIG_SYSFS_MNFINFO)	+= sysfs-mnfinfo/
+--- a/drivers/spi/Kconfig
++++ b/drivers/spi/Kconfig
+@@ -1048,4 +1048,6 @@ endif # SPI_SLAVE
+ config SPI_DYNAMIC
+ 	def_bool ACPI || OF_DYNAMIC || SPI_SLAVE
+ 
++source "drivers/spi/sysfs-mnfinfo/Kconfig"
++
+ endif # SPI

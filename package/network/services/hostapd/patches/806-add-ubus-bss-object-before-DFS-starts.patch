@@ -1,0 +1,68 @@
+Index: hostapd-2023-09-08-e5ccbfc6/src/ap/hostapd.c
+===================================================================
+--- hostapd-2023-09-08-e5ccbfc6.orig/src/ap/hostapd.c	2023-11-06 11:29:17.484183616 +0200
++++ hostapd-2023-09-08-e5ccbfc6/src/ap/hostapd.c	2023-11-06 11:29:31.000000000 +0200
+@@ -1215,8 +1215,13 @@
+ 	if (hapd->driver && hapd->driver->set_operstate)
+ 		hapd->driver->set_operstate(hapd->drv_priv, 1);
+ 
+-	hostapd_ubus_add_bss(hapd);
+-	hostapd_ucode_add_bss(hapd);
++	if (!hapd->ubus_added) {
++		hostapd_ubus_add_bss(hapd);
++	}
++
++	if (!hapd->ucode_added) {
++		hostapd_ucode_add_bss(hapd);
++	}
+ 
+ 	return 0;
+ }
+@@ -2307,6 +2312,8 @@
+ 		goto fail;
+ 
+ 	hostapd_ubus_add_iface(iface);
++	hostapd_ubus_add_bss(hapd);
++	hostapd_ucode_add_bss(hapd);
+ 	wpa_printf(MSG_DEBUG, "Completing interface initialization");
+ 	if (iface->freq) {
+ #ifdef NEED_AP_MLME
+Index: hostapd-2023-09-08-e5ccbfc6/src/ap/hostapd.h
+===================================================================
+--- hostapd-2023-09-08-e5ccbfc6.orig/src/ap/hostapd.h	2023-11-06 11:29:17.484183616 +0200
++++ hostapd-2023-09-08-e5ccbfc6/src/ap/hostapd.h	2023-11-06 11:29:17.480183638 +0200
+@@ -193,6 +193,8 @@
+ 	struct hostapd_ubus_bss ubus;
+ 	struct hostapd_ucode_bss ucode;
+ 	int interface_added; /* virtual interface added for this BSS */
++	int ubus_added;
++	int ucode_added;
+ 	unsigned int started:1;
+ 	unsigned int disabled:1;
+ 	unsigned int reenable_beacon:1;
+Index: hostapd-2023-09-08-e5ccbfc6/src/ap/ubus.c
+===================================================================
+--- hostapd-2023-09-08-e5ccbfc6.orig/src/ap/ubus.c	2023-11-06 11:29:17.484183616 +0200
++++ hostapd-2023-09-08-e5ccbfc6/src/ap/ubus.c	2023-11-06 11:29:31.000000000 +0200
+@@ -1723,6 +1723,8 @@
+ 	obj->n_methods = bss_object_type.n_methods;
+ 	ret = ubus_add_object(ctx, obj);
+ 	hostapd_ubus_ref_inc();
++
++	hapd->ubus_added = 1;
+ }
+ 
+ void hostapd_ubus_free_bss(struct hostapd_data *hapd)
+Index: hostapd-2023-09-08-e5ccbfc6/src/ap/ucode.c
+===================================================================
+--- hostapd-2023-09-08-e5ccbfc6.orig/src/ap/ucode.c	2023-11-06 11:29:17.484183616 +0200
++++ hostapd-2023-09-08-e5ccbfc6/src/ap/ucode.c	2023-11-06 11:29:17.480183638 +0200
+@@ -777,6 +777,8 @@
+ 	uc_value_push(ucv_get(val));
+ 	ucv_put(wpa_ucode_call(2));
+ 	ucv_gc(vm);
++
++	hapd->ucode_added = 1;
+ }
+ 
+ void hostapd_ucode_reload_bss(struct hostapd_data *hapd)

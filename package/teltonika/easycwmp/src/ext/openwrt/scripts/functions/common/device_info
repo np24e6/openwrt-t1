@@ -14,18 +14,17 @@ prefix_list="$prefix_list $DMROOT.DeviceInfo."
 entry_execute_method_list="$entry_execute_method_list entry_execute_method_root_DeviceInfo"
 entry_execute_method_list_forcedinform="$entry_execute_method_list_forcedinform  entry_execute_method_root_DeviceInfo"
 
-
 entry_execute_method_root_DeviceInfo() {
 	case "$1" in ""|"$DMROOT."|"$DMROOT.DeviceInfo."*)
 		common_execute_method_obj "$DMROOT.DeviceInfo." "0"
 		common_execute_method_param "$DMROOT.DeviceInfo.SpecVersion" "0" "echo 1.0" "" "" "1"
 		common_execute_method_param "$DMROOT.DeviceInfo.ProvisioningCode" "1" "$UCI_GET easycwmp.@local[0].provisioning_code" "device_info_set_provisioningcode" "" "1"
-		common_execute_method_param "$DMROOT.DeviceInfo.Manufacturer" "0" "echo Teltonika" "" "" "1"
-		common_execute_method_param "$DMROOT.DeviceInfo.ManufacturerOUI" "0" "echo 001E42" "" "" "1"
-		common_execute_method_param "$DMROOT.DeviceInfo.ProductClass" "0" "device_info_get_product_class" "" "" "1"
-		common_execute_method_param "$DMROOT.DeviceInfo.SerialNumber" "0" "mnf_info -s" "" "" "1"
-		common_execute_method_param "$DMROOT.DeviceInfo.HardwareVersion" "0" "mnf_info --hwver" "" "" "1"
-		common_execute_method_param "$DMROOT.DeviceInfo.SoftwareVersion" "0" "cat /etc/version" "" "" "1"
+		common_execute_method_param "$DMROOT.DeviceInfo.Manufacturer" "0" "$UCI_GET easycwmp.@device[0].manufacturer" "" "" "1"
+		common_execute_method_param "$DMROOT.DeviceInfo.ManufacturerOUI" "0" "$UCI_GET easycwmp.@device[0].oui" "" "" "1"
+		common_execute_method_param "$DMROOT.DeviceInfo.ProductClass" "0" "$UCI_GET easycwmp.@device[0].product_class" "" "" "1"
+		common_execute_method_param "$DMROOT.DeviceInfo.SerialNumber" "0" "$UCI_GET easycwmp.@device[0].serial_number" "" "" "1"
+		common_execute_method_param "$DMROOT.DeviceInfo.HardwareVersion" "0" "$UCI_GET easycwmp.@device[0].hardware_version" "" "" "1"
+		common_execute_method_param "$DMROOT.DeviceInfo.SoftwareVersion" "0" "$UCI_GET easycwmp.@device[0].software_version" "" "" "1"
 		common_execute_method_param "$DMROOT.DeviceInfo.UpTime" "0" "device_info_get_uptime" "" "xsd:unsignedInt"
 		common_execute_method_param "$DMROOT.DeviceInfo.DeviceLog" "0" "dmesg | tail -n1"
 		common_execute_method_obj "$DMROOT.DeviceInfo.MemoryStatus." "0"
@@ -57,9 +56,4 @@ device_info_set_provisioningcode() {
 
 device_info_get_uptime() {
 	awk -F '.' '{ print $1 }' /proc/uptime
-}
-
-device_info_get_product_class() {
-	local val=`mnf_info -n | cut -c1-6`
-	echo "$val"
 }

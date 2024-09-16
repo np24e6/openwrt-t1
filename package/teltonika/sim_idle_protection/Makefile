@@ -3,7 +3,7 @@ include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=sim_idle_protection
 
-PKG_SOURCE_VERSION:=1.0
+PKG_SOURCE_VERSION:=2.0
 
 include $(INCLUDE_DIR)/package.mk
 
@@ -11,6 +11,7 @@ define Package/$(PKG_NAME)
 	SECTION:=base
 	CATEGORY:=Base system
 	TITLE:=sim idle protection
+	DEPENDS:=+vuci-app-sim-idle-protection-ui
 	ifeq (m, $(CONFIG_PACKAGE_$(PKG_NAME)))
 		PKG_TLT_NAME:=SIM Idle Protection
 		PKG_ROUTER:=$(TLT_PLATFORM_NAME)

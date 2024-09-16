@@ -66,7 +66,6 @@ proto_connm_setup() {
 #~ Parameters part------------------------------------------------------
 
 	service_name="wds"
-	options="--timeout 3000"
 
 	get_simcard_parameters() {
 		local section="$1"
@@ -282,8 +281,9 @@ ${pdptype:+ --pdp-type $pdptype}"
 		ubus_set_interface_data "$modem" "$sim" "$zone" "$IFACE6"
 	}
 
-	[ "$ipv4" != "1" ] && [ "$pdptype" = "ipv4v6" ] && proto_notify_error "$interface" "$pdh_4"
-	[ "$ipv6" != "1" ] && [ "$pdptype" = "ipv4v6" ] && proto_notify_error "$interface" "$pdh_6"
+	[ "$ipv4" != "1" ] && [ "$pdptype" = "ip" ] && proto_notify_error "$interface" "$pdh_4"
+	[ "$ipv6" != "1" ] && [ "$pdptype" = "ipv6" ] && proto_notify_error "$interface" "$pdh_6"
+	[ "$pdptype" = "ipv4v6" ] && [ "$ipv4" != "1" ] && [ "$ipv6" != "1" ] && proto_notify_error "$interface" "$pdh_4" && proto_notify_error "$interface" "$pdh_6"
 
 	#cid is lost after script shutdown so we should create temp files for that
 	mkdir -p "/var/run/qmux/"
@@ -299,17 +299,17 @@ ${pdptype:+ --pdp-type $pdptype}"
 proto_connm_teardown() {
 	local interface="$1"
 	local device="/dev/cdc-wdm0" conn_proto
-	local bridge_ipaddr
+	local bridge_ipaddr method braddr_f
 
 	[ -n "$ctl_device" ] && device=$ctl_device
 
 	echo "Stopping network $interface"
 
-	json_load "$(ubus call network.interface.$interface status)"
-	json_select data
-	json_get_vars pdh_4 pdh_6 method bridge_ipaddr
-
 	conn_proto="qmux"
+
+	braddr_f="/var/run/${interface}_braddr"
+	method=$(grep -o 'method:[^ ]*' $braddr_f 2> /dev/null | cut -d':' -f2)
+	bridge_ipaddr=$(grep -o 'bridge_ipaddr:[^ ]*' $braddr_f 2> /dev/null | cut -d':' -f2)
 
 	clear_connection_values $interface $device "4" $conn_proto
 	ubus call network.interface down "{\"interface\":\"${interface}_4\"}"
@@ -323,6 +323,8 @@ proto_connm_teardown() {
 		ip route flush table 42
 		ip route flush table 43
 		ip route del "$bridge_ipaddr"
+		ubus call network.interface down "{\"interface\":\"mobile_bridge\"}"
+		rm -f "$braddr_f" 2> /dev/null
 		ethtool -r eth0
 	}
 

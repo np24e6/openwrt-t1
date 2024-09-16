@@ -1,7 +1,9 @@
-Index: linux-5.10.191/drivers/net/usb/usbnet.c
-===================================================================
---- linux-5.10.191.orig/drivers/net/usb/usbnet.c
-+++ linux-5.10.191/drivers/net/usb/usbnet.c
+Allow usbnet subdrivers to force usbnet into using page fragment allocations
+for rx urbs, this allows aggregating subdrivers to implement efficient zerocopy
+rx_fixup implentation. Also included is a helper function for doing so.
+
+--- a/drivers/net/usb/usbnet.c
++++ b/drivers/net/usb/usbnet.c
 @@ -477,10 +477,18 @@ static int rx_submit (struct usbnet *dev
  		return -ENOLINK;
  	}
@@ -25,10 +27,8 @@ Index: linux-5.10.191/drivers/net/usb/usbnet.c
  	if (!skb) {
  		netif_dbg(dev, rx_err, dev->net, "no rx skb\n");
  		usbnet_defer_kevent (dev, EVENT_RX_MEMORY);
-Index: linux-5.10.191/include/linux/skbuff.h
-===================================================================
---- linux-5.10.191.orig/include/linux/skbuff.h
-+++ linux-5.10.191/include/linux/skbuff.h
+--- a/include/linux/skbuff.h
++++ b/include/linux/skbuff.h
 @@ -2729,6 +2729,8 @@ static inline int pskb_trim(struct sk_bu
  extern struct sk_buff *__netdev_alloc_skb_ip_align(struct net_device *dev,
  		unsigned int length, gfp_t gfp);
@@ -48,10 +48,8 @@ Index: linux-5.10.191/include/linux/skbuff.h
  /**
   *	netdev_alloc_skb - allocate an skbuff for rx on a specific device
   *	@dev: network device to receive on
-Index: linux-5.10.191/include/linux/usb/usbnet.h
-===================================================================
---- linux-5.10.191.orig/include/linux/usb/usbnet.h
-+++ linux-5.10.191/include/linux/usb/usbnet.h
+--- a/include/linux/usb/usbnet.h
++++ b/include/linux/usb/usbnet.h
 @@ -123,6 +123,7 @@ struct driver_info {
  #define FLAG_MULTI_PACKET	0x2000
  #define FLAG_RX_ASSEMBLE	0x4000	/* rx packets may span >1 frames */
@@ -119,10 +117,8 @@ Index: linux-5.10.191/include/linux/usb/usbnet.h
 +}
 +
  #endif /* __LINUX_USB_USBNET_H */
-Index: linux-5.10.191/net/core/skbuff.c
-===================================================================
---- linux-5.10.191.orig/net/core/skbuff.c
-+++ linux-5.10.191/net/core/skbuff.c
+--- a/net/core/skbuff.c
++++ b/net/core/skbuff.c
 @@ -490,6 +490,54 @@ skb_fail:
  }
  EXPORT_SYMBOL(__netdev_alloc_skb);

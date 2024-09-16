@@ -27,15 +27,26 @@ if [ "$enable" -eq "1" ] && [ "$wan_deny" -eq "0" ]; then
 	fi
 	shells=$(ps | grep -v grep | grep -c shellinaboxd)
 	if [ "$shells" -lt "$shell_limit" ]; then
-			if grep -q "[^[:print:][:blank:]]" "$uhttpd_cert"; then
-				openssl x509 -inform DER -in "$uhttpd_cert" -outform PEM | cat "$uhttpd_key" - > /tmp/shellinabox.tmp
-			else
-				cat "$uhttpd_key" "$uhttpd_cert" > /tmp/shellinabox.tmp
-			fi
-			mv /tmp/shellinabox.tmp "$shell_cert"
-			[ "$key_type" = "ec" ] && sed -i 's/\([^C]\) PRIVATE/\1 EC PRIVATE/g' "$shell_cert"
 		if [ -n "$HTTPS" ]; then
-			/usr/sbin/shellinaboxd --disable-ssl-menu --cgi="${port}" -u 0 -g 0 -c /tmp
+			tmp_cert_file=$(mktemp)
+
+			if openssl rsa -in "$uhttpd_key" -check 2>/dev/null > /dev/null; then
+				cp "$uhttpd_key" "$tmp_cert_file"
+			elif openssl ec -in "$uhttpd_key" -check 2>/dev/null > /dev/null; then
+				openssl ec -in "$uhttpd_key" -outform PEM 2>/dev/null > "$tmp_cert_file"
+			else
+				openssl dsa -in "$uhttpd_key" -outform PEM 2>/dev/null > "$tmp_cert_file"
+			fi
+
+			if grep -q "[^[:print:][:blank:]]" "$uhttpd_cert"; then
+				openssl x509 -inform DER -in "$uhttpd_cert" -outform PEM >> "$tmp_cert_file"
+			else
+				cat "$uhttpd_cert" >> "$tmp_cert_file"
+			fi
+
+			mv "$tmp_cert_file" "$shell_cert"
+			exec 3<"$shell_cert"
+			/usr/sbin/shellinaboxd --disable-ssl-menu --cgi="${port}" -u 0 -g 0 --cert-fd=3
 		else
 			/usr/sbin/shellinaboxd -t --cgi="${port}" -u 0 -g 0
 		fi

@@ -60,8 +60,8 @@
  			break;
 @@ -380,6 +384,8 @@ static void usage()
  	printf("\t--lists-dir		Specify lists-dir.\n");
- 	printf("\t-e <conf_file>			Specify feeds file.\n");
- 	printf("\t--force-feeds	<conf_file>	Specify feeds file.\n");
+ 	printf("\t-e <file>		Specify feeds file.\n");
+ 	printf("\t--force_feeds <file>	Specify feeds file.\n");
 +	printf("\t-c			Remove configuration files when removing.\n");
 +	printf("\t--remove_conf		Remove configuration files when removing.\n");
  

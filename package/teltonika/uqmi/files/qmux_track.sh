@@ -4,7 +4,7 @@
 #~ Exit when connection lost
 device="$1"
 drop_timer=0
-drop_timer_limit=45 #15 minutes 
+drop_timer_limit=45 #15 minutes
 shift
 
 check_state() {

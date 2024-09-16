@@ -1,0 +1,148 @@
+Index: procd-2021-02-23-37eed131/rcS.c
+===================================================================
+--- procd-2021-02-23-37eed131.orig/rcS.c
++++ procd-2021-02-23-37eed131/rcS.c
+@@ -18,6 +18,7 @@
+ 
+ #include <libubox/uloop.h>
+ #include <libubox/runqueue.h>
++#include <libubox/list.h>
+ #include <inttypes.h>
+ #include <stdlib.h>
+ #include <stdio.h>
+@@ -34,6 +35,7 @@
+ #include "rcS.h"
+ 
+ static struct runqueue q, r;
++static LIST_HEAD(services);
+ 
+ struct initd {
+ 	struct ustream_fd fd;
+@@ -43,6 +45,14 @@ struct initd {
+ 	char *param;
+ };
+ 
++struct service_info {
++	char *file;
++	int64_t took_ms;
++	int64_t reached_ms;
++
++	struct list_head list;
++};
++
+ static void pipe_cb(struct ustream *s, int bytes)
+ {
+ 	struct initd *initd = container_of(s, struct initd, fd.stream);
+@@ -110,6 +120,7 @@ static void q_initd_complete(struct runq
+ {
+ 	struct initd *s = container_of(p, struct initd, proc.task);
+ 	struct timespec ts_stop, ts_res;
++	struct service_info *si;
+ 
+ 	clock_gettime(CLOCK_MONOTONIC_RAW, &ts_stop);
+ 	ts_res.tv_sec = ts_stop.tv_sec - s->ts_start.tv_sec;
+@@ -119,6 +130,17 @@ static void q_initd_complete(struct runq
+ 		ts_res.tv_nsec += 1000000000;
+ 	}
+ 
++	// keep only boot times
++	if (!strncmp(s->param, "boot", 4)) {
++		si = calloc(1, sizeof(struct service_info));
++
++		si->file = strdup(s->file + 13); // truncate /etc/rc.d/S
++		si->took_ms = (int64_t)(ts_res.tv_sec * 1000 + ts_res.tv_nsec / 1000000);
++		si->reached_ms = (int64_t)(ts_stop.tv_sec * 1000 + ts_stop.tv_nsec / 1000000);
++
++		list_add(&si->list, &services);
++	}
++
+ 	DEBUG(2, "stop %s %s - took %" PRId64 ".%09" PRId64 "s\n", s->file, s->param, (int64_t)ts_res.tv_sec, (int64_t)ts_res.tv_nsec);
+ 	ustream_free(&s->fd.stream);
+ 	close(s->fd.fd.fd);
+@@ -193,6 +215,26 @@ int rc(const char *file, char *param)
+ 	return _rc(&r, "/etc/init.d", file, "", param);
+ }
+ 
++void rc_analyze(struct blob_buf *b)
++{
++	struct service_info *si;
++	void *tbl, *arr;
++
++	arr = blobmsg_open_array(b, "service_info");
++
++	list_for_each_entry(si, &services, list) {
++		tbl = blobmsg_open_table(b, NULL);
++
++		blobmsg_add_string(b, "name", si->file);
++		blobmsg_add_u64(b, "boot_ms", si->took_ms);
++		blobmsg_add_u64(b, "reached_ms", si->reached_ms);
++
++		blobmsg_close_table(b, tbl);
++	}
++
++	blobmsg_close_array(b, arr);
++}
++
+ static void r_empty(struct runqueue *q)
+ {
+ 
+Index: procd-2021-02-23-37eed131/rcS.h
+===================================================================
+--- procd-2021-02-23-37eed131.orig/rcS.h
++++ procd-2021-02-23-37eed131/rcS.h
+@@ -16,8 +16,10 @@
+ #define __PROCD_RCS_H
+ 
+ #include <libubox/runqueue.h>
++#include <libubox/blobmsg_json.h>
+ 
+ extern int rcS(char *pattern, char *param, void (*q_empty)(struct runqueue *));
+ extern int rc(const char *file, char *param);
++extern void rc_analyze(struct blob_buf *b);
+ 
+ #endif
+Index: procd-2021-02-23-37eed131/system.c
+===================================================================
+--- procd-2021-02-23-37eed131.orig/system.c
++++ procd-2021-02-23-37eed131/system.c
+@@ -32,6 +32,7 @@
+ #include "procd.h"
+ #include "sysupgrade.h"
+ #include "watchdog.h"
++#include "rcS.h"
+ 
+ static struct blob_buf b;
+ static int notify;
+@@ -717,13 +718,23 @@ static int sysupgrade(struct ubus_contex
+ 	return UBUS_STATUS_UNKNOWN_ERROR;
+ }
+ 
++static int system_analyze(struct ubus_context *ctx, struct ubus_object *obj,
++			  struct ubus_request_data *req, const char *method,
++			  struct blob_attr *msg)
++{
++	blob_buf_init(&b, 0);
++	rc_analyze(&b);
++	ubus_send_reply(ctx, req, b.head);
++
++	return UBUS_STATUS_OK;
++}
++
+ static void
+ procd_subscribe_cb(struct ubus_context *ctx, struct ubus_object *obj)
+ {
+ 	notify = obj->has_subscribers;
+ }
+ 
+-
+ static const struct ubus_method system_methods[] = {
+ 	UBUS_METHOD_NOARG("board", system_board),
+ 	UBUS_METHOD_NOARG("info",  system_info),
+@@ -732,6 +743,7 @@ static const struct ubus_method system_m
+ 	UBUS_METHOD("signal", proc_signal, signal_policy),
+ 	UBUS_METHOD("validate_firmware_image", validate_firmware_image, validate_firmware_image_policy),
+ 	UBUS_METHOD("sysupgrade", sysupgrade, sysupgrade_policy),
++	UBUS_METHOD_NOARG("analyze", system_analyze),
+ };
+ 
+ static struct ubus_object_type system_object_type =

@@ -1,7 +1,8 @@
-Index: linux-5.10.191/net/core/flow_dissector.c
-===================================================================
---- linux-5.10.191.orig/net/core/flow_dissector.c
-+++ linux-5.10.191/net/core/flow_dissector.c
+On low end devices with sparse amount of cpus, cryptographic hash functions
+are tad overkill for calculating flow hashes, and take a lot of cpu time too.
+
+--- a/net/core/flow_dissector.c
++++ b/net/core/flow_dissector.c
 @@ -1527,8 +1527,7 @@ static inline u32 __flow_hash_from_keys(
  
  	__flow_hash_consistentify(keys);

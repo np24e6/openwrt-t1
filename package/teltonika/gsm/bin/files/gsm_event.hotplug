@@ -21,43 +21,6 @@ get_contype() {
     json_get_var CONTYPE net_mode
 }
 
-identify_modem() {
-    local look_modem="$1"
-    local modem modems id primary
-
-    json_init
-    json_load_file "/etc/board.json"
-    json_get_keys modems modems
-    json_select modems
-
-    for modem in $modems; do
-        json_select "$modem"
-        json_get_vars id builtin primary
-        if [ "$id" != "$look_modem" ]; then
-            json_select ..
-            continue
-        fi
-
-        if [ "$builtin" != "1" ]; then
-            json_select ..
-            continue
-        fi
-
-        if ([ "$DEV_NAME" = "RUTX12" ] || [ "$DEV_NAME" = "RUTM12" ]) && [ "$primary" = "1" ]; then
-            MODEM_TYPE="primary"
-        elif [ "$DEV_NAME" = "RUTX12" ] || [ "$DEV_NAME" = "RUTM12" ]; then
-            MODEM_TYPE="secondary"
-        else
-            MODEM_TYPE="internal"
-        fi
-        json_select ..
-    done
-
-    if [ "$MODEM_TYPE" = "" ]; then
-        MODEM_TYPE="external"
-    fi
-}
-
 interface=$(echo "$INTERFACE" | sed -E 's|(.*)_[46]$|\1|')
 iface=$(echo "$INTERFACE" | grep -e "_4" -e "_6" | wc -l)
 MODEM=$(uci -q get network."$interface".modem)
@@ -65,7 +28,7 @@ MODEM_TYPE=""
 DEV_NAME=$(mnf_info -n | cut -b 0-6)
 
 if [ "$MODEM" != "" ]; then
-    identify_modem "$MODEM"
+    MODEM_TYPE="$(get_modem_type "$MODEM")"
 
     if [ "$ACTION" = "ifup" ] && [ "$iface" -gt 0 ]; then
         mdm_ubus_obj="$(find_mdm_ubus_obj "$MODEM")"

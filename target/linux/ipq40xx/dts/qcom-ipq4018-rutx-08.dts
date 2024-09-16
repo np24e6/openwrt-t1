@@ -21,4 +21,38 @@
 			};
 		};
 	};
+
+	tlt_gpios { // Modify according to wiki page "DTS syntax with Libgpiod changes"
+		gpiochip_info {
+			hw_9 {
+				hwver = <9>;
+				gpiochip_count = <2>;
+
+				gpiochip_0 = <100>; // Built-in
+				gpiochip_1 = <8>;   // Shift Register
+			};
+		};
+
+		ioman {
+			GPIO_100 {
+				compatible_versions = <9 99>;
+				line_name = "GPIO_OUT_1";
+			};
+			GPIO_0 {
+				compatible_versions = <9 99>;
+				line_name = "GPIO_IN_1";
+			};
+		};
+	};
+};
+
+&mnfinfo {
+	/delete-node/ simpin1;
+	/delete-node/ simpin2;
+	/delete-node/ simpin3;
+	/delete-node/ simpin4;
+
+	sim_count {
+		default =  "0";
+	};
 };

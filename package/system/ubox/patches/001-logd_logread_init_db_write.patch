@@ -1,7 +1,5 @@
-Index: ubox-2020-10-25-9ef88681/log/logread.c
-===================================================================
---- ubox-2020-10-25-9ef88681.orig/log/logread.c
-+++ ubox-2020-10-25-9ef88681/log/logread.c
+--- a/log/logread.c
++++ b/log/logread.c
 @@ -11,7 +11,7 @@
   * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
   * GNU General Public License for more details.
@@ -27,7 +25,7 @@ Index: ubox-2020-10-25-9ef88681/log/logread.c
  
  #define LOGD_CONNECT_RETRY	10
  
-@@ -47,15 +49,35 @@ enum {
+@@ -47,15 +49,44 @@ enum {
  	LOG_PRIO,
  	LOG_SOURCE,
  	LOG_TIME,
@@ -52,6 +50,15 @@ Index: ubox-2020-10-25-9ef88681/log/logread.c
 +	{ NULL, -1 }
 +};
 +
++CODE log_facility_names_net[] =
++{
++	{ "events: ", LOG_EVENTS },
++	{ "system: ", LOG_SYSTEM },
++	{ "network: ", LOG_NETWORK },
++	{ "connections: ", LOG_CONNECTIONS },
++	{ "kernel: ", -1 }
++};
++
  static const struct blobmsg_policy log_policy[] = {
  	[LOG_MSG] = { .name = "msg", .type = BLOBMSG_TYPE_STRING },
  	[LOG_ID] = { .name = "id", .type = BLOBMSG_TYPE_INT32 },
@@ -63,7 +70,7 @@ Index: ubox-2020-10-25-9ef88681/log/logread.c
  };
  
  static struct uloop_timeout retry;
-@@ -63,7 +85,7 @@ static struct uloop_fd sender;
+@@ -63,7 +94,7 @@ static struct uloop_fd sender;
  static regex_t regexp_preg;
  static const char *log_file, *log_ip, *log_port, *log_prefix, *pid_file, *hostname, *regexp_pattern;
  static int log_type = LOG_STDOUT;
@@ -72,7 +79,7 @@ Index: ubox-2020-10-25-9ef88681/log/logread.c
  static int log_timestamp;
  static int logd_conn_tries = LOGD_CONNECT_RETRY;
  static int facility_include;
-@@ -111,6 +133,20 @@ static void log_handle_fd(struct uloop_f
+@@ -111,6 +142,20 @@ static void log_handle_fd(struct uloop_f
  	}
  }
  
@@ -93,7 +100,7 @@ Index: ubox-2020-10-25-9ef88681/log/logread.c
  static int log_notify(struct blob_attr *msg)
  {
  	struct blob_attr *tb[__LOG_MAX];
-@@ -118,10 +154,14 @@ static int log_notify(struct blob_attr *
+@@ -118,10 +163,14 @@ static int log_notify(struct blob_attr *
  	char buf[LOG_LINE_SIZE + 128];
  	char buf_ts[32];
  	uint32_t p;
@@ -108,7 +115,7 @@ Index: ubox-2020-10-25-9ef88681/log/logread.c
  
  	if (sender.fd < 0)
  		return 0;
-@@ -130,6 +170,12 @@ static int log_notify(struct blob_attr *
+@@ -130,6 +179,12 @@ static int log_notify(struct blob_attr *
  	if (!tb[LOG_ID] || !tb[LOG_PRIO] || !tb[LOG_SOURCE] || !tb[LOG_TIME] || !tb[LOG_MSG])
  		return 1;
  
@@ -121,7 +128,7 @@ Index: ubox-2020-10-25-9ef88681/log/logread.c
  	if ((log_type == LOG_FILE) && log_size && (!stat(log_file, &s)) && (s.st_size > log_size)) {
  		char *old = malloc(strlen(log_file) + 5);
  
-@@ -161,6 +207,7 @@ static int log_notify(struct blob_attr *
+@@ -161,6 +216,7 @@ static int log_notify(struct blob_attr *
  				(unsigned long)t, t_ms);
  	}
  	c = ctime(&t);
@@ -129,7 +136,20 @@ Index: ubox-2020-10-25-9ef88681/log/logread.c
  	c[strlen(c) - 1] = '\0';
  
  	if (log_type == LOG_NET) {
-@@ -200,12 +247,54 @@ static int log_notify(struct blob_attr *
+@@ -179,8 +235,11 @@ static int log_notify(struct blob_attr *
+ 			strncat(buf, log_prefix, sizeof(buf) - strlen(buf) - 1);
+ 			strncat(buf, ": ", sizeof(buf) - strlen(buf) - 1);
+ 		}
+-		if (blobmsg_get_u32(tb[LOG_SOURCE]) == SOURCE_KLOG)
++		if (src == SOURCE_KLOG)
+ 			strncat(buf, "kernel: ", sizeof(buf) - strlen(buf) - 1);
++		else if(strstr(m, ": ") == NULL)
++			strncat(buf, getcodetext(src, log_facility_names_net), sizeof(buf) - strlen(buf) - 1);
++
+ 		strncat(buf, m, sizeof(buf) - strlen(buf) - 1);
+ 		if (log_udp)
+ 			err = write(sender.fd, buf, strlen(buf));
+@@ -200,12 +259,54 @@ static int log_notify(struct blob_attr *
  			uloop_timeout_set(&retry, 1000);
  		}
  	} else {
@@ -190,7 +210,7 @@ Index: ubox-2020-10-25-9ef88681/log/logread.c
  	}
  
  	if (log_type == LOG_FILE)
-@@ -307,7 +396,7 @@ int main(int argc, char **argv)
+@@ -307,7 +408,7 @@ int main(int argc, char **argv)
  
  	signal(SIGPIPE, SIG_IGN);
  
@@ -199,7 +219,7 @@ Index: ubox-2020-10-25-9ef88681/log/logread.c
  		switch (ch) {
  		case 'u':
  			log_udp = 1;
-@@ -334,6 +423,9 @@ int main(int argc, char **argv)
+@@ -334,6 +435,9 @@ int main(int argc, char **argv)
  		case 'f':
  			log_follow = 1;
  			break;
@@ -209,7 +229,7 @@ Index: ubox-2020-10-25-9ef88681/log/logread.c
  		case 'l':
  			lines = atoi(optarg);
  			break;
-@@ -375,6 +467,11 @@ int main(int argc, char **argv)
+@@ -375,6 +479,11 @@ int main(int argc, char **argv)
  	}
  	ubus_add_uloop(ctx);
  

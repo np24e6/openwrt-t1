@@ -6,7 +6,8 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=modbus_client
-PKG_SOURCE_VERSION:=7.5
+PKG_VERSION:=2023-12-08
+PKG_SOURCE_VERSION:=7.6
 
 include $(INCLUDE_DIR)/package.mk
 
@@ -16,7 +17,7 @@ define Package/$(PKG_NAME)
 	TITLE:=MODBUS TCP/Serial client daemon by Teltonika
 	DEPENDS:=+libuci +libtlt_uci +libsqlite3 +vuci-app-modbus-client-ui +libmodbus \
 		+SERIAL_SUPPORT:vuci-app-modbus-serial-ui +IO_SUPPORT:iomand \
-		+libgsm +libparam +libmosquitto +data-sender-mod-modbus
+		+MOBILE_SUPPORT:libgsm +libparam +libmosquitto +data-sender-mod-modbus +data-sender-mod-modbus_alarm
 
 	ifeq (m, $(CONFIG_PACKAGE_modbus_client))
 		PKG_TLT_NAME:=MODBUS Client
@@ -55,6 +56,76 @@ define Package/$(PKG_NAME)/postinst
         ds_find_plugin modbus && /etc/init.d/data_sender restart
 
         exit 0
+endef
+
+define Package/$(PKG_NAME)/prerm
+	#!/bin/sh
+	. /lib/functions.sh
+	. /lib/config/uci.sh
+
+	[ -f "/etc/config/data_sender" ] || return 0
+
+	config_load data_sender
+
+	list_length=0
+	modbus_list_count=0
+
+	check_list_modbus_in() {
+		list_length=$$((list_length+1))
+	}
+
+	count_modbus_in() {
+		config_get plugin "$$1" plugin ""
+		[ "$$plugin" = "modbus" ] && modbus_list_count=$$((modbus_list_count+1))
+	}
+
+	del_modbus_in() {
+		uci_remove data_sender "$$1"
+	}
+
+	check_modbus_col() {
+		list_length=0
+		modbus_list_count=0
+
+		config_foreach count_modbus_in "input"
+		config_list_foreach "$$1" input check_list_modbus_in
+		echo "$$list_length"
+		echo "$$modbus_list_count"
+		if [ "$$list_length" -ge 2 ] && [ "$$list_length" -ne "$$modbus_list_count" ]; then
+			uci_remove data_sender "$$2"
+			uci_remove_list data_sender "$$1" input "$$2"
+		elif [ "$$list_length" -ge 2 ] && [ "$$list_length" -eq "$$modbus_list_count" ]; then
+			config_list_foreach "$$1" input del_modbus_in
+
+			config_get out "$$1" output ""
+			uci_remove data_sender "$$out"
+
+			uci_remove data_sender "$$1"
+		else
+			config_get in "$$1" input ""
+			uci_remove data_sender "$$in"
+
+			config_get out "$$1" output ""
+			uci_remove data_sender "$$out"
+
+			uci_remove data_sender "$$1"
+
+		fi
+
+	}
+
+	start_modbus_in() {
+		config_get plugin "$$1" plugin ""
+		[ "$$plugin" = "modbus" ] || return 0
+
+		config_foreach check_modbus_col "collection" "$$1"
+		uci_commit data_sender 2> /dev/null
+		config_load data_sender
+	}
+
+	config_foreach start_modbus_in "input"
+	/etc/init.d/data_sender reload 2> /dev/null || true
+
 endef
 
 $(eval $(call BuildPackage,$(PKG_NAME)))

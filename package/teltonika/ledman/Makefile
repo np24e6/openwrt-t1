@@ -7,7 +7,7 @@ include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=ledman
 
-PKG_SOURCE_VERSION:=2.13.3
+PKG_SOURCE_VERSION:=2.14
 
 include $(INCLUDE_DIR)/package.mk
 
@@ -17,7 +17,7 @@ define Package/ledman-full
 	TITLE:=LED status manager
 	PROVIDES:=ledman
 	VARIANT:=full
-	DEPENDS:= +libubus +libubox +libgsm +libuci +libmnfinfo +libnl-tiny
+	DEPENDS:= +libubus +libubox +libgsm +libuci +libtlt_uci +libmnfinfo +libnl-tiny +libgpiod +gpiod-tools
 	DEPENDS+= +POE_SUPPORT:libpoeman
 endef
 

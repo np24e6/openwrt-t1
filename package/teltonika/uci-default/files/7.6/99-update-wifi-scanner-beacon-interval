@@ -1,0 +1,37 @@
+#!/bin/sh
+. /lib/functions.sh
+
+update_beacon_interval(){
+	# shellcheck disable=SC2317
+	local sid="$1"
+	local enabled_2ghz="$2"
+	local enabled_5ghz="$3"
+	local hwmode
+	config_get hwmode "$sid" "hwmode"
+	local update_beacon
+	[ "$hwmode" = "11a" ] && [ "$enabled_5ghz" = "1" ] && update_beacon=true
+	[ "$hwmode" != "11a" ] && [ "$enabled_2ghz" = "1" ] && update_beacon=true
+	if "$update_beacon" ; then
+		local current_beacon_int
+		config_get current_beacon_int "$sid" "beacon_int" "0"
+		[ "$current_beacon_int" -lt "300" ] && uci_set "wireless" "$sid" "beacon_int" "300"
+	fi
+}
+
+check_wifi_scanner(){
+	config_load "wifi_scanner"
+	if [ ! -e "/sys/module/mt7628" ] && [ ! -e "/sys/module/ath9k" ] ; then
+		exit 0
+	fi
+	local enabled_2ghz enabled_5ghz
+	config_get enabled_2ghz "wifi_scan" "two_g_enabled"
+	config_get enabled_5ghz "wifi_scan" "five_g_enabled"
+	if [ "$enabled_2ghz" = "1" ] || [ "$enabled_5ghz" = "1" ] ; then
+		config_load "wireless"
+		config_foreach update_beacon_interval "wifi-device" "$enabled_2ghz" "$enabled_5ghz"
+		uci_commit "wireless"
+	fi
+}
+check_wifi_scanner
+
+exit 0

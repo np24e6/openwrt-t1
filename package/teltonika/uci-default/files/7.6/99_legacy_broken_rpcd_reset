@@ -1,0 +1,15 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+[ -f "/etc/config/teltonika" ] || exit 0
+
+groups_defined=false
+
+group_cb() {
+	groups_defined=true
+}
+config_load "rpcd"
+config_foreach group_cb "group"
+$groups_defined || cp /rom/etc/config/rpcd /etc/config/rpcd
+exit 0

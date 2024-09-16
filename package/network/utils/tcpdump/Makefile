@@ -42,6 +42,10 @@ define Package/tcpdump
   endif
 endef
 
+define Package/tcpdump/description
+  TCP dump is used to capture packets moving through network interfaces.
+endef
+
 define Package/tcpdump-mini
   $(Package/tcpdump/default)
   TITLE+= (minimal version)

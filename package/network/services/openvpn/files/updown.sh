@@ -19,7 +19,11 @@ case $script_type in
 		json_init
 		json_add_string "name" "$INSTANCE"
 		json_add_string "ip" "$ifconfig_local"
-		[ "$TYPE" = "client" ] && json_add_string "ip_remote" "$ifconfig_remote"
+		json_add_string "ipv6" "$ifconfig_ipv6_local"
+		[ "$TYPE" = "client" ] && {
+			json_add_string "ip_remote" "$ifconfig_remote"
+			json_add_string "ipv6_remote" "$ifconfig_ipv6_remote"
+		}
 		json_add_string "time" "$daemon_start_time"
 		json_dump > "$STATUS_FILE"
 		;;

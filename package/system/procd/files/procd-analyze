@@ -1,0 +1,146 @@
+#!/bin/sh
+
+fetch_data() {
+	. /usr/share/libubox/jshn.sh
+
+	json_load "$(ubus call system analyze)"
+
+	json_get_keys keys service_info
+	json_select service_info
+}
+
+fmt_time() {
+	local ms="$1"
+
+	seconds=$((ms / 1000))
+	milliseconds=$((ms % 1000))
+
+	if [ "$seconds" -gt 0 ]; then
+		printf "%d.%03ds\n" "$seconds" "$milliseconds"
+	else
+		printf "%dms\n" "$milliseconds"
+	fi
+}
+
+default() {
+	fetch_data
+
+	local total_time_ms=0
+	local service_appeared=""
+	local services="dropbear network uhttpd"
+
+	for key in $keys; do
+		json_select "$key"
+		json_get_vars name boot_ms reached_ms
+
+		total_time_ms=$((total_time_ms + boot_ms))
+
+		for s in $services; do
+			[ "$s" = "$name" ] || continue
+			service_appeared="$(printf "%s\n%s.service finished in %s." "$service_appeared" "$name" "$(fmt_time "$reached_ms")")"
+			break
+		done
+
+		json_select ..
+	done
+
+	printf "Startup finished in %s (services)." "$(fmt_time "$total_time_ms")"
+	printf "%s\n" "$service_appeared"
+}
+
+blame() {
+	fetch_data
+
+	tmpfile="$(mktemp)"
+
+	for key in $keys; do
+		json_select "$key"
+		json_get_vars name boot_ms
+
+		seconds=$((boot_ms / 1000))
+		milliseconds=$((boot_ms % 1000))
+
+		printf "%d.%03d %s\n" "$seconds" "$milliseconds" "$name" >> "$tmpfile"
+		json_select ..
+	done
+
+	sort -nr "$tmpfile" | awk '{
+		if ($1 >= 1) {
+			printf "%8.3fs ", $1
+		} else {
+			printf "%7dms ", $1*1000
+		}
+		for(i=2; i<=NF; i++) {
+			printf "%s ", $i
+		}
+		printf "\n"
+	}'
+
+	rm -f "$tmpfile"
+}
+
+critical_chain() {
+	fetch_data
+
+	local base_prefix="  "
+	local reversed=""
+	local current_prefix=""
+	local biggest_time_ms=0
+	local first=0
+
+	# reverse list order
+	for key in $keys; do
+		reversed="$key $reversed"
+	done
+
+	printf "The time when unit became active or started is printed after the \"@\" character.\n"
+	printf "The time the unit took to start is printed after the \"+\" character.\n"
+	printf "\n"
+
+	for key in $reversed; do
+		json_select "$key"
+		json_get_vars name boot_ms reached_ms
+
+		# the "@" time is cumulative (since it's a linear startup), so we sum all previous times
+		# for simplicity, we'll just show the most recent time as the "@" value
+		[ "$boot_ms" -gt "$biggest_time_ms" ] && {
+			biggest_time_ms="$boot_ms"
+			printf "\033[31m"
+		}
+
+		# ignore symbol on first element
+		[ $first -eq 1 ] && printf "%s└─" "$current_prefix"
+
+		printf "%s @%s +%s\033[0m\n" "$name" "$(fmt_time "$reached_ms")" "$(fmt_time "$boot_ms")"
+
+		[ $first -eq 1 ] && current_prefix="$current_prefix$base_prefix"
+		first=1
+
+		json_select ..
+	done
+}
+
+
+[ "$#" -eq 0 ] && {
+	default
+	exit 0
+}
+
+help() {
+	printf "%s - Analyze procd startup processes\n" "$(basename "$0")"
+	printf "\n"
+	printf "Usage: %s COMMAND\n" "$(basename "$0")"
+	printf "\n"
+	printf "Commands:\n"
+	printf "  [time]           Print time required to boot the machine\n"
+	printf "  blame            Print list of running services ordered by time to init\n"
+	printf "  critical-chain   Print a tree of the time critical chain of services\n"
+}
+
+case "$1" in
+	time) default ;;
+	blame) blame ;;
+	chain) chain ;;
+	critical-chain) critical_chain ;;
+	*) help;;
+esac

@@ -24,30 +24,6 @@
 
 #include "qmi-message.h"
 
-#define LOG(...) do { \
-	fprintf(stdout, ##__VA_ARGS__); fflush(stdout); \
-} while (0);
-
-#define DD LOG("DD[***\%s:\%d]\\n", __func__, __LINE__)
-
-static struct {
-	uint32_t mux_id;
-	uint32_t iface_number;
-	//QmiDataEndpointType endpoint_type;
-} wds_endpoint_info;
-
-static struct {
-	QmiWdsProfileType type;
-	QmiWdsPdpType pdp_type;
-	QmiWdsAuthentication authentication;
-	uint32_t profile_index;
-	char *profile_name;
-	bool no_roam;
-	char *username;
-	char *password;
-	char *apn;
-} wds_modify_profile_info;
-
 static struct qmi_wds_start_network_request wds_sn_req = {
 	QMI_INIT(authentication_preference,
 	         QMI_WDS_AUTHENTICATION_PAP | QMI_WDS_AUTHENTICATION_CHAP),
@@ -59,7 +35,6 @@ static enum qmi_cmd_result
 cmd_wds_set_apn_prepare(struct qmi_dev *qmi, struct qmi_request *req, struct qmi_msg *msg, char *arg)
 {
 	qmi_set_ptr(&wds_sn_req, apn, arg);
-	wds_modify_profile_info.apn = arg;
 	return QMI_CMD_DONE;
 }
 
@@ -82,7 +57,6 @@ cmd_wds_set_auth_prepare(struct qmi_dev *qmi, struct qmi_request *req, struct qm
 		if (strcasecmp(modes[i].name, arg) != 0)
 			continue;
 
-		wds_modify_profile_info.authentication = modes[i].auth;
 		qmi_set(&wds_sn_req, authentication_preference, modes[i].auth);
 		return QMI_CMD_DONE;
 	}
@@ -96,7 +70,6 @@ static enum qmi_cmd_result
 cmd_wds_set_username_prepare(struct qmi_dev *qmi, struct qmi_request *req, struct qmi_msg *msg, char *arg)
 {
 	qmi_set_ptr(&wds_sn_req, username, arg);
-	wds_modify_profile_info.username = arg;
 	return QMI_CMD_DONE;
 }
 
@@ -105,7 +78,6 @@ static enum qmi_cmd_result
 cmd_wds_set_password_prepare(struct qmi_dev *qmi, struct qmi_request *req, struct qmi_msg *msg, char *arg)
 {
 	qmi_set_ptr(&wds_sn_req, password, arg);
-	wds_modify_profile_info.password = arg;
 	return QMI_CMD_DONE;
 }
 
@@ -154,20 +126,14 @@ cmd_wds_set_profile_prepare(struct qmi_dev *qmi, struct qmi_request *req, struct
 	return QMI_CMD_DONE;
 }
 
-void
+static void
 cmd_wds_start_network_cb(struct qmi_dev *qmi, struct qmi_request *req, struct qmi_msg *msg)
 {
 	struct qmi_wds_start_network_response res;
+
 	qmi_parse_wds_start_network_response(msg, &res);
-
-	if (res.set.packet_data_handle && res.data.packet_data_handle != 0) {
+	if (res.set.packet_data_handle)
 		blobmsg_add_u32(&status, NULL, res.data.packet_data_handle);
-	} else {
-		LOG("%s\"\n", qmi_wds_verbose_call_end_reason_get_string(
-					res.data.verbose_call_end_reason.type,
-					res.data.verbose_call_end_reason.reason));
-	}
-
 }
 
 static enum qmi_cmd_result
@@ -275,51 +241,6 @@ cmd_wds_set_ip_family_prepare(struct qmi_dev *qmi, struct qmi_request *req, stru
 
 	uqmi_add_error("Invalid value (valid: ipv4, ipv6, unspecified)");
 	return QMI_CMD_EXIT;
-}
-
-#define cmd_wds_bind_mux_data_port_cb no_cb
-
-static enum qmi_cmd_result
-cmd_wds_bind_mux_data_port_prepare(struct qmi_dev *qmi, struct qmi_request *req,
-				   struct qmi_msg *msg, char *arg)
-{
-	struct qmi_wds_bind_mux_data_port_request wds_mux_req = {
-		QMI_INIT_SEQUENCE(
-				  endpoint_info,
-				  .endpoint_type = QMI_DATA_ENDPOINT_TYPE_HSUSB,
-				  .interface_number = wds_endpoint_info.iface_number,
-				  ),
-		QMI_INIT(mux_id, wds_endpoint_info.mux_id),
-		QMI_INIT(client_type, QMI_WDS_CLIENT_TYPE_TETHERED),
-	};
-
-	qmi_set_wds_bind_mux_data_port_request(msg, &wds_mux_req);
-        return QMI_CMD_REQUEST;
-}
-
-#define cmd_wds_mux_id_cb no_cb
-
-static enum qmi_cmd_result cmd_wds_mux_id_prepare(struct qmi_dev *qmi,
-						  struct qmi_request *req,
-						  struct qmi_msg *msg,
-						  char *arg)
-{
-	uint32_t mux_num = strtoul(arg, NULL, 10);
-
-	wds_endpoint_info.mux_id = mux_num;
-	return QMI_CMD_DONE;
-}
-
-#define cmd_wds_ep_iface_number_cb no_cb
-
-static enum qmi_cmd_result
-cmd_wds_ep_iface_number_prepare(struct qmi_dev *qmi, struct qmi_request *req,
-				struct qmi_msg *msg, char *arg)
-{
-        uint32_t iface_num = strtoul(arg, NULL, 10);
-
-        wds_endpoint_info.iface_number = iface_num;
-        return QMI_CMD_DONE;
 }
 
 static void wds_to_ipv4(const char *name, const uint32_t addr)
@@ -441,136 +362,4 @@ cmd_wds_get_current_settings_prepare(struct qmi_dev *qmi, struct qmi_request *re
 		QMI_WDS_GET_CURRENT_SETTINGS_REQUESTED_SETTINGS_IP_FAMILY);
 	qmi_set_wds_get_current_settings_request(msg, &gcs_req);
 	return QMI_CMD_REQUEST;
-}
-
-static void
-cmd_wds_get_dormancy_status_cb(struct qmi_dev *qmi, struct qmi_request *req, struct qmi_msg *msg)
-{
-	struct qmi_wds_get_dormancy_status_response res;
-	const char *dormancy_types[] = {
-		[QMI_WDS_DORMANCY_STATUS_UNKNOWN] = "unknown",
-		[QMI_WDS_DORMANCY_STATUS_TRAFFIC_CHANNEL_ACTIVE] = "traffic-channel-active",
-		[QMI_WDS_DORMANCY_STATUS_TRAFFIC_CHANNEL_DORMANT] = "traffic-channel-dormant",
-	};
-	void *c;
-
-	qmi_parse_wds_get_dormancy_status_response(msg, &res);
-
-	c = blobmsg_open_table(&status, NULL);
-	if (res.set.dormancy_status) {
-		int dormancy_state = res.data.dormancy_status;
-
-		blobmsg_add_string(&status, "dormancy_status", dormancy_types[dormancy_state]);
-	}
-
-	blobmsg_close_table(&status, c);
-}
-
-static enum qmi_cmd_result
-cmd_wds_get_dormancy_status_prepare(struct qmi_dev *qmi, struct qmi_request *req, struct qmi_msg *msg, char *arg)
-{
-	qmi_set_wds_get_dormancy_status_request(msg);
-	return QMI_CMD_REQUEST;
-}
-
-// ---- MODIFY PROFILE ----
-#define cmd_wds_modify_profile_cb no_cb
-
-static enum qmi_cmd_result
-cmd_wds_modify_profile_prepare(struct qmi_dev *qmi, struct qmi_request *req, struct qmi_msg *msg, char *arg)
-{
-	struct qmi_wds_modify_profile_request wds_mod_prof_req = {
-		QMI_INIT_SEQUENCE(profile_identifier,
-				  .profile_type = wds_modify_profile_info.type,
-				  .profile_index = wds_modify_profile_info.profile_index),
-		QMI_INIT_PTR(profile_name, wds_modify_profile_info.profile_name),
-		QMI_INIT_PTR(username, wds_modify_profile_info.username),
-		QMI_INIT_PTR(password, wds_modify_profile_info.password),
-		QMI_INIT_PTR(apn_name, wds_modify_profile_info.apn),
-		QMI_INIT(roaming_disallowed_flag, wds_modify_profile_info.no_roam),
-		QMI_INIT(authentication, wds_modify_profile_info.authentication),
-		QMI_INIT(pdp_type, wds_modify_profile_info.pdp_type),
-	};
-
-	qmi_set_wds_modify_profile_request(msg, &wds_mod_prof_req);
-	return QMI_CMD_REQUEST;
-}
-
-#define cmd_wds_set_profile_identifier_cb no_cb
-
-static enum qmi_cmd_result
-cmd_wds_set_profile_identifier_prepare(struct qmi_dev *qmi, struct qmi_request *req, struct qmi_msg *msg, char *arg)
-{
-	char *tmp = NULL;
-
-	tmp = strtok(arg, ",");
-
-	if (!strcmp(tmp, "3gpp2")) {
-		wds_modify_profile_info.type = QMI_WDS_PROFILE_TYPE_3GPP2;
-	} else if (!strcmp(tmp, "3gpp")) {
-		wds_modify_profile_info.type = QMI_WDS_PROFILE_TYPE_3GPP;
-	} else {
-		uqmi_add_error("Invalid profile type (valid: 3gpp, 3gpp2)");
-		return QMI_CMD_EXIT;
-	}
-
-	tmp = strtok(NULL, "\0");
-	wds_modify_profile_info.profile_index = strtol(tmp, NULL, 10);
-
-	return QMI_CMD_DONE;
-}
-
-#define cmd_wds_set_roaming_disallowed_flag_cb no_cb
-
-static enum qmi_cmd_result
-cmd_wds_set_roaming_disallowed_flag_prepare(struct qmi_dev *qmi, struct qmi_request *req, struct qmi_msg *msg, char *arg)
-{
-	if (!strcasecmp(arg, "yes") || !strcasecmp(arg, "true")) {
-		wds_modify_profile_info.no_roam = 1;
-	} else if (!strcasecmp(arg, "no") || !strcasecmp(arg, "false")) {
-		wds_modify_profile_info.no_roam = 0;
-	} else {
-		uqmi_add_error("Invalid flag (valid: yes, true, no, false)");
-		return QMI_CMD_EXIT;
-	}
-
-	return QMI_CMD_DONE;
-}
-
-#define cmd_wds_set_profile_name_cb no_cb
-
-static enum qmi_cmd_result
-cmd_wds_set_profile_name_prepare(struct qmi_dev *qmi, struct qmi_request *req, struct qmi_msg *msg, char *arg)
-{
-	wds_modify_profile_info.profile_name = arg;
-	return QMI_CMD_DONE;
-}
-
-#define cmd_wds_set_pdp_type_cb no_cb
-
-static enum qmi_cmd_result
-cmd_wds_set_pdp_type_prepare(struct qmi_dev *qmi, struct qmi_request *req, struct qmi_msg *msg, char *arg)
-{
-	const struct pdp_modes {
-		const char *name;
-		const QmiWdsPdpType mode;
-	} modes[] = {
-		{ "ip", QMI_WDS_PDP_TYPE_IPV4 },
-		{ "ipv4", QMI_WDS_PDP_TYPE_IPV4 },
-		{ "ipv6", QMI_WDS_PDP_TYPE_IPV6 },
-		{ "ppp", QMI_WDS_PDP_TYPE_PPP },
-		{ "ipv4v6", QMI_WDS_PDP_TYPE_IPV4_OR_IPV6 },
-	};
-	int i;
-
-	for (i = 0; i < ARRAY_SIZE(modes); i++) {
-		if (strcasecmp(modes[i].name, arg) != 0)
-			continue;
-
-		wds_modify_profile_info.pdp_type = modes[i].mode;
-		return QMI_CMD_DONE;
-	}
-
-	uqmi_add_error("Invalid value (valid: ipv4, ipv6, ppp, ipv4v6)");
-	return QMI_CMD_EXIT;
 }

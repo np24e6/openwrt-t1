@@ -36,15 +36,8 @@ define Package/sstp-client
 endef
 
 define Package/sstp-client/description
-The advantage of SSTP compared to other vpn protocols like PPTP and L2TP is that it cannot be easily blocked by firewalls since the traffic is transmitted over HTTPS on port 443.
-This software has a similar commandline and configuration to the standard linux pptp-client software.
-
-Features:
-- Connect to Microsoft RAS network using SSTP
-- Use HTTPS with strong encryption over port 443
-- Asynchronous HDLC frame support
-- Integration with pon/poff
-
+	Secure Socket Tunneling Protocol (SSTP) is a VPN protocol
+	designed to transport PPP traffic via a secure SSL/TLS channel.
 endef
 
 define Package/sstp-client/conffiles

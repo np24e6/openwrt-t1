@@ -83,7 +83,7 @@ proto_qmux_setup() {
 #~ Parameters part------------------------------------------------------
 
 	service_name="wds"
-	options="--timeout 3000"
+	options="--timeout 6000"
 
 	#Check sim positions count in simcard config
 	get_sim_count(){
@@ -376,6 +376,7 @@ ${ifid} --ep-iface-number ${ep_iface} --set-client-id wds,${cid_4}"
 			iptables -w -tnat -I postrouting_rule -o "$qmimux" -j SNAT --to "$bridge_ipaddr"
 			ip route add default dev "$qmimux"
 		}
+
 	}
 
 	[ "$method" != "bridge" ] && [ "$method" != "passthrough" ] && \
@@ -401,8 +402,9 @@ ${ifid} --ep-iface-number ${ep_iface} --set-client-id wds,${cid_4}"
 		ubus_set_interface_data "$modem" "$sim" "$zone" "$IFACE6"
 	}
 
-	[ "$ipv4" != "1" ] && [ "$pdptype" = "ipv4v6" ] && proto_notify_error "$interface" "$pdh_4"
-	[ "$ipv6" != "1" ] && [ "$pdptype" = "ipv4v6" ] && proto_notify_error "$interface" "$pdh_6"
+	[ "$ipv4" != "1" ] && [ "$pdptype" = "ip" ] && proto_notify_error "$interface" "$pdh_4"
+	[ "$ipv6" != "1" ] && [ "$pdptype" = "ipv6" ] && proto_notify_error "$interface" "$pdh_6"
+	[ "$pdptype" = "ipv4v6" ] && [ "$ipv4" != "1" ] && [ "$ipv6" != "1" ] && proto_notify_error "$interface" "$pdh_4" && proto_notify_error "$interface" "$pdh_6"
 
 	#cid is lost after script shutdown so we should create temp files for that
 	mkdir -p "/var/run/qmux/"
@@ -421,18 +423,18 @@ proto_qmux_teardown() {
 	#~ We need to put some time taking actions to background
 	local interface="$1"
 	local qmiif mif conn_proto
-	local device bridge_ipaddr method
+	local device bridge_ipaddr method braddr_f
 	json_get_vars device
 
 	[ -n "$ctl_device" ] && device="$ctl_device"
 
 	echo "Stopping network $interface"
 
-	json_load "$(ubus call network.interface.$interface status)"
-	json_select data
-	json_get_vars method bridge_ipaddr
-
 	conn_proto="qmux"
+
+	braddr_f="/var/run/${interface}_braddr"
+	method=$(grep -o 'method:[^ ]*' $braddr_f 2> /dev/null | cut -d':' -f2)
+	bridge_ipaddr=$(grep -o 'bridge_ipaddr:[^ ]*' $braddr_f 2> /dev/null | cut -d':' -f2)
 
 	mif=$(cat "/var/run/${conn_proto}/${interface}.up" 2>/dev/null | head -1)
 	qmiif=$(cat "/var/run/${conn_proto}/${interface}.up" 2>/dev/null | tail -1)
@@ -451,7 +453,9 @@ proto_qmux_teardown() {
 		ip route flush table 42
 		ip route flush table 43
 		ip route del "$bridge_ipaddr"
+		ubus call network.interface down "{\"interface\":\"mobile_bridge\"}"
 		swconfig dev switch0 set soft_reset 5 &
+		rm -f "$braddr_f" 2> /dev/null
 	}
 
 	#Clear passthrough and bridge params

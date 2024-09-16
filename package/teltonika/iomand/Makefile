@@ -7,7 +7,7 @@ include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=iomand
 
-PKG_SOURCE_VERSION:=2.14.1
+PKG_SOURCE_VERSION:=2.15
 
 include $(INCLUDE_DIR)/package.mk
 include $(INCLUDE_DIR)/migrations.mk
@@ -16,7 +16,7 @@ define Package/iomand
 	SECTION:=base
 	CATEGORY:=Base system
 	TITLE:=Daemon providing I/O related functionality.
-	DEPENDS:=+libuci +libubus +libubox +libcgi +libmnfinfo +libtlt-logger +liblog
+	DEPENDS:=+libuci +libubus +libubox +libcgi +libmnfinfo +libtlt-logger +liblog +libgpiod +gpiod-tools
 endef
 
 define Package/iomand/conffiles
@@ -40,10 +40,12 @@ define Package/iomand/install
 
 	if [ $(TLT_PLATFORM_RUTX) ] || [ $(TLT_PLATFORM_X86_64) ] || [ $(TLT_PLATFORM_RUTM) ]; then \
 		$(INSTALL_CONF) $(PKG_BUILD_DIR)/files/ioman_RUTX.config $(1)/etc/config/ioman; \
-	elif [ $(TLT_PLATFORM_TRB1) ] || [ $(TLT_PLATFORM_TRB5) ]; then \
+	elif [ $(TLT_PLATFORM_TRB1) ] || [ $(TLT_PLATFORM_TRB500) ]; then \
 		$(INSTALL_CONF) $(PKG_BUILD_DIR)/files/ioman_TRB14x.config $(1)/etc/config/ioman; \
 	elif [ $(TLT_PLATFORM_TRB2) ] || [ $(TLT_PLATFORM_TRB2M) ]; then \
 		$(INSTALL_CONF) $(PKG_BUILD_DIR)/files/ioman_TRB2.config $(1)/etc/config/ioman; \
+	elif [ $(TLT_PLATFORM_TRB501) ]; then \
+		$(INSTALL_CONF) $(PKG_BUILD_DIR)/files/ioman_TRB501.config $(1)/etc/config/ioman; \
 	elif [ $(TLT_PLATFORM_RUT30X) ] || [ $(TLT_PLATFORM_RUT36X) ] || [ $(TLT_PLATFORM_RUT301) ] || [ $(TLT_PLATFORM_RUT361) ]; then \
 		$(INSTALL_CONF) $(PKG_BUILD_DIR)/files/ioman_RUT3.config $(1)/etc/config/ioman; \
 	elif [ $(TLT_PLATFORM_RUT9) ] || [ $(TLT_PLATFORM_RUT9M) ]; then \

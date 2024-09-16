@@ -6,7 +6,6 @@ START=14
 USE_PROCD=1
 
 UHTTPD_BIN="/usr/sbin/uhttpd"
-PX5G_BIN="/usr/sbin/px5g"
 OPENSSL_BIN="/usr/bin/openssl"
 
 append_arg() {
@@ -17,7 +16,7 @@ append_arg() {
 	local val
 
 	config_get val "$cfg" "$var"
-	[ -n "$val" -o -n "$def" ] && procd_append_param command "$opt" "${val:-$def}"
+	[ -n "$val" ] || [ -n "$def" ] && procd_append_param command "$opt" "${val:-$def}"
 }
 
 append_bool() {
@@ -33,9 +32,9 @@ append_bool() {
 
 generate_keys() {
 	local cfg="$1"
-	local key="$2"
-	local crt="$3"
-	local days bits country state location commonname
+	local crt="$2"
+	local key="$3"
+	local days bits country state location commonname key_type ec_curve
 
 	config_get days       "$cfg" days
 	config_get bits       "$cfg" bits
@@ -46,38 +45,19 @@ generate_keys() {
 	config_get key_type   "$cfg" key_type
 	config_get ec_curve   "$cfg" ec_curve
 
-	# Prefer px5g for certificate generation (existence evaluated last)
-	local GENKEY_CMD=""
 	local KEY_OPTS="rsa:${bits:-2048}"
-	local UNIQUEID=$(dd if=/dev/urandom bs=1 count=4 | hexdump -e '1/1 "%02x"')
+	local UNIQUEID=$(dd if=/dev/urandom bs=1 count=4 2>/dev/null | hexdump -e '1/1 "%02x"')
 	[ "$key_type" = "ec" ] && KEY_OPTS="ec -pkeyopt ec_paramgen_curve:${ec_curve:-P-256}"
-	[ -x "$OPENSSL_BIN" ] && GENKEY_CMD="$OPENSSL_BIN req -x509 -sha256 -outform der -nodes"
-	[ -x "$PX5G_BIN" ] && GENKEY_CMD="$PX5G_BIN selfsigned -der"
-	[ -n "$GENKEY_CMD" ] && {
+	[ -x "$OPENSSL_BIN" ] && {
 		local macaddr="$(mnf_info -m)"
-		$GENKEY_CMD \
-			-days ${days:-730} -newkey ${KEY_OPTS} -keyout "${UHTTPD_KEY}.new" -out "${UHTTPD_CERT}.new" \
+		$OPENSSL_BIN req -x509 -sha256 -outform der -nodes \
+			-days ${days:-730} -newkey ${KEY_OPTS} -keyout "${key}.new" -out "${crt}.new" \
 			-subj /C="${country:-ZZ}"/ST="${state:-Somewhere}"/L="${location:-Unknown}"/O="${commonname:-OpenWrt}$UNIQUEID"/CN="${commonname:-OpenWrt}" \
-			-addext "subjectAltName=DNS:Teltonika${macaddr}"
+			-addext "subjectAltName=DNS:Teltonika${macaddr}" &>/dev/null
 		sync
-		mv "${UHTTPD_KEY}.new" "${UHTTPD_KEY}"
-		mv "${UHTTPD_CERT}.new" "${UHTTPD_CERT}"
+		mv "${key}.new" "${key}"
+		mv "${crt}.new" "${crt}"
 	}
-}
-
-create_httpauth() {
-	local cfg="$1"
-	local prefix username password
-
-	config_get prefix "$cfg" prefix
-	config_get username "$cfg" username
-	config_get password "$cfg" password
-
-	if [ -z "$prefix" ] || [ -z "$username" ] || [ -z "$password" ]; then
-		return
-	fi
-	echo "${prefix}:${username}:${password}" >>$httpdconf
-	haveauth=1
 }
 
 append_lua_prefix() {
@@ -94,13 +74,9 @@ append_lua_prefix() {
 
 start_instance()
 {
-	UHTTPD_CERT=""
-	UHTTPD_KEY=""
+	local disabled enb_http enb_https
 
 	local cfg="$1"
-	local realm="$(uci_get system.@system[0].hostname)"
-	local listen http https interpreter indexes path handler httpdconf haveauth enb_http enb_https
-
 	config_get disabled "$cfg" disabled "0"
 	[ "$disabled" = "1" ] && return
 
@@ -109,20 +85,9 @@ start_instance()
 	procd_set_param stderr 1
 	procd_set_param command "$UHTTPD_BIN" -f
 
-	config_get config "$cfg" config
-	if [ -z "$config" ]; then
-		mkdir -p /var/etc/uhttpd
-		httpdconf="/var/etc/uhttpd/httpd.${cfg}.conf"
-		rm -f ${httpdconf}
-		config_list_foreach "$cfg" httpauth create_httpauth
-		if [ "$haveauth" = "1" ]; then
-			procd_append_param command -c ${httpdconf}
-			[ -r /etc/httpd.conf ] && cat /etc/httpd.conf >>/var/etc/uhttpd/httpd.${cfg}.conf
-		fi
-	fi
+	[ "$cfg" = "main" ] && procd_append_param command -b
 
 	append_arg "$cfg" home "-h"
-	append_arg "$cfg" realm "-r" "${realm:-OpenWrt}"
 	append_arg "$cfg" config "-c"
 	append_arg "$cfg" cgi_prefix "-x"
 	[ -f /usr/lib/uhttpd_lua.so ] && {
@@ -146,6 +111,7 @@ start_instance()
 	append_arg "$cfg" network_timeout "-T"
 	append_arg "$cfg" http_keepalive "-k"
 	append_arg "$cfg" tcp_keepalive "-A"
+	append_arg "$cfg" index_page "-I"
 	append_arg "$cfg" error_page "-E"
 	append_arg "$cfg" max_requests "-n" 3
 	append_arg "$cfg" max_connections "-N"
@@ -155,61 +121,32 @@ start_instance()
 	append_bool "$cfg" no_dirlists "-D" 0
 	append_bool "$cfg" rfc1918_filter "-R" 0
 
-	[ "$cfg" == "main" ] && {
-		procd_append_param command "-b"
-	}
-
-	config_get alias_list "$cfg" alias
-	for alias in $alias_list; do
-		 procd_append_param command -y "$alias"
-	done
-
 	config_get enb_http "$cfg" enable_http "1"
-	[ "${enb_http}" == "1" ] && {
-		config_get http "$cfg" listen_http
-		for listen in $http; do
-			procd_append_param command -p "$listen"
-		done
-	}
-
-	config_get interpreter "$cfg" interpreter
-	for path in $interpreter; do
-		procd_append_param command -i "$path"
-	done
-
-	config_get indexes "$cfg" index_page
-	for path in $indexes; do
-		procd_append_param command -I "$path"
-	done
+	[ "$enb_http" = "1" ] && append_arg "$cfg" listen_http "-p"
 
 	config_get enb_https "$cfg" enable_https
-	config_get https "$cfg" listen_https
-	config_get UHTTPD_KEY  "$cfg" key  /etc/uhttpd.key
-	config_get UHTTPD_CERT "$cfg" cert /etc/uhttpd.crt
+	[ -f /lib/libustream-ssl.so ] && [ "$enb_https" = "1" ] && {
+		local cert key
+		config_get cert 	"$cfg" cert /etc/uhttpd.crt
+		config_get cert_key "$cfg" key	/etc/uhttpd.key
 
-	[ -f /lib/libustream-ssl.so ] && [ -n "$https" ] && [ -z "$enb_https" -o "$enb_https" == "1" ] && {
-		[ -s "$UHTTPD_CERT" -a -s "$UHTTPD_KEY" ] || {
-			config_foreach generate_keys cert
-		}
+		[ ! -s "$cert" ] || [ ! -s "$cert_key" ] \
+			&& generate_keys "defaults" "$cert" "$cert_key"
 
-		[ -f "$UHTTPD_CERT" -a -f "$UHTTPD_KEY" ] && {
-			append_arg "$cfg" cert "-C"
-			append_arg "$cfg" key  "-K"
+		[ -f "$cert" ] && [ -f "$cert_key" ] && {
+			procd_append_param command -C "$cert"
+			procd_append_param command -K "$cert_key"
 
-			for listen in $https; do
-				procd_append_param command -s "$listen"
-				procd_add_mdns "https" "tcp" "$listen"
-			done
+			local https
+			config_get https "$cfg" listen_https
+			procd_append_param command -s "$https"
+			procd_add_mdns "https" "tcp" "$https"
+
+			procd_set_param file "$cert" "$cert_key"
 		}
 
 		append_bool "$cfg" redirect_https "-q" 0
-
-		procd_set_param file "$UHTTPD_KEY" "$UHTTPD_CERT"
 	}
-
-	for file in /etc/uhttpd/*.json; do
-		[ -s "$file" ] && procd_append_param command -H "$file"
-	done
 
 	procd_close_instance
 }

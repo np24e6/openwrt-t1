@@ -12,35 +12,34 @@ chilli.h session.h garden.h radius.h options.h \
 tun.h ippool.h md5.h redir.h dhcp.h iphash.h \
 radius_wispr.h radius_coovachilli.h ssl.h dns.h net.h \
 pkt.h conn.h lookup.h chilli_limits.h cmdline.h debug.h \
-radius_pkt.h ../bstring/bstrlib.h ../config.h system.h \
- sqlite.h users.h
+radius_pkt.h ../bstring/bstrlib.h ../config.h system.h 
 
 lib_LTLIBRARIES = libchilli.la
 sbin_PROGRAMS = \
-chilli chilli_response chilli_radconfig chilli_opt
+chilli chilli_response chilli_radconfig chilli_opt 
 
 suid_programs =
 
 libchilli_la_SOURCES = \
 chilli.c tun.c ippool.c radius.c md5.c redir.c dhcp.c \
 iphash.c lookup.c system.h util.c options.c statusfile.c conn.c sig.c \
-garden.c dns.c session.c pkt.c chksum.c net.c safe.c sqlite.c users.c
+garden.c dns.c session.c pkt.c chksum.c net.c safe.c
 
 AM_CFLAGS = -D_GNU_SOURCE -Wall -Werror -fno-builtin -fno-strict-aliasing \
   -fomit-frame-pointer -funroll-loops -pipe -I$(top_builddir)/bstring \
  -DDEFCHILLICONF='"$(sysconfdir)/chilli.conf"'\
  -DDEFPIDFILE='"$(localstatedir)/run/chilli.pid"'\
  -DDEFSTATEDIR='"$(localstatedir)/run"'\
- -DSBINDIR='"$(sbindir)"'
+ -DSBINDIR='"$(sbindir)"' 
 
 chilli_SOURCES= main.c
-chilli_radconfig_SOURCES = main-radconfig.c
-chilli_response_SOURCES = main-response.c
-chilli_query_SOURCES = main-query.c
-chilli_opt_SOURCES = main-opt.c
+chilli_radconfig_SOURCES = main-radconfig.c 
+chilli_response_SOURCES = main-response.c 
+chilli_query_SOURCES = main-query.c 
+chilli_opt_SOURCES = main-opt.c 
 
-libchilli_la_LIBADD = $(top_builddir)/bstring/libbstring.la -lsqlite3 -luci -ltlt_uci
-LDADD = libchilli.la ${LIBRT} $(top_builddir)/bstring/libbstring.la ${LIBJSON} -lsqlite3
+libchilli_la_LIBADD = $(top_builddir)/bstring/libbstring.la 
+LDADD = libchilli.la ${LIBRT} $(top_builddir)/bstring/libbstring.la ${LIBJSON}
 
 if WITH_MINICONFIG
 chilli_opt_SOURCES += cmdline.mini.c
@@ -55,7 +54,7 @@ endif
 if WITH_JSONLIB
 AM_CFLAGS += -I$(top_builddir)/json
 libchilli_la_LIBADD += $(top_builddir)/json/libjson.la 
-LDADD += $(top_builddir)/json/libjson.la
+LDADD += $(top_builddir)/json/libjson.la 
 endif
 
 if WITH_EWTAPI
@@ -76,8 +75,6 @@ libchilli_la_SOURCES += lookup3.c
 endif
 
 if WITH_OPENSSL
-libchilli_la_SOURCES += passwd_md5crypt.c passwd_shacrypt.c
-chilliinclude_HEADERS += passwd_md5crypt.h passwd_shacrypt.h
 libchilli_la_LIBADD += ${LIBSSL}
 LDADD += ${LIBSSL}
 endif
@@ -94,25 +91,6 @@ LDADD += -lmatrixssl
 if WITH_MATRIXSSL_CLI
 SUBDIRS += mssl
 endif
-endif
-
-if WITH_GSM
-libchilli_la_SOURCES += gsm.c
-chilliinclude_HEADERS += gsm.h
-libchilli_la_LIBADD += -lgsm -lgsm_utils
-LDADD += -lgsm
-endif
-
-if WITH_DATABASE
-libchilli_la_SOURCES += database.c
-chilliinclude_HEADERS += database.h
-endif
-
-if WITH_UBUS
-chilliinclude_HEADERS += ubus.h
-libchilli_la_SOURCES += ubus.c
-libchilli_la_LIBADD += -lubox -lubus
-LDADD += -lubox -lubus
 endif
 
 if WITH_AVL

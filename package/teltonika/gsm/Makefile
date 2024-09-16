@@ -7,7 +7,7 @@ include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=gsm
 
-PKG_SOURCE_VERSION:=1.2.6
+PKG_SOURCE_VERSION:=1.3
 
 GPL_INCLUDE_HEADERS:=1
 
@@ -17,14 +17,14 @@ define Package/gsmd
 	SECTION:=net
 	CATEGORY:=Network
 	TITLE:=Simple server to route AT commands to modem
-	DEPENDS:=+USE_GLIBC:glib2 +libusb-1.0 +libubus +libubox +libuci +libblobmsg-json +modems +libe4c +kmod-usb-serial-option
+	DEPENDS:= +libusb-1.0 +libubus +libubox +libuci +libblobmsg-json +modems +libe4c +kmod-usb-serial-option
 endef
 
 define Package/gsmctl
 	SECTION:=net
 	CATEGORY:=Network
 	TITLE:=Sending AT commands by ubus to gsmd deamon app
-	DEPENDS:=+libblobmsg-json +libubus +libgsm +gsmd
+	DEPENDS:=+libblobmsg-json +libubus +libgsm +gsmd +libtlt_uci
 endef
 
 define Package/libgsm
@@ -65,11 +65,6 @@ define Package/libgsm/description
 	A simple lib with AT commands parser. Created by Teltonika
 endef
 
-ifeq ($(CONFIG_USE_GLIBC),y)
-TARGET_CFLAGS += -Dstrlcpy=g_strlcpy
-TARGET_LDFLAGS += -lglib-2.0
-endif
-
 define Build/test
 	test_pdu.c
 endef
@@ -106,11 +101,10 @@ define Package/gsmd/install
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/files/gsmd.hotplug $(1)/etc/hotplug.d/usb/05_gsmd.sh
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/files/gsm_event.hotplug $(1)/etc/hotplug.d/iface/89-gsm-event
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/files/check_vcert.hotplug $(1)/etc/hotplug.d/gsm/1-check_vcert
-	$(if $(CONFIG_BASEBAND_SUPPORT),, \
-		$(INSTALL_BIN) $(PKG_BUILD_DIR)/files/fill_modem.hotplug \
-			$(1)/etc/hotplug.d/gsm/2-fill-modem-info)
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/files/fill_modem.hotplug $(1)/etc/hotplug.d/gsm/2-fill-modem-info
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/files/reload_simcard.hotplug $(1)/etc/hotplug.d/gsm/3-reload-simcard
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/files/notify_send_sms.hotplug $(1)/etc/hotplug.d/gsm/4-notify-send-sms
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/files/notify_sim_state.hotplug $(1)/etc/hotplug.d/gsm/4-notify-sim-state
 	if [ $(CONFIG_MULTI_DEVICE_QUIRK) ]; then \
 		$(INSTALL_BIN) $(PKG_BUILD_DIR)/files/validate_cefs.hotplug $(1)/etc/hotplug.d/gsm/5-validate-cefs; \
 	fi;

@@ -29,10 +29,9 @@ DIR_LIST="/etc/config /etc/crontabs /etc/dropbear /etc/firewall.user /etc/group 
 /etc/uhttpd.crt /etc/uhttpd.key /etc/board.json"
 
 #ignore sshfs mount dir if it on tmp directory
-config_load sshfs
-config_get mount_point sshfs mount_point ""
+SSHFS_DIR=$(grep "fuse.sshfs" /etc/mtab | awk '{print $2}' | awk -F'/' '/^\/tmp\//{print $3}')
 
-IGNORE_DIR_LIST="troubleshoot luci-indexcache luci-indexcache luci-modulecache $mount_point"
+IGNORE_DIR_LIST="troubleshoot luci-indexcache luci-indexcache luci-modulecache $SSHFS_DIR"
 
 generate_random_str() {
 	local out="$(tr </dev/urandom -dc A-Za-z0-9 2>/dev/null | head -c $1)"
@@ -43,7 +42,7 @@ generate_random_str() {
 	fi
 }
 
-secuire_tmp_config() {
+secure_tmp_config() {
 	local value="$1"
 
 	[ "${#value}" -lt 3 -o -f "$value" ] && return 0
@@ -71,8 +70,7 @@ secure_config() {
 		grep -iE "((([A-Za-z0-9]|\_|\@|\[|\]|\-)*\.){2})(.*)(pass|psw|pasw|psv|pasv|key|secret|username)(.*)=")"
 	# local tmp_file=$(generate_random_str 64)
 
-	OLD_IFS="$IFS"
-	IFS=$'\n'
+	local IFS=$'\n'
 	mkdir "$DELTA_DIR"
 	for line in $lines; do
 		option="${line%%=\'*}"
@@ -84,13 +82,19 @@ secure_config() {
 		echo "$WHITE_LIST" | grep -iqFx "$option"
 		[ $? -ne 1 ] && continue
 
-		secuire_tmp_config "$value"
+		secure_tmp_config "$value"
 		uci -c "${ROOT_DIR}etc/config" -t "$DELTA_DIR" set "${option}=${CENSORED_STR}"
 	done
-	IFS="$OLD_IFS"
 
 	uci -c "$ROOT_DIR/etc/config" -t "$DELTA_DIR" commit
 	rm -rf "$DELTA_DIR"
+
+	local f fn
+	for f in /etc/config/*; do
+		fn="$ROOT_DIR/etc/config/$(basename $f)"
+		[ -e "$fn" ] || continue
+		touch -r "$f" "$fn"
+	done
 }
 
 get_mnf_info() {
@@ -204,6 +208,18 @@ systemlog_hook() {
 		troubleshoot_add_file_log "$log_flash_file" "$log_file" || troubleshoot_add_log "$(logread)" "$log_file"
 }
 
+cloud_solutions_hook() {
+	local log_file="${PACK_DIR}cloud_solutions.log"
+
+	troubleshoot_init_log "CLOUD SOLUTIONS INFO" "$log_file"
+
+	# RMS
+	troubleshoot_add_log "RMS" "$log_file"
+	rms_ubus_res=$(ubus call rms get_status 2>&1)
+	rms_json_res=$(rms_json -p -v 18446744073709551615 -v 127 2>&1)
+	printf "%s:\n%s\n\n%s\n" "rms get_status" "$rms_ubus_res" "$rms_json_res" >> "$log_file"
+}
+
 services_secure_passwords() {
 	local file="$1"
 	local lines passwd
@@ -232,8 +248,8 @@ services_secure_passwords() {
 services_hook() {
 	local log_file="${PACK_DIR}services.log"
 
-	troubleshoot_init_log "Process list" "$log_file"
-	troubleshoot_add_log "$(ps -ww)" "$log_file"
+	troubleshoot_init_log "Process activity" "$log_file"
+	troubleshoot_add_log "$(top -b -n 1)" "$log_file"
 
 	troubleshoot_init_log "SERVICES" "$log_file"
 	troubleshoot_add_log "$(ubus call service list)" "$log_file"
@@ -242,6 +258,22 @@ services_hook() {
 		services_secure_passwords "$log_file"
 	fi
 }
+
+package_manager_hook() {
+	local log_file="${PACK_DIR}package_manager.log"
+
+	opkg_packets=$(grep -l "Router:" /usr/lib/opkg/info/*.control)
+	[ -z "$opkg_packets" ] && return
+
+	troubleshoot_init_log "Installed packages from PM" "$log_file"
+	troubleshoot_add_log "" "$log_file"
+
+	for packet in $opkg_packets; do
+		source_name=$(grep "SourceName:" "$packet" | awk -F ": " '{print $2}')
+		troubleshoot_add_log "$source_name" "$log_file"
+	done
+}
+
 generate_root_hook() {
 	mkdir "$ROOT_DIR"
 	mkdir "${ROOT_DIR}/etc"
@@ -249,10 +281,10 @@ generate_root_hook() {
 	for file in $(ls /tmp/); do
 		[ "$(echo ${IGNORE_DIR_LIST} | grep -wc ${file})" -gt 0 ] && continue
 
-		cp -rf "/tmp/${file}" "${ROOT_DIR}/tmp"
+		cp -prf "/tmp/${file}" "${ROOT_DIR}/tmp"
 	done
 
-	cp -r ${DIR_LIST} "${ROOT_DIR}/etc"
+	cp -pr ${DIR_LIST} "${ROOT_DIR}/etc"
 	secure_config
 }
 
@@ -297,6 +329,8 @@ troubleshoot_hook_init switch_hook
 troubleshoot_hook_init wifi_hook
 troubleshoot_hook_init services_hook "$1"
 troubleshoot_hook_init systemlog_hook
+troubleshoot_hook_init cloud_solutions_hook
+troubleshoot_hook_init package_manager_hook
 
 #init external hooks
 [ -d "/lib/troubleshoot" ] && {

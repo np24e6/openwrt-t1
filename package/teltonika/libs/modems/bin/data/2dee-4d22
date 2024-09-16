@@ -10,7 +10,7 @@
 	"dl_max_datagrams": 32,
 	"ul_max_size": 8192,
 	"ul_max_datagrams": 11,
-	"power_on_ms": 550,
-	"power_off_ms": 850,
+	"power_on_ms": 1600,
+	"power_off_ms": 4000,
 	"reset_ms": 550
 }

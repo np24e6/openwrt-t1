@@ -178,16 +178,17 @@ struct symbol {
  */
 enum prop_type {
 	P_UNKNOWN,
-	P_PROMPT,   /* prompt "foo prompt" or "BAZ Value" */
-	P_COMMENT,  /* text associated with a comment */
-	P_MENU,     /* prompt associated with a menu or menuconfig symbol */
-	P_DEFAULT,  /* default y */
-	P_CHOICE,   /* choice value */
-	P_SELECT,   /* select BAR */
-	P_IMPLY,    /* imply BAR */
-	P_RANGE,    /* range 7..100 (for a symbol) */
-	P_SYMBOL,   /* where a symbol is defined */
-	P_RESET,	/* reset to defaults condition */
+	P_PROMPT,     /* prompt "foo prompt" or "BAZ Value" */
+	P_COMMENT,    /* text associated with a comment */
+	P_MENU,       /* prompt associated with a menu or menuconfig symbol */
+	P_DEFAULT,    /* default y */
+	P_CHOICE,     /* choice value */
+	P_SELECT,     /* select BAR */
+	P_IMPLY,      /* imply BAR */
+	P_RANGE,      /* range 7..100 (for a symbol) */
+	P_SYMBOL,     /* where a symbol is defined */
+	P_RESET,      /* reset to defaults condition */
+	P_MAINTAINER, /* maintainer information */
 };
 
 struct property {

@@ -9,6 +9,3 @@ SUBDIRS += src doc www conf debian distro
 if WITH_MINIPORTAL
 SUBDIRS += miniportal
 endif
-#if WITH_UBUS
-#SUBDIRS += lchilli
-#endif

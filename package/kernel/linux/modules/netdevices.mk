@@ -571,6 +571,25 @@ endef
 
 $(eval $(call KernelPackage,r8169))
 
+define KernelPackage/r8125
+  SUBMENU:=$(NETWORK_DEVICES_MENU)
+  TITLE:=RealTek RTL-8125 PCI Gigabit Ethernet Adapter with Qualcomm hardware offload support
+  DEPENDS:=@PCI_SUPPORT
+  KCONFIG:=CONFIG_R8125 \
+    CONFIG_R8125_IOSS=m \
+    CONFIG_IOSS=m
+  FILES:= \
+  $(LINUX_DIR)/techpack/data-eth/drivers/ioss/ioss.ko \
+  $(LINUX_DIR)/techpack/data-eth/drivers/r8125_ioss/r8125_ioss.ko
+  AUTOLOAD:=$(call AutoProbe,ioss r8125_ioss)
+endef
+
+define KernelPackage/r8125/description
+ Kernel modules for RealTek RTL-8125 PCI Gigabit Ethernet Adapter with Qualcomm hardware offload support
+endef
+
+$(eval $(call KernelPackage,r8125))
+
 
 define KernelPackage/ne2k-pci
   SUBMENU:=$(NETWORK_DEVICES_MENU)

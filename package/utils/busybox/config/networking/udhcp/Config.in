@@ -201,3 +201,7 @@ config BUSYBOX_CONFIG_FEATURE_UDHCP_8021Q
 	help
 	If selected, both client and server will support passing of VLAN
 	ID and priority via options 132 and 133 as per 802.1Q.
+
+config BUSYBOX_CONFIG_FEATURE_NETIFD
+	bool "Support for libnetifd"
+	default BUSYBOX_DEFAULT_FEATURE_NETIFD

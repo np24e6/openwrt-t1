@@ -8,7 +8,6 @@
 . /lib/functions.sh
 . /usr/share/libubox/jshn.sh
 . /usr/share/easycwmp/defaults
-. /lib/functions/network.sh
 
 UCI_GET="/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get"
 UCI_SET="/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set"
@@ -22,7 +21,7 @@ UCI_REVERT="/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} revert"
 UCI_CHANGES="/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} changes"
 UCI_BATCH="/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} batch"
 
-DOWNLOAD_FILE="/tmp/easycwmp_download"
+DOWNLOAD_DIR="/tmp/easycwmp_download"
 EASYCWMP_PROMPT="easycwmp>"
 set_fault_tmp_file="/tmp/.easycwmp_set_fault_tmp"
 apply_service_tmp_file="/tmp/.easycwmp_apply_service"
@@ -73,6 +72,7 @@ command:
   add [object]
   delete [object]
   download
+  upload
   factory_reset
   reboot
   inform [parameter|device_id]
@@ -107,6 +107,13 @@ json_get_opt() {
 			json_get_var __arg3 file_size
 			json_get_var __arg4 user_name
 			json_get_var __arg5 password
+			;;
+		upload)
+			action="upload"
+			json_get_var __arg1 url
+			json_get_var __arg2 file_type
+			json_get_var __arg3 user_name
+			json_get_var __arg4 password
 			;;
 		factory_reset|reboot)
 			action="$command"
@@ -163,6 +170,13 @@ case "$1" in
 		__arg3="$4"
 		__arg4="$5"
 		__arg5="$6"
+		;;
+	upload)
+		action="upload"
+		__arg1="$2"
+		__arg2="$3"
+		__arg3="$4"
+		__arg4="$5"
 		;;
 	factory_reset|reboot)
 		action="$1"
@@ -272,12 +286,14 @@ handle_action() {
 			let fault_code=9000+$E_DOWNLOAD_FAILURE
 			common_json_output_fault "" "$fault_code"
 		else 
-			rm -f $DOWNLOAD_FILE 2> /dev/null
+			rm -rf $DOWNLOAD_DIR 2> /dev/null
+			mkdir -p $DOWNLOAD_DIR
 			local dw_url="$__arg1"
 			[ "$__arg4" != "" -o "$__arg5" != "" ] && dw_url=`echo "$__arg1" | sed -e "s@://@://$__arg4:$__arg5\@@g"`
-			wget -O $DOWNLOAD_FILE "$dw_url"
+			wget -P $DOWNLOAD_DIR "$dw_url"
 			fault_code="$?"
 			if [ "$fault_code" != "0" ]; then
+				rm -rf $DOWNLOAD_DIR 2> /dev/null
 				let fault_code=9000+$E_DOWNLOAD_FAILURE
 				common_json_output_fault "" "$fault_code"
 			else
@@ -286,37 +302,108 @@ handle_action() {
 		fi
 		return
 	fi
+
+	if [ "$action" = "upload" ]; then 
+
+		local up_url="$__arg1"
+		SERIAL_NUMBER=`$UCI_GET easycwmp.@device[0].serial_number`
+
+		[ "$__arg3" != "" -o "$__arg4" != "" ] && up_url=`echo "$__arg1" | sed -e "s@://@://$__arg3:$__arg4\@@g"`
+
+		case "$__arg2" in
+		*"Vendor Log File"*)
+			logread > "/tmp/log$SERIAL_NUMBER.log"
+			if [ "$__arg3" != "" ]; then
+				curl --user $__arg3:$__arg4 --connect-timeout 30 --upload-file /tmp/log$SERIAL_NUMBER.log $up_url
+			else
+				curl -T --connect-timeout 30 "/tmp/log$SERIAL_NUMBER.log" "$up_url"
+			fi
+			
+			
+			fault_code="$?"
+		rm -f "/tmp/log$SERIAL_NUMBER.log"
+		;;
+		*"Vendor Configuration File"*)
+			
+			sysupgrade --create-backup "/tmp/config$SERIAL_NUMBER.tar.gz"
+			if [ "$__arg3" != "" ]; then
+				curl --user $__arg3:$__arg4 --connect-timeout 30 --upload-file /tmp/config$SERIAL_NUMBER.tar.gz $up_url
+			else
+				curl -T --connect-timeout 30 "/tmp/config$SERIAL_NUMBER.tar.gz" "$up_url"
+			fi	
+			fault_code="$?"
+		rm -f "/tmp/config$SERIAL_NUMBER.tar.gz"
+		;;
+		*)
+			common_json_output_fault "" "$(($E_INVALID_ARGUMENTS+9000))"
+			return
+		;;
+		esac
+		
+		if [ "$fault_code" != "0" ]; then
+			let fault_code=9000+$E_UPLOAD_FAILURE
+			common_json_output_fault "" "$fault_code"
+		else
+			common_json_output_status "1"
+		fi
+		return
+	fi
+		
 	if [ "$action" = "apply_download" ]; then
 		if [ "$__arg1" = "3 Vendor Configuration File" ]; then 
-			/sbin/uci import < $DOWNLOAD_FILE  
-			fault_code="$?"
-			if [ "$fault_code" != "0" ]; then
-				let fault_code=$E_DOWNLOAD_FAIL_FILE_CORRUPTED+9000
-				common_json_output_fault "" "$fault_code"
+			dwfile=`ls $DOWNLOAD_DIR`
+			if [ "$dwfile" != "" ]; then
+				dwfile="$DOWNLOAD_DIR/$dwfile"
+				if [ ${dwfile%.gz} != $dwfile -o ${dwfile%.bz2} != $dwfile ]; then
+					sysupgrade --restore-backup $dwfile
+					fault_code="$?"
+				else
+					/sbin/uci import < $dwfile
+					fault_code="$?"
+					[ "$fault_code" = "0" ] && $UCI_COMMIT
+				fi
+				if [ "$fault_code" != "0" ]; then
+					let fault_code=$E_DOWNLOAD_FAIL_FILE_CORRUPTED+9000
+					common_json_output_fault "" "$fault_code"
+				else
+					sync
+					reboot
+					common_json_output_status "1"
+				fi
 			else
-				$UCI_COMMIT
-				sync
-				/sbin/reload_config
-				common_json_output_status "1"
+				let fault_code=$E_DOWNLOAD_FAILURE+9000
+				common_json_output_fault "" "$fault_code"
 			fi
 		elif [ "$__arg1" = "1 Firmware Upgrade Image" ]; then
 			local gr_backup=`grep "^/etc/easycwmp/\.backup\.xml" /etc/sysupgrade.conf`
 			[ -z $gr_backup ] && echo "/etc/easycwmp/.backup.xml" >> /etc/sysupgrade.conf
-			/sbin/sysupgrade $DOWNLOAD_FILE 
-			fault_code="$?"
-			if [ "$fault_code" != "0" ]; then
-				let fault_code=$E_DOWNLOAD_FAIL_FILE_CORRUPTED+9000
-				common_json_output_fault "" "$fault_code"
+			dwfile=`ls $DOWNLOAD_DIR`
+			if [ "$dwfile" != "" ]; then
+				dwfile="$DOWNLOAD_DIR/$dwfile"
+				/sbin/sysupgrade $dwfile
+				fault_code="$?"
+				if [ "$fault_code" != "0" ]; then
+					let fault_code=$E_DOWNLOAD_FAIL_FILE_CORRUPTED+9000
+					common_json_output_fault "" "$fault_code"
+				else
+					common_json_output_status "1"
+				fi
 			else
-				common_json_output_status "1"
+				let fault_code=$E_DOWNLOAD_FAILURE+9000
+				common_json_output_fault "" "$fault_code"
 			fi
 		else
 			common_json_output_fault "" "$(($E_INVALID_ARGUMENTS+9000))"
 		fi
+		rm -rf $DOWNLOAD_DIR 2> /dev/null
 		return
 	fi
 	if [ "$action" = "factory_reset" ]; then
-		printf 'y' | ./sbin/firstboot
+		if [ "`which jffs2_mark_erase`" != "" ]; then
+			jffs2_mark_erase "rootfs_data"
+		else
+			/sbin/jffs2mark -y
+		fi
 		sync
 		reboot
 	fi
@@ -386,7 +473,7 @@ handle_action() {
 		return
 	fi
 	if [ "$action" = "apply_service" ]; then
-		common_uci_track_restart_services		
+		common_restart_services
 		if [ -f "$apply_service_tmp_file" ]; then
 			chmod +x "$apply_service_tmp_file"
 			/bin/sh "$apply_service_tmp_file"

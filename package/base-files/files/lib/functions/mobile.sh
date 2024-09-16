@@ -38,6 +38,7 @@ handle_retry() {
 		[ -z "$object" ] && echo "Can't find modem $modem gsm object" && return
 		echo "$modem $interface reloading mobifd"
 		ubus -t 180 call mobifd.$object reload
+		ifdown "$interface"
 	else
 		retry="$((retry + 1))"
 		rm /tmp/conn_retry_$interface >/dev/null 2>/dev/null
@@ -254,7 +255,7 @@ setup_bridge_v4() {
 	ip rule add pref 5043 iif "$dev" lookup 43
 	#sysctl -w net.ipv4.conf.br-lan.proxy_arp=1 #2>/dev/null
 	model="$(gsmctl --model ${modem_num:+-O "$modem_num"})"
-	[ "${model:0:4}" = "UC20" ] && ip neighbor add proxy "$bridge_ipaddr" dev "$dev" 2>/dev/null
+	[ "${model:0:4}" = "UC20" ] || [ "${model:0:6}" = "RG500U" ] && ip neighbor add proxy "$bridge_ipaddr" dev "$dev" 2>/dev/null
 
 	iptables -A postrouting_rule -m comment --comment "Bridge mode" -o "$dev" -j ACCEPT -tnat
 
@@ -284,6 +285,8 @@ setup_bridge_v4() {
 		echo "server=$bridge_dns1" >> "$dhcp_param_file"
 		echo "server=$bridge_dns2" >> "$dhcp_param_file"
 	}
+
+	echo "method:$method bridge_ipaddr:$bridge_ipaddr" > "/var/run/${interface}_braddr"
 
 	/etc/init.d/dnsmasq reload
 	swconfig dev 'switch0' set soft_reset 5 &
@@ -456,4 +459,34 @@ notify_mtu_diff(){
 		echo "Notifying WebUI that operator ($operator_mtu) and configuration MTU ($current_mtu) differs"
 		touch "/tmp/vuci/mtu_${interface_name}_${operator_mtu}"
 	}
+}
+
+get_modem_type() {
+	local modem_id="$1"
+	local modem modems id primary
+
+	json_init
+	json_load_file "/etc/board.json"
+	json_get_keys modems modems
+	json_select modems
+
+	arr_len(){
+		echo $#
+	}
+
+	local modem_count="$(arr_len $modems)"
+
+	for modem in $modems; do
+		json_select "$modem"
+		json_get_vars id builtin primary
+
+		[ "$id" != "$modem_id" ] && json_select .. && continue
+		[ "$builtin" != "1" ] && json_select .. && continue
+
+		[ "$modem_count" -gt 1 ] && {
+			[ "$primary" = "1" ] && echo "primary" || echo "secondary"
+		} || echo "internal"
+		return
+	done
+	echo "external"
 }

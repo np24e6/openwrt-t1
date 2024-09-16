@@ -35,24 +35,9 @@
 #include "net.h"
 #include "md5.h"
 #include "dns.h"
-#include "sqlite.h"
-#include "ubus.h"
-#ifdef  ENABLE_DATABASE
-#include "database.h"
-#endif
-#include "users.h"
-#include "gsm.h"
-#ifdef HAVE_OPENSSL
-#include "passwd_md5crypt.h"
-#include "passwd_shacrypt.h"
-#endif
 
 #ifndef HAVE_STRLCPY
 extern size_t strlcpy(char *dst, const char *src, size_t dsize);
-#endif
-
-#ifdef ENABLE_UBUS
-  struct ubus_context *ubus_ctx;
 #endif
 
 /*#define XXX_IO_DAEMON 1*/
@@ -84,8 +69,6 @@ extern size_t strlcpy(char *dst, const char *src, size_t dsize);
 #define DEBUG_RADIUS      4
 #define DEBUG_REDIR       8
 #define DEBUG_CONF       16
-
-#define WARNING_FMT "You're about to reach your %s data limit, %.1f %s left.\n"
 
 /* Struct information for each connection */
 struct app_conn_t {
@@ -119,11 +102,6 @@ struct app_conn_t {
 
   struct session_params s_params;         /* Session parameters */
   struct session_state  s_state;          /* Session state */
-#ifdef ENABLE_DATABASE
-  struct session_history s_history;		/*Session history*/
-#endif
-
-
 
 #ifdef HAVE_PATRICIA
   patricia_tree_t *ptree;
@@ -234,8 +212,6 @@ int chilli_connect(struct app_conn_t **appconn, struct dhcp_conn_t *conn);
 struct app_conn_t * chilli_connect_layer3(struct in_addr *src, struct dhcp_conn_t *conn);
 #endif
 
-int find_active_user(char *username);
-
 int chilli_getconn(struct app_conn_t **conn, uint32_t ip,
 		   uint32_t nasip, uint32_t nasport);
 
@@ -280,23 +256,11 @@ void config_radius_session(struct session_params *params,
 
 void session_param_defaults(struct session_params *params);
 
-void session_params_dyn(struct session_params *params);
-
-void session_params_trial(struct session_params *params);
-
 int dnprot_accept(struct app_conn_t *appconn);
 
 int dnprot_reject(struct app_conn_t *appconn);
 
 int get_urlparts(char *src, char *host, int hostsize, int *port, int *uripos);
-
-int bstrtocstr(bstring src, char *dst, unsigned int len);
-
-int bescape_str(bstring src, bstring dst);
-
-int escape_cstr(char *src, char *dst);
-
-int besc_strtocstr(bstring src, char *dst, unsigned int len);
 
 int cmdsock_init();
 
@@ -355,12 +319,6 @@ void GenerateAuthenticatorResponse(u_char *Password, int PasswordLen,
 #ifdef ENABLE_MULTIROUTE
 int chilli_getconn_byroute(struct app_conn_t **conn, int idx);
 #endif
-
-
-struct app_conn_t * find_app_conn(struct cmdsock_request *req, int *has_criteria);
-char *state2name(int authstate);
-int has_dhcp(void);
-
 
 uint8_t* chilli_called_station(struct session_state *state);
 

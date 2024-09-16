@@ -15,81 +15,9 @@ set_service() {
 	local ENABLED=$(uci -q get "$CONFIG"."$section".enabled)
 	[ "$ENABLED" != "1" ] && return 1
 
-	local SPEED=$(uci -q get "$CONFIG"."$section".baudrate)
-	local DBITS=$(uci -q get "$CONFIG"."$section".databits)
-	local PARITY=$(uci -q get "$CONFIG"."$section".parity)
-	local SBITS=$(uci -q get "$CONFIG"."$section".stopbits)
-	local FCTRL=$(uci -q get "$CONFIG"."$section".flowcontrol)
-	local DEVICE=$(uci -q get "$CONFIG"."$section".device)
-	local DUPLEX=$(uci -q get "$CONFIG"."$section".full_duplex_enabled)
-	local ECHO_ENABLED=$(uci -q get "$CONFIG"."$section".echo_enabled)
-
-	case "$SPEED" in
-		"50") SPEED=50;;
-		"75") SPEED=75;;
-		"110") SPEED=110;;
-		"134") SPEED=134;;
-		"150") SPEED=150;;
-		"200") SPEED=200;;
-		"300") SPEED=300;;
-		"600") SPEED=600;;
-		"1200") SPEED=1200;;
-		"2400") SPEED=2400;;
-		"4800") SPEED=4800;;
-		"9600") SPEED=9600;;
-		"19200") SPEED=19200;;
-		"38400") SPEED=38400;;
-		"57600") SPEED=57600;;
-		"115200") SPEED=115200;;
-		"230400") SPEED=230400;;
-		"460800") SPEED=460800;;
-		"500000") SPEED=500000;;
-		"576000") SPEED=576000;;
-		"921600") SPEED=921600;;
-		"1000000") SPEED=1000000;;
-		"1152000") SPEED=1152000;;
-		"1500000") SPEED=1500000;;
-		"2000000") SPEED=2000000;;
-		"2500000") SPEED=2500000;;
-		"3000000") SPEED=3000000;;
-		"3500000") SPEED=3500000;;
-		"4000000") SPEED=4000000;;
-		*) SPEED=115200;;
-	esac
-
-	case "$DBITS" in
-		"5") DBITS=5;;
-		"6") DBITS=6;;
-		"7") DBITS=7;;
-		"8") DBITS=8;;
-		*) DBITS=8;;
-	esac
-
-	set_tty_options "$DEVICE" "$SPEED" "$DBITS" "$PARITY" "$SBITS" "$FCTRL" "$DUPLEX" "$ECHO_ENABLED"
-
-	MODBUS_IP=$(uci -q get "$CONFIG"."$section".modbus_ip)
-	MODBUS_PORT=$(uci -q get "$CONFIG"."$section".modbus_port)
-
-	SERVER_ID=$(uci -q get "$CONFIG"."$section".server_id)
-	SERVER_ID_CONFIG=$(uci -q get "$CONFIG"."$section".server_id_config)
-	MULTI_SERVER_ID=$(uci -q get "$CONFIG"."$section".multi_server_id)
-	SINGLE_SERVER_ID=$(uci -q get "$CONFIG"."$section".single_server_id)
-
-	CRC_ENABLED=$(uci -q get "$CONFIG"."$section".crc_enabled)
-	CRC_REPEAT=$(uci -q get "$CONFIG"."$section".crc_repeat)
-
 	procd_open_instance
 	procd_set_param file /etc/config/"$CONFIG"
-	if [ "$SERVER_ID_CONFIG" = "single" ]; then
-		procd_set_param command $PROGRAM -p "$DEVICE" -s "$SPEED" -b "$DBITS" -a "$PARITY" -t "$SBITS" -g "$SINGLE_SERVER_ID" -i "$MODBUS_IP" -m "$MODBUS_PORT"
-		else
-		procd_set_param command $PROGRAM -p "$DEVICE" -s "$SPEED" -b "$DBITS" -a "$PARITY" -t "$SBITS" -r "$MULTI_SERVER_ID" -i "$MODBUS_IP" -m "$MODBUS_PORT"
-	fi
-
-	if [ "$CRC_ENABLED" = "1" ]; then
-		procd_append_param command -c "$CRC_REPEAT"
-	fi
-
+	procd_set_param command $PROGRAM -s "$section"
 	procd_set_param respawn ${respawn_threshold:-0} ${respawn_timeout:-6} ${respawn_retry:-0}
 	procd_close_instance
 }

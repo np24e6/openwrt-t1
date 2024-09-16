@@ -164,7 +164,7 @@ config HIGH_WATCHDOG_PRIORITY
 config AP_DEVICE
 	bool
 
-config LEDMAN_FULL
+config LEDMAN_LITE
 	bool
 
 config GATEWAY_DEVICE

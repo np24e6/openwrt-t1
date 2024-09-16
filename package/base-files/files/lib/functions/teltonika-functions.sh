@@ -14,21 +14,7 @@ set_tty_duplex() {
 	# duplex mode only applies for rs485
 	[ "$1" != "/dev/rs485" ] && return
 
-	case "$2" in
-	0|1)
-		case "$(mnf_info -n)" in
-		TRB145*)
-			if [ ! -d /sys/class/gpio/gpio949 ]; then
-				echo 949 > /sys/class/gpio/export
-				echo out > /sys/class/gpio/gpio949/direction
-			fi
-			echo $2 > /sys/class/gpio/gpio949/value
-			;;
-		*)
-			echo $2 > /sys/class/gpio/rs485_rx_en/value
-			;;
-		esac
-	esac
+	echo $2 > /sys/class/gpio/rs485_rx_en/value
 }
 
 # set_tty_options <device_path> <baudrate> <databits> <parity> <stopbits> <flowcontrol> <duplex> <echo>

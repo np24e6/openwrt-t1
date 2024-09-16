@@ -240,6 +240,8 @@ do_save_conffiles() {
 	}
 	run_hooks "$CONFFILES" $sysupgrade_init_conffiles
 
+	third_party_pkg=$(uci_get package_restore package_restore 3rd_party_pkg)
+
 	# Request mdcolect to save the most recent version of its database.
 	# Try for at most 5 times, because call fails if there are other SQL queries being executed
 	ubus list mdcollect >/dev/null 2>/dev/null && {
@@ -265,6 +267,7 @@ do_save_conffiles() {
 		[ -e /etc/privoxy/user_action_luci ] && echo "/etc/privoxy/user_action_luci"
 		[ -d /etc/openvpn ] && {
 			find "/etc/openvpn/" -name "auth_*"							# OpenVPN username and password files
+			find "/etc/openvpn/" -name "askpass_*"						# OpenVPN PKCS password files
 			find "/etc/openvpn/" -name "*.ovpn" | grep -v "template"	# OpenVPN configurations created from templates, excluding templates themselves
 		}
 		[ -d /greengrass/certs ] && {
@@ -288,6 +291,15 @@ do_save_conffiles() {
 	[ -f /etc/package_restore.txt ] && {
 		sorted="$(sort -u /etc/package_restore.txt)"
 		echo "$sorted" > /etc/package_restore.txt
+	}
+
+	[ "$third_party_pkg" = "1" ] && {
+		opkg_packets=$(find /overlay/upper/usr/lib/opkg/info/ -type f -name \
+			       '*.control' -exec basename {} .control ';')
+		[ -n "$opkg_packets" ] && echo "$opkg_packets" >> /etc/package_restore.txt
+	}
+
+	[ -f /etc/package_restore.txt ] && {
 		echo "/etc/package_restore.txt" >> "$CONFFILES"
 	}
 

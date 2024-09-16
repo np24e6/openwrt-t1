@@ -57,6 +57,8 @@ typedef enum {
 	EVT_EMM, /*!< EMM reject cause event */
 	EVT_ESM, /*!< ESM reject cause event */
 
+	EVT_QNETDEVCTL, /*!< QNETDEVCTL status event */
+
 	EVT_OPERATOR, /*!< Operator change event */
 	EVT_SIM_CHANGE, /*!< SIM change event */
 
@@ -274,6 +276,16 @@ enum net_reg_stat_id {
 };
 
 /**
+ * Enumeration of qnetdevctl command
+ */
+enum net_data_stat_id {
+	NET_DATA_STAT_DISCONNECTED, /*<! Disconnected */
+	NET_DATA_STAT_CONNECTED, /*<! Connected */
+
+	__NET_DATA_STAT_MAX,
+};
+
+/**
  * Enumeration of network registration access technology values
  */
 enum net_reg_act_id {
@@ -291,6 +303,10 @@ enum net_reg_act_id {
 	NET_REG_ACT_NR_5GCN, /*<! NR connected to 5GCN */
 	NET_REG_ACT_NG_RAN, /*<! NG-RAN technology */
 	NET_REG_ACT_EUTRAN_NR, /*<! E-UTRAN-NR dual connectivity */
+	NET_REG_ACT_EMTC, /*EMTC enhanced machine-type communication*/
+	NET_REG_ACT_NB_IOT, /*NB-IOT AKA CAT-NB1 AKA LTE-M2*/
+	NET_REG_ACT_LTE_CAT_M1, /*CAT-M1 technology*/
+	NET_REG_ACT_UTRAN_HSPA_PLUS, /*<! UTRAN HSPA+ */
 
 	__NET_REG_ACT_MAX,
 };
@@ -2220,6 +2236,13 @@ const char *gnss_operation_mode_str(enum gnss_operation_mode_id mode);
  * @return const char *.    String of EMM error cause value.
  */
 const char *emm_cause_str(enum emm_cause_id emm_cause);
+
+/**
+ * Convert qnetdevctl status enum to string.
+ * @param[in]   emm_cause   EMM cause enumeration value.
+ * @return const char *.    String of qnetdevctl status.
+ */
+const char *net_data_state_str(enum net_data_stat_id status);
 
 /**
  * Convert ESM error cause enum to string.

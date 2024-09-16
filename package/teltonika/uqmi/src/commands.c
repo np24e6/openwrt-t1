@@ -19,13 +19,11 @@
  * Boston, MA 02110-1301 USA.
  */
 
-#define _GNU_SOURCE
 #include <stdio.h>
 #include <string.h>
 #include <strings.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <dirent.h>
 
 #include <libubox/blobmsg.h>
 #include <libubox/blobmsg_json.h>
@@ -163,174 +161,6 @@ cmd_ctl_set_data_format_prepare(struct qmi_dev *qmi, struct qmi_request *req, st
 	}
 
 	qmi_set_ctl_set_data_format_request(msg, &sreq);
-	return QMI_CMD_DONE;
-}
-
-static void
-reload_wwan_iface_name(struct qmi_dev *qmi)
-{
-	const char *cdc_wdm_device_name;
-	static const char *driver_names[] = { "usbmisc", "usb" };
-	uint32_t i;
-
-	cdc_wdm_device_name = strrchr(qmi->fd_path, '/');
-	if (!cdc_wdm_device_name) {
-		uqmi_add_error("invalid path for cdc-wdm control port");
-		return;
-	}
-	cdc_wdm_device_name++;
-
-	for (i = 0; i < ARRAY_SIZE(driver_names) && !qmi->wwan_iface; i++) {
-		char *sysfs_path;
-		struct dirent *sysfs_entry;
-		DIR *sysfs_fold;
-
-		asprintf(&sysfs_path, "/sys/class/%s/%s/device/net",
-			 driver_names[i], cdc_wdm_device_name);
-		sysfs_fold = opendir(sysfs_path);
-		if (!sysfs_fold) {
-//			uqmi_add_error("Failed to open");
-			continue;
-		}
-
-		while ((sysfs_entry = readdir(sysfs_fold))) {
-			if (strstr(sysfs_entry->d_name, ".")) {
-				continue;
-			}
-			/* We only expect ONE file in the sysfs directory corresponding
-                         * to this control port, if more found for any reason, warn about it */
-			if (qmi->wwan_iface) {
-				uqmi_add_error("Invalid additional wwan iface found");
-			} else {
-				qmi->wwan_iface = strdup(sysfs_entry->d_name);
-				break;
-			}
-		}
-
-		closedir(sysfs_fold);
-		free(sysfs_path);
-	}
-
-	if (!qmi->wwan_iface) {
-		uqmi_add_error("wwan iface not found");
-	}
-}
-
-static enum qmi_cmd_result
-set_expected_data_format(char *sysfs_path,
-			 QmiCtlDataLinkProtocol requested)
-{
-	enum qmi_cmd_result ret = QMI_CMD_EXIT;
-	char value;
-	FILE *f = NULL;
-
-	if (requested == QMI_CTL_DATA_LINK_PROTOCOL_RAW_IP)
-		value = 'Y';
-	else if (requested == QMI_CTL_DATA_LINK_PROTOCOL_802_3)
-		value = 'N';
-	else
-		goto out;
-
-	if (!(f = fopen(sysfs_path, "w"))) {
-		uqmi_add_error("Failed to open file for R/W");
-		goto out;
-	}
-
-	if (fwrite(&value, 1, 1, f) != 1) {
-		uqmi_add_error("Failed to write to file");
-		goto out;
-	}
-
-	ret = QMI_CMD_DONE;
-out:
-	if (f)
-		fclose(f);
-	return ret;
-}
-
-static QmiCtlDataLinkProtocol get_expected_data_format(char *sysfs_path)
-{
-	QmiCtlDataLinkProtocol expected = QMI_CTL_DATA_LINK_PROTOCOL_UNKNOWN;
-	char value = '\0';
-	FILE *f;
-
-	if (!(f = fopen(sysfs_path, "r"))) {
-		uqmi_add_error("Failed to open file");
-		goto out;
-	}
-
-	if (fread(&value, 1, 1, f) != 1) {
-		uqmi_add_error("Failed to read from file");
-		goto out;
-	}
-
-	if (value == 'Y')
-		expected = QMI_CTL_DATA_LINK_PROTOCOL_RAW_IP;
-	else if (value == 'N')
-		expected = QMI_CTL_DATA_LINK_PROTOCOL_802_3;
-	else
-		uqmi_add_error("Unexpected sysfs file contents");
-
-out:
-	if (f)
-		fclose(f);
-	return expected;
-}
-
-static enum qmi_cmd_result
-cmd_ctl_get_set_expected_data_format(struct qmi_dev *qmi,
-				     QmiCtlDataLinkProtocol requested)
-{
-	char *sysfs_path = NULL;
-	QmiCtlDataLinkProtocol expected = QMI_CTL_DATA_LINK_PROTOCOL_UNKNOWN;
-	bool read_only;
-	enum qmi_cmd_result ret = QMI_CMD_EXIT;
-
-	read_only = (requested == QMI_CTL_DATA_LINK_PROTOCOL_UNKNOWN);
-
-	reload_wwan_iface_name(qmi);
-	if (!qmi->wwan_iface) {
-		uqmi_add_error("Unknown wwan iface");
-		goto out;
-	}
-
-	asprintf(&sysfs_path, "/sys/class/net/%s/qmi/raw_ip", qmi->wwan_iface);
-
-	if (!read_only && set_expected_data_format(sysfs_path, requested))
-		goto out;
-
-	if ((expected = get_expected_data_format(sysfs_path)) ==
-	    QMI_CTL_DATA_LINK_PROTOCOL_UNKNOWN)
-		goto out;
-
-	if (!read_only && (requested != expected)) {
-		uqmi_add_error("Expected data format not updated properly");
-		expected = QMI_CTL_DATA_LINK_PROTOCOL_UNKNOWN;
-		goto out;
-	}
-
-	ret = QMI_CMD_DONE;
-out:
-	free(sysfs_path);
-	return ret;
-}
-
-#define cmd_ctl_set_expected_data_format_cb no_cb
-static enum qmi_cmd_result
-cmd_ctl_set_expected_data_format_prepare(struct qmi_dev *qmi, struct qmi_request *req, struct qmi_msg *msg, char *arg)
-{
-	const char *modes[] = {
-		[QMI_CTL_DATA_LINK_PROTOCOL_802_3] = "802.3",
-		[QMI_CTL_DATA_LINK_PROTOCOL_RAW_IP] = "raw-ip",
-	};
-	int mode = qmi_get_array_idx(modes, ARRAY_SIZE(modes), arg);
-
-	if (mode < 0) {
-		uqmi_add_error("Invalid mode (modes: 802.3, raw-ip)");
-		return QMI_CMD_EXIT;
-	}
-
-	cmd_ctl_get_set_expected_data_format(qmi, mode);
 	return QMI_CMD_DONE;
 }
 

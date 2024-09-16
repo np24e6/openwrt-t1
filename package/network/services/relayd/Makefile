@@ -36,40 +36,22 @@ endef
 
 TARGET_CFLAGS += -I$(STAGING_DIR)/usr/include
 
+define Package/relayd/conffiles
+/etc/config/relayd
+endef
+
 define Package/relayd/install
 	$(INSTALL_DIR) $(1)/usr/sbin
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/relayd $(1)/usr/sbin/relayd
+
 	$(INSTALL_DIR) $(1)/etc/init.d
-	$(INSTALL_BIN) ./files/relay.init $(1)/etc/init.d/relayd
-endef
+	$(INSTALL_BIN) ./files/etc/init.d/relayd $(1)/etc/init.d/
 
-define Package/relayd/postinst
-	#!/bin/sh
+	$(INSTALL_DIR) $(1)/etc/config
+	$(INSTALL_CONF) ./files/etc/config/relayd $(1)/etc/config/
 
-	[ -z "$${IPKG_INSTROOT}" ] || exit 0
-
-	[ "$$(uci -q get network.relayd)" != "" ] && exit 0
-
-	uci -q batch <<-EOF
-		set network.relayd='interface'
-		set network.relayd.disabled='1'
-		set network.relayd.proto='relay'
-	EOF
-
-	uci -q commit network
-	exit 0
-endef
-
-define Package/relayd/prerm
-	#!/bin/sh
-	. /lib/functions.sh
-	clean_config() {
-		config_get proto "$$1" proto ""
-		[ "$$proto" = "relay" ] && uci_remove network "$$1"
-	}
-	config_load 'network'
-	config_foreach clean_config "interface"
-	uci_commit network
+	$(INSTALL_DIR) $(1)/etc/uci-defaults/7.6
+	$(INSTALL_DATA) ./files/relayd.defaults $(1)/etc/uci-defaults/7.6/10-move-relayd-from-network-conf
 endef
 
 $(eval $(call BuildPackage,relayd))

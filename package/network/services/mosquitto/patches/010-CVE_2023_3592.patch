@@ -1,0 +1,12 @@
+Index: mosquitto-2.0.15/src/property_broker.c
+===================================================================
+--- mosquitto-2.0.15.orig/src/property_broker.c
++++ mosquitto-2.0.15/src/property_broker.c
+@@ -103,6 +103,7 @@ int property__process_will(struct mosqui
+ 				break;
+ 
+ 			default:
++				msg->properties = msg_properties;
+ 				return MOSQ_ERR_PROTOCOL;
+ 				break;
+ 		}

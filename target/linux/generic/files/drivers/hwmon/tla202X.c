@@ -140,7 +140,10 @@ static ssize_t in0_input_show(struct device *dev, struct device_attribute *attr,
 	if (raw_val < 0 || ret < 0) {
 		val = 0;
 	} else {
-		val = (raw_val * 1621) / 1000; // diff between ADC MCP3021 and TLA2021 raw values is 1.621
+		/* old ADC MCP3021 K = 0,1282, new ADC TLA2021 K = 0,07969814
+		* Ratio of old/new is 1,608, so multiply raw value by 1,608 for same value in iomand
+		*/
+		val = (raw_val * 1608) / 1000;
 	}
 
 	return sprintf(buf, "%d\n", val);

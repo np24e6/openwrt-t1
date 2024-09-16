@@ -1,0 +1,35 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+change_client_options() {
+    config_get pip "$1" "pip" ""
+    config_get pnm "$1" "pnm" ""
+    [ -n "$pip" ] && [ -n "$pnm" ] && {
+        eval "$(/bin/ipcalc.sh "$pip $pnm")"
+        uci_add_list "openvpn" "$1" "private_network" "${pip}/${PREFIX}"
+        uci_remove "openvpn" "$1" "pip"
+        uci_remove "openvpn" "$1" "pnm"
+    }
+    uci -q rename openvpn."${1}".sname=name
+    uci -q rename openvpn."${1}".cn=common_name
+    uci -q rename openvpn."${1}".lip=local_ip
+    uci -q rename openvpn."${1}".rip=remote_ip
+    uci -q rename openvpn."${1}".rip=remote_ip
+    uci -q rename openvpn."${1}".cntw=covered_network
+}
+
+change_options() {
+    uci -q rename openvpn."${1}"._auth=auth_mode
+    uci -q rename openvpn."${1}"._device_files=device_files
+    uci -q rename openvpn."${1}"._extra=extra
+    uci -q rename openvpn."${1}"._tls_auth=tls_security
+    uci -q rename openvpn."${1}"._tls_cipher=tls_cipher_list
+    uci -q rename openvpn."${1}"._cipher_custom=cipher_custom
+}
+
+config_load "openvpn"
+uci -q rename openvpn.webui._auth=auth_mode
+config_foreach change_client_options "client"
+config_foreach change_options "openvpn"
+uci_commit openvpn

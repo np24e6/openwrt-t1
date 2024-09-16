@@ -27,14 +27,3 @@ To get started after cloning git repository:
   `make`
 
 More details about the build process and dependencies are covered in the [INSTALL file](/INSTALL)
-
-## UBUS Methods
-
-The following methods are exposed over `ubus`:
-
-**Object: chilli**
-
-Path | Procedure | Signature | Description
---- | --- | --- | ---
-chilli | list | `{"ip":"String","mac":"String","sessionid":"String"}` | List sessions. Params: `ip` - ip address (optional), mac - mac address (optional), sessionid - session ID (optional).
-chilli | logout | `{"ip":"String","mac":"String","sessionid":"String"}` | Logoff active user. Params: `ip` - ip address (optional), mac - mac address (optional), sessionid - session ID (optional). At least one parameter required.

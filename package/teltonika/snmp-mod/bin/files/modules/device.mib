@@ -7,7 +7,8 @@ deviceGroup OBJECT-GROUP
 		  batchNumber,
 		  hardwareRevision,
 		  fwVersion,
-		  deviceUptime }
+		  deviceUptime,
+		  cpuUsage }
 	STATUS current
 	DESCRIPTION "Device SNMP group defined according to RFC 2580"
 	::= { teltonikaSnmpGroups 1 }
@@ -60,3 +61,10 @@ deviceUptime OBJECT-TYPE
 	STATUS		current
 	DESCRIPTION	"Device uptime in seconds"
 	::= { device 7 }
+
+cpuUsage OBJECT-TYPE
+	SYNTAX		DisplayString (SIZE (0..255))
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION	"Device cpu usage in percents"
+	::= { device 8 }

@@ -101,7 +101,7 @@ ifdef CONFIG_MIPS64_ABI
   endif
 endif
 
-DEFAULT_SUBDIR_TARGETS:=clean download prepare compile update refresh prereq dist distcheck configure check check-depends develop stage unstage ucompile uclean gpl-install unit_test unit_test_clean toolchain-dump geninfo
+DEFAULT_SUBDIR_TARGETS:=clean download prepare compile update refresh prereq dist distcheck configure check check-depends develop stage unstage ucompile uclean gpl-install unit_test unit_test_clean toolchain-dump geninfo upload
 
 define DefaultTargets
 $(foreach t,$(DEFAULT_SUBDIR_TARGETS) $(1),

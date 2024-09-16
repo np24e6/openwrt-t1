@@ -34,9 +34,6 @@ dnl Check for header files that do not exist on all platforms
 AC_CHECK_HEADERS([libutil.h pthread.h pty.h strings.h syslog.h sys/prctl.h \
                   sys/uio.h util.h])
 
-dnl Ubus support
-AC_CHECK_HEADERS(libubus.h, [LIBS="-lubus $LIBS"])
-
 dnl Most systems require linking against libutil.so in order to get login_tty()
 AC_CHECK_FUNCS(login_tty, [],
                [AC_CHECK_LIB(util, login_tty,

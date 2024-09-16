@@ -6,10 +6,10 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=mobutils
-PKG_VERSION:=2023-09-15
+PKG_VERSION:=2023-12-13
 PKG_RELEASE:=1
 
-PKG_SOURCE_VERSION:=3.3
+PKG_SOURCE_VERSION:=3.5
 
 PKG_FIXUP:=autoreconf
 
@@ -109,11 +109,12 @@ define Package/mobutils-sms_utilities/install
 	$(CP) $(PKG_BUILD_DIR)/sms_utils/files/api_list.json $(1)/etc/sms_utils/api_list.json
 	$(CP) $(PKG_BUILD_DIR)/files/99_sms_utils-mobutils $(1)/etc/uci-defaults/etc
 	$(CP) $(PKG_BUILD_DIR)/files/99_sms_utils-mobutils_3 $(1)/etc/uci-defaults/etc
+	$(CP) $(PKG_BUILD_DIR)/files/99_sms_gateway $(1)/etc/uci-defaults/etc
 	if [ $(TLT_PLATFORM_RUTX) ] || [ $(TLT_PLATFORM_RUTM) ] || [ $(TLT_PLATFORM_X86_64) ]; then \
 		$(INSTALL_CONF) $(PKG_BUILD_DIR)/sms_utils/files/sms_utils_rutx.conf $(1)/etc/config/sms_utils; \
 	elif [ $(TLT_PLATFORM_TRB2) ] || [ $(TLT_PLATFORM_TRB2M) ] ; then \
 		$(INSTALL_CONF) $(PKG_BUILD_DIR)/sms_utils/files/sms_utils_trb2.conf $(1)/etc/config/sms_utils; \
-	elif [ $(TLT_PLATFORM_TRB1) ] || [ $(TLT_PLATFORM_TRB5) ] ; then \
+	elif [ $(CONFIG_BASEBAND_SUPPORT) ] ; then \
 		$(INSTALL_CONF) $(PKG_BUILD_DIR)/sms_utils/files/sms_utils_trb1.conf $(1)/etc/config/sms_utils; \
 	elif [ $(TLT_PLATFORM_RUT36X) ] || [ $(TLT_PLATFORM_RUT30X) ] || [ $(TLT_PLATFORM_RUT361) ] ||		\
 	     [ $(TLT_PLATFORM_RUT301) ]; then \

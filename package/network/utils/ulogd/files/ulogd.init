@@ -22,10 +22,15 @@ ipt6() {
 }
 
 undo_firewall() {
-	iptables -F LOGGING
-	ip6tables -F LOGGING
-	[ -e "$UNDO_FILE" ] && sh ${UNDO_FILE} 2>/dev/null
-	rm -f ${UNDO_FILE} 2>/dev/null
+	[ -e "$UNDO_FILE" ] || return
+	{
+		iptables -F LOGGING
+		ip6tables -F LOGGING
+		sh ${UNDO_FILE}
+		rm -f ${UNDO_FILE}
+		iptables -X LOGGING
+		ip6tables -X LOGGING
+	} 2>/dev/null
 }
 
 add_logging_rule() {

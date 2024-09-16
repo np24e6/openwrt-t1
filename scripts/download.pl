@@ -287,7 +287,12 @@ while (!-f "$target/$filename") {
 		die "Skipping mirrors.\n";
 	}
 
-	my $mirror = shift @mirrors;
+	my $mirror;
+
+	while (@mirrors && !$mirror) {
+		$mirror = shift @mirrors;
+	}
+
 	$mirror or die "No more mirrors to try - giving up.\n";
 
 	download($mirror, $url_filename);

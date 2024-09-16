@@ -86,6 +86,10 @@
 #include <util.h>
 #endif
 
+#ifdef HAVE_UTMP_H
+#include <utmp.h>
+#endif
+
 #ifdef HAVE_UTMPX_H
 #include <utmpx.h>
 #endif
@@ -635,7 +639,7 @@ struct Utmp *newUtmp(int useLogin, const char *ptyPath,
   return utmp;
 }
 
-#if defined(HAVE_UTMPX) && defined(HAVE_UPDWTMP) && !defined(HAVE_UPDWTMPX)
+#if defined(HAVE_UPDWTMP) && !defined(HAVE_UPDWTMPX)
 #define min(a,b) ({ typeof(a) _a=(a); typeof(b) _b=(b); _a < _b ? _a : _b; })
 #define updwtmpx x_updwtmpx
 
@@ -1674,22 +1678,14 @@ static void childProcess(struct Service *service, int width, int height,
     // At login service launch, we try to pass real IP in '-h' parameter. Real
     // IP is provided in HTTP header field 'X-Real-IP', if ShellInABox is used
     // behind properly configured HTTP proxy.
-
     char remoteHost[256];
     snprintf(remoteHost, 256,
              (*realIP) ? "%s, %s" : "%s%s", peerName,
              (*realIP) ? realIP : "");
-	if (service->portRange) {
-		execle("/bin/login", "login", "-p", "-h", remoteHost, "-P", service->portRange,
-			(void *)0, environment);
-		execle("/usr/bin/login", "login", "-p", "-h", remoteHost, "-P", service->portRange,
-			(void *)0, environment);
-	} else {
-		execle("/bin/login", "login", "-p", "-h", remoteHost,
-			(void *)0, environment);
-		execle("/usr/bin/login", "login", "-p", "-h", remoteHost,
-			(void *)0, environment);
-	}
+    execle("/bin/login", "login", "-p", "-h", remoteHost,
+           (void *)0, environment);
+    execle("/usr/bin/login", "login", "-p", "-h", remoteHost,
+           (void *)0, environment);
   } else {
     // Launch user provied service
     execService(width, height, service, peerName, realIP, environment, url);
@@ -1790,7 +1786,7 @@ static void launcherDaemon(int fd) {
       if (!((*s >= '0' && *s <= '9') ||
             (*s >= 'A' && *s <= 'Z') ||
             (*s >= 'a' && *s <= 'z') ||
-             *s == '.' || *s == '-' || *s == ':')) {
+             *s == '.' || *s == '-')) {
         *s                    = '-';
       }
     }

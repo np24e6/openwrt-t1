@@ -308,16 +308,16 @@ proto_ncm_setup() {
 }
 
 proto_ncm_teardown() {
-	local interface="$1" pdp bridge_ipaddr method
+	local interface="$1" pdp bridge_ipaddr method braddr_f
 	json_get_vars pdp modem
 
 	mdm_ubus_obj="$(find_mdm_ubus_obj "$modem")"
 
 	echo "Stopping network ${interface}"
 
-	json_load "$(ubus call network.interface.$interface status 2>/dev/null)"
-	json_select data
-	json_get_vars method bridge_ipaddr
+	braddr_f="/var/run/${interface}_braddr"
+	method=$(grep -o 'method:[^ ]*' $braddr_f 2> /dev/null | cut -d':' -f2)
+	bridge_ipaddr=$(grep -o 'bridge_ipaddr:[^ ]*' $braddr_f 2> /dev/null | cut -d':' -f2)
 
 	#Kill udhcpc instance
 	proto_kill_command "$interface"
@@ -339,7 +339,9 @@ proto_ncm_teardown() {
 		ip route flush table 42
 		ip route flush table 43
 		ip route del "$bridge_ipaddr"
+		ubus call network.interface down "{\"interface\":\"mobile_bridge\"}"
 		swconfig dev switch0 set soft_reset 5 &
+		rm -f "$braddr_f" 2> /dev/null
 	}
 
 	#Clear passthrough and bridge params

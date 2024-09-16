@@ -1,0 +1,74 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+api_dispatcher=$(uci_get uhttpd main lua_prefix)
+max_requests="$(uci_get uhttpd main max_requests)"
+
+if [ "$max_requests" -lt 10 ]; then
+	uci_set "uhttpd" "main" "max_requests" "10"
+fi
+
+if [ -n "$api_dispatcher" ]; then
+	uci_remove "uhttpd" "main" "lua_prefix"
+fi
+uci_add_list "uhttpd" "main" "lua_prefix" "/api=/www/cgi-bin/api_dispatcher.lua"
+
+[ "$(uci_get uhttpd main ubus_socket)" = "/var/run/ubus.sock" ] && {
+	uci_set "uhttpd" "main" "ubus_socket" "/var/run/ubus/ubus.sock"
+}
+
+uci batch <<-EOF
+	set uhttpd.main.ubus_prefix="/ubus"
+	set uhttpd.main.index_page='cgi-bin/index'
+	set uhttpd.main.error_page="/cgi-bin/index"
+	commit uhttpd
+EOF
+
+language_section=$(uci_get vuci languages)
+
+if [ -z "$language_section" ]; then
+	# Exception
+	languages_section=$(uci -q add vuci internal)
+	uci_rename "vuci" "$languages_section" "languages"
+	uci_set "vuci" "languages" "en" "English"
+fi
+
+if [ -f "/etc/config/luci" ]; then
+	first_login=$(uci_get luci main firstlogin)
+	if [ "$first_login" = "1" ]; then
+		uci_set "vuci" "main" "firstlogin" "1"
+	else
+		uci_remove "vuci" "main" "firstlogin"
+	fi
+
+	advanced=$(uci_get luci main advanced)
+
+	if [ -n "$advanced" ]; then
+		uci_set "vuci" "main" "advanced" "$advanced"
+	fi
+
+	config_cb() {
+		type="$1"
+		name="$2"
+		if [ "$name" = "languages" ]; then
+			option_cb() {
+				option="$1"
+				value="$2"
+				vuci_language=$(uci_get vuci languages "$option")
+				if [ -z "$vuci_language" ]; then
+					uci_set "vuci" "languages" "$option" "$value"
+				fi
+			}
+		else
+			option_cb() { return; }
+		fi
+	}
+	config_load "luci"
+
+	rm /etc/config/luci
+fi
+
+uci_commit "vuci"
+
+exit 0

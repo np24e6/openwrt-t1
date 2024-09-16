@@ -23,6 +23,10 @@ is_switch() {
 	mnf_info -n | grep "TSW" > /dev/null 2>&1
 }
 
+is_trb5() {
+	mnf_info -n | grep "TRB5" > /dev/null 2>&1
+}
+
 get_device_name() {
 	local name
 
@@ -89,6 +93,7 @@ unset port_vlan
 unset if_vlan
 unset sqm
 unset port
+unset iface
 
 device=1
 # To support external modems, mobile MIB should also be included
@@ -97,15 +102,15 @@ device=1
 is_installed mdcollectd && mdcollect=1
 is_true "gps" && gps=1
 traps=1
-# There are devices that don't have wifi but have hotspot package
-# installed (e.g. RUTX08). Include hotspot for them as well.
-(is_true "wifi" || is_installed "coova-chilli") && hotspot=1
+iface=1
+# Hotspot is available on all devices except TSW switches
+! is_switch && hotspot=1
 is_true "ios" && ios=1
 is_true "wifi" && wireless=1
 ! is_switch && if_vlan=1
 ( jsonfilter -q -i $board_json_file -e "$.switch" 1>/dev/null || is_switch || [ $router_type = 'RUTM' ]) && port_vlan=1
 [ $if_vlan -eq 1 ]  || [ $port_vlan -eq 1 ] && vlan_gen=1
-! is_switch && sqm=1
+( ! is_switch ) && ( ! is_trb5 ) && sqm=1
 (is_installed "port_eventsd") && port=1
 
 # Unset 'traps' if neither 'mobile' nor 'ios' or 'hotspot' are supported
@@ -123,6 +128,7 @@ hotspot_mib=$(cat $MODULES_DIR/hotspot.mib)
 io_mib=$(cat $MODULES_DIR/io.mib)
 wireless_mib=$(cat $MODULES_DIR/wireless.mib)
 if_vlan_mib=$(cat $MODULES_DIR/vlan_if.mib)
+iface_mib=$(cat $MODULES_DIR/iface.mib)
 
 if [ -n "$router_type" ] && [ "$router_type" = "RUTM" ]; then
 	port_vlan_mib=$(cat $MODULES_DIR/vlan_port_rutm.mib)
@@ -150,8 +156,8 @@ teltonika MODULE-IDENTITY
 	ORGANIZATION	\"TELTONIKA\"
 	CONTACT-INFO	\"TELTONIKA\"
 	DESCRIPTION	\"The MIB module for TELTONIKA ${device_name} routers.\"
-	REVISION	\"202206200000Z\"
-	DESCRIPTION	\"Initial version\"
+	REVISION	\"$(date "+%Y%m%d%H%MZ")\"
+	DESCRIPTION	\"Latest version\"
 	::= { enterprises 48690 }
 	
 teltonikaSnmpGroups	OBJECT IDENTIFIER ::= { teltonika 0 }"
@@ -172,6 +178,7 @@ ${wireless:+wireless		OBJECT IDENTIFIER ::= { teltonika 7 \}\n}\
 ${vlan_gen:+vlan			OBJECT IDENTIFIER ::= { teltonika 8 \}\n}\
 ${sqm:+sqm			OBJECT IDENTIFIER ::= { teltonika 9 \}\n}\
 ${port:+port			OBJECT IDENTIFIER ::= { teltonika 10 \}\n}\
+${iface:+iface			OBJECT IDENTIFIER ::= { teltonika 11 \}\n}\
 
 ${device:+$device_mib\n\n}\
 ${mobile:+$mobile_mib\n\n}\
@@ -196,6 +203,7 @@ ${if_vlan:+$if_vlan_mib\n\n}\
 ${port_vlan:+$port_vlan_mib\n\n}\
 ${sqm:+$sqm_mib\n\n}\
 ${port:+$port_mib\n\n}\
+${iface:+$iface_mib\n\n}\
 
 ${end_mib}" >"$MIB_file"
 

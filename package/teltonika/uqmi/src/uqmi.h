@@ -72,8 +72,6 @@ struct qmi_msg;
 typedef void (*request_cb)(struct qmi_dev *qmi, struct qmi_request *req, struct qmi_msg *msg);
 
 struct qmi_dev {
-	const char *fd_path;
-	char *wwan_iface;
 	struct ustream_fd sf;
 
 	struct list_head req;

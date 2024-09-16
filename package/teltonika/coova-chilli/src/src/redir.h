@@ -45,9 +45,6 @@
 #define REDIR_SPLASH          8
 #define REDIR_MACREAUTH       9
 #define REDIR_REQERROR       10  /* Used internally when the HTTP request parsing created an error */
-#define REDIR_SIGNUP		11
-#define REDIR_SMSSIGNUP		12
-#define REDIR_TRIAL			13
 
 #define REDIR_WWW            20
 #ifdef ENABLE_EWTAPI
@@ -73,23 +70,6 @@
 #define REDIR_FAILED_NOROUTE 60 /* Reply to /logon - no route for NAI */
 #define REDIR_ERROR_PROTOCOL 61 /* Reply to /logon - the client software is not matching the protocol (e.g. WISPr 1.0 or WISPr 2.0) */
 #define REDIR_CHALLENGE      62 /* Reply to /logon - if Radius challenge received in EAP authentication */
-#define REDIR_FAILED_DATA	 63 /* Reply to /logon if data limit reached */
-#define REDIR_FAILED_TIME	 64 /* Reply to /logon if time limit reached */
-#define REDIR_SIGNUP_FAILED	 65 /* Reply to /signup if no username or password found */
-#define REDIR_SIGNUP_SUCCESS 66 /* Reply to /signup user registered successfully */
-#define REDIR_SIGNUP_ALREADY 67 /* Reply to /signup user registered unsuccessfully */
-#define REDIR_SIGNUP_DENIED 68 /* Reply to /signup if method is disabled */
-#define REDIR_SMSSIGNUP_FAILED 69 /* Reply to /smssignup user registered unsuccessfully */
-#define REDIR_SMSSIGNUP_ALREADY 70 /* Reply to /smssignup user registered unsuccessfully */
-#define REDIR_SMSSIGNUP_SUCCESS 71 /* Reply to /smssignup user registered successfully */
-#define REDIR_SMSSIGNUP_SMS_FAIL 72 /* Reply to /smssignup user registered unsuccessfully (sms failure) */
-#define REDIR_SMSSIGNUP_DENIED 73 /* Reply to /smssignup if method is disabled */
-#define REDIR_FAILED_TOS 74 /* Reply to /logon - the client does not accepted TOS */
-#define REDIR_TRIALLOGIN_DENIED 75 /* Reply to /trial - method not allowed */
-#define REDIR_TRIALLOGIN_FAILED 76 /* Reply to /trial - login failed */
-#define REDIR_TRIAL_FAILED_DATA	 77 /* Reply to /trial if data limit reached */
-#define REDIR_TRIAL_FAILED_TIME	 78 /* Reply to /trial if time limit reached */
-#define REDIR_FAILED_USER_DUPLICATE	 79 /* Reply to /logon if user duplicates with other */
 
 /* If more than one format flag is set, it indicates that Coova advertises several
    protocols that can be used by the client. Once the client has choosen which protocol
@@ -111,18 +91,6 @@
 #define REDIR_MSG_OPT_REDIR   1
 #define REDIR_MSG_OPT_PARAMS  2
 #define REDIR_MSG_NSESSIONID  4
-
-#define ACCESS_DENIED 0
-#define ACCESS_ACCEPTED 1
-#define ACCESS_DENIED_DATA 2
-#define ACCESS_DENIED_TIME 3
-#define ACCESS_DENIED_UDUPCLICATE 4
-
-#define AUTH_LOCAL_USER 0
-#define AUTH_DYN_USER 1
-#define AUTH_SMS_USER 2
-#define AUTH_MAC_USER 3
-#define AUTH_TRIAL_USER 4
 
 struct eapmsg_t {
   uint16_t len;
@@ -188,10 +156,6 @@ struct redir_conn_t {
    */
   struct session_params s_params;
   struct session_state s_state;
-#ifdef ENABLE_DATABASE
-    struct session_history s_history;		/*Session history*/
-#endif
-
 } __attribute__((packed));
 
 /* HTTP request parsing context */

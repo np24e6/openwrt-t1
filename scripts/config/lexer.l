@@ -108,6 +108,7 @@ n	[A-Za-z0-9_-]
 "endif"			return T_ENDIF;
 "endmenu"		return T_ENDMENU;
 "help"|"---help---"	return T_HELP;
+"detail"		return T_DETAIL;
 "hex"			return T_HEX;
 "if"			return T_IF;
 "imply"			return T_IMPLY;
@@ -122,6 +123,7 @@ n	[A-Za-z0-9_-]
 "prompt"		return T_PROMPT;
 "range"			return T_RANGE;
 "reset"			return T_RESET;
+"maintainer"		return T_MAINTAINER;
 "select"		return T_SELECT;
 "source"		return T_SOURCE;
 "string"		return T_STRING;

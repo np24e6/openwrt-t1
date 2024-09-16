@@ -68,7 +68,7 @@ add_area_type() {
 
 	# finally we try to assume interfaces type by comparing their probabilities
 	[ "$lan" -ge "$wan" ] && area_type="lan" || area_type="wan"
-	uci_set "network" "$section" "_area_type" "$area_type"
+	uci_set "network" "$section" "area_type" "$area_type"
 }
 
 config_load "firewall"

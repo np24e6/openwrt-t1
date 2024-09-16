@@ -63,7 +63,7 @@ start_instance() {
 		append_arg "$section" 'virtual_id' '-v' '1'
 		append_arg "$section" 'delay' '-d'
 		append_arg "$section" 'priority' '-p'
-		[ "$virtual_mac" = 0 ] && procd_append_param command -n
+		[ "$virtual_mac" -eq 1 ] && procd_append_param command -n
 		procd_append_param command "-y" "$section"
 
 		config_list_foreach "$section" 'virtual_ip' append_value

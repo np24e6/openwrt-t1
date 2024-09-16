@@ -43,7 +43,7 @@ Index: ubox-2020-10-25-9ef88681/log/logdb.c
 ===================================================================
 --- /dev/null
 +++ ubox-2020-10-25-9ef88681/log/logdb.c
-@@ -0,0 +1,503 @@
+@@ -0,0 +1,504 @@
 +#define _GNU_SOURCE
 +
 +#include <stdio.h>
@@ -461,6 +461,7 @@ Index: ubox-2020-10-25-9ef88681/log/logdb.c
 +		return SQLITE_ERROR;
 +	}
 +
++	sqlite3_busy_timeout(conn, 60000);
 +	output = sqlite3_step(*stmt);
 +	if (output == SQLITE_ROW) {
 +		while (output == SQLITE_ROW) {

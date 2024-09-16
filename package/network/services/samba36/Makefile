@@ -82,10 +82,9 @@ define Package/samba36-server/config
 endef
 
 define Package/samba36-server/description
- The Samba software suite is a collection of programs that implements the
- SMB protocol for UNIX systems, allowing you to serve files and printers to
- Windows, NT, OS/2 and DOS clients. This protocol is sometimes also referred
- to as the LanManager or Netbios protocol.
+	Samba is a software solution for using the Server Message Block (SMB)
+	networking protocol, which provides shared file access between
+	nodes on a computer network.
 endef
 
 TARGET_CFLAGS += -DMAX_DEBUG_LEVEL=$(CONFIG_PACKAGE_SAMBA_MAX_DEBUG_LEVEL) -D__location__=\\\"\\\" -ffunction-sections -fdata-sections

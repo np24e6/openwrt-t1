@@ -65,7 +65,6 @@
 #include <sys/un.h>
 #include <time.h>
 #include <unistd.h>
-#include <libubus.h>
 
 #ifdef HAVE_SYS_PRCTL_H
 #include <sys/prctl.h>
@@ -104,12 +103,10 @@
 
 #define PORTNUM           4200
 #define MAX_RESPONSE      2048
-#define NONCE_SIZE        128
 
 static int            port;
 static int            portMin;
 static int            portMax;
-static char           *portRange;
 static int            localhostOnly     = 0;
 static int            noBeep            = 0;
 static int            numericHosts      = 0;
@@ -1046,7 +1043,6 @@ static void parseArgs(int argc, char * const argv[]) {
         if (!ptr) {
           fatal("[config] Syntax error in port range specification!");
         }
-		check(portRange = strdup(optarg));
         *ptr               = '\000';
         portMin            = strtoint(optarg, 1, 65535);
         *ptr               = '-';
@@ -1149,7 +1145,7 @@ static void parseArgs(int argc, char * const argv[]) {
         fatal("[config] Option \"--service\" expects an argument.");
       }
       struct Service *service;
-      service              = newService(optarg, NULL);
+      service              = newService(optarg);
       if (getRefFromHashMap(serviceTable, service->path)) {
         fatal("[config] Duplicate service description for \"%s\".", service->path);
       }
@@ -1282,7 +1278,7 @@ static void parseArgs(int argc, char * const argv[]) {
 #else
                                     ":SSH"
 #endif
-                                    , portRange));
+                                    ));
   }
   enumerateServices(serviceTable);
   deleteHashMap(serviceTable);
@@ -1363,38 +1359,6 @@ static void setUpSSL(Server *server) {
   }
 }
 
-static void receive_uhttpd_nonce_cb(struct ubus_request *req, int type, struct blob_attr *msg) {
-  char *buf = req->priv;
-  struct blob_attr *cur;
-  int rem;
-  blobmsg_for_each_attr (cur, msg, rem) {
-    if (!strcmp(blobmsg_name(cur), "nonce")) {
-      strncpy(buf, blobmsg_get_string(cur), NONCE_SIZE - 1);
-    }
-  }
-}
-
-static int receive_uhttpd_nonce(char *buffer) {
-  struct ubus_context *ubus;
-  uint32_t obj;
-
-  ubus = ubus_connect(NULL);
-  if (!ubus) {
-    fprintf(stderr, "failed to connect to ubus\n");
-    return 1;
-  }
-
-  if (ubus_lookup_id(ubus, "uhttpd", &obj) ||
-    ubus_invoke(ubus, obj, "nonce", NULL, receive_uhttpd_nonce_cb, buffer, 1000)) {
-      fprintf(stderr, "ubus request failed\n");
-      ubus_free(ubus);
-      return 1;
-  }
-
-  ubus_free(ubus);
-  return 0;
-}
-
 int main(int argc, char * const argv[]) {
 #ifdef HAVE_SYS_PRCTL_H
   // Disable core files
@@ -1425,7 +1389,6 @@ int main(int argc, char * const argv[]) {
     // background.
     pid_t pid;
     int   fds[2];
-    char nonce_hash[NONCE_SIZE];
     dropPrivileges();
     check(!pipe(fds));
     check((pid    = fork()) >= 0);
@@ -1451,8 +1414,7 @@ int main(int argc, char * const argv[]) {
            "Content-type: text/html; charset=utf-8\r\n\r\n",
            port, getpid(), cgiSessionKey);
     UNUSED(cgiRootSize);
-    receive_uhttpd_nonce(nonce_hash);
-    printfUnchecked(cgiRootStart, nonce_hash, port, cgiSessionKey);
+    printfUnchecked(cgiRootStart, port, cgiSessionKey);
     fflush(stdout);
     check(!NOINTR(close(fds[1])));
     closeAllFds((int []){ launcherFd, serverGetFd(server) }, 2);

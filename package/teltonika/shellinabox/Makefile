@@ -9,16 +9,20 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=shellinabox
-PKG_VERSION:=2023-08-31
+PKG_VERSION:=2023-11-08
 PKG_BUILD_DEPENDS:=zlib
 
-PKG_SOURCE_VERSION:=1.5
+PKG_SOURCE_VERSION:=1.6
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_SOURCE_VERSION)-$(PKG_VERSION)
 PKG_SOURCE:=$(PKG_SOURCE_SUBDIR).tar.gz
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_SOURCE_SUBDIR)
 
 PKG_ORIGIN_URL:=https://github.com/shellinabox/shellinabox
 PKG_LICENSE:=GPL-2.0
+
+PKG_UPSTREAM_VERSION:=v2.20
+PKG_UPSTREAM_URL:=https://codeload.github.com/shellinabox/shellinabox/tar.gz/refs/tags/$(PKG_UPSTREAM_VERSION)?
+PKG_UPSTREAM_FILE:=shellinabox_$(PKG_UPSTREAM_VERSION).tar.gz
 
 PKG_FIXUP:=autoreconf
 GPL_INCLUDE_SRC:=1

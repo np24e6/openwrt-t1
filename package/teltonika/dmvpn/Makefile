@@ -26,6 +26,13 @@ define Package/dmvpn
 	endif
 endef
 
+define Package/dmvpn/description
+	Dynamic Multipoint VPN (DMVPN) is a method of building scalable IPsec VPNs.
+	DMVPN is configured as a hub-and-spoke network, where tunnels between spokes
+	are built dynamically; therefore, no change in configuration is required on
+	the hub in order to connect new spokes.
+endef
+
 
 
 define Package/dmvpn/conffiles

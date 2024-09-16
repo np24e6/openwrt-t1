@@ -5,7 +5,7 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=storage-memory-expansion
-PKG_VERSION:=2020-07-08
+PKG_VERSION:=2023-07-25
 PKG_RELEASE:=1
 
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-$(PKG_VERSION)
@@ -27,8 +27,9 @@ endef
 
 
 define Package/$(PKG_NAME)/install
-	$(INSTALL_DIR) $(1)/bin
+	$(INSTALL_DIR) $(1)/bin $(1)/etc/hotplug.d/block
 	$(INSTALL_BIN) ./files/sme.sh $(1)/bin/
+	$(LN) /bin/sme.sh $(1)/etc/hotplug.d/block/
 endef
 
 $(eval $(call BuildPackage,$(PKG_NAME)))

@@ -11,7 +11,6 @@ STOP=10
 USE_PROCD=1
 PROG=/usr/sbin/openvpn
 
-CCD_ARGS=""
 LIST_SEP="
 "
 
@@ -25,47 +24,62 @@ CUSTOM_PARAMS="auth_user_pass_verify userpass"
 # global OpenVPN server logic (routes, pushs etc.)
 config_client() {
 	local section_id="$1"
-	local snip
-	local sip
-	local snm
-	local cn
-	local lip
-	local rip
-	local pip
-	local pnm
-	local cntw
+	local ula_prefix ip6assign netw_ip netw_ip6 netw_mask netw_mask6
+	local common_name local_ip remote_ip private_network covered_network local_ipv6 private_network_ipv6
 
 	# get client params from /etc/config/openvpn
-	config_get cn "$section_id" cn
-	config_get lip "$section_id" lip
-	config_get rip "$section_id" rip
-	config_get pip "$section_id" pip
-	config_get pnm "$section_id" pnm
-	config_get cntw "$section_id" cntw
+	config_get common_name "$section_id" common_name
+	config_get local_ip "$section_id" local_ip
+	config_get remote_ip "$section_id" remote_ip
+	config_get private_network "$section_id" private_network
+	config_get covered_network "$section_id" covered_network
+	config_get local_ipv6 "$section_id" local_ipv6
+	config_get private_network_ipv6 "$section_id" private_network_ipv6
 
-	# don't inlucde this in /etc/openvpn/ccd if any of these options are empty
-	[ -z "$cn" ] || [ -z "$lip" ] || [ -z "$rip" ] || [ -z "$pip" ] || [ -z "$pnm" ] && return
+	# don't include this in /etc/openvpn/ccd if common name is empty
+	[ -z "$common_name" ] && return
 
 	# generate selective config in /etc/openvpn/ccd
-	printf "ifconfig-push %s %s\n" "$lip" "$rip" >/etc/openvpn/ccd/"$cn"
-	printf "iroute %s %s\n" "$pip" "$pnm" >>/etc/openvpn/ccd/"$cn"
-
-	for iface in ${cntw}; do
-		local tmp
-
-		sip=$(/sbin/uci -q get network."$iface".ipaddr 2>/dev/null)
-		snm=$(/sbin/uci -q get network."$iface".netmask 2>/dev/null)
-		tmp=$(/bin/ipcalc.sh "$sip" "$snm" 2>/dev/null)
-		snip=$(printf "%s" "$tmp" | grep 'NETWORK' | cut -d'=' -f2 2>/dev/null)
-
-		if [ -n "$snip" ] && [ -n "$snm" ]; then
-			printf "push \"route %s %s\"\n" "$snip" "$snm" >>/etc/openvpn/ccd/"$cn"
+	[ -n "$local_ip" ] && [ -n "$remote_ip" ] && printf "ifconfig-push %s %s\n" "$local_ip" "$remote_ip" >/etc/openvpn/ccd/"$common_name"
+	[ -n "$local_ipv6" ] && printf "ifconfig-ipv6-push %s\n" "$local_ipv6" >>/etc/openvpn/ccd/"$common_name"
+	[ -n "$private_network" ] && {
+		for r in $private_network; do
+			[ -n "${r##*/*}" ] && r="${r}/32"
+			eval "$(ipcalc.sh "$r")"
+			printf "iroute %s %s\n" "$NETWORK" "$NETMASK" >>/etc/openvpn/ccd/"$common_name"
+		done
+	}
+	[ -n "$private_network_ipv6" ] && {
+		for r6 in $private_network_ipv6; do
+			printf "iroute-ipv6 %s\n" "$r6" >>/etc/openvpn/ccd/"$common_name"
+		done
+	}
+	for iface in ${covered_network}; do
+		eval "$(ubus call network.interface dump | jsonfilter -e \
+		'netw_ip=@.interface[@.interface="'"$iface"'"]["ipv4-address"][0].address' -e \
+		'netw_mask=@.interface[@.interface="'"$iface"'"]["ipv4-address"][0].mask' -e \
+		'netw_ip6=@.interface[@.interface="'"$iface"'"]["ipv6-address"][0].address' -e \
+		'netw_mask6=@.interface[@.interface="'"$iface"'"]["ipv6-address"][0].mask')"
+		[ -n "$netw_ip" ] && [ -n "$netw_mask" ] && {
+			eval "$(ipcalc.sh "${netw_ip}/${netw_mask}")"
+			printf "push \"route %s %s\"\n" "$NETWORK" "$NETMASK" >>/etc/openvpn/ccd/"$common_name"
+			netw_ip=""
+		}
+		if [ -n "$local_ipv6" ] || [ -n "$private_network_ipv6" ]; then
+			if [ -n "$netw_ip6" ] && [ -n "$netw_mask6" ]; then
+				printf "push \"route-ipv6 %s\"\n" "${netw_ip6}/${netw_mask6}" >>/etc/openvpn/ccd/"$common_name"
+				netw_ip6=""
+			else
+				ula_prefix=$(/sbin/uci -q get network.globals.ula_prefix 2>/dev/null)
+				ula_prefix="${ula_prefix%%/*}"
+				ip6assign=$(/sbin/uci -q get network."$iface".ip6assign 2>/dev/null)
+				[ -n "$ip6assign" ] && [ -n "$ula_prefix" ] && {
+					printf "push \"route-ipv6 %s\"\n" "${ula_prefix}/${ip6assign}" >>/etc/openvpn/ccd/"$common_name"
+					ip6assign=""
+				}
+			fi
 		fi
 	done
-
-	# store temporary data
-	printf "push \"route %s %s\"\n" "$pip" "$pnm" >>/etc/openvpn/ccd/plist.tmp
-	printf "--route %s %s " "$pip" "$pnm" >>/etc/openvpn/ccd/rlist.tmp
 }
 
 init_ccd() {
@@ -80,25 +94,20 @@ init_ccd() {
 	fi
 }
 
-add_server_routes() {
-	CCD_ARGS=$(cat /etc/openvpn/ccd/rlist.tmp 2>/dev/null)
-	rm /etc/openvpn/ccd/rlist.tmp 2>/dev/null
-}
-
-add_interclient_routes() {
-	for f in /etc/openvpn/ccd/*; do
-		if [ "$f" != /etc/openvpn/ccd/plist.tmp ]; then
-			cat /etc/openvpn/ccd/plist.tmp 2>/dev/null >>"$f"
-		fi
-	done
-	rm /etc/openvpn/ccd/plist.tmp 2>/dev/null
-}
-
 prepare_clients() {
 	init_ccd
 	config_foreach config_client 'client'
-	add_server_routes
-	add_interclient_routes
+}
+
+decrypt_key() {
+	local s="$1"
+	local key decrypt
+	config_get key "$s" key ""
+	config_get decrypt "$s" decrypt ""
+	[ -z "$key" ] || [ -z "$decrypt" ] && return
+	[ ! -d "/var/etc/openvpn-dkey" ] && mkdir -p "/var/etc/openvpn-dkey"
+	/usr/bin/openssl rsa -in "$key" -out "/var/etc/openvpn-dkey/${s}.key" -passin pass:"$decrypt" 1>/dev/null 2>&1
+	echo -e "key /var/etc/openvpn-dkey/${s}.key" >>"/var/etc/openvpn-$s.conf"
 }
 
 append_param() {
@@ -137,13 +146,19 @@ append_params() {
 	local p
 	local v
 	local s="$1"
+	local key_encrypted
+	config_get key_encrypted "$s" key_encrypted ""
 	shift
 	for p in "$@"; do
 		config_get v "$s" "$p"
 		IFS="$LIST_SEP"
 		for v in $v; do
-			[ -n "$v" ] && [ "$p" != "push" ] && append_param "$s" "$p" && echo " $v" >>"/var/etc/openvpn-$s.conf"
-			[ -n "$v" ] && [ "$p" == "push" ] && append_param "$s" "$p" && echo " \"$v\"" >>"/var/etc/openvpn-$s.conf"
+			if [ "$key_encrypted" = "1" ] && [ "$p" = "key" ]; then
+				decrypt_key "$s"
+			else
+				[ -n "$v" ] && [ "$p" != "push" ] && append_param "$s" "$p" && echo " $v" >>"/var/etc/openvpn-$s.conf"
+				[ -n "$v" ] && [ "$p" = "push" ] && append_param "$s" "$p" && echo " \"$v\"" >>"/var/etc/openvpn-$s.conf"
+			fi
 		done
 		unset IFS
 	done
@@ -216,23 +231,26 @@ openvpn_add_instance() {
 	local dir="$2"
 	local conf="$3"
 	local type="$4"
-	local CCD=$CCD_ARGS
 
 	{
 		[ "$type" = "client" ] && echo "auth-nocache"
 		echo "script-security 2"
 		echo "up /etc/openvpn/updown.sh"
 		echo "down /etc/openvpn/updown.sh"
+		[ "$type" = "server" ] && [ -n "$(ls /etc/openvpn/ccd/)" ] && echo "learn-address /etc/openvpn/route.sh"
 	} >>/var/etc/openvpn-"$name".conf
 
 	config_get local_ip "$name" 'local_ip'
 	config_get remote_ip "$name" 'remote_ip'
+	config_get local_ipv6 "$name" 'local_ipv6'
+	config_get remote_ipv6 "$name" 'remote_ipv6'
 	config_get network_ip "$name" 'network_ip'
 	config_get network_mask "$name" 'network_mask'
 	config_get server_ip "$name" 'server_ip'
 	config_get server_netmask "$name" 'server_netmask'
 
 	[ -n "$local_ip" ] && [ -n "$remote_ip" ] && echo "ifconfig $local_ip $remote_ip" >> /var/etc/openvpn-"$name".conf
+	[ -n "$local_ipv6" ] && [ -n "$remote_ipv6" ] && echo "ifconfig-ipv6 $local_ipv6 $remote_ipv6" >> /var/etc/openvpn-"$name".conf
 	[ -n "$network_ip" ] && [ -n "$network_mask" ] && echo "route $network_ip $network_mask" >> /var/etc/openvpn-"$name".conf
 	[ -n "$server_ip" ] && [ -n "$server_netmask" ] && echo "server $server_ip $server_netmask" >> /var/etc/openvpn-"$name".conf
 
@@ -241,8 +259,7 @@ openvpn_add_instance() {
 		--syslog "openvpn($name)" \
 		--status "/var/run/openvpn.$name.status" "10" \
 		--cd "$dir" \
-		--config "/var/etc/openvpn-$name.conf" \
-		$CCD
+		--config "/var/etc/openvpn-$name.conf"
 	procd_set_param file "$dir/$conf"
 	append_tracked_files "$name" $OPENVPN_PARAMS
 	procd_set_param respawn
@@ -257,7 +274,7 @@ add_authentication_to_config() {
 	local config_path="$2"
 
 	config_load "openvpn"
-	config_get auth "$section_id" _auth ""
+	config_get auth "$section_id" auth_mode ""
 	config_get role "$section_id" type ""
 	config_get passwords "$section_id" pass ""
 	config_get pkcs12_path "$section_id" pkcs12 ""
@@ -267,12 +284,13 @@ add_authentication_to_config() {
 	config_get key_path "$section_id" key ""
 	config_get tls_auth_key_path "$section_id" tls_auth ""
 	config_get tls_crypt_key_path "$section_id" tls_crypt ""
-	config_get dh_path "$section_id" dh ""
+	config_get dh "$section_id" dh ""
 	config_get crl_path "$section_id" crl-verify ""
 	config_get secret_path "$section_id" secret ""
 	config_get server_list "$section_id" server_list ""
 	config_get key_direction "$section_id" key_direction ""
 	config_get auth_user_pass "$section_id" auth_user_pass ""
+	config_get key_encrypted "$section_id" key_encrypted ""
 
 	if [ "$auth" == "tls/pass" ] || [ "$auth" == "pass" ] || [ "$server_list" == "custom" ]; then
 		if [ -f "$auth_user_pass" ] && [ "$role" == "client" ]; then
@@ -294,13 +312,19 @@ add_authentication_to_config() {
 		[ -f "$pkcs12_pass" ] && echo -e "askpass $pkcs12_pass" >>"$config_path"
 		[ -f "$ca_path" ] && echo -e "ca $ca_path" >>"$config_path"
 		[ -f "$cert_path" ] && echo -e "cert $cert_path" >>"$config_path"
-		[ -f "$key_path" ] && echo -e "key $key_path" >>"$config_path"
+		[ -f "$key_path" ] && {
+			if [ "$key_encrypted" = "1" ]; then
+				decrypt_key "$section_id"
+			else
+				echo -e "key $key_path" >>"$config_path"
+			fi
+		}
 		[ -f "$(echo "$tls_auth_key_path" | sed 's/[[:space:]][0-1]$//g')" ] && {
 			echo -e "tls-auth $tls_auth_key_path"
 			[ -n "$key_direction" ] && echo "key-direction $key_direction"
 		} >>"$config_path"
 		[ -f "$tls_crypt_key_path" ] && echo -e "tls-crypt $tls_crypt_key_path" >>"$config_path"
-		[ -f "$dh_path" ] && echo -e "dh $dh_path" >>"$config_path"
+		[ -n "$dh" ] && echo -e "dh $dh" >>"$config_path"
 		[ -f "$crl_path" ] && echo -e "crl-verify $crl_path" >>"$config_path"
 	elif [ "$auth" = "skey" ] && [ -n "$secret_path" ]; then
 		echo -e "\n# Authentication \nsecret $secret_path" >>"$config_path"
@@ -312,7 +336,7 @@ add_vars_to_config() {
 	local config_path="$2"
 
 	local proto=$(grep -w ^proto "$config_path" | tr -d '\r' | cut -d ' ' -f 2 | tr -d '\n')
-	local dev=$(grep -w ^dev "$config_path" | tr -d '\r' | cut -d ' ' -f 2 | tr -d '\n')
+	local dev=$(grep -w ^dev "$config_path" | sort -r | tr -d '\r' | cut -d ' ' -f 2 | tr -d '\n')
 	local port=$(grep -w ^port "$config_path" | tr -d '\r' | cut -d ' ' -f 2 | tr -d '\n')
 
 	if [ -z "$port" ]; then
@@ -342,7 +366,7 @@ start_instance() {
 
 	if [ -n "$config" ]; then
 		cp "$config" "$OPENVPN_CONFIG"
-		local dev="$(cat ${OPENVPN_CONFIG} | grep ^dev | cut -f2 -d' ')"
+		local dev="$(cat ${OPENVPN_CONFIG} | grep "^dev " | cut -f2 -d' ')"
 		[ "$dev" != "${dev#tun}" ] && sed -i "s/dev .*/dev tun_${type:0:1}_${s}/" "$OPENVPN_CONFIG"
 		[ "$dev" != "${dev#tap}" ] && sed -i "s/dev .*/dev tap/" "$OPENVPN_CONFIG"
 
@@ -376,12 +400,13 @@ start_instance() {
 	append_params "$s" $OPENVPN_PARAMS
 	append_list "$s" $OPENVPN_LIST
 	append_custom_params "$s" $CUSTOM_PARAMS
-	config_list_foreach "$s" "_extra" append_extended_params
+	config_list_foreach "$s" "extra" append_extended_params
 	openvpn_add_instance "$s" "/var/etc" "openvpn-$s.conf" "$type"
 	
 }
 
 start_service() {
+	[ -n "$(uci -q get openvpn.@openvpn[0])" ] || return
 	local instance="$1"
 	local instance_found=0
 

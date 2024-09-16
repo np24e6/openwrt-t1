@@ -188,8 +188,6 @@ struct options_t {
   uint16_t forcedns2_port;        /* Port to force DNS to */
 #endif
 
-
-
   /* booleans */
   uint8_t layer3;                   /* Layer3 only support */
   uint8_t allowdyn:1;               /* Allow dynamic address allocation */
@@ -242,7 +240,6 @@ struct options_t {
   uint8_t uamauthedallowed:1;
   uint8_t postauth_proxyssl:1;
   uint8_t nochallenge:1;
-  uint8_t successuserurl:1;         /* Do not return to the UAM server on success, original url instead */
 
 #ifdef USING_MMAP
   uint8_t mmapring:1;
@@ -341,36 +338,6 @@ struct options_t {
   uint64_t defbandwidthmaxup;
   uint32_t defidletimeout;
   uint16_t definteriminterval;
-  uint64_t defmaxdownload;
-  uint64_t defmaxupload;
-  uint64_t defwarning;
-  uint16_t deflimitperiod;
-  uint16_t deflimitstart;
-  uint64_t defexpirationtime;
-
-  uint64_t dynsessiontimeout;
-  uint64_t dynbandwidthmaxdown;
-  uint64_t dynbandwidthmaxup;
-  uint32_t dynidletimeout;
-  uint16_t dyninteriminterval;
-  uint64_t dynmaxdownload;
-  uint64_t dynmaxupload;
-  uint64_t dynwarning;
-  uint16_t dynlimitperiod;
-  uint16_t dynlimitstart;
-  uint64_t dynexpirationtime;
-
-    uint64_t trialsessiontimeout;
-    uint64_t trialbandwidthmaxdown;
-    uint64_t trialbandwidthmaxup;
-    uint32_t trialidletimeout;
-    uint16_t trialinteriminterval;
-    uint64_t trialmaxdownload;
-    uint64_t trialmaxupload;
-    uint64_t trialwarning;
-    uint16_t triallimitperiod;
-    uint16_t triallimitstart;
-    uint64_t trialexpirationtime;
 
   uint32_t challengetimeout;
   uint32_t challengetimeout2;
@@ -458,37 +425,6 @@ struct options_t {
   } modules[MAX_MODULES];
   char *moddir;
 #endif
-
-  char *successurlcustom;
-  char *dbpath;
-  char *usersdbpath;
-  char * usersignup;                /* Script to run after user has been created */
-  char * macpass;
-#ifdef ENABLE_GSM
-  char *modemid;
-#endif
-  uint8_t smsusers:1;
-  uint8_t macusers:1;
-  uint8_t trialusers:1;
-  uint8_t registerusers:1;
-  uint8_t tos:1;
-  uint8_t duplicateusers:1;
-
-  char *paramuamip;
-  char *paramuamport;
-  char *paramcalled;
-  char *parammac;
-  char *paramip;
-  char *paramnasid;
-  char *paramsessionid;
-  char *paramuserurl;
-  char *paramchallenge;
-  char *param1;
-  char *param1value;
-  char *param2;
-  char *param2value;
-
-  uint8_t testtime:1;
 
   char * _data; /* actual data buffer for loaded options */
 };

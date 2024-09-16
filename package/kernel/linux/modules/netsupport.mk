@@ -562,7 +562,6 @@ endef
 
 $(eval $(call KernelPackage,veth))
 
-
 define KernelPackage/slhc
   SUBMENU:=$(NETWORK_SUPPORT_MENU)
   HIDDEN:=1
