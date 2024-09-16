@@ -183,7 +183,6 @@ config OPENVPN_SUPPORT
 	bool
 	depends on ADVANCED_NETWORK
 	default y
-	imply PACKAGE_openvpn-easy-rsa
 	imply PACKAGE_openvpn-openssl
 	imply PACKAGE_vuci-app-openvpn-ui
 

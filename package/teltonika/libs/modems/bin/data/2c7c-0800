@@ -5,6 +5,7 @@
 	"boudrate": 115200,
 	"stop_bits": 8,
 	"gps": 1,
+	"gps_optional": true,
 	"ep_iface": 4,
 	"dl_max_size": 31744,
 	"dl_max_datagrams": 62,

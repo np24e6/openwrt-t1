@@ -2,8 +2,8 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=sodog-tlt
-PKG_VERSION:=2023-12-08
-PKG_SOURCE_VERSION:=7.6
+PKG_VERSION:=2024-02-21
+PKG_SOURCE_VERSION:=7.6.6
 
 include $(INCLUDE_DIR)/package.mk
 

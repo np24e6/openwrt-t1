@@ -1,3 +1,22 @@
+# 2024-02-26 00.07.06.6
+
+### New
+
+* Hotspot: added domain and subdomain options for external landing page (ID: 15648)
+
+### Improvements
+
+* System: improved firmware validation for devices with EG25-G modem (ID: 16943)
+* WebUI: minified *.svg WebUI files to save space on the device (ID: 16887)
+* OpenVPN: removed unused easy-rsa package to increase free space (ID: 16851)
+
+### Fix
+
+* Interfaces: fixed a WAN interface edit window not showing a loading screen in some situations (ID: 16764)
+* Mobile data: fixed mobile daily data usage representation (ID: 16867)
+* Over IP: fixed issue where after some time server mode can't accept incoming connections anymore (ID: 16645)
+* Wireless: fixed the issue with bgscan functionality not operating correctly (ID: 16834)
+
 # 2024-02-12 00.07.06.5
 
 ### New

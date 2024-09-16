@@ -6,7 +6,7 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=modems
-PKG_SOURCE_VERSION:=3.2
+PKG_SOURCE_VERSION:=3.3
 
 include $(INCLUDE_DIR)/package.mk
 

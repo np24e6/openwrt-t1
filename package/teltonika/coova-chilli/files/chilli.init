@@ -90,7 +90,7 @@ set_dyn_limits() {
 
 set_chilli() {
 	local option=$1 value=$2
-	local route mode port
+	local route port
 
 	case "$1" in
 	# UCI settings
@@ -134,9 +134,9 @@ set_chilli() {
 		;;
 	_landingpage)
 		[ "$value" = "int" ] && {
-			_protocol=$(uci -q get chilli."${CONFIG_SECTION}"._protocol)
-			uamlisten=$(uci -q get chilli."${CONFIG_SECTION}".uamlisten)
-			mode=$(uci -q get chilli."${CONFIG_SECTION}"._mode)
+			local _protocol=$(uci -q get chilli."${CONFIG_SECTION}"._protocol)
+			local uamlisten=$(uci -q get chilli."${CONFIG_SECTION}".uamlisten)
+			local mode=$(uci -q get chilli."${CONFIG_SECTION}"._mode)
 
 			case "$mode" in
 			sms_otp)
@@ -147,10 +147,33 @@ set_chilli() {
 				;;
 			esac
 
-			[ "$_protocol" = "https" ] && port=444
+			[ "$_protocol" = "https" ] && {
+				port=444
+				set_conf_bool "uamuissl" 1
+
+				local sslcert=$(uci -q get chilli."${CONFIG_SECTION}"._device_sslcertfile)
+				local sslkey=$(uci -q get chilli."${CONFIG_SECTION}"._device_sslkeyfile)
+				[ -z "$sslcert" ] && [ -z "$sslkey" ] && {
+					sslcert=$(uci -q get chilli."${CONFIG_SECTION}".sslcertfile)
+					sslkey=$(uci -q get chilli."${CONFIG_SECTION}".sslkeyfile)
+				}
+
+				[ -n "$sslcert" ] && [ -n "$sslkey" ] && {
+					uci -q set uhttpd.hotspot.cert="$sslcert"
+					uci -q set uhttpd.hotspot.key="$sslkey"
+				}
+				uci -q set uhttpd.hotspot.enable_https="1"
+				uci -q commit uhttpd
+				/etc/init.d/uhttpd reload
+			}
 
 			set_conf "uamserver" \
 				"${_protocol:-http}://${uamlisten}:${port:-81}/cgi-bin/hotspot/${route:-userpass}"
+		}
+		[ "$value" = "ext" ] && {
+			local server=$(uci -q get chilli."${CONFIG_SECTION}".uamserver)
+			local https=$(uci -q get chilli."${CONFIG_SECTION}"._https)
+			[[ "$server" = "https://"* ]] && [ "$https" = "1" ] && set_conf_bool "uamuissl" 1
 		}
 		;;
 	_success)
@@ -169,6 +192,19 @@ set_chilli() {
 		;;
 	_trial_users_group)
 		eval "chilli_trial_group_$CONFIG_SECTION=$value"
+		;;
+	_https)
+		[ "$2" = "1" ] && set_conf_bool "redirssl" 1
+		;;
+	_device_sslcertfile)
+		set_conf "sslcertfile" "$2"
+		;;
+	_device_sslkeyfile)
+		set_conf "sslkeyfile" "$2"
+		;;
+	subdomain)
+		set_conf "uamhostname" "$2"
+		set_conf "uamaliasname" "$2"
 		;;
 	_* | uamdomain_*) ;;
 

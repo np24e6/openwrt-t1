@@ -509,11 +509,14 @@ class NorScript(FlashScript):
         size = roundup(size, self.blocksize)
         self.append("sf erase 0x%08x +0x%08x" % (offset, size))
 
-    def write(self, offset, size, yaffs):
+    def write(self, offset, size, yaffs, verif_addr):
         """Generate code, to write to a partition."""
 
         if size > 0:
             self.append("sf write $fileaddr 0x%08x 0x%08x" % (offset, size))
+            if verif_addr != "0":
+                self.append("sf read %s 0x%08x 0x%08x" % (verif_addr, offset, size))
+                self.append("cmp.b %s $fileaddr 0x%08x" % (verif_addr, size))
 
     def nand_write(self, offset, part_size, img_size, verif_addr):
         """Handle the NOR + NAND case
@@ -796,7 +799,7 @@ class Pack(object):
                 if part_info.which_flash == 0:
                     offset = part_info.offset
                     script.erase(offset, part_info.length)
-                    script.write(offset, img_size, yaffs)
+                    script.write(offset, img_size, yaffs, verif_addr)
                 else:
                     offset = part_info.offset
                     script.nand_write(offset, part_info.length, img_size, verif_addr)

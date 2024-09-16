@@ -313,10 +313,8 @@ CONFIGURE_ARGS+= \
 
 define Package/frr/install
 	$(INSTALL_DIR) $(1)/usr/sbin
-	$(INSTALL_BIN) ./files/frr $(1)/usr/sbin/frr.init
 	$(INSTALL_DIR) $(1)/etc/init.d
 	$(INSTALL_BIN) ./files/frr.init $(1)/etc/init.d/frr
-	$(INSTALL_BIN) ./files/frrcommon.sh $(1)/usr/sbin/
 	$(INSTALL_DIR) $(1)/etc/uci-defaults/7.5
 	$(CP) ./files/defaults/97_frr_indexing $(1)/etc/uci-defaults/7.5/97_frr_indexing
 	$(CP) ./files/defaults/98_modify-frr.sh $(1)/etc/uci-defaults/7.5/98_modify-frr.sh
@@ -325,6 +323,7 @@ endef
 
 define Package/frr-watchfrr/install
 	$(INSTALL_DIR) $(1)/usr/sbin
+	$(INSTALL_BIN) ./files/frrcommon.sh $(1)/usr/sbin/
 	$(INSTALL_BIN) ./files/watchfrr.sh $(1)/usr/sbin/
 	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/watchfrr $(1)/usr/sbin/
 endef
