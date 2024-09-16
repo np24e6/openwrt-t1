@@ -14,7 +14,3 @@ start() {
 restart() {
 	return 0
 }
-
-stop() {
-	/sbin/block umount
-}

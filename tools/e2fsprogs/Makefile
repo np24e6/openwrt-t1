@@ -19,6 +19,7 @@ PKG_SOURCE_URL:=@KERNEL/linux/kernel/people/tytso/e2fsprogs/v$(PKG_VERSION)/
 HOST_BUILD_PARALLEL:=1
 
 include $(INCLUDE_DIR)/host-build.mk
+include $(INCLUDE_DIR)/gpl.mk
 
 ifneq ($(shell $(HOSTCC) --version | grep clang),)
   HOST_CFLAGS += -D__GNUC_PREREQ\(...\)=0 -Dloff_t=off_t

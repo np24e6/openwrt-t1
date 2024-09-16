@@ -16,6 +16,8 @@ wifi_rfkill_check() {
 	[ "$disabled" = "1" ] || rfkill_state=1
 }
 
+logger -t "button" "rfkill button has been pressed"
+
 config_load wireless
 case "${TYPE}" in
 "switch")

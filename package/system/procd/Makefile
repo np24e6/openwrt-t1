@@ -32,7 +32,7 @@ include $(INCLUDE_DIR)/package.mk
 include $(INCLUDE_DIR)/cmake.mk
 
 ifeq ($(DUMP),)
-  STAMP_CONFIGURED:=$(strip $(STAMP_CONFIGURED))_$(shell echo $(CONFIG_TARGET_INIT_PATH) | mkhash md5)
+  STAMP_CONFIGURED:=$(strip $(STAMP_CONFIGURED))_$(shell echo $(CONFIG_TARGET_INIT_PATH) | $(MKHASH) md5)
 endif
 
 CMAKE_OPTIONS += -DEARLY_PATH="$(TARGET_INIT_PATH)"
@@ -53,15 +53,6 @@ endef
 define Package/procd
   $(call Package/procd/Default)
   VARIANT:=default
-  CONFLICTS:=procd-selinux
-endef
-
-define Package/procd-selinux
-  $(call Package/procd/Default)
-  DEPENDS += +libselinux
-  TITLE += with SELinux support
-  PROVIDES:=procd
-  VARIANT:=selinux
 endef
 
 define Package/procd-ujail
@@ -97,7 +88,7 @@ endef
 
 define Package/procd/config
 menu "Configuration"
-	depends on PACKAGE_procd || PACKAGE_procd-selinux
+	depends on PACKAGE_procd
 
 config PROCD_SHOW_BOOT
 	bool
@@ -110,10 +101,6 @@ config PROCD_ZRAM_TMPFS
 	prompt "Mount /tmp using zram."
 endmenu
 endef
-
-ifeq ($(BUILD_VARIANT),selinux)
-  CMAKE_OPTIONS += -DSELINUX=1
-endif
 
 ifeq ($(CONFIG_PROCD_SHOW_BOOT),y)
   CMAKE_OPTIONS += -DSHOW_BOOT_ON_CONSOLE=1
@@ -139,8 +126,6 @@ define Package/procd/install
 	$(INSTALL_CONF) ./files/hotplug*.json $(1)/etc/
 	$(INSTALL_DATA) ./files/procd.sh $(1)/lib/functions/
 endef
-
-Package/procd-selinux/install = $(Package/procd/install)
 
 define Package/procd-ujail/install
 	$(INSTALL_DIR) $(1)/sbin
@@ -172,7 +157,6 @@ define Package/uxc/install
 endef
 
 $(eval $(call BuildPackage,procd))
-$(eval $(call BuildPackage,procd-selinux))
 $(eval $(call BuildPackage,procd-ujail))
 $(eval $(call BuildPackage,procd-ujail-console))
 $(eval $(call BuildPackage,procd-seccomp))

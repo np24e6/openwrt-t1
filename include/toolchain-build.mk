@@ -10,6 +10,7 @@ BUILD_DIR_HOST:=$(BUILD_DIR_TOOLCHAIN)
 
 include $(INCLUDE_DIR)/host-build.mk
 include $(INCLUDE_DIR)/hardening.mk
+include $(INCLUDE_DIR)/gpl.mk
 
 HOST_STAMP_PREPARED=$(HOST_BUILD_DIR)/.prepared
 

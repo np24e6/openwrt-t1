@@ -4,6 +4,7 @@ PKG_NAME:=wwan
 PKG_VERSION:=2019-04-29
 PKG_RELEASE=5
 
+PKG_ORIGIN_URL:=https://github.com/openwrt/openwrt/tree/openwrt-21.02/package/network/utils/wwan
 PKG_LICENSE:=GPL-2.0
 PKG_LICENSE_FILES:=
 
@@ -15,6 +16,7 @@ define Package/wwan
   SECTION:=net
   CATEGORY:=Network
   TITLE:=Generic OpenWrt 3G/4G proto handler
+  DEPENDS:=+modems
 endef
 
 define Build/Compile
@@ -24,22 +26,10 @@ endef
 define Package/wwan/install
 	$(INSTALL_DIR) $(1)/lib/netifd/proto/
 	$(CP) ./files/wwan.sh $(1)/lib/netifd/proto/
+	$(INSTALL_BIN) ./files/wwan_up.sh $(1)/lib/netifd/wwan_up.sh
 	$(INSTALL_DIR) $(1)/etc/hotplug.d/usb
-	$(INSTALL_BIN) ./files/wwan.usb $(1)/etc/hotplug.d/usb/00_wwan.sh
-	$(INSTALL_DIR) $(1)/etc/hotplug.d/usbmisc
-	$(INSTALL_BIN) ./files/wwan.usbmisc $(1)/etc/hotplug.d/usbmisc/00_wwan.sh
-	$(INSTALL_DIR) $(1)/lib/network/wwan/
-	$(INSTALL_DATA) ./files/data/* $(1)/lib/network/wwan/
-	#in order to keep the Lede GIT repo free of filenames with colons,
-	#we name the files xxxx-yyyy
-	# and rename here after copying to the build directory
-	shopt -s nullglob ; \
-	for filevar in $(1)/lib/network/wwan/*-* ; \
-	do \
-		FILENAME=$$$$(basename $$$$filevar) ; \
-		NEWNAME=$$$${FILENAME//-/:} ; \
-		mv "$(1)/lib/network/wwan/$$$$FILENAME" "$(1)/lib/network/wwan/$$$$NEWNAME" ; \
-	done
+	$(INSTALL_DIR) $(1)/lib/functions/
+	$(INSTALL_DATA) ./files/modem.sh $(1)/lib/functions/
 endef
 
 $(eval $(call BuildPackage,wwan))

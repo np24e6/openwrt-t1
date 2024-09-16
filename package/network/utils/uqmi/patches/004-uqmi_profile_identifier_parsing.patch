@@ -1,0 +1,51 @@
+Index: uqmi-2020-11-22-0a19b5b7/commands-wds.c
+===================================================================
+--- uqmi-2020-11-22-0a19b5b7.orig/commands-wds.c
++++ uqmi-2020-11-22-0a19b5b7/commands-wds.c
+@@ -21,7 +21,7 @@
+ 
+ #include <stdlib.h>
+ #include <arpa/inet.h>
+-
++#include <ctype.h>
+ #include "qmi-message.h"
+ 
+ static struct {
+@@ -502,19 +502,35 @@ static enum qmi_cmd_result
+ cmd_wds_set_profile_identifier_prepare(struct qmi_dev *qmi, struct qmi_request *req, struct qmi_msg *msg, char *arg)
+ {
+ 	char *tmp = NULL;
++	char *tmpDigit = NULL;
++	int profileType = 0;
+ 
+ 	tmp = strtok(arg, ",");
+ 
+ 	if (!strcmp(tmp, "3gpp2")) {
+-		wds_modify_profile_info.type = QMI_WDS_PROFILE_TYPE_3GPP2;
++		profileType = QMI_WDS_PROFILE_TYPE_3GPP2;
+ 	} else if (!strcmp(tmp, "3gpp")) {
+-		wds_modify_profile_info.type = QMI_WDS_PROFILE_TYPE_3GPP;
++		profileType = QMI_WDS_PROFILE_TYPE_3GPP;
+ 	} else {
+ 		uqmi_add_error("Invalid profile type (valid: 3gpp, 3gpp2)");
+ 		return QMI_CMD_EXIT;
+ 	}
+ 
+ 	tmp = strtok(NULL, "\0");
++	if (!tmp) {
++		uqmi_add_error("Profile identifier number not found");
++		return QMI_CMD_EXIT;
++	}
++
++	tmpDigit = tmp;
++	while(*tmpDigit) {
++		if (!isdigit(*tmpDigit++)) {
++			uqmi_add_error("Invalid profile identifier number");
++			return QMI_CMD_EXIT;
++		}
++	}
++
++	wds_modify_profile_info.type = profileType;
+ 	wds_modify_profile_info.profile_index = strtol(tmp, NULL, 10);
+ 
+ 	return QMI_CMD_DONE;

@@ -1,0 +1,24 @@
+--- a/ether-wake.c
++++ b/ether-wake.c
+@@ -124,7 +124,11 @@ int main(int argc, char *argv[])
+ 		case 'b': opt_broadcast++;	break;
+ 		case 'D': debug++;			break;
+ 		case 'i': ifname = optarg;	break;
+-		case 'p': get_wol_pw(optarg); break;
++		case 'p':
++			if (get_wol_pw(optarg) == -1) {
++				return 4;
++			}
++			break;
+ 		case 'u': printf("%s\n", usage_msg); return 0;
+ 		case 'v': verbose++;		break;
+ 		case 'V': do_version++;		break;
+@@ -343,7 +347,7 @@ static int get_wol_pw(const char *optarg
+ 						  &passwd[0], &passwd[1], &passwd[2], &passwd[3]);
+ 	if (byte_cnt < 4) {
+ 		fprintf(stderr, "Unable to read the Wake-On-LAN password.\n");
+-		return 0;
++		return -1;
+ 	}
+ 	printf(" The Magic packet password is %2.2x %2.2x %2.2x %2.2x (%d).\n",
+ 		   passwd[0], passwd[1], passwd[2], passwd[3], byte_cnt);

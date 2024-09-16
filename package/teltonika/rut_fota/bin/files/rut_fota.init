@@ -1,0 +1,51 @@
+#!/bin/sh /etc/rc.common
+
+USE_PROCD=1
+START=99
+
+FOTA_ID='746c74'
+cron_file='/etc/crontabs/root'
+
+rm_cron_entry() {
+	[ -f "$cron_file" ] || return
+	sed -i'' -e "/#$FOTA_ID/d" "$cron_file"
+}
+
+start_service() {
+	local enabled
+	local hour minute wday
+
+	config_load rut_fota
+	config_get enabled config enabled 0
+	[ $((enabled)) -eq 1 ] || return
+
+	rm_cron_entry
+
+	minute="$(awk -v min=0 -v max=59 'BEGIN{srand(); print int(min+rand()*(max-min+1))}')"
+	hour="$(($(date +%H) + 1))"
+	wday="$(date +%w)"
+
+	[ "$hour" -gt 23 ] && {
+		hour=0
+		wday=$((wday + 1))
+		[ "$wday" -gt 6 ] && wday=0
+	}
+
+	#Start fota at the next hour random minute, every week.
+	echo "${minute:-0} ${hour:-0} * * ${wday:-0} /sbin/rut_fota --fw_info >/dev/null 2>&1 #$FOTA_ID" >>/etc/crontabs/root
+	/etc/init.d/cron restart
+}
+
+stop_service() {
+	rm_cron_entry
+	[ $((RESTART)) -eq 0 ] || /etc/init.d/cron restart
+}
+
+restart() {
+	RESTART=0 stop
+	start
+}
+
+service_triggers() {
+	procd_add_reload_trigger rut_fota
+}

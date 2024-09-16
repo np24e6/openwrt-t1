@@ -1,0 +1,20 @@
+Index: mwan3-2.10.12/files/lib/mwan3/mwan3.sh
+===================================================================
+--- mwan3-2.10.12.orig/files/lib/mwan3/mwan3.sh
++++ mwan3-2.10.12/files/lib/mwan3/mwan3.sh
+@@ -545,12 +545,14 @@ mwan3_delete_iface_ipset_entries()
+ 
+ mwan3_set_policy()
+ {
+-	local id iface family metric probability weight device is_lowest is_offline IPT IPTR total_weight current update error proto
++	local id iface family metric probability weight device is_lowest is_offline IPT IPTR total_weight current update error proto enabled
+ 
+ 	is_lowest=0
+ 	config_get iface "$1" interface
+ 	config_get metric "$1" metric 1
+ 	config_get weight "$1" weight 1
++	config_get enabled "${1%%_*}" 'enabled'
++	[ "$enabled" = "0" ] && return
+ 
+ 	[ -n "$iface" ] || return 0
+ 	network_get_protocol proto "$iface"

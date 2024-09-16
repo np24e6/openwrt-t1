@@ -1,0 +1,11 @@
+{
+        "desc": "MeigLink SLM770",
+        "type": "rndis",
+        "control": 3,
+        "boudrate": 115200,
+        "stop_bits": 8,
+        "gps": 5,
+        "power_on_ms": 150,
+        "power_off_ms": 700,
+        "reset_ms": 350
+}

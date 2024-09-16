@@ -1,0 +1,80 @@
+diff --git a/include/net/netfilter/nf_tables.h b/include/net/netfilter/nf_tables.h
+index 886866bee8b27..ad2a52a6c478b 100644
+--- a/include/net/netfilter/nf_tables.h
++++ b/include/net/netfilter/nf_tables.h
+@@ -493,6 +493,7 @@ struct nft_set_binding {
+ };
+ 
+ enum nft_trans_phase;
++void nf_tables_activate_set(const struct nft_ctx *ctx, struct nft_set *set);
+ void nf_tables_deactivate_set(const struct nft_ctx *ctx, struct nft_set *set,
+ 			      struct nft_set_binding *binding,
+ 			      enum nft_trans_phase phase);
+diff --git a/net/netfilter/nf_tables_api.c b/net/netfilter/nf_tables_api.c
+index 1a5294eb340c0..7794fa4c669d6 100644
+--- a/net/netfilter/nf_tables_api.c
++++ b/net/netfilter/nf_tables_api.c
+@@ -3909,12 +3909,24 @@ static void nf_tables_unbind_set(const struct nft_ctx *ctx, struct nft_set *set,
+ 	}
+ }
+ 
++void nf_tables_activate_set(const struct nft_ctx *ctx, struct nft_set *set)
++{
++	if (nft_set_is_anonymous(set))
++		nft_clear(ctx->net, set);
++
++	set->use++;
++}
++EXPORT_SYMBOL_GPL(nf_tables_activate_set);
++
+ void nf_tables_deactivate_set(const struct nft_ctx *ctx, struct nft_set *set,
+ 			      struct nft_set_binding *binding,
+ 			      enum nft_trans_phase phase)
+ {
+ 	switch (phase) {
+ 	case NFT_TRANS_PREPARE:
++		if (nft_set_is_anonymous(set))
++			nft_deactivate_next(ctx->net, set);
++
+ 		set->use--;
+ 		return;
+ 	case NFT_TRANS_ABORT:
+diff --git a/net/netfilter/nft_dynset.c b/net/netfilter/nft_dynset.c
+index 6bcc18124e5bd..7f9e6c90f7271 100644
+--- a/net/netfilter/nft_dynset.c
++++ b/net/netfilter/nft_dynset.c
+@@ -259,7 +259,7 @@ static void nft_dynset_activate(const struct nft_ctx *ctx,
+ {
+ 	struct nft_dynset *priv = nft_expr_priv(expr);
+ 
+-	priv->set->use++;
++	nf_tables_activate_set(ctx, priv->set);
+ }
+ 
+ static void nft_dynset_destroy(const struct nft_ctx *ctx,
+diff --git a/net/netfilter/nft_lookup.c b/net/netfilter/nft_lookup.c
+index 660bad688e2bc..4eb4d076927e4 100644
+--- a/net/netfilter/nft_lookup.c
++++ b/net/netfilter/nft_lookup.c
+@@ -129,7 +129,7 @@ static void nft_lookup_activate(const struct nft_ctx *ctx,
+ {
+ 	struct nft_lookup *priv = nft_expr_priv(expr);
+ 
+-	priv->set->use++;
++	nf_tables_activate_set(ctx, priv->set);
+ }
+ 
+ static void nft_lookup_destroy(const struct nft_ctx *ctx,
+diff --git a/net/netfilter/nft_objref.c b/net/netfilter/nft_objref.c
+index bfd18d2b65a28..74c61278e6bd3 100644
+--- a/net/netfilter/nft_objref.c
++++ b/net/netfilter/nft_objref.c
+@@ -180,7 +180,7 @@ static void nft_objref_map_activate(const struct nft_ctx *ctx,
+ {
+ 	struct nft_objref_map *priv = nft_expr_priv(expr);
+ 
+-	priv->set->use++;
++	nf_tables_activate_set(ctx, priv->set);
+ }
+ 
+ static void nft_objref_map_destroy(const struct nft_ctx *ctx,

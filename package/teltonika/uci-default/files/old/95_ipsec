@@ -1,0 +1,41 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+fix_bind() {
+	config_get bind_to "$1" "bind_to"
+	new_bind_to=${bind_to#"server_"}
+	uci_set "ipsec" "$1" "bind_to" "$new_bind_to"
+}
+
+
+num_proposal() {
+	local section="$1"
+	case "${section}" in
+		(*_[0123456789]) return 1 ;;
+		(*_[0123456789][0123456789]) return 1 ;;
+	esac
+	uci_rename ipsec "$section" "${section}_1"
+}
+
+
+num_remote() {
+	local section="$1"
+	config_get crypto_proposal "$section" "crypto_proposal"
+
+	case "${crypto_proposal}" in
+		(*_[0123456789]) return 1 ;;
+		(*_[0123456789][0123456789]) return 1 ;;
+	esac
+	uci_remove ipsec "$section" "crypto_proposal"
+	uci_add_list ipsec "$section" "crypto_proposal" "${crypto_proposal}_1"
+}
+
+config_load "ipsec"
+
+config_foreach fix_bind "connection"
+config_foreach num_remote "remote"
+config_foreach num_remote "connection"
+config_foreach num_proposal "proposal"
+
+uci_commit "ipsec"

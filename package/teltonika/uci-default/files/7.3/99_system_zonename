@@ -1,0 +1,12 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+zoneName=$(uci_get ntpclient.@ntpclient[0].zoneName)
+[ -z "$zoneName" ] && return
+
+zoneName=$(echo "$zoneName" | tr " " _)
+
+uci_set "ntpclient" "@ntpclient[0]" "zoneName" "$zoneName"
+uci_set "system" "system" "zoneName" "$zoneName"
+uci_commit

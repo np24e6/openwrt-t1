@@ -1,0 +1,53 @@
+#!/bin/sh
+
+[ -f "/etc/config/zerotier" ] || exit 1
+
+. /lib/functions.sh
+
+INDEX=0
+
+migrate_network() {
+	network_id="$1"
+	cfg="$2"
+	selected_network="$3"
+	port="$4"
+
+	INDEX=$((INDEX + 1))
+
+	uci_add zerotier "network_${cfg}" "$INDEX"
+	uci_set zerotier "$INDEX" "enabled" "1"
+	uci_set zerotier "$INDEX" "network_id" "$network_id"
+	uci_set zerotier "$INDEX" "port" "$port"
+
+	[ "$selected_network" = "$network_id" ] && \
+		uci_set zerotier "$INDEX" "allow_default" "1"
+}
+
+migrate_instance() {
+	cfg="$1"
+	config_get network_id "$cfg" "join"
+	config_get mode "$cfg" "mode"
+	config_get vpnenabled "$cfg" "vpnenabled"
+	config_get selectedNetwork "$cfg" "selectedNetwork"
+	config_get port "$cfg" "port"
+
+	[ "$mode" != "client" ] || [ "$vpnenabled" != "1" ] && selectedNetwork="NONE"
+
+	INDEX=$((INDEX + 1))
+
+	uci_rename zerotier "$cfg" "$INDEX"
+	uci_add zerotier instance "$INDEX"
+	uci_set zerotier "$INDEX" "name" "$cfg"
+
+	uci_remove zerotier "$INDEX" "port"
+	uci_remove zerotier "$INDEX" "join"
+	uci_remove zerotier "$INDEX" "vpnenabled"
+	uci_remove zerotier "$INDEX" "mode"
+	uci_remove zerotier "$INDEX" "selectedNetwork"
+
+	config_list_foreach "$cfg" "join" migrate_network "$INDEX" "$selectedNetwork" "$port"
+}
+
+config_load 'zerotier'
+config_foreach migrate_instance 'zerotier'
+uci_commit 'zerotier'

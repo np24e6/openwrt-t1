@@ -1,0 +1,191 @@
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -24,7 +24,7 @@ ENDIF()
+ FIND_PATH(ubox_include_dir libubox/usock.h)
+ INCLUDE_DIRECTORIES(${ubox_include_dir})
+ 
+-SET(SOURCES main.c listen.c client.c utils.c file.c auth.c cgi.c relay.c proc.c plugin.c handler.c)
++SET(SOURCES main.c listen.c client.c utils.c file.c auth.c cgi.c relay.c proc.c plugin.c handler.c ubus_uhttpd.c)
+ IF(TLS_SUPPORT)
+ 	SET(SOURCES ${SOURCES} tls.c)
+ 	ADD_DEFINITIONS(-DHAVE_TLS)
+@@ -37,7 +37,7 @@ ENDIF()
+ 
+ ADD_EXECUTABLE(uhttpd ${SOURCES})
+ FIND_LIBRARY(libjson NAMES json-c json)
+-TARGET_LINK_LIBRARIES(uhttpd ubox dl json_script blobmsg_json ${libjson} ${LIBS})
++TARGET_LINK_LIBRARIES(uhttpd ubox dl json_script blobmsg_json ubus ${libjson} ${LIBS})
+ 
+ SET(PLUGINS "")
+ IF(LUA_SUPPORT)
+--- a/client.c
++++ b/client.c
+@@ -22,6 +22,7 @@
+ 
+ #include "uhttpd.h"
+ #include "tls.h"
++#include "ubus_uhttpd.h"
+ 
+ static LIST_HEAD(clients);
+ static bool client_done = false;
+@@ -60,11 +61,17 @@ static void add_security_headers(struct client *cl)
+ 	ustream_printf(cl->us, "X-Frame-Options: SAMEORIGIN\r\n");
+ 	ustream_printf(cl->us, "X-Content-Type-Options: nosniff\r\n");
+ 	if (!strncmp(conf.docroot, "/www", 4) && pi && strncmp(pi->phys, "/www/cgi-bin/custom/", 20)) {
++		const char* nonce = get_nonce();
++		char nonce_str[128] = {0};
++		if (nonce[0] != '\0') {
++			snprintf(nonce_str, sizeof(nonce_str), " 'nonce-%s'", nonce);
++		}
+ 		ustream_printf(cl->us, "Content-Security-Policy: \
+ 				default-src 'self'; frame-src * 'self'; \
+ 				img-src * 'self'; \
+-				script-src https://cdn.jsdelivr.net 'unsafe-eval' 'self' 'sha256-8yE2w7Bv8/Il8SvtEkB35j3QNRei9CKtdX8HgqblU04=' 'nonce-pbfMmwrsnzqz1rg86SUDb6A+NvckQ8U3s4almwle63M' 'sha256-3/SyFyEV0Y/9yrhH8vNQqUrPTjxumNcaYo5gRtJvm2c='; \
+-				style-src https://cdn.jsdelivr.net 'unsafe-hashes' 'sha256-4Su6mBWzEIFnH4pAGMOuaeBrstwJN4Z3pq/s1Kn4/KQ=' 'sha256-kwpt3lQZ21rs4cld7/uEm9qI5yAbjYzx+9FGm/XmwNU=' 'self'\r\n");
++				script-src https://cdn.jsdelivr.net 'unsafe-eval' 'self' 'sha256-8yE2w7Bv8/Il8SvtEkB35j3QNRei9CKtdX8HgqblU04='%s 'sha256-3/SyFyEV0Y/9yrhH8vNQqUrPTjxumNcaYo5gRtJvm2c='; \
++				style-src https://cdn.jsdelivr.net 'unsafe-hashes' 'sha256-4Su6mBWzEIFnH4pAGMOuaeBrstwJN4Z3pq/s1Kn4/KQ=' 'sha256-kwpt3lQZ21rs4cld7/uEm9qI5yAbjYzx+9FGm/XmwNU=' 'self'\r\n", 
++				nonce_str);
+ 	}
+ }
+ 
+--- a/main.c
++++ b/main.c
+@@ -38,12 +38,16 @@
+ 
+ #include "uhttpd.h"
+ #include "tls.h"
++#include "ubus_uhttpd.h"
+ 
+ char uh_buf[4096];
+ 
+ static int run_server(void)
+ {
+ 	uloop_init();
++	if (conf.ubus_object) {
++		init_uhttpd_ubus();
++	}
+ 	uh_setup_listeners();
+ 	uh_plugin_post_init();
+ 	uloop_run();
+@@ -171,6 +175,7 @@ static int usage(const char *name)
+ 		"	-d string       URL decode given string\n"
+ 		"	-r string       Specify basic auth realm\n"
+ 		"	-m string       MD5 crypt given string\n"
++		"	-b              Attach uhttpd ubus object\n"
+ 		"\n", name
+ 	);
+ 	return 1;
+@@ -263,7 +268,7 @@ int main(int argc, char **argv)
+ 	init_defaults_pre();
+ 	signal(SIGPIPE, SIG_IGN);
+ 
+-	while ((ch = getopt(argc, argv, "A:aC:c:Dd:E:e:fh:H:I:i:K:k:L:l:m:N:n:P:p:qRr:Ss:T:t:U:u:Xx:y:")) != -1) {
++	while ((ch = getopt(argc, argv, "A:abC:c:Dd:E:e:fh:H:I:i:K:k:L:l:m:N:n:P:p:qRr:Ss:T:t:U:u:Xx:y:")) != -1) {
+ 		switch(ch) {
+ #ifdef HAVE_TLS
+ 		case 'C':
+@@ -300,6 +305,10 @@ int main(int argc, char **argv)
+ 			bound += add_listener_arg(optarg, (ch == 's'));
+ 			break;
+ 
++		case 'b':
++			conf.ubus_object = 1;
++			break;
++
+ 		case 'h':
+ 			if (!realpath(optarg, uh_buf)) {
+ 				fprintf(stderr, "Error: Invalid directory %s: %s\n",
+--- /dev/null
++++ b/ubus_uhttpd.c
+@@ -0,0 +1,72 @@
++#include <libubus.h>
++#include <libubox/blobmsg.h>
++#include <libubox/utils.h>
++#include <unistd.h>
++#include <sys/random.h>
++
++#include "ubus_uhttpd.h"
++
++static struct ubus_context *g_ubus_ctx;
++char b64_nonce[64] = {0};
++
++enum u_method
++{
++	METHOD_NONCE = 0,
++
++	METHOD_MAX
++};
++
++
++static int show(struct ubus_context *ctx, struct ubus_object *obj,
++		struct ubus_request_data *req, const char *method,
++		struct blob_attr *msg)
++{
++	struct blob_buf buffer = {0};
++	char binary_nonce[32] = {0};
++	if (getrandom(binary_nonce, sizeof(binary_nonce), 0) < 0) {
++		fprintf(stderr, "getrandom() error\n");
++		return UBUS_STATUS_UNKNOWN_ERROR;
++	}
++	b64_encode(binary_nonce, sizeof(binary_nonce), b64_nonce, sizeof(b64_nonce));
++
++	blob_buf_init(&buffer, 0);
++	blobmsg_add_string(&buffer, "nonce", b64_nonce);
++
++	ubus_send_reply(ctx, req, buffer.head);
++	blob_buf_free(&buffer);
++
++	return UBUS_STATUS_OK;
++}
++
++// uloop_init() must be executed before this
++int init_uhttpd_ubus()
++{
++	g_ubus_ctx = ubus_connect(NULL);
++	if (!g_ubus_ctx) {
++		fprintf(stderr, "Failed to connect to ubus\n");
++		return EXIT_FAILURE;
++	}
++
++	static const struct ubus_method methods[] = {
++		[METHOD_NONCE] = UBUS_METHOD_NOARG("nonce", show)
++	};
++
++	static struct ubus_object_type type = UBUS_OBJECT_TYPE("type", methods);
++
++	static struct ubus_object obj = {
++		.name	   = "uhttpd",
++		.type	   = &type,
++		.methods   = methods,
++		.n_methods = METHOD_MAX,
++	};
++
++	ubus_add_uloop(g_ubus_ctx);
++	ubus_add_object(g_ubus_ctx, &obj);
++
++	return EXIT_SUCCESS;
++}
++
++const char* get_nonce()
++{
++	return b64_nonce;
++}
+--- /dev/null
++++ b/ubus_uhttpd.h
+@@ -0,0 +1,6 @@
++#ifndef _UBUS_UHTTPD_
++
++int init_uhttpd_ubus(void);
++const char* get_nonce(void);
++
++#endif
+--- a/uhttpd.h
++++ b/uhttpd.h
+@@ -69,6 +69,7 @@ struct config {
+ 	const char *cgi_path;
+ 	const char *ubus_prefix;
+ 	const char *ubus_socket;
++	int ubus_object;
+ 	int no_symlinks;
+ 	int no_dirlists;
+ 	int network_timeout;

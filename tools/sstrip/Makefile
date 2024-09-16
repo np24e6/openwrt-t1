@@ -17,6 +17,7 @@ PKG_HASH:=06430880aaf4919c5f99fc629da7000347421668c2cf32bced2d401aac276508
 PKG_RELEASE:=1
 
 include $(INCLUDE_DIR)/host-build.mk
+include $(INCLUDE_DIR)/gpl.mk
 
 define Host/Install
 	$(CP) $(HOST_BUILD_DIR)/bin/sstrip $(STAGING_DIR_HOST)/bin/

@@ -17,7 +17,7 @@ define KernelPackage/mmc-spi
   FILES:=\
 	$(if $(CONFIG_OF),$(LINUX_DIR)/drivers/mmc/host/of_mmc_spi.ko) \
 	$(LINUX_DIR)/drivers/mmc/host/mmc_spi.ko
-  AUTOLOAD:=$(call AutoProbe,$(if $(CONFIG_OF),of_mmc_spi) mmc_spi)
+  AUTOLOAD_LATE:=$(call AutoProbe,$(if $(CONFIG_OF),of_mmc_spi) mmc_spi)
 endef
 
 define KernelPackage/mmc-spi/description
@@ -49,7 +49,7 @@ define KernelPackage/spi-gpio
   DEPENDS:=@GPIO_SUPPORT +kmod-spi-bitbang
   KCONFIG:=CONFIG_SPI_GPIO
   FILES:=$(LINUX_DIR)/drivers/spi/spi-gpio.ko
-  AUTOLOAD:=$(call AutoProbe,spi-gpio)
+  AUTOLOAD:=$(call AutoProbe,spi-gpio,1)
 endef
 
 define KernelPackage/spi-gpio/description

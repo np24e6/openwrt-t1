@@ -9,7 +9,7 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=zlib
 PKG_VERSION:=1.2.11
-PKG_RELEASE:=1
+PKG_RELEASE:=2
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.xz
 PKG_SOURCE_URL:=@SF/libpng http://www.zlib.net
@@ -21,6 +21,7 @@ PKG_CPE_ID:=cpe:/a:gnu:zlib
 
 include $(INCLUDE_DIR)/host-build.mk
 include $(INCLUDE_DIR)/cmake.mk
+include $(INCLUDE_DIR)/gpl.mk
 
 HOST_CFLAGS +=-fPIC
 

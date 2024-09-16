@@ -11,7 +11,6 @@ define rootfs_align
 $(patsubst %-256k,0x40000,$(patsubst %-128k,0x20000,$(patsubst %-64k,0x10000,$(patsubst squashfs%,0x4,$(patsubst root.%,%,$(1))))))
 endef
 
-
 define Build/append-dtb
 	cat $(KDIR)/image-$(firstword $(DEVICE_DTS)).dtb >> $@
 endef
@@ -40,23 +39,38 @@ metadata_json = \
 	'{ $(if $(IMAGE_METADATA),$(IMAGE_METADATA)$(comma)) \
 		"metadata_version": "1.1", \
 		"compat_version": "$(call json_quote,$(compat_version))", \
+		"version":"$(call json_quote,$(TLT_VERSION))", \
+		"device_code": [$(DEVICE_COMPAT_CODE)], \
+		"hwver": [".*"], \
+		"batch": [".*"], \
+		"serial": [".*"], \
 		$(if $(DEVICE_COMPAT_MESSAGE),"compat_message": "$(call json_quote,$(DEVICE_COMPAT_MESSAGE))"$(comma)) \
 		$(if $(filter-out 1.0,$(compat_version)),"new_supported_devices": \
 			[$(call metadata_devices,$(SUPPORTED_DEVICES))]$(comma) \
 			"supported_devices": ["$(call json_quote,$(legacy_supported_message))"]$(comma)) \
 		$(if $(filter 1.0,$(compat_version)),"supported_devices":[$(call metadata_devices,$(SUPPORTED_DEVICES))]$(comma)) \
-		"version": { \
+		"version_wrt": { \
 			"dist": "$(call json_quote,$(VERSION_DIST))", \
 			"version": "$(call json_quote,$(VERSION_NUMBER))", \
 			"revision": "$(call json_quote,$(REVISION))", \
 			"target": "$(call json_quote,$(TARGETID))", \
 			"board": "$(call json_quote,$(if $(BOARD_NAME),$(BOARD_NAME),$(DEVICE_NAME)))" \
-		} \
+		}, \
+		$(subst $(comma)},},"hw_support": { \
+			$(foreach data, \
+				$(HW_SUPPORT), \
+					"$(firstword $(subst %,": ,$(data))) \
+					["$(subst :," $(comma)",$(lastword $(subst %,": ,$(data))))"],)},) \
+		$(subst $(comma)},},"hw_mods": { \
+			$(foreach data, \
+				$(HW_MODS), \
+					"$(firstword $(subst %,": ,$(data))) \
+					"$(subst :," $(comma)",$(lastword $(subst %,": ,$(data))))",)}) \
 	}'
 
 define Build/append-metadata
 	$(if $(SUPPORTED_DEVICES),-echo $(call metadata_json) | fwtool -I - $@)
-	[ ! -s "$(BUILD_KEY)" -o ! -s "$(BUILD_KEY).ucert" -o ! -s "$@" ] || { \
+	[ -z "$(CONFIG_SIGNED_IMAGES)" -o ! -s "$(BUILD_KEY)" -o ! -s "$(BUILD_KEY).ucert" -o ! -s "$@" ] || { \
 		cp "$(BUILD_KEY).ucert" "$@.ucert" ;\
 		usign -S -m "$@" -s "$(BUILD_KEY)" -x "$@.sig" ;\
 		ucert -A -c "$@.ucert" -x "$@.sig" ;\
@@ -182,7 +196,7 @@ define Build/elx-header
 			dd bs=20 count=1 conv=sync; \
 		echo -ne "$$(printf '%08x' $$(stat -c%s $@) | fold -s2 | xargs -I {} echo \\x{} | tr -d '\n')" | \
 			dd bs=8 count=1 conv=sync; \
-		echo -ne "$$($(STAGING_DIR_HOST)/bin/mkhash md5 $@ | fold -s2 | xargs -I {} echo \\x{} | tr -d '\n')" | \
+		echo -ne "$$($(MKHASH) md5 $@ | fold -s2 | xargs -I {} echo \\x{} | tr -d '\n')" | \
 			dd bs=58 count=1 conv=sync; \
 	) > $(KDIR)/tmp/$(DEVICE_NAME).header
 	$(call Build/xor-image,-p $(xor_pattern) -x)
@@ -206,6 +220,12 @@ define Build/fit
 		-A $(LINUX_KARCH) -v $(LINUX_VERSION)
 	PATH=$(LINUX_DIR)/scripts/dtc:$(PATH) mkimage -f $@.its $@.new
 	@mv $@.new $@
+endef
+
+define Build/append-signature
+	$(TOPDIR)/scripts/add_signature.sh $@ $@.tmp $(word 1,$(1))
+	mv $@.tmp $@
+	echo "appending signature to $@"
 endef
 
 define Build/gzip
@@ -245,6 +265,25 @@ define Build/kernel2minor
 	kernel2minor -k $(temp_file) -r $(temp_file).new $(1)
 	mv $(temp_file).new $@
 	rm -f $(temp_file)
+endef
+
+define Build/finalize-tlt-custom
+	[ -d $(BIN_DIR)/tltFws ] || mkdir -p $(BIN_DIR)/tltFws
+	$(CP) $@ $(BIN_DIR)/tltFws/$(TLT_VERSION_FILE)$(if $(1),_$(word 1,$(1)))$(if $(findstring 1,$(FAKE_RELEASE_BUILD)),_FAKE).$(if $(word 2,$(1)),$(word 2,$(1)),bin)
+	echo "Copying $@ to tltFws"
+	echo  $(BIN_DIR)/tltFws/$(TLT_VERSION_FILE)$(if $(1),_$(word 1,$(1)))$(if $(findstring 1,$(FAKE_RELEASE_BUILD)),_FAKE).$(if $(word 2,$(1)),$(word 2,$(1)),bin) > /tmp/last_built.fw
+endef
+
+define Build/finalize-tlt-webui
+	$(call Build/finalize-tlt-custom,WEBUI bin)
+endef
+
+define Build/finalize-tlt-master-stendui
+	[ -d $(BIN_DIR)/tltFws ] || mkdir -p $(BIN_DIR)/tltFws
+
+	$(eval UBOOT_INSERTION=$(shell cat ${BIN_DIR}/u-boot_version))
+	$(if $(UBOOT_INSERTION), $(eval UBOOT_INSERTION=_UBOOT_$(UBOOT_INSERTION)))
+	$(CP) $@ $(BIN_DIR)/tltFws/$(TLT_VERSION_FILE)$(UBOOT_INSERTION)_MASTER_STENDUI$(word 1,$(1))$(if $(findstring 1,$(FAKE_RELEASE_BUILD)),_FAKE).bin
 endef
 
 define Build/kernel-bin
@@ -301,6 +340,7 @@ endef
 
 define Build/pad-extra
 	dd if=/dev/zero bs=$(1) count=1 >> $@
+	echo "padding $@ with $(1) zeros"
 endef
 
 define Build/pad-offset

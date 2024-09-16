@@ -37,13 +37,21 @@ sub target_config_features(@) {
 		/^nommu$/ and $ret .= "\tselect NOMMU\n";
 		/^mips16$/ and $ret .= "\tselect HAS_MIPS16\n";
 		/^rfkill$/ and $ret .= "\tselect RFKILL_SUPPORT\n";
+		/^wps$/ and $ret .= "\tselect WPS_SUPPORT\n";
 		/^low_mem$/ and $ret .= "\tselect LOW_MEMORY_FOOTPRINT\n";
 		/^small_flash$/ and $ret .= "\tselect SMALL_FLASH\n";
 		/^nand$/ and $ret .= "\tselect NAND_SUPPORT\n";
 		/^virtio$/ and $ret .= "\tselect VIRTIO_SUPPORT\n";
+		/^baseband$/ and $ret .= "\tselect BASEBAND_SUPPORT\n";
+		/^bpoffload$/ and $ret .= "\tselect BYPASS_OFFLOAD_FEATURE\n";
+		/^verified_boot$/ and $ret .= "\tselect VERIFIED_BOOT_SUPPORT\n";
 		/^rootfs-part$/ and $ret .= "\tselect USES_ROOTFS_PART\n";
 		/^boot-part$/ and $ret .= "\tselect USES_BOOT_PART\n";
 		/^testing-kernel$/ and $ret .= "\tselect HAS_TESTING_KERNEL\n";
+		/^smp$/ and $ret .= "\tselect SMP_SUPPORT\n";
+		/^dsa$/ and $ret .= "\tselect DSA_SUPPORT\n";
+		/^soft_port_mirror$/ and $ret .= "\tselect USES_SOFT_PORT_MIRROR\n";
+		/^vendor_wifi$/ and $ret .= "\tselect USES_VENDOR_WIFI_DRIVER\n"
 	}
 	return $ret;
 }
@@ -254,6 +262,11 @@ EOF
 				undef $help;
 			}
 			print "$help\n";
+
+			my $features = target_config_features(@{$profile->{features}});
+			if (length $features) {
+				print $features;
+			}
 		}
 	}
 
@@ -322,6 +335,22 @@ EOF
 	}
 
 	print <<EOF;
+config TARGET_MULTI_PROFILE_NAME
+	string
+	depends on TARGET_ALL_PROFILES
+
+EOF
+
+	foreach my $target (@target) {
+		my $profiles = $target->{profiles};
+		foreach my $profile (@$profiles) {
+			next unless $profile->{multi_profile_name};
+			print "\tdefault $profile->{multi_profile_name} if TARGET_$target->{conf}\n";
+			last;
+		}
+	}
+
+	print <<EOF;
 
 endmenu
 
@@ -358,6 +387,19 @@ EOF
 		my $profiles = $target->{profiles};
 		foreach my $profile (@$profiles) {
 			print "\tdefault \"$profile->{id}\" if TARGET_$target->{conf}_$profile->{id}\n";
+		}
+	}
+
+	print <<EOF;
+
+config INITIAL_SUPPORT_VERSION
+	string
+EOF
+	foreach my $target (@target) {
+		my $profiles = $target->{profiles};
+		foreach my $profile (@$profiles) {
+			next unless $profile->{initial_support_version};
+			print "\tdefault $profile->{initial_support_version} if TARGET_$target->{conf}_$profile->{id}\n";
 		}
 	}
 

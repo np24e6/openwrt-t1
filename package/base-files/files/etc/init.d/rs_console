@@ -1,0 +1,49 @@
+#!/bin/sh /etc/rc.common
+
+. /lib/functions/teltonika-functions.sh
+
+USE_PROCD=1
+START=99
+STOP=99
+
+CONFIG="rs_console"
+PROGRAM="/sbin/getty"
+
+set_service() {
+	local section="$1"
+
+	config_get ENABLED "$section" "enabled"
+	[ "$ENABLED" != "1" ] && return 1
+
+	config_get SPEED "$section" "baudrate"
+	config_get DBITS "$section" "databits"
+	config_get PARITY "$section" "parity"
+	config_get SBITS "$section" "stopbits"
+	config_get FCTRL "$section" "flowcontrol"
+	config_get DEVICE "$section" "device"
+	config_get DUPLEX "$section" "full_duplex_enabled"
+	config_get ECHO_ENABLED "$section" "echo_enabled"
+
+	set_tty_options "$DEVICE" "$SPEED" "$DBITS" "$PARITY" "$SBITS" "$FCTRL" "$DUPLEX" "$ECHO_ENABLED"
+
+	procd_open_instance
+	procd_set_param file /etc/config/"$CONFIG"
+	procd_set_param term_timeout 0
+	procd_set_param command "$PROGRAM" "$SPEED" "$DEVICE" vt100
+	procd_set_param respawn
+	procd_close_instance
+}
+
+reload_service() {
+	stop
+	start
+}
+
+start_service() {
+	config_load "$CONFIG"
+	config_foreach set_service
+}
+
+service_triggers() {
+	procd_add_reload_trigger "$CONFIG"
+}

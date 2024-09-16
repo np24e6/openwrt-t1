@@ -8,13 +8,13 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=fstools
-PKG_RELEASE:=1
+PKG_RELEASE:=$(AUTORELEASE)
 
 PKG_SOURCE_PROTO:=git
 PKG_SOURCE_URL=$(PROJECT_GIT)/project/fstools.git
-PKG_MIRROR_HASH:=a485792d90c71cd4fb396ce97f42a57ee4d2a3d78e5f3fd0748270ffb14209e6
-PKG_SOURCE_DATE:=2021-01-04
-PKG_SOURCE_VERSION:=c53b18820756f6f32ad0782d3bf489422b7c4ad3
+PKG_MIRROR_HASH:=c6239a75f6a3b5b010a48d195006550b0e2154f5b22611484c4979f552c0da7d
+PKG_SOURCE_DATE:=2022-05-03
+PKG_SOURCE_VERSION:=9e11b3723ce30b9b8c94ad7d15072a10cf13c0b4
 CMAKE_INSTALL:=1
 
 PKG_LICENSE:=GPL-2.0
@@ -105,10 +105,10 @@ define Package/snapshot-tool/install
 endef
 
 define Package/block-mount/install
-	$(INSTALL_DIR) $(1)/sbin $(1)/lib $(1)/usr/sbin $(1)/etc/hotplug.d/block $(1)/etc/init.d/ $(1)/etc/uci-defaults/
+	$(INSTALL_DIR) $(1)/sbin $(1)/lib $(1)/usr/sbin $(1)/etc/hotplug.d/block $(1)/etc/init.d \
+		$(1)/etc/uci-defaults/etc
 
 	$(INSTALL_BIN) ./files/fstab.init $(1)/etc/init.d/fstab
-	$(INSTALL_CONF) ./files/fstab.default $(1)/etc/uci-defaults/10-fstab
 	$(INSTALL_CONF) ./files/mount.hotplug $(1)/etc/hotplug.d/block/10-mount
 	$(INSTALL_CONF) ./files/media-change.hotplug  $(1)/etc/hotplug.d/block/00-media-change
 
@@ -116,6 +116,8 @@ define Package/block-mount/install
 	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/libblkid-tiny.so $(1)/lib/
 	$(LN) ../../sbin/block $(1)/usr/sbin/swapon
 	$(LN) ../../sbin/block $(1)/usr/sbin/swapoff
+
+	$(INSTALL_DATA) ./files/fstab-fstools.defaults $(1)/etc/uci-defaults/etc/10_fstab-fstools
 
 endef
 

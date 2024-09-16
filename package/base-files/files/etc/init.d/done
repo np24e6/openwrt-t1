@@ -1,7 +1,7 @@
 #!/bin/sh /etc/rc.common
 # Copyright (C) 2006 OpenWrt.org
 
-START=95
+START=16
 boot() {
 	mount_root done
 	rm -f /sysupgrade.tgz && sync
@@ -11,7 +11,33 @@ boot() {
 		sh /etc/rc.local
 	}
 
-	# set leds to normal state
-	. /etc/diag.sh
-	set_state done
+	#some times soc usb does not start
+	#workaround is reboot if usb not started
+	platform=$(cat /proc/device-tree/platform)
+	if [ $platform == "RUT9M" ] || [ $platform == "RUT2M" ]; then
+		
+		if [ -z $(uci -q get system.usbcheck.counter) ]; then
+			uci -q set system.usbcheck=usbcheck
+			uci -q set system.usbcheck.counter='0'
+			uci -q set system.usbcheck.max='3'
+			uci commit system
+		fi
+
+		if [ "$(uci -q get system.modem.disable)" -eq 0 ] && \
+			[ ! -d "/sys/bus/usb/drivers/usb/1-1" ]; then
+			echo "USB system start up: FAILED... rebooting!"
+			cnt=$(uci -q get system.usbcheck.counter)
+			max=$(uci -q get system.usbcheck.max)
+			if [ "$max" -gt "$cnt" ]; then
+				cnt=$((cnt+1))
+				uci -q set system.usbcheck.counter=$cnt
+				uci commit system
+				sync && reboot -f
+			fi
+		else
+			echo "USB system start up: OK"
+			uci -q set system.usbcheck.counter='0'
+			uci commit system
+		fi
+	fi
 }

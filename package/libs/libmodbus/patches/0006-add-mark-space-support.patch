@@ -1,0 +1,25 @@
+diff --git a/src/modbus-rtu.c b/src/modbus-rtu.c
+index 38f6deb..d9fca83 100644
+--- a/src/modbus-rtu.c
++++ b/src/modbus-rtu.c
+@@ -768,6 +768,11 @@ static int _modbus_rtu_connect(modbus_t *ctx)
+         /* Even */
+         tios.c_cflag |= PARENB;
+         tios.c_cflag &=~ PARODD;
++    } else if (ctx_rtu->parity == 'M') {
++	tios.c_cflag |= PARENB | CMSPAR | PARODD;
++    } else if (ctx_rtu->parity == 'S') {
++	    tios.c_cflag |= PARENB | CMSPAR;
++	    tios.c_cflag &= ~PARODD;
+     } else {
+         /* Odd */
+         tios.c_cflag |= PARENB;
+@@ -1270,7 +1275,7 @@ modbus_t* modbus_new_rtu(const char *device,
+     strcpy(ctx_rtu->device, device);
+ 
+     ctx_rtu->baud = baud;
+-    if (parity == 'N' || parity == 'E' || parity == 'O') {
++    if (parity == 'N' || parity == 'E' || parity == 'O' || parity == 'M' || parity == 'S') {
+         ctx_rtu->parity = parity;
+     } else {
+         modbus_free(ctx);

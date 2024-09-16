@@ -42,7 +42,7 @@ define Package/dnsmasq/Default
   CATEGORY:=Base system
   TITLE:=DNS and DHCP server
   URL:=http://www.thekelleys.org.uk/dnsmasq/
-  DEPENDS:=+libubus
+  DEPENDS:=+libubus +CORE_UI_PACKAGES:vuci-app-dhcp-ui +CORE_UI_PACKAGES:vuci-app-dns-ui
   USERID:=dnsmasq=453:dnsmasq=453
 endef
 
@@ -164,7 +164,11 @@ define Package/dnsmasq/install
 	$(INSTALL_DIR) $(1)/usr/sbin
 	$(CP) $(PKG_INSTALL_DIR)/usr/sbin/dnsmasq $(1)/usr/sbin/
 	$(INSTALL_DIR) $(1)/etc/config
-	$(INSTALL_CONF) ./files/dhcp.conf $(1)/etc/config/dhcp
+	if [ -e "./files/dhcp.conf-$(call device_shortname)" ]; then \
+		$(INSTALL_CONF) "./files/dhcp.conf-$(call device_shortname)" $(1)/etc/config/dhcp; \
+	else \
+		$(INSTALL_CONF) ./files/dhcp.conf $(1)/etc/config/dhcp; \
+	fi;
 	$(INSTALL_CONF) ./files/dnsmasq.conf $(1)/etc/dnsmasq.conf
 	$(INSTALL_DIR) $(1)/etc/init.d
 	$(INSTALL_BIN) ./files/dnsmasq.init $(1)/etc/init.d/dnsmasq
@@ -172,7 +176,12 @@ define Package/dnsmasq/install
 	$(INSTALL_DIR) $(1)/etc/hotplug.d/neigh
 	$(INSTALL_DIR) $(1)/etc/hotplug.d/ntp
 	$(INSTALL_DIR) $(1)/etc/hotplug.d/tftp
+	$(INSTALL_DIR) $(1)/etc/hotplug.d/iface
 	$(INSTALL_DATA) ./files/dnsmasqsec.hotplug $(1)/etc/hotplug.d/ntp/25-dnsmasqsec
+	$(INSTALL_CONF) ./files/dnsmasq_ifup.hotplug $(1)/etc/hotplug.d/iface/25-dnsmasq_ifup
+	if [ -e "./files/dnsmasq_hostname.hotplug-$(call device_shortname)" ]; then \
+		$(INSTALL_CONF) ./files/dnsmasq_hostname.hotplug-$(call device_shortname) $(1)/etc/hotplug.d/iface/26-dnsmasq_update_hostname; \
+	fi;
 	$(INSTALL_DIR) $(1)/usr/share/dnsmasq
 	$(INSTALL_CONF) ./files/dhcpbogushostname.conf $(1)/usr/share/dnsmasq/
 	$(INSTALL_CONF) ./files/rfc6761.conf $(1)/usr/share/dnsmasq/
@@ -180,8 +189,7 @@ define Package/dnsmasq/install
 	$(INSTALL_BIN) ./files/dhcp-script.sh $(1)/usr/lib/dnsmasq/dhcp-script.sh
 	$(INSTALL_DIR) $(1)/usr/share/acl.d
 	$(INSTALL_DATA) ./files/dnsmasq_acl.json $(1)/usr/share/acl.d/
-	$(INSTALL_DIR) $(1)/etc/uci-defaults
-	$(INSTALL_BIN) ./files/50-dnsmasq-migrate-resolv-conf-auto.sh $(1)/etc/uci-defaults
+	$(INSTALL_BIN) ./files/dhcpinfo.sh $(1)/usr/sbin/dhcpinfo.sh
 endef
 
 Package/dnsmasq-dhcpv6/install = $(Package/dnsmasq/install)

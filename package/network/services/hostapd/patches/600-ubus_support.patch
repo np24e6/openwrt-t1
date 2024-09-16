@@ -1,5 +1,7 @@
---- a/hostapd/Makefile
-+++ b/hostapd/Makefile
+Index: hostapd-2020-06-08-5a8b3662/hostapd/Makefile
+===================================================================
+--- hostapd-2020-06-08-5a8b3662.orig/hostapd/Makefile
++++ hostapd-2020-06-08-5a8b3662/hostapd/Makefile
 @@ -171,6 +171,11 @@ OBJS += ../src/common/hw_features_common
  
  OBJS += ../src/eapol_auth/eapol_auth_sm.o
@@ -12,8 +14,10 @@
  
  ifdef CONFIG_CODE_COVERAGE
  CFLAGS += -O0 -fprofile-arcs -ftest-coverage
---- a/src/ap/hostapd.h
-+++ b/src/ap/hostapd.h
+Index: hostapd-2020-06-08-5a8b3662/src/ap/hostapd.h
+===================================================================
+--- hostapd-2020-06-08-5a8b3662.orig/src/ap/hostapd.h
++++ hostapd-2020-06-08-5a8b3662/src/ap/hostapd.h
 @@ -17,6 +17,7 @@
  #include "utils/list.h"
  #include "ap_config.h"
@@ -47,8 +51,10 @@
  void hostapd_interface_deinit(struct hostapd_iface *iface);
  void hostapd_interface_free(struct hostapd_iface *iface);
  struct hostapd_iface * hostapd_alloc_iface(void);
---- a/src/ap/hostapd.c
-+++ b/src/ap/hostapd.c
+Index: hostapd-2020-06-08-5a8b3662/src/ap/hostapd.c
+===================================================================
+--- hostapd-2020-06-08-5a8b3662.orig/src/ap/hostapd.c
++++ hostapd-2020-06-08-5a8b3662/src/ap/hostapd.c
 @@ -395,6 +395,7 @@ void hostapd_free_hapd_data(struct hosta
  	hapd->beacon_set_done = 0;
  
@@ -90,8 +96,10 @@
  	hostapd_interface_deinit(iface);
  	wpa_printf(MSG_DEBUG, "%s: driver=%p drv_priv=%p -> hapd_deinit",
  		   __func__, driver, drv_priv);
---- a/src/ap/ieee802_11.c
-+++ b/src/ap/ieee802_11.c
+Index: hostapd-2020-06-08-5a8b3662/src/ap/ieee802_11.c
+===================================================================
+--- hostapd-2020-06-08-5a8b3662.orig/src/ap/ieee802_11.c
++++ hostapd-2020-06-08-5a8b3662/src/ap/ieee802_11.c
 @@ -2327,13 +2327,18 @@ static void handle_auth(struct hostapd_d
  	u16 auth_alg, auth_transaction, status_code;
  	u16 resp = WLAN_STATUS_SUCCESS;
@@ -179,8 +187,10 @@
  	sta = ap_get_sta(hapd, mgmt->sa);
  	if (sta == NULL) {
  		wpa_msg(hapd->msg_ctx, MSG_DEBUG, "Station " MACSTR " trying "
---- a/src/ap/beacon.c
-+++ b/src/ap/beacon.c
+Index: hostapd-2020-06-08-5a8b3662/src/ap/beacon.c
+===================================================================
+--- hostapd-2020-06-08-5a8b3662.orig/src/ap/beacon.c
++++ hostapd-2020-06-08-5a8b3662/src/ap/beacon.c
 @@ -814,6 +814,12 @@ void handle_probe_req(struct hostapd_dat
  	u16 csa_offs[2];
  	size_t csa_offs_len;
@@ -207,8 +217,10 @@
  	/* TODO: verify that supp_rates contains at least one matching rate
  	 * with AP configuration */
  
---- a/src/ap/drv_callbacks.c
-+++ b/src/ap/drv_callbacks.c
+Index: hostapd-2020-06-08-5a8b3662/src/ap/drv_callbacks.c
+===================================================================
+--- hostapd-2020-06-08-5a8b3662.orig/src/ap/drv_callbacks.c
++++ hostapd-2020-06-08-5a8b3662/src/ap/drv_callbacks.c
 @@ -119,6 +119,10 @@ int hostapd_notif_assoc(struct hostapd_d
  	u16 reason = WLAN_REASON_UNSPECIFIED;
  	int status = WLAN_STATUS_SUCCESS;
@@ -233,8 +245,10 @@
  #ifdef CONFIG_P2P
  	if (elems.p2p) {
  		wpabuf_free(sta->p2p_ie);
---- a/src/ap/sta_info.c
-+++ b/src/ap/sta_info.c
+Index: hostapd-2020-06-08-5a8b3662/src/ap/sta_info.c
+===================================================================
+--- hostapd-2020-06-08-5a8b3662.orig/src/ap/sta_info.c
++++ hostapd-2020-06-08-5a8b3662/src/ap/sta_info.c
 @@ -424,6 +424,7 @@ void ap_handle_timer(void *eloop_ctx, vo
  			       HOSTAPD_LEVEL_INFO, "deauthenticated due to "
  			       "local deauth request");
@@ -259,8 +273,10 @@
  
  		if (hapd->msg_ctx_parent &&
  		    hapd->msg_ctx_parent != hapd->msg_ctx)
---- a/src/ap/wpa_auth_glue.c
-+++ b/src/ap/wpa_auth_glue.c
+Index: hostapd-2020-06-08-5a8b3662/src/ap/wpa_auth_glue.c
+===================================================================
+--- hostapd-2020-06-08-5a8b3662.orig/src/ap/wpa_auth_glue.c
++++ hostapd-2020-06-08-5a8b3662/src/ap/wpa_auth_glue.c
 @@ -259,6 +259,7 @@ static void hostapd_wpa_auth_psk_failure
  	struct hostapd_data *hapd = ctx;
  	wpa_msg(hapd->msg_ctx, MSG_INFO, AP_STA_POSSIBLE_PSK_MISMATCH MACSTR,
@@ -269,8 +285,10 @@
  }
  
  
---- a/wpa_supplicant/Makefile
-+++ b/wpa_supplicant/Makefile
+Index: hostapd-2020-06-08-5a8b3662/wpa_supplicant/Makefile
+===================================================================
+--- hostapd-2020-06-08-5a8b3662.orig/wpa_supplicant/Makefile
++++ hostapd-2020-06-08-5a8b3662/wpa_supplicant/Makefile
 @@ -190,6 +190,12 @@ ifdef CONFIG_EAPOL_TEST
  CFLAGS += -Werror -DEAPOL_TEST
  endif
@@ -294,8 +312,10 @@
  endif
  
  CFLAGS += -DEAP_SERVER -DEAP_SERVER_IDENTITY
---- a/wpa_supplicant/wpa_supplicant.c
-+++ b/wpa_supplicant/wpa_supplicant.c
+Index: hostapd-2020-06-08-5a8b3662/wpa_supplicant/wpa_supplicant.c
+===================================================================
+--- hostapd-2020-06-08-5a8b3662.orig/wpa_supplicant/wpa_supplicant.c
++++ hostapd-2020-06-08-5a8b3662/wpa_supplicant/wpa_supplicant.c
 @@ -6794,6 +6794,8 @@ struct wpa_supplicant * wpa_supplicant_a
  	}
  #endif /* CONFIG_P2P */
@@ -327,8 +347,10 @@
  	return 0;
  }
  
---- a/wpa_supplicant/wpa_supplicant_i.h
-+++ b/wpa_supplicant/wpa_supplicant_i.h
+Index: hostapd-2020-06-08-5a8b3662/wpa_supplicant/wpa_supplicant_i.h
+===================================================================
+--- hostapd-2020-06-08-5a8b3662.orig/wpa_supplicant/wpa_supplicant_i.h
++++ hostapd-2020-06-08-5a8b3662/wpa_supplicant/wpa_supplicant_i.h
 @@ -17,6 +17,7 @@
  #include "wps/wps_defs.h"
  #include "config_ssid.h"
@@ -354,8 +376,10 @@
  #ifdef CONFIG_MATCH_IFACE
  	int matched;
  #endif /* CONFIG_MATCH_IFACE */
---- a/wpa_supplicant/wps_supplicant.c
-+++ b/wpa_supplicant/wps_supplicant.c
+Index: hostapd-2020-06-08-5a8b3662/wpa_supplicant/wps_supplicant.c
+===================================================================
+--- hostapd-2020-06-08-5a8b3662.orig/wpa_supplicant/wps_supplicant.c
++++ hostapd-2020-06-08-5a8b3662/wpa_supplicant/wps_supplicant.c
 @@ -33,6 +33,7 @@
  #include "p2p/p2p.h"
  #include "p2p_supplicant.h"
@@ -373,8 +397,10 @@
  	if (wpa_s->conf->wps_cred_processing == 1)
  		return 0;
  
---- a/hostapd/main.c
-+++ b/hostapd/main.c
+Index: hostapd-2020-06-08-5a8b3662/hostapd/main.c
+===================================================================
+--- hostapd-2020-06-08-5a8b3662.orig/hostapd/main.c
++++ hostapd-2020-06-08-5a8b3662/hostapd/main.c
 @@ -896,6 +896,7 @@ int main(int argc, char *argv[])
  	}
  
@@ -391,8 +417,10 @@
  	hostapd_global_ctrl_iface_deinit(&interfaces);
  	/* Deinitialize all interfaces */
  	for (i = 0; i < interfaces.count; i++) {
---- a/wpa_supplicant/main.c
-+++ b/wpa_supplicant/main.c
+Index: hostapd-2020-06-08-5a8b3662/wpa_supplicant/main.c
+===================================================================
+--- hostapd-2020-06-08-5a8b3662.orig/wpa_supplicant/main.c
++++ hostapd-2020-06-08-5a8b3662/wpa_supplicant/main.c
 @@ -203,7 +203,7 @@ int main(int argc, char *argv[])
  
  	for (;;) {
@@ -412,8 +440,10 @@
  		case 'o':
  			params.override_driver = optarg;
  			break;
---- a/src/ap/rrm.c
-+++ b/src/ap/rrm.c
+Index: hostapd-2020-06-08-5a8b3662/src/ap/rrm.c
+===================================================================
+--- hostapd-2020-06-08-5a8b3662.orig/src/ap/rrm.c
++++ hostapd-2020-06-08-5a8b3662/src/ap/rrm.c
 @@ -89,6 +89,9 @@ static void hostapd_handle_beacon_report
  		return;
  	wpa_msg(hapd->msg_ctx, MSG_INFO, BEACON_RESP_RX MACSTR " %u %02x %s",
@@ -424,3 +454,17 @@
  }
  
  
+Index: hostapd-2020-06-08-5a8b3662/src/ap/ubus.c
+===================================================================
+--- hostapd-2020-06-08-5a8b3662.orig/src/ap/ubus.c
++++ hostapd-2020-06-08-5a8b3662/src/ap/ubus.c
+@@ -1449,8 +1449,7 @@ int hostapd_ubus_handle_event(struct hos
+ 	blobmsg_add_macaddr(&b, "address", addr);
+ 	if (req->mgmt_frame)
+ 		blobmsg_add_macaddr(&b, "target", req->mgmt_frame->da);
+-	if (req->ssi_signal)
+-		blobmsg_add_u32(&b, "signal", req->ssi_signal);
++	blobmsg_add_u32(&b, "signal", req->ssi_signal);
+ 	blobmsg_add_u32(&b, "freq", hapd->iface->freq);
+ 
+ 	if (req->elems) {

@@ -1,0 +1,4 @@
+#!/bin/sh
+
+	[[ -s "/etc/config/operctl" ]] || cp -f /rom/etc/config/operctl /etc/config/
+	return 0

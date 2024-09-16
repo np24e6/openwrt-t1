@@ -1,0 +1,25 @@
+#!/bin/sh
+. /lib/functions.sh
+
+fix_deprecated() {
+	local section 
+	local local_firewall remote_firewall
+       	local forceencaps aggressive
+	section="$1"
+
+	config_get_bool local_firewall "$section" "local_firewall"
+	config_get_bool remote_firewall "$section" "remote_firewall"
+	config_get_bool forceencaps "$section" "forceencaps"
+	config_get_bool aggressive "$section" "aggressive"
+
+	[ -n "$local_firewall"  ] && uci_set "ipsec" "$section" "local_firewall" "$local_firewall"
+	[ -n "$remote_firewall" ] && uci_set "ipsec" "$section" "remote_firewall" "$remote_firewall"
+	[ -n "$forceencaps" ] && uci_set "ipsec" "$section" "forceencaps" "$forceencaps"
+	[ -n "$aggressive" ] && uci_set "ipsec" "$section" "aggressive" "$aggressive"
+
+}
+
+config_load "ipsec"
+config_foreach fix_deprecated "connection"
+uci_commit "ipsec"
+

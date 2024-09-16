@@ -18,6 +18,7 @@ PKG_SOURCE_URL:=https://github.com/libexpat/libexpat/releases/download/R_$(subst
 HOST_BUILD_PARALLEL:=1
 
 include $(INCLUDE_DIR)/host-build.mk
+include $(INCLUDE_DIR)/gpl.mk
 
 HOST_CONFIGURE_ARGS += \
 	--without-docbook

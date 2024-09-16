@@ -1,0 +1,32 @@
+Index: mwan3-2.10.12/files/usr/sbin/mwan3track
+===================================================================
+--- mwan3-2.10.12.orig/files/usr/sbin/mwan3track
++++ mwan3-2.10.12/files/usr/sbin/mwan3track
+@@ -73,6 +73,12 @@ validate_track_method() {
+ 				return 1
+ 			fi
+ 			;;
++		wgetping)
++			command -v wget 1>/dev/null 2>&1 || {
++				LOG warn "Missing wget. Please install wget package."
++				return 1
++			}
++			;;
+ 		arping)
+ 			command -v arping 1>/dev/null 2>&1 || {
+ 				LOG warn "Missing arping. Please install iputils-arping package."
+@@ -282,6 +288,14 @@ main() {
+ 							fi
+ 						fi
+ 					;;
++					wgetping)
++						[ $(echo "$track_ip" | grep "http://") ] || [ $(echo "$track_ip" | grep "https://") ] || \
++							track_ip="http://${track_ip}"
++						WRAP wget -s --no-check-certificate -T $timeout -q "$track_ip" &> /dev/null &
++						TRACK_PID=$!
++						wait $TRACK_PID
++						result=$?
++					;;
+ 					arping)
+ 						WRAP arping -I $DEVICE -c $count -w $timeout -q $track_ip &> /dev/null &
+ 						TRACK_PID=$!

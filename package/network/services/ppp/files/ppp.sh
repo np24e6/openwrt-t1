@@ -241,6 +241,11 @@ proto_pppoe_setup() {
 		${padi_attempts:+pppoe-padi-attempts $padi_attempts} \
 		${padi_timeout:+pppoe-padi-timeout $padi_timeout} \
 		"nic-$iface"
+
+	config_load network
+        config_get tag "$config" tag
+        config_get priority "$config" priority
+        [ -n "$tag" ] && [ -n "$priority" ] && ip link set $iface type vlan egress $tag:$priority
 }
 
 proto_pppoe_teardown() {
@@ -287,6 +292,7 @@ proto_pptp_init_config() {
 	ppp_generic_init_config
 	proto_config_add_string "server"
 	proto_config_add_string "interface"
+	proto_config_add_boolean "client_to_client"
 	available=1
 	no_device=1
 	lasterror=1
@@ -329,10 +335,96 @@ proto_pptp_teardown() {
 	ppp_generic_teardown "$@"
 }
 
+proto_sstp_init_config() {
+	ppp_generic_init_config
+	proto_config_add_string "server"
+	proto_config_add_string "ca"
+	proto_config_add_string "username"
+	proto_config_add_string "password"
+	proto_config_add_boolean "defaultroute"
+	proto_config_add_array "sstp_options"
+	available=1
+	no_device=1
+}
+
+create_option_file() {
+	local sstp_option="$1"
+	local options="$2"
+	echo "$sstp_option" >> "$options"
+}
+proto_sstp_setup() {
+	local config="$1"
+	local ifname="sstp-$config"
+	local options="/etc/ppp/peers/$ifname"
+	local server ip serv_addr ca username password defaultroute
+
+	json_get_vars server ca username password defaultroute
+	
+	config_load network
+	config_list_foreach "$config" sstp_options create_option_file "$options"
+	[ -e "$options" ] && options="file $options" || options=
+
+	server_and_port=$server
+	server="${server%%:*}" # split server and port
+
+	[ -n "$server" ] && {
+		for ip in $(resolveip -t 5 "$server"); do
+			#ADDS STATIC ROUTE TO SERVER VIA ONE GATEWAY
+			( proto_add_host_dependency "$config" "$ip" )
+			serv_addr=1
+		done
+	}
+	[ -n "$serv_addr" ] || {
+		echo "Could not resolve server address"
+		sleep 5
+		proto_setup_failed "$config"
+		exit 1
+	}
+	
+	[ "$defaultroute" -eq 1 ] || defaultroute=
+
+	local load
+	for module in slhc ppp_generic ppp_async ppp_mppe ip_gre gre pptp; do
+		grep -q "$module" /proc/modules && continue
+		/sbin/insmod $module 2>&- >&-
+		load=1
+	done
+	[ "$load" = "1" ] && sleep 1
+
+	proto_init_update "$ifname" 1
+	proto_send_update "$config"
+
+	proto_run_command "$config" sstpc ${ca:+--ca-cert $ca} --cert-warn --log-level 1 \
+	--tls-ext ${username:+--user $username} ${password:+--password $password} \
+	$server_and_port \
+	nodetach ipparam "$config" \
+	ifname $ifname \
+	usepeerdns \
+	${defaultroute:+replacedefaultroute defaultroute} \
+	ip-up-script /lib/netifd/ppp-up \
+	ip-down-script /lib/netifd/ppp-down \
+	$options
+
+}
+
+proto_sstp_teardown() {
+	local server
+	local options="/etc/ppp/peers/sstp-$1"
+	json_get_vars server
+	server="${server%%:*}" # split server and port
+
+	for ip in $(resolveip -t 5 "$server"); do
+		#DELETES STATIC ROUTE TO SERVER VIA ONE GATEWAY
+		route del $ip
+	done
+	[ -e "$options" ] && rm "$options"
+	ppp_generic_teardown "$@"
+}
+
 [ -n "$INCLUDE_ONLY" ] || {
 	add_protocol ppp
 	[ -f /usr/lib/pppd/*/rp-pppoe.so ] && add_protocol pppoe
 	[ -f /usr/lib/pppd/*/pppoatm.so ] && add_protocol pppoa
 	[ -f /usr/lib/pppd/*/pptp.so ] && add_protocol pptp
+	[ -f /usr/lib/sstp-pppd-plugin.so ] && add_protocol sstp
 }
-

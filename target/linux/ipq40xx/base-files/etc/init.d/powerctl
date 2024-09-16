@@ -1,0 +1,91 @@
+#!/bin/sh /etc/rc.common
+
+START=98
+
+ipq40xx_power_auto() {
+	# change scaling governor as ondemand to enable clock scaling based on system load
+	echo "performance" > /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor
+
+	# set scaling min freq as 200 MHz
+	echo "716000" > /sys/devices/system/cpu/cpu0/cpufreq/scaling_min_freq
+
+	# Change sampling rate for frequency scaling decisions to 1s, from 10 ms
+	#echo "1000000" > /sys/devices/system/cpu/cpufreq/ondemand/sampling_rate
+
+	# Change sampling rate for frequency down scaling decision to 10s
+	#echo 10 > /sys/devices/system/cpu/cpufreq/ondemand/sampling_down_factor
+
+	# Change the CPU load threshold above which frequency is up-scaled to
+	# turbo frequency,to 50%
+	#echo 50 > /sys/devices/system/cpu/cpufreq/ondemand/up_threshold
+}
+
+ipq40xx_queues_fixup() {
+	#---ETH0---
+	echo 1 > /sys/class/net/eth0/queues/tx-0/xps_cpus
+	echo 2 > /sys/class/net/eth0/queues/tx-1/xps_cpus
+	echo 4 > /sys/class/net/eth0/queues/tx-2/xps_cpus
+	echo 8 > /sys/class/net/eth0/queues/tx-3/xps_cpus
+	echo 1 > /sys/class/net/eth0/queues/rx-0/rps_cpus
+	echo 2 > /sys/class/net/eth0/queues/rx-1/rps_cpus
+	echo 4 > /sys/class/net/eth0/queues/rx-2/rps_cpus
+	echo 8 > /sys/class/net/eth0/queues/rx-3/rps_cpus
+	#---ETH1---
+	echo 1 > /sys/class/net/eth1/queues/tx-0/xps_cpus
+	echo 2 > /sys/class/net/eth1/queues/tx-1/xps_cpus
+	echo 4 > /sys/class/net/eth1/queues/tx-2/xps_cpus
+	echo 8 > /sys/class/net/eth1/queues/tx-3/xps_cpus
+	echo 1 > /sys/class/net/eth1/queues/rx-0/rps_cpus
+	echo 2 > /sys/class/net/eth1/queues/rx-1/rps_cpus
+	echo 4 > /sys/class/net/eth1/queues/rx-2/rps_cpus
+	echo 8 > /sys/class/net/eth1/queues/rx-3/rps_cpus
+}
+
+ipq40xx_smp_fixup() {
+	local TX_IDS=$(grep edma_eth_tx /proc/interrupts | sed -r 's/\s*([0-9]+):(\s*[a-zA-Z0-9\-]+){7}\s*edma_eth_tx([0-9]+)/\1,\3/g')
+
+	for eth_tx in $TX_IDS;
+	do
+		irq=$(echo $eth_tx | cut -d "," -f 1)
+		queue=$(echo $eth_tx | cut -d "," -f 2)
+		case "$queue" in
+		0 | 1 | 2 | 3)
+			affinity=4
+			;;
+		4 | 5 | 6 | 7)
+			affinity=8
+			;;
+		8 | 9 | 10 | 11)
+			affinity=1
+			;;
+		12 | 13 | 14 | 15)
+			affinity=2
+			;;
+		esac
+
+		echo $affinity > /proc/irq/$irq/smp_affinity
+	done
+
+	local RX_IDS=$(grep edma_eth_rx /proc/interrupts | sed -r 's/\s*([0-9]+):(\s*[a-zA-Z0-9\-]+){7}\s*edma_eth_rx([0-9]+)/\1/g')
+
+	i=0
+	for eth_rx in $RX_IDS;
+	do
+		echo $((1 << $i)) > /proc/irq/$eth_rx/smp_affinity
+		i=$(($i + 1))
+	done
+}
+
+start() {
+	. /lib/functions.sh
+
+	local board=$(board_name)
+	case "$board" in
+	teltonika,rutx | ap-dk01.1-c1 | ap-dk01.1-c2 | ap-dk04.1-c1 | ap-dk04.1-c2 | ap-dk04.1-c3 | \
+	ap-dk04.1-c4   | ap-dk04.1-c5 | ap-dk05.1-c1 | ap-dk06.1-c1 | ap-dk07.1-c1 | ap-dk07.1-c2 | ap-dk07.1-c3)
+		ipq40xx_power_auto
+		ipq40xx_queues_fixup
+		ipq40xx_smp_fixup
+		;;
+	esac
+}

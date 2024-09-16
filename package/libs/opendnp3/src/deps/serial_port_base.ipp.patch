@@ -1,0 +1,29 @@
+diff --git a/asio/include/asio/impl/serial_port_base.ipp b/asio/include/asio/impl/serial_port_base.ipp
+index 984d7a85..7cb53d0d 100644
+--- a/asio/include/asio/impl/serial_port_base.ipp
++++ b/asio/include/asio/impl/serial_port_base.ipp
+@@ -328,7 +328,7 @@ ASIO_SYNC_OP_VOID serial_port_base::flow_control::load(
+ serial_port_base::parity::parity(serial_port_base::parity::type t)
+   : value_(t)
+ {
+-  if (t != none && t != odd && t != even)
++  if (t != none && t != odd && t != even && t != mark && t != space)
+   {
+     std::out_of_range ex("invalid parity value");
+     asio::detail::throw_exception(ex);
+@@ -374,6 +374,15 @@ ASIO_SYNC_OP_VOID serial_port_base::parity::store(
+     storage.c_iflag |= INPCK;
+     storage.c_cflag |= (PARENB | PARODD);
+     break;
++  case mark:
++    storage.c_iflag |= INPCK;
++    storage.c_cflag |= PARENB | CMSPAR | PARODD;
++    break;
++  case space:
++    storage.c_iflag |= INPCK;
++    storage.c_cflag |= PARENB | CMSPAR;
++    storage.c_cflag &= ~PARODD;
++    break;
+   default:
+     break;
+   }

@@ -16,6 +16,7 @@ PKG_HASH:=3af0b6bd35e5b6fc58d8b68827fbae2ff6b7e20dd2b238ccb9b49d84722066c2
 HOST_FIXUP:=autoreconf
 
 include $(INCLUDE_DIR)/host-build.mk
+include $(INCLUDE_DIR)/gpl.mk
 
 HOST_CFLAGS += -I$(CURDIR)/include
 HOST_CPPFLAGS += -std=gnu++98

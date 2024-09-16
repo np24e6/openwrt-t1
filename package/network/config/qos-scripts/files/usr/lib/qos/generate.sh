@@ -2,10 +2,8 @@
 [ -e /lib/functions.sh ] && . /lib/functions.sh || . ./functions.sh
 [ -x /sbin/modprobe ] && {
 	insmod="modprobe"
-	rmmod="$insmod -r"
 } || {
 	insmod="insmod"
-	rmmod="rmmod"
 }
 
 add_insmod() {
@@ -13,7 +11,6 @@ add_insmod() {
 	case "$isset" in
 		1) ;;
 		*) {
-			[ "$2" ] && append INSMOD "$rmmod $1 >&- 2>&-" "$N"
 			append INSMOD "$insmod $* >&- 2>&-" "$N"; export insmod_$1=1
 		};;
 	esac
@@ -223,7 +220,7 @@ qos_parse_config() {
 				config_get device "$1" device
 				[ -z "$device" ] && {
 					device="$(find_ifname $1)"
-					[ -z "$device" ] && exit 1
+					[ -z "$device" ] && return 1
 					config_set "$1" device "$device"
 				}
 			}
@@ -522,7 +519,7 @@ done
 case "$1" in
 	all)
 		start_interfaces "$C"
-		start_firewall
+		[ "$C" -gt 0 ] && start_firewall
 	;;
 	interface)
 		start_interface "$2" "$C"

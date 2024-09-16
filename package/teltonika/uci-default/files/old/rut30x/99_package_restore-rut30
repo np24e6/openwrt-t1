@@ -1,0 +1,40 @@
+#!/bin/sh
+
+. /lib/functions.sh
+PACKAGE_FILE="/etc/package_restore.txt"
+
+[ -s "$PACKAGE_FILE" ] && {
+	sed -i "s/tlt_custom_pkg_//g" "$PACKAGE_FILE"
+	sed -i "/wireguard/d" "$PACKAGE_FILE"
+	sed -i "/coStreamApp - Cloud of Things/s/.*/cmStreamApp - Cumulocity - Cloud of Things/" "$PACKAGE_FILE"
+	sed -i "/cmStreamApp - Cumulocity/s/.*/cmStreamApp - Cumulocity - Cloud of Things/" "$PACKAGE_FILE"
+	sed -i "s/pamd/pam/g" "$PACKAGE_FILE"
+}
+
+get_enabled() {
+	local enabled
+
+	config_get_bool enabled "$1" "$2" "0"
+
+	[ "$enabled" -eq 1 ] && ENABLED="1"
+}
+
+check_config() {
+	local config="$1"
+	local section="$2"
+	local enabled_option="$3"
+	local pkg_name="$4"
+	local full_name="$5"
+	local check=0
+
+	ENABLED="0"
+	config_load "$config"
+	config_foreach get_enabled "$section" "$enabled_option"
+
+	[ -f "$PACKAGE_FILE" ] && check=$(grep -c -w "$pkg_name" "$PACKAGE_FILE" 2>/dev/null)
+	[ "$ENABLED" -eq 1 ] && [ "$check" -eq 0 ] && echo "$pkg_name - $full_name" >> "$PACKAGE_FILE"
+}
+
+check_config "system" "system" "tcp_dump" "tcpdump" "TCPdump"
+
+exit 0

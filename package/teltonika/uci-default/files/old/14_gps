@@ -1,0 +1,19 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+[ -f "/etc/config/gps" ] || return 1
+
+SECTION="https"
+CONFIG="gps"
+
+sec_flg=$(uci_get "$CONFIG" "$SECTION" 2>&1)
+
+if [ "$sec_flg" = "uci: Entry not found" ]; then
+	uci -q set "${CONFIG}.${SECTION}=section"
+	uci_set "$CONFIG" "$SECTION" "enabled" "0"
+
+	uci_commit "$CONFIG"
+fi
+
+exit 0

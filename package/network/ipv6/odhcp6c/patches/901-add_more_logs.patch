@@ -1,0 +1,80 @@
+Index: odhcp6c-2021-01-09-53f07e90/src/odhcp6c.c
+===================================================================
+--- odhcp6c-2021-01-09-53f07e90.orig/src/odhcp6c.c
++++ odhcp6c-2021-01-09-53f07e90/src/odhcp6c.c
+@@ -397,7 +397,7 @@ int main(_unused int argc, char* const a
+ 
+ 	openlog("odhcp6c", logopt, LOG_DAEMON);
+ 	if (!verbosity)
+-		setlogmask(LOG_UPTO(LOG_WARNING));
++		setlogmask(LOG_INFO);
+ 
+ 	ifname = argv[optind];
+ 
+@@ -457,9 +457,10 @@ int main(_unused int argc, char* const a
+ 
+ 		signal_usr1 = signal_usr2 = false;
+ 		int mode = dhcpv6_set_ia_mode(ia_na_mode, ia_pd_mode);
+-		if (mode != DHCPV6_STATELESS)
++		if (mode != DHCPV6_STATELESS) {
++			syslog(LOG_INFO, "Interface %s sending router solicitation message", ifname);
+ 			mode = dhcpv6_request(DHCPV6_MSG_SOLICIT);
+-
++		}
+ 		odhcp6c_signal_process();
+ 
+ 		if (mode < 0)
+@@ -539,11 +540,13 @@ int main(_unused int argc, char* const a
+ 					break; // Other signal type
+ 
+ 				// Send renew as T1 expired
++				syslog(LOG_INFO, "Interface %s sending DHCPv6 renew", ifname);
+ 				res = dhcpv6_request(DHCPV6_MSG_RENEW);
+ 				odhcp6c_signal_process();
+ 
+ 				if (res > 0) { // Renew was succesfull
+ 					// Publish updates
++					syslog(LOG_INFO, "Interface %s DHCPv6 renew successful", ifname);
+ 					script_call("updated", 0, false);
+ 					continue; // Renew was successful
+ 				}
+Index: odhcp6c-2021-01-09-53f07e90/src/dhcpv6.c
+===================================================================
+--- odhcp6c-2021-01-09-53f07e90.orig/src/dhcpv6.c
++++ odhcp6c-2021-01-09-53f07e90/src/dhcpv6.c
+@@ -1346,7 +1346,7 @@ static unsigned int dhcpv6_parse_ia(void
+ 	if (t1 > t2)
+ 		return 0;
+ 
+-	syslog(LOG_INFO, "%s %04x T1 %d T2 %d", ntohs(ia_hdr->type) == DHCPV6_OPT_IA_PD ? "IA_PD" : "IA_NA", ntohl(ia_hdr->iaid), t1, t2);
++	syslog(LOG_INFO, "%s %04x T1(renew time) %ds T2(rebind time) %ds", ntohs(ia_hdr->type) == DHCPV6_OPT_IA_PD ? "IA_PD" : "IA_NA", ntohl(ia_hdr->iaid), t1, t2);
+ 
+ 	// Update address IA
+ 	dhcpv6_for_each_option(&ia_hdr[1], end, otype, olen, odata) {
+@@ -1416,7 +1416,7 @@ static unsigned int dhcpv6_parse_ia(void
+ 				if (odhcp6c_update_entry(STATE_IA_PD, &entry, 0, 0))
+ 					updated_IAs++;
+ 
+-				syslog(LOG_INFO, "%s/%d preferred %d valid %d",
++				syslog(LOG_INFO, "lease of %s/%d obtained, preferred lifetime %ds, valid lifetime %ds",
+ 				       inet_ntop(AF_INET6, &entry.target, buf, sizeof(buf)),
+ 				       entry.length, entry.preferred , entry.valid);
+ 			}
+@@ -1445,7 +1445,7 @@ static unsigned int dhcpv6_parse_ia(void
+ 			if (odhcp6c_update_entry(STATE_IA_NA, &entry, 0, 0))
+ 				updated_IAs++;
+ 
+-			syslog(LOG_INFO, "%s preferred %d valid %d",
++			syslog(LOG_INFO, "lease of %s obtained, preferred lifetime %ds, valid lifetime %ds",
+ 			       inet_ntop(AF_INET6, &entry.target, buf, sizeof(buf)),
+ 			       entry.preferred , entry.valid);
+ 		}
+@@ -1493,7 +1493,7 @@ static unsigned int dhcpv6_calc_refresh_
+ 		t2 = l_t2;
+ 		t3 = l_t3;
+ 
+-		syslog(LOG_INFO, "T1 %"PRId64"s, T2 %"PRId64"s, T3 %"PRId64"s", t1, t2, t3);
++		syslog(LOG_INFO, "T1(renew time) %"PRId64"s, T2(rebind time) %"PRId64"s, T3(lease time) %"PRId64"s", t1, t2, t3);
+ 	}
+ 
+ 	return (unsigned int)(ia_pd_entries + ia_na_entries);

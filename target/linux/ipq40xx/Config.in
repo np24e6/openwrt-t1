@@ -1,0 +1,10 @@
+menu "Target options and settings"
+depends on TARGET_ipq40xx
+
+config DEFAULT_TARGET_OPTIONS
+	bool
+	default y
+	select KERNEL_MTD_UBI
+	select KERNEL_MTD_UBI_BLOCK
+
+endmenu

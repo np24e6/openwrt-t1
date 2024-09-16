@@ -75,6 +75,7 @@ drv_mac80211_init_iface_config() {
 	config_add_int $MP_CONFIG_INT
 	config_add_boolean $MP_CONFIG_BOOL
 	config_add_string $MP_CONFIG_STRING
+	config_add_string wifi_id
 }
 
 mac80211_add_capabilities() {
@@ -535,7 +536,7 @@ mac80211_iw_interface_add() {
 mac80211_prepare_vif() {
 	json_select config
 
-	json_get_vars ifname mode ssid wds powersave macaddr enable wpa_psk_file vlan_file
+	json_get_vars ifname mode ssid wds powersave macaddr enable wpa_psk_file vlan_file wifi_id
 
 	[ -n "$ifname" ] || ifname="wlan${phy#phy}${if_idx:+-$if_idx}"
 	if_idx=$((${if_idx:-0} + 1))
@@ -582,6 +583,8 @@ mac80211_prepare_vif() {
 				ap_ifname="${ifname}"
 				hostapd_ctrl="${hostapd_ctrl:-/var/run/hostapd/$ifname}"
 			}
+			#Write ifname to wifi_id and interface relation file.
+			echo "$ifname" > /var/run/${wifi_id}.wifi_id
 		;;
 		mesh)
 			mac80211_iw_interface_add "$phy" "$ifname" mp || return
@@ -801,6 +804,7 @@ mac80211_setup_vif() {
 
 	json_select config
 	json_get_vars mode
+	json_get_vars ssid
 	json_get_var vif_txpower
 	json_get_var vif_enable enable 1
 
@@ -839,12 +843,15 @@ mac80211_setup_vif() {
 			fi
 		;;
 		sta)
-			mac80211_setup_supplicant $vif_enable || failed=1
+			# Checking for SSID disables automatic connection to first
+			# unencrypted AP when MULTI_AP is used
+			[ -n "$ssid" ] && mac80211_setup_supplicant $vif_enable || failed=1
 		;;
 	esac
 
 	json_select ..
 	[ -n "$failed" ] || wireless_add_vif "$name" "$ifname"
+	ubus send wireless.state "{\"state\":\"up\", \"ifname\":\"$ifname\", \"mode\":\"$mode\"}"
 }
 
 get_freq() {
@@ -903,7 +910,7 @@ drv_mac80211_setup() {
 
 	find_phy || {
 		echo "Could not find PHY for device '$1'"
-		wireless_set_retry 0
+		sleep 10
 		return 1
 	}
 
@@ -931,6 +938,9 @@ drv_mac80211_setup() {
 			iw dev "$wdev" del
 		fi
 	done
+
+	#Remove all wifi_id files.
+	rm -f "/var/run/*.wifi_id"
 
 	# convert channel to frequency
 	[ "$auto_channel" -gt 0 ] || freq="$(get_freq "$phy" "$channel")"
@@ -1073,15 +1083,28 @@ list_phy_interfaces() {
 }
 
 drv_mac80211_teardown() {
-	json_select data
-	json_get_vars phy
-	json_select ..
+	json_select data && {
+		json_get_vars phy
+		json_select ..
+	}
+
+	json_select config && {
+		json_get_vars path
+		json_select ..
+	}
+
+	find_phy
+
 	[ -n "$phy" ] || {
 		echo "Bug: PHY is undefined for device '$1'"
 		return 1
 	}
 
 	mac80211_interface_cleanup "$phy"
+
+	ifname="wlan${phy#phy}${if_idx:+-$if_idx}"
+
+	ubus send wireless.state "{\"state\":\"down\", \"ifname\":\"$ifname\"}"
 	uci -q -P /var/state revert wireless._${phy}
 }
 

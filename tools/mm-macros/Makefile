@@ -19,6 +19,7 @@ HOST_BUILD_DIR:=$(BUILD_DIR_HOST)/mm-common-$(PKG_VERSION)
 HOST_FIXUP:=autoreconf
 
 include $(INCLUDE_DIR)/host-build.mk
+include $(INCLUDE_DIR)/gpl.mk
 
 define Host/Install
 	$(INSTALL_DIR) $(STAGING_DIR_HOST)/share/aclocal

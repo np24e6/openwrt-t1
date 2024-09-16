@@ -36,12 +36,31 @@ endef
 define Package/tcpdump
   $(Package/tcpdump/default)
   VARIANT:=full
+  ifeq (m, $(CONFIG_PACKAGE_tcpdump))
+    PKG_TLT_NAME:=TCPdump
+    PKG_ROUTER:=$(TLT_PLATFORM_NAME)
+  endif
 endef
 
 define Package/tcpdump-mini
   $(Package/tcpdump/default)
   TITLE+= (minimal version)
   VARIANT:=mini
+endef
+
+# Remove TCPdump configuration from system config file
+define Package/tcpdump/prerm
+  #!/bin/sh
+  . /lib/functions.sh
+  config_load system
+  uci_remove system system tcp_dump
+  uci_remove system system tcp_dump_interface
+  uci_remove system system tcp_dump_filter
+  uci_remove system system tcp_inout
+  uci_remove system system tcp_host
+  uci_remove system system tcp_port
+  uci_remove system system tcp_mount
+  uci_commit
 endef
 
 CONFIGURE_ARGS += \
@@ -59,8 +78,9 @@ ifeq ($(BUILD_VARIANT),mini)
 endif
 
 define Package/tcpdump/install
-	$(INSTALL_DIR) $(1)/usr/sbin
+	$(INSTALL_DIR) $(1)/usr/sbin $(1)/etc/init.d/
 	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/tcpdump $(1)/usr/sbin/
+	$(INSTALL_BIN) ./files/tcpdebug.init $(1)/etc/init.d/tcpdebug
 endef
 
 Package/tcpdump-mini/install = $(Package/tcpdump/install)

@@ -10,6 +10,7 @@ rootfs=""
 outfile=""
 err=""
 ubinize_seq=""
+pagesize=""
 
 ubivol() {
 	volid=$1
@@ -39,6 +40,10 @@ ubilayout() {
 	local autoresize=
 	local rootfs_type="$( get_fs_type "$2" )"
 
+	local kernsize=
+	local kernsize_padd=
+	local diff=
+
 	if [ "$1" = "ubootenv" ]; then
 		ubivol $vol_id ubootenv
 		vol_id=$(( $vol_id + 1 ))
@@ -62,6 +67,14 @@ ubilayout() {
 		vol_id=$(( $vol_id + 1 ))
 	done
 	if [ "$3" ]; then
+		kernsize="$( stat -c%s "$3" )"
+		kernsize_padd="$( round_up "$kernsize" ${4:-2048} )"
+		diff=$((kernsize_padd - kernsize))
+
+		if [ $diff -gt 0 ]; then
+			dd if=/dev/zero bs=$(($diff)) count=1 >> $3
+		fi
+
 		ubivol $vol_id kernel "$3"
 		vol_id=$(( $vol_id + 1 ))
 	fi
@@ -109,6 +122,13 @@ while [ "$1" ]; do
 		;;
 	"-"*)
 		ubinize_param="$@"
+		shift
+		shift
+		case "$1" in
+		"-m")
+			pagesize="$2"
+			;;
+		esac
 		break
 		;;
 	*)
@@ -142,7 +162,7 @@ if [ -z "$ubinizecfg" ]; then
 	# try OSX signature
 	ubinizecfg="$( mktemp -t 'ubitmp' )"
 fi
-ubilayout "$ubootenv" "$rootfs" "$kernel" > "$ubinizecfg"
+ubilayout "$ubootenv" "$rootfs" "$kernel" "$pagesize" > "$ubinizecfg"
 
 set_ubinize_seq
 cat "$ubinizecfg"

@@ -1,0 +1,21 @@
+config MOBIFD_DEBUG
+	bool "Enable debuging"
+	depends on PACKAGE_mobifd
+	default n
+    help
+        Enables deep debuging
+
+config MOBIFD_WHITELIST_AFRICA
+	bool "Module works only with africa operators (RUT200)"
+	depends on PACKAGE_mobifd
+	default n
+    help
+        Module works only with africa operators (RUT200)
+
+config MOBIFD_WHITELIST_AFRICA_EU
+	bool "Module works with africa and EU operators (RUT200)"
+	depends on PACKAGE_mobifd
+	default n
+    help
+        Module works with africa and EU operators (RUT200)
+

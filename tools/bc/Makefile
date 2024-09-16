@@ -19,5 +19,6 @@ PKG_HASH:=7ee4abbcfac03d8a6e1a8a3440558a3d239d6b858585063e745c760957725ecc
 PKG_FIXUP := autoreconf
 
 include $(INCLUDE_DIR)/host-build.mk
+include $(INCLUDE_DIR)/gpl.mk
 
 $(eval $(call HostBuild))

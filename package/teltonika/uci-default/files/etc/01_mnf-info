@@ -1,0 +1,40 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+get_hw_info() {
+	local param hostname routername version
+
+	param=$(/sbin/mnf_info "--name")
+	[ -n "$param" ] && [ "${#param}" = 12 ] && uci_set "system" "@system[0]" "device_code" "$param"
+
+	hostname="${param:0:6}"
+	[ -n "$hostname" ] && [ "${#hostname}" = 6 ] && [ -z "$(uci_get system @system[0] hostname)" ] && uci_set "system" "@system[0]" "hostname" "Teltonika-${hostname}.com"
+
+	routername="${param:0:6}"
+	[ -n "$routername" ] && [ "${#routername}" = 6 ] && [ -z "$(uci_get system @system[0] routername)" ] && uci_set "system" "@system[0]" "routername" "$routername"
+
+	version=$(cat /etc/version)
+	[ -n "$version" ] && uci_set "system" "@system[0]" "device_fw_version" "$version"
+
+	uci_commit "system"
+}
+
+set_ledman_config() {
+	local en_val
+
+	en_val=$(uci_get system ledman enabled 2>/dev/null)
+	if [ -z "$en_val" ] || [ "$en_val" -ne 0 ]; then
+		uci -q set "system.ledman=ledman"
+		uci_set "system" "ledman" "enabled" "1"
+		uci_commit "system.ledman"
+	fi
+}
+
+# get device information
+get_hw_info
+
+# sets ledman default delman configuration to /etc/config/system
+set_ledman_config
+
+exit 0

@@ -14,6 +14,7 @@ PKG_SOURCE_URL:=@GNU/autoconf
 PKG_HASH:=64ebcec9f8ac5b2487125a86a7760d2591ac9e1d3dbd59489633f9de62a57684
 
 include $(INCLUDE_DIR)/host-build.mk
+include $(INCLUDE_DIR)/gpl.mk
 
 HOST_CONFIGURE_ARGS += \
 	--datarootdir=$(STAGING_DIR_HOST)/share

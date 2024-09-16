@@ -15,7 +15,7 @@ PKG_LICENSE_FILES:=
 
 PKG_BUILD_PARALLEL:=1
 
-PKG_FLAGS:=nonshared
+# PKG_FLAGS:=nonshared
 
 include $(INCLUDE_DIR)/package.mk
 include $(INCLUDE_DIR)/cmake.mk
@@ -34,7 +34,7 @@ define Package/uqmi/description
 endef
 
 TARGET_CFLAGS += \
-	-I$(STAGING_DIR)/usr/include -ffunction-sections -fdata-sections
+	-I$(STAGING_DIR)/usr/include -ffunction-sections -fdata-sections -D_GNU_SOURCE
 
 TARGET_LDFLAGS += -Wl,--gc-sections
 
@@ -42,9 +42,22 @@ CMAKE_OPTIONS += \
 	-DDEBUG=1
 
 define Package/uqmi/install
-	$(INSTALL_DIR) $(1)/sbin
+	$(INSTALL_DIR) $(1)/sbin $(1)/usr/bin
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/uqmi $(1)/sbin/
-	$(CP) ./files/* $(1)/
+	$(INSTALL_DIR) $(1)/lib/netifd/proto
+	$(INSTALL_BIN) ./files/dhcp_mobile.script $(1)/lib/netifd/
+	$(INSTALL_BIN) ./files/uqmi_shared_functions.sh $(1)/lib/netifd/ ; \
+	$(INSTALL_BIN) ./files/qmux_track.sh $(1)/usr/bin/qmuxtrack ; \
+
+	$(if $(CONFIG_BASEBAND_SUPPORT), \
+		$(INSTALL_BIN) ./files/connm.sh $(1)/lib/netifd/proto ; \
+	, \
+		$(INSTALL_BIN) ./files/qmi.sh $(1)/lib/netifd/proto ; \
+		$(INSTALL_BIN) ./files/qmux.sh $(1)/lib/netifd/proto)
+
+	$(if $(or $(CONFIG_RNDIS_SUPPORT),$(CONFIG_USB_NCM_SUPPORT)), \
+		$(INSTALL_BIN) ./files/ncm.sh $(1)/lib/netifd/proto ; \
+		$(INSTALL_BIN) ./files/ncm_conn.sh $(1)/usr/bin/ncm_conn.sh)
 endef
 
 $(eval $(call BuildPackage,uqmi))

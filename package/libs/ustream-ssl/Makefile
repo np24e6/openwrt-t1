@@ -33,38 +33,11 @@ define Package/libustream-openssl
   VARIANT:=openssl
 endef
 
-define Package/libustream-wolfssl
-  $(Package/libustream/default)
-  TITLE += (wolfssl)
-  DEPENDS += +PACKAGE_libustream-wolfssl:libwolfssl
-  VARIANT:=wolfssl
-endef
-
-define Package/libustream-mbedtls
-  $(Package/libustream/default)
-  TITLE += (mbedtls)
-  DEPENDS += +libmbedtls
-  VARIANT:=mbedtls
-  DEFAULT_VARIANT:=1
-endef
-
-ifeq ($(BUILD_VARIANT),wolfssl)
-  TARGET_CFLAGS += -I$(STAGING_DIR)/usr/include/wolfssl
-  CMAKE_OPTIONS += -DWOLFSSL=on
-endif
-ifeq ($(BUILD_VARIANT),mbedtls)
-  CMAKE_OPTIONS += -DMBEDTLS=on
-endif
-
 define Package/libustream/default/install
 	$(INSTALL_DIR) $(1)/lib/
 	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/libustream-ssl.so $(1)/lib/
 endef
 
 Package/libustream-openssl/install = $(Package/libustream/default/install)
-Package/libustream-wolfssl/install = $(Package/libustream/default/install)
-Package/libustream-mbedtls/install = $(Package/libustream/default/install)
 
-$(eval $(call BuildPackage,libustream-mbedtls))
-$(eval $(call BuildPackage,libustream-wolfssl))
 $(eval $(call BuildPackage,libustream-openssl))

@@ -1,0 +1,67 @@
+--- a/wireless.h
++++ b/wireless.h
+@@ -91,6 +91,7 @@
+ 	bool proxyarp;
+ 	bool isolate;
+ 	bool ap_mode;
++	bool disabled;
+ };
+ 
+ struct wireless_vlan {
+--- a/wireless.c
++++ b/wireless.c
+@@ -382,6 +382,31 @@
+ 	}
+ }
+ 
++/* check if sta wan interface needs to be reloaded */
++static void
++vif_update_if_sta(struct wireless_interface *vif)
++{
++	struct blob_attr *cur;
++	const char *network;
++	int rem;
++	struct interface *iface;
++
++	if (vif->ap_mode)
++		return;
++
++	blobmsg_for_each_attr(cur, vif->network, rem) {
++		network = blobmsg_data(cur);
++		iface = vlist_find(&interfaces, network, iface, node);
++		if (!iface)
++			continue;
++
++		if(!iface->enabled && !vif->disabled) {
++			D(WIRELESS, "Set interface '%s' up for '%s' \n", iface->name, vif->ifname);
++			wireless_interface_handle_link(vif, NULL, true);
++		}
++	}
++}
++
+ static void
+ wireless_device_setup_cancel(struct wireless_device *wdev)
+ {
+@@ -711,8 +736,12 @@
+ 	struct wireless_device *wd_new = container_of(node_new, struct wireless_device, node);
+ 
+ 	if (wd_old && wd_new) {
++		struct wireless_interface *vif;
++
+ 		D(WIRELESS, "Update wireless device '%s'\n", wd_old->name);
+ 		wdev_change_config(wd_old, wd_new);
++		vlist_for_each_element(&wd_old->interfaces, vif, node)
++			vif_update_if_sta(vif);
+ 	} else if (wd_old) {
+ 		D(WIRELESS, "Delete wireless device '%s'\n", wd_old->name);
+ 		wdev_set_config_state(wd_old, IFC_REMOVE);
+@@ -811,6 +840,9 @@
+ 
+ 	cur = tb[VIF_ATTR_PROXYARP];
+ 	vif->proxyarp = vif->ap_mode && cur && blobmsg_get_bool(cur);
++
++	cur = tb[VIF_ATTR_DISABLED];
++	vif->disabled = cur && blobmsg_get_bool(cur);
+ }
+ 
+ /* vlist update call for wireless interface list */

@@ -21,7 +21,7 @@ Signed-off-by: Felix Fietkau <nbd@nbd.name>
  #define PPP_VERSION	"2.4.2"
  
  /*
-@@ -1373,12 +1378,37 @@ static void ppp_dev_priv_destructor(stru
+@@ -1378,12 +1383,37 @@ static void ppp_dev_priv_destructor(stru
  		ppp_destroy_interface(ppp);
  }
  
@@ -73,7 +73,7 @@ Signed-off-by: Felix Fietkau <nbd@nbd.name>
  #include <linux/nsproxy.h>
  #include <net/net_namespace.h>
  #include <net/netns/generic.h>
-@@ -974,8 +979,36 @@ static int pppoe_xmit(struct ppp_channel
+@@ -980,8 +985,36 @@ static int pppoe_xmit(struct ppp_channel
  	return __pppoe_xmit(sk, skb);
  }
  

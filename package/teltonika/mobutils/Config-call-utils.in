@@ -1,0 +1,18 @@
+# call-utilities advanced configuration
+
+menu "Handlers configuration"
+	depends on PACKAGE_mobutils-call_utilities
+
+config CALL_UTILS_HANDLER_WIFI
+	bool "WIFI handler"
+	default n
+	help
+		Compile with WIFI support
+
+config CALL_UTILS_HANDLER_IO
+	bool "I/O handler"
+	default n
+    help
+        Compile with I/O support
+
+endmenu

@@ -179,22 +179,29 @@ for file_mode in $file_modes; do
 	chown "$uid:$gid" "$pkg_dir/$path"
 	chmod  "$mode" "$pkg_dir/$path"
 done
-$TAR -X $tmp_dir/tarX --format=gnu --sort=name -cpf - --mtime="$TIMESTAMP" . | $GZIP -n - > $tmp_dir/data.tar.gz
 
-installed_size=`stat -c "%s" $tmp_dir/data.tar.gz`
+$TAR -X $tmp_dir/tarX --format=gnu --sort=name -cpf - --mtime="$TIMESTAMP" . | $GZIP -n - > $tmp_dir/data.tar.gz
+installed_size=$(stat -c "%s" $tmp_dir/data.tar.gz)
+
 sed -i -e "s/^Installed-Size: .*/Installed-Size: $installed_size/" \
 	$pkg_dir/$CONTROL/control
 
 ( cd $pkg_dir/$CONTROL && $TAR --format=gnu --sort=name -cf -  --mtime="$TIMESTAMP" . | $GZIP -n - > $tmp_dir/control.tar.gz )
 rm $tmp_dir/tarX
 
+which usign >/dev/null && [ -s "$TOPDIR/key-build" ] && {
+	tmp_concat="$tmp_dir/control+data.tmp"
+	cat "$tmp_dir/data.tar.gz" "$tmp_dir/control.tar.gz" > "$tmp_concat"
+	usign -S -m "$tmp_concat" -s "$TOPDIR/key-build" -x "$tmp_dir/control+data.sig"
+	control_data_sig='./control+data.sig'
+}
+
 echo "2.0" > $tmp_dir/debian-binary
 
 pkg_file=$dest_dir/${pkg}_${version}_${arch}.ipk
 rm -f $pkg_file
-( cd $tmp_dir && $TAR --format=gnu --sort=name -cf -  --mtime="$TIMESTAMP" ./debian-binary ./data.tar.gz ./control.tar.gz | $GZIP -n - > $pkg_file )
+( cd $tmp_dir && $TAR --format=gnu --sort=name -cf -  --mtime="$TIMESTAMP" ./debian-binary ./data.tar.gz ./control.tar.gz $control_data_sig | $GZIP -n - > $pkg_file )
 
-rm $tmp_dir/debian-binary $tmp_dir/data.tar.gz $tmp_dir/control.tar.gz
-rmdir $tmp_dir
+rm -rf $tmp_dir
 
 echo "Packaged contents of $pkg_dir into $pkg_file"

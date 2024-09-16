@@ -1,7 +1,7 @@
 # QoS configuration for OpenWrt
 
 # INTERFACES:
-config interface wan
+config interface lan
 	option classgroup  "Default"
 	option enabled      0
 	option upload       128

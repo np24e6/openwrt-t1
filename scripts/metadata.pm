@@ -144,6 +144,7 @@ sub parse_target_metadata($) {
 				supported_devices => [],
 				priority => 999,
 				packages => [],
+				features => [],
 				default => "y if TARGET_ALL_PROFILES"
 			};
 			$1 =~ /^DEVICE_/ and $target->{has_devices} = 1;
@@ -151,11 +152,14 @@ sub parse_target_metadata($) {
 		};
 		/^Target-Profile-Name:\s*(.+)\s*$/ and $profile->{name} = $1;
 		/^Target-Profile-hasImageMetadata:\s*(\d+)\s*$/ and $profile->{has_image_metadata} = $1;
+		/^Target-Profile-InitialSupportVersion:\s*(\S+)\s*$/ and $profile->{initial_support_version} = $1;
+		/^Target-Profile-MultiProfileName:\s*(\S+)\s*$/ and $profile->{multi_profile_name} = $1;
 		/^Target-Profile-SupportedDevices:\s*(.+)\s*$/ and $profile->{supported_devices} = [ split(/\s+/, $1) ];
 		/^Target-Profile-Priority:\s*(\d+)\s*$/ and do {
 			$profile->{priority} = $1;
 			$target->{sort} = 1;
 		};
+		/^Target-Profile-Features:\s*(.*)\s*$/ and $profile->{features} = [ split(/\s+/, $1) ];
 		/^Target-Profile-Packages:\s*(.*)\s*$/ and $profile->{packages} = [ split(/\s+/, $1) ];
 		/^Target-Profile-Description:\s*(.*)\s*/ and $profile->{desc} = get_multiline(*FILE);
 		/^Target-Profile-Broken:\s*(.+)\s*$/ and do {
@@ -174,7 +178,8 @@ sub parse_target_metadata($) {
 			{
 				id => 'Default',
 				name => 'Default',
-				packages => []
+				packages => [],
+				features => []
 			}
 		];
 

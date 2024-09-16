@@ -15,6 +15,7 @@
 #include "wpa_supplicant_i.h"
 #include "wps_supplicant.h"
 #include "ubus.h"
+#include "config.h"
 
 static struct ubus_context *ctx;
 static struct blob_buf b;
@@ -113,6 +114,34 @@ wpas_bss_reload(struct ubus_context *ctx, struct ubus_object *obj,
 		return 0;
 }
 
+static int
+wpas_bss_get_status(struct ubus_context *ctx, struct ubus_object *obj,
+			struct ubus_request_data *req, const char *method,
+			struct blob_attr *msg)
+{
+	struct wpa_supplicant *wpa_s = get_wpas_from_object(obj);
+	struct wpa_config *conf = wpa_s->conf;
+	struct wpa_ssid *ssid = conf->ssid;
+
+	blob_buf_init(&b, 0);
+	blobmsg_add_u32(&b, "disconnect_reason", wpa_s->disconnect_reason);
+	blobmsg_add_string(&b, "wpa_state", wpa_supplicant_state_txt(wpa_s->wpa_state));
+	blobmsg_add_string(&b, "conf_id", ssid->config_id);
+	ubus_send_reply(ctx, req, b.head);
+
+	return 0;
+}
+
+static void
+blobmsg_add_macaddr(struct blob_buf *buf, const char *name, const u8 *addr)
+{
+        char *s;
+
+        s = blobmsg_alloc_string_buffer(buf, name, 20);
+        sprintf(s, MACSTR, MAC2STR(addr));
+        blobmsg_add_string_buffer(buf);
+}
+
 #ifdef CONFIG_WPS
 enum {
 	WPS_START_MULTI_AP,
@@ -166,6 +195,7 @@ wpas_bss_wps_cancel(struct ubus_context *ctx, struct ubus_object *obj,
 static const struct ubus_method bss_methods[] = {
 	UBUS_METHOD_NOARG("reload", wpas_bss_reload),
 	UBUS_METHOD_NOARG("get_features", wpas_bss_get_features),
+	UBUS_METHOD_NOARG("get_status", wpas_bss_get_status),
 #ifdef CONFIG_WPS
 	UBUS_METHOD_NOARG("wps_start", wpas_bss_wps_start),
 	UBUS_METHOD_NOARG("wps_cancel", wpas_bss_wps_cancel),
@@ -356,6 +386,58 @@ void wpas_ubus_free(struct wpa_global *global)
 	free(name);
 }
 
+struct ubus_event_req {
+        struct ubus_notify_request nreq;
+        int resp;
+};
+
+static void
+ubus_event_cb(struct ubus_notify_request *req, int idx, int ret)
+{
+        struct ubus_event_req *ureq = container_of(req, struct ubus_event_req, nreq);
+
+        ureq->resp = ret;
+}
+
+int wpas_ubus_handle_event(struct wpa_supplicant *wpa_s, struct wpas_ubus_request *req)
+{
+	const char *types[WPAS_UBUS_TYPE_MAX] = {
+		[WPAS_UBUS_PROBE_REQ] = "probe",
+		[WPAS_UBUS_BEACON] = "beacon",
+	};
+	const char *type = "mgmt";
+	struct ubus_event_req ureq = {};
+	const u8 *addr;
+
+	if (req->mgmt_frame)
+		addr = req->mgmt_frame->sa;
+	else
+		addr = req->addr;
+
+	if (!wpa_s->ubus.obj.has_subscribers)
+		return WLAN_STATUS_SUCCESS;
+
+	if (req->type < ARRAY_SIZE(types))
+		type = types[req->type];
+
+	blob_buf_init(&b, 0);
+	blobmsg_add_macaddr(&b, "address", addr);
+	if (req->mgmt_frame)
+		blobmsg_add_macaddr(&b, "target", req->mgmt_frame->da);
+	if (req->frame_info)
+		blobmsg_add_u32(&b, "signal", req->frame_info->ssi_signal);
+
+	if (ubus_notify_async(ctx, &wpa_s->ubus.obj, type, b.head, &ureq.nreq))
+		return WLAN_STATUS_SUCCESS;
+
+	ureq.nreq.status_cb = ubus_event_cb;
+	ubus_complete_request(ctx, &ureq.nreq.req, 100);
+
+	if (ureq.resp)
+		return ureq.resp;
+
+	return WLAN_STATUS_SUCCESS;
+}
 
 #ifdef CONFIG_WPS
 void wpas_ubus_notify(struct wpa_supplicant *wpa_s, const struct wps_credential *cred)

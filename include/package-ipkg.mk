@@ -189,6 +189,12 @@ $$(call addfield,Depends,$$(Package/$(1)/DEPENDS)
 )$(if $(filter hold,$(PKG_FLAGS)),Status: unknown hold not-installed
 )$(if $(filter essential,$(PKG_FLAGS)),Essential: yes
 )$(if $(MAINTAINER),Maintainer: $(MAINTAINER)
+)$(if $(PKG_HIDDEN),Hidden: $(PKG_HIDDEN)
+)$(if $(PKG_ROUTER),Router: $(PKG_ROUTER)
+)$(if $(findstring m,$(CONFIG_PACKAGE_$(1))),Firmware: $(TLT_VERSION)
+)$(if $(PKG_REBOOT),pkg_reboot: $(PKG_REBOOT)
+)$(if $(PKG_NETWORK_RESTART),pkg_network_restart: $(PKG_NETWORK_RESTART)
+)$(if $(PKG_TLT_NAME),tlt_name: $(PKG_TLT_NAME)
 )Architecture: $(PKGARCH)
 Installed-Size: 0
 $(_endef)
@@ -221,7 +227,7 @@ $(_endef)
     ifneq ($$(CONFIG_IPK_FILES_CHECKSUMS),)
 	(cd $$(IDIR_$(1)); \
 		( \
-			find . -type f \! -path ./CONTROL/\* -exec mkhash sha256 -n \{\} \; 2> /dev/null | \
+			find . -type f \! -path ./CONTROL/\* -exec $(MKHASH) sha256 -n \{\} \; 2> /dev/null | \
 			sed 's|\([[:blank:]]\)\./| \1/|' > $$(IDIR_$(1))/CONTROL/files-sha256sum \
 		) || true \
 	)

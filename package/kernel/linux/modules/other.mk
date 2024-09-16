@@ -238,7 +238,7 @@ define KernelPackage/gpio-nxp-74hc164
   TITLE:=NXP 74HC164 GPIO expander support
   KCONFIG:=CONFIG_GPIO_74X164
   FILES:=$(LINUX_DIR)/drivers/gpio/gpio-74x164.ko
-  AUTOLOAD:=$(call AutoProbe,gpio-74x164)
+  AUTOLOAD:=$(call AutoProbe,gpio-74x164,1)
 endef
 
 define KernelPackage/gpio-nxp-74hc164/description

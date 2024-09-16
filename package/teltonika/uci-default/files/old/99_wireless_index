@@ -1,0 +1,16 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+index=0
+
+index_iface() {
+	[ "${1:0:3}" != "cfg" ] && return
+
+	index=$((index + 1))
+	uci_rename "wireless" "$1" "$index"
+}
+
+config_load "wireless"
+config_foreach index_iface "wifi-iface"
+uci_commit "wireless"

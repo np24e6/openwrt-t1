@@ -1,0 +1,19 @@
+--- a/drivers/net/usb/usbnet.c
++++ b/drivers/net/usb/usbnet.c
+@@ -33,6 +33,7 @@
+ #include <linux/slab.h>
+ #include <linux/kernel.h>
+ #include <linux/pm_runtime.h>
++#include <linux/if_arp.h>
+ 
+ #define DRIVER_VERSION		"22-Aug-2005"
+ 
+@@ -383,7 +384,7 @@ int usbnet_change_mtu (struct net_device
+ 	int		old_rx_urb_size = dev->rx_urb_size;
+ 
+ 	// no second zero-length packet read wanted after mtu-sized packets
+-	if ((ll_mtu % dev->maxpacket) == 0)
++	if (((ll_mtu % dev->maxpacket) == 0) && (net->type != ARPHRD_NONE))
+ 		return -EDOM;
+ 	net->mtu = new_mtu;
+ 

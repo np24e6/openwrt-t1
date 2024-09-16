@@ -1,0 +1,24 @@
+--- a/net/ipv4/fib_semantics.c
++++ b/net/ipv4/fib_semantics.c
+@@ -882,6 +882,10 @@ int fib_nh_match(struct fib_config *cfg,
+ 		return 0;
+ 	}
+ 
++        /* cannot match on nexthop object attributes */
++        if (fi->nh)
++                return 1;
++
+ 	if (cfg->fc_oif || cfg->fc_gw_family) {
+ 		struct fib_nh *nh;
+ 
+@@ -916,6 +920,10 @@ int fib_nh_match(struct fib_config *cfg,
+ 	if (!cfg->fc_mp)
+ 		return 0;
+ 
++        /* multipath spec and nexthop id are mutually exclusive */
++        if (fi->nh)
++                return 1;
++
+ 	rtnh = cfg->fc_mp;
+ 	remaining = cfg->fc_mp_len;
+ 

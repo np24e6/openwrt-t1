@@ -1,0 +1,113 @@
+#!/bin/sh
+# Copyright (C) 2022 Teltonika
+
+PRX="STM32 AutoFlash:"
+IMAGE_FILE=/usr/share/stm32/firmware.bin
+
+check_version() {
+	ver=`cat /sys/r2ec/app_version`
+	cnt=3
+
+	while [ "$cnt" -gt 0 ] && [ -z "$ver" ]; do
+		sleep 1
+		ver=`cat /sys/r2ec/app_version`
+		cnt=$((cnt-1))
+	done
+
+	echo $ver
+}
+
+check_firmware() {
+	if [ ! -f "$IMAGE_FILE" ]; then
+		logger "$PRX Unable to open image: $IMAGE_FILE"
+		printf "invalid"
+		exit 0
+	fi
+
+	index=0
+	hexdump -v -e '/1 "%u\n"' $IMAGE_FILE | while read c; do
+		index=$((index+1))
+		if [ "$index" -lt 9 ]; then
+			continue
+		fi
+
+		if [ "$index" -eq 17 ]; then
+			break
+		fi
+
+		printf "\x$(printf %x $c)"
+
+		if [ "$index" -eq 14 ]; then
+			printf " rev. "
+		elif [ `expr $index % 2` -eq 0 ] && [ "$index" -lt 16 ]; then
+			printf "."
+		fi
+	done
+}
+
+finalize() {
+	cur_ver=$(check_version)
+	fw_ver=$(check_firmware)
+
+	if [ "$fw_ver" != "invalid" ] && [ "$cur_ver" != "$fw_ver" ]; then
+		echo "An attempt was made to upgrade STM32 without success." > /dev/console
+		echo "STM32 subsystem is not functioning correctly!" > /dev/console
+		ledman --clean
+		touch /tmp/stm32_fail
+		exit 0
+	fi
+
+	echo "### ROUTER IS REBOOTING DUE TO STM32 UPGRADE! ###" > /dev/console
+	sync && reboot -f
+	exit 0
+}
+
+start_service() {
+	echo "$PRX Started"  > /dev/console
+
+	cur_ver=$(check_version)
+	fw_ver=$(check_firmware)
+
+	if [ "$fw_ver" != "invalid" ] && [ "$cur_ver" != "$fw_ver" ]; then
+		echo "$PRX Current: $cur_ver; available: $fw_ver" > /dev/console
+		echo "$PRX Versions do not match. Flashing..." > /dev/console
+		count=0
+
+		# first, attempt to put STM32 into bootloader mode
+		echo "$PRX Resetting MCU..." > /dev/console
+		echo 1 > /sys/r2ec/reset
+		sleep 5
+
+		# turn off possible LED triggers to supress "gpio chip gone" warnings
+		for led in /sys/class/leds/*; do
+			echo none > "$led/trigger"
+		done
+
+		while [ "$count" -lt 5 ]; do
+			stm32flasher $IMAGE_FILE >> /tmp/flash_history
+
+			if [ "$?" == "0" ]; then
+				echo "$PRX Done"  > /dev/console
+				finalize
+				exit 0
+			fi
+
+			echo "$PRX Flashing failed, retrying ($count)..." > /dev/console
+			count=$((count+1))
+			sleep 2
+		done
+
+		stm32flasher $IMAGE_FILE >> /tmp/flash_history
+
+		if [ "$?" != "0" ]; then
+			echo "$PRX Flashing failed, please repeat the operation." > /dev/console
+		else
+			finalize
+		fi
+	fi
+
+	echo "$PRX Done" > /dev/console
+	exit 0
+}
+
+start_service

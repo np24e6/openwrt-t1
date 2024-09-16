@@ -1,0 +1,16 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+index="1"
+
+add_index() {
+	[ "${1:0:3}" != "cfg" ] && return
+
+	uci_rename "network" "$1" "$index"
+	index=$((index + 1))
+}
+
+config_load "network"
+config_foreach add_index "device"
+uci_commit "network"

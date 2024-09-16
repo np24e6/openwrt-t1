@@ -9,7 +9,7 @@ missing_lines() {
 	IFS=":"
 	while read line; do
 		set -- $line
-		grep -q "^$1:" "$file2" || echo "$*"
+		grep -q "^$1:" "$file2" || echo "$line"
 	done < "$file1"
 	IFS="$oIFS"
 }
@@ -17,18 +17,30 @@ missing_lines() {
 do_mount_root() {
 	mount_root
 	boot_run_hook preinit_mount_root
-	[ -f /sysupgrade.tgz ] && {
+	if [ -f /user_defaults.tgz ]; then
+		echo "- restoring user config -"
+		tar -C / -xzf /user_defaults.tgz
+		mkdir -p /etc/default-config
+		mv /user_defaults.tgz /etc/default-config/config.tar.gz
+		# Prevent configuration corruption on a power loss
+		sync
+		sme.sh --preboot || echo "- sme.sh failed with code $? -"
+
+	elif [ -f /sysupgrade.tgz ]; then
 		echo "- config restore -"
+		mv /sysupgrade.tgz /tmp/
 		cp /etc/passwd /etc/group /etc/shadow /tmp
-		cd /
-		tar xzf /sysupgrade.tgz
+		echo 'etc/rc.d/*' >/tmp/exclusions
+		tar -C / -xzf /tmp/sysupgrade.tgz -X '/tmp/exclusions'
+		rm -f /tmp/sysupgrade.tgz /tmp/exclusions
 		missing_lines /tmp/passwd /etc/passwd >> /etc/passwd
 		missing_lines /tmp/group /etc/group >> /etc/group
 		missing_lines /tmp/shadow /etc/shadow >> /etc/shadow
 		rm /tmp/passwd /tmp/group /tmp/shadow
 		# Prevent configuration corruption on a power loss
 		sync
-	}
+		sme.sh --preboot || echo "- sme.sh failed with code $? -"
+	fi
 }
 
 [ "$INITRAMFS" = "1" ] || boot_hook_add preinit_main do_mount_root

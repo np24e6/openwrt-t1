@@ -1,0 +1,15 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+[ -f "/etc/config/rms_connect_mqtt" ] && {
+  cat /etc/config/rms_connect_mqtt >> /etc/config/rms_mqtt
+  rm /etc/config/rms_connect_mqtt
+}
+
+[ -f "/etc/config/rms_connect_timer" ] && {
+  cat /etc/config/rms_connect_timer >> /etc/config/rms_mqtt
+  rm /etc/config/rms_connect_timer
+}
+
+exit 0

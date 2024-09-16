@@ -176,6 +176,19 @@ endef
 
 $(eval $(call KernelPackage,w1-slave-ds2760))
 
+define KernelPackage/w1-slave-ds28e17
+  TITLE:=DS28E17 1-Wire to I2C bridge
+  KCONFIG:= CONFIG_W1_SLAVE_DS28E17
+  FILES:=$(W1_SLAVES_DIR)/w1_ds28e17.ko
+  AUTOLOAD:=$(call AutoProbe,w1_ds28e17)
+  $(call AddDepends/w1,+kmod-i2c-core)
+endef
+
+define KernelPackage/w1-slave-ds28e17/description
+ Kernel module for DS28E17 1-Wire to I2C bridge
+endef
+
+$(eval $(call KernelPackage,w1-slave-ds28e17))
 
 define KernelPackage/w1-slave-ds2413
   TITLE:=DS2413 2 Ch. Addressable Switch

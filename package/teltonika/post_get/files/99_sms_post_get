@@ -1,0 +1,31 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+uci_get sms_gateway post_get >/dev/null || exit 0
+
+config_load sms_gateway
+config_get enabled post_get enabled 0
+config_get username post_get username
+config_get password post_get password
+config_get info_modem_id post_get info_modem_id
+config_get send_modem_id post_get send_modem_id
+uci_remove sms_gateway post_get
+
+uci_get post_get mobile >/dev/null || uci -q set post_get.mobile=post_get 2>/dev/null
+uci_set post_get mobile enabled "$enabled"
+uci_set post_get mobile username "$username"
+[ -n "$info_modem_id" ] && uci_set post_get mobile info_modem_id "$info_modem_id"
+[ -n "$send_modem_id" ] && uci_set post_get mobile send_modem_id "$send_modem_id"
+
+#Check and encrypt password
+[ -n "$password" ] && {
+	[ "${password:0:1}" != "\$" ] || [ "${password:2:1}" != "\$" ] && {
+		passwd="$(mkpasswd ${password})"
+		[ -n "$passwd" ] && password="$passwd"
+	}
+	
+	uci_set post_get mobile password "$password"
+}
+
+uci_commit

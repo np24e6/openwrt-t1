@@ -1,0 +1,436 @@
+#!/bin/sh
+
+. /lib/functions/network.sh
+. /lib/functions.sh
+
+IPSEC_VAR_SECRETS_FILE=/var/ipsec/ipsec.secrets
+IPSEC_VAR_CONN_FILE=/var/ipsec/ipsec.conf
+
+IPSEC_SECRETS_TMP=/var/ipsec.secrets.tmp
+
+CONFIG="true"
+OK="1"
+REQUIRED="0"
+NAME=""
+ENDPOINT=""
+SHARED_KEY=""
+
+ESP_IKE_N="3"
+CUSTOM_ESP_IKE=""
+
+network_get_ipaddr addr lan
+network_get_subnet subnet lan
+L_SUBNET="${addr%.*}.0/${subnet##*/}"
+
+get_limits() {
+        n=1
+        name=""
+
+        start="-1"
+        end="-1"
+        uniq="1"
+
+        while read line; do
+                [ "${line:0:4}" = "conn" ] && {
+                        base="${line##*conn }"
+                        name="${base%-*}"
+                        start="$n"
+                        uniq="1"
+                }
+
+                [ "$start" -ne -1 ] && [ -z "$line" ] && [ "$uniq" -eq 1 ] && {
+                        end="$n"
+                        uniq="0"
+                        echo "$name.$start.$end"
+                }
+
+                n=$((n + 1))
+        done < "${4:-$IPSEC_VAR_CONN_FILE}"
+}
+
+append() {
+	section="$1"
+	option="$2"
+	value="$3"
+
+	get_limit() {
+		limits=$(get_limits)
+		for i in $limits; do
+			name="${i%%.*}"
+			[ "$name" != "$section" ] && continue
+			start=$(echo "$i" | awk -F '.' '{print $2}')
+			end=${i##*.}
+			echo "${start}-${end}" && return
+		done
+	}
+
+	name=""
+	limits=$(get_limit)
+	start=${limits%%-*}
+	end=${limits##*-}
+	n=1
+
+	[ -z "$limits" ] && return
+
+	while read line; do
+		[ "$n" -lt "$start" ] || [ "$n" -gt "$end" ] && n=$((n + 1)) && continue
+
+		sed -i "${n} s|.*${option}=.*|  ${option}=${value}|" ${4:-$IPSEC_VAR_CONN_FILE}
+		n=$((n + 1))
+	done < "${4:-$IPSEC_VAR_CONN_FILE}"
+}
+
+help() {
+	echo "
+Usage: ipsec_test (FLAG) [PARAMETERS]
+Setup and test IPsec connection
+		
+Flags:
+	-h,				display help
+	-s [args],			setup and start configuration
+	-f,				do not write to UCI and start only from IPsec configuration
+	-d [name],			stop and remove configuration
+
+Parameters (-s):
+	name, [*]			service name
+	endpoint, [0.0.0.0] [*]		domain name or IP address
+	shared_key, [*]			shared password used for authentication
+	local_id, [auto]		local device identifier
+	remote_id,			remote device identifier
+	local_subnet, [auto]		local device network
+	remote_subnet, [*]		remote device network
+	default_route, [false]		route all traffic though IPsec tunnel
+	encryption, [aes128]		encryption algorithm
+	hash, [sha1]			hash algorithm
+	dh_group, [modp1536]		DH group
+
+					[*] - required option
+					[auto] - filled automatically if empty
+
+Examples:
+	./ipsec_test -s name=ipsec shared_key=ipsec159 remote_subnet=192.168.2.0/24
+	./ipsec_test -d ipsec
+	"
+}
+
+error() {
+	message="$1"
+	[ -z "$1" ] && message="There was an error in your input!"
+	echo "$message"
+	uci revert ipsec
+	exit 1
+}
+
+is_valid() {
+	if [[ "$1" =~ ['!@#$%^&*()_+'] ]]; then
+		OK=0
+	else
+		OK=1
+	fi
+}
+
+generate_config() {
+	uci -q set ipsec.${1}=remote
+	uci_set "ipsec" "${1}" "crypto_proposal" "${1}_ph1"
+	uci_set "ipsec" "${1}" "authentication_method" "psk"
+	uci_add_list "ipsec" "${1}" "tunnel" "${1}_c"
+	uci_set "ipsec" "${1}" "enabled" "1"
+
+	uci -q set ipsec.${1}_c=connection
+	uci_set "ipsec" "${1}_c" "crypto_proposal" "${1}_ph2"
+	uci_set "ipsec" "${1}_c" "type" "tunnel"
+	uci_set "ipsec" "${1}_c" "keyexchange" "ikev1"
+	uci_set "ipsec" "${1}_c" "mode" "start"
+	uci_add_list "ipsec" "${1}_c" "local_subnet" "$L_SUBNET"
+
+	uci -q set ipsec.${1}_ph1=proposal
+	uci_set "ipsec" "${1}_ph1" "encryption_algorithm" "aes128"
+	uci_set "ipsec" "${1}_ph1" "hash_algorithm" "sha1"
+	uci_set "ipsec" "${1}_ph1" "dh_group" "modp1536"
+
+	uci -q set ipsec.${1}_ph2=proposal
+	uci_set "ipsec" "${1}_ph2" "encryption_algorithm" "aes128"
+	uci_set "ipsec" "${1}_ph2" "hash_algorithm" "sha1"
+	uci_set "ipsec" "${1}_ph2" "dh_group" "modp1536"
+}
+
+generate_ipsec() {
+echo "
+conn ${1}-${1}_c
+  left=%any
+  right=%any
+  leftfirewall=yes
+  rightfirewall=no
+  ikelifetime=3h
+  lifetime=1h
+  margintime=9m
+  keyingtries=3
+  dpdaction=none
+  dpddelay=30s
+  dpdtimeout=90s
+  leftauth=psk
+  rightauth=psk
+  auto=start
+  type=tunnel
+  keyexchange=ikev1
+  aggressive=no
+  forceencaps=no
+  esp=aes128-sha1-modp1536
+  ike=aes128-sha1-modp1536
+  leftsubnet=${L_SUBNET}
+  rightsubnet=
+" >> "$IPSEC_VAR_CONN_FILE"
+
+echo "
+ %any : PSK 0x000000000000000000
+" > "$IPSEC_SECRETS_TMP"
+}
+
+check_name() {
+	for i in "$1"; do
+		param=${i%=*}
+                value=${i##*=}
+
+                [ "$param" = "$value" ] || [ -z "$param" ] || [ -z "$value" ] && error
+		is_valid "$value"
+
+		[ "$OK" = "0" ] && error "Input is not valid"
+		name_exists=$(uci_get "ipsec" "$value")
+
+		while read line; do
+		[ "${line:0:4}" = "conn" ] && {
+			base="${line##*conn }"
+			name="${base%-*}"
+		}
+		[ "$name" = "$value" ] && name_exists="remote"
+		done < "${IPSEC_VAR_CONN_FILE}"
+
+		[ "$name_exists" = "remote" ] && error "Instance with the same name already exists"
+		[ "$param" = "name" ] && { # Required
+			generate_config "$value"
+			generate_ipsec "$value"
+			NAME="$value"
+			REQUIRED=$((REQUIRED+1))
+		}
+	done
+}
+
+setup() {
+	[ "$1" = "-f" ] && {
+		CONFIG="false"
+		shift
+	}
+
+	check_name "$@"
+
+	for i in $@; do
+		param=${i%=*}
+		value=${i##*=}
+
+		[ "$param" = "$value" ] || [ -z "$param" ] || [ -z "$value" ] && error
+
+		case "$param" in
+			endpoint)
+				is_valid "$value"
+				param="gateway"
+				append "$NAME" "right" "$value" "$IPSEC_VAR_CONN_FILE"
+				ENDPOINT="$value"
+				;;
+			shared_key) # Required
+				[ "${#value}" -lt 5 ] && error "Shared-Key must be at least 5 symbols long"
+				REQUIRED=$((REQUIRED+1))
+				param="pre_shared_key"
+				value="0x$(echo -n "$value" | hexdump -ve '1/1 "%.2x"')"
+				SHARED_KEY="$value"
+				;;
+			local_id)
+				param="local_identifier"
+				append "$NAME" "leftid" "$value" "$IPSEC_VAR_CONN_FILE"
+				;;
+			remote_id)
+				param="remote_identifier"
+				append "$NAME" "rightid" "$value" "$IPSEC_VAR_CONN_FILE"
+				;;
+			local_subnet)
+				param="local_subnet"
+				append "$NAME" "leftsubnet" "$value" "$IPSEC_VAR_CONN_FILE"
+				;;
+			remote_subnet) # Required
+				is_valid "$value"
+				[ "$OK" = "0" ] && error "Input is not valid"
+				REQUIRED=$((REQUIRED+1))
+				param="remote_subnet"
+				append "$NAME" "rightsubnet" "$value" "$IPSEC_VAR_CONN_FILE"
+				;;
+			default_route)
+				param="default_route"
+				;;
+			encryption)
+				param="encryption_algorithm"
+				CUSTOM_ESP_IKE="${CUSTOM_ESP_IKE}${value}-"
+				ESP_IKE_N=$((ESP_IKE_N - 1))
+				;;
+			hash)
+				param="hash_algorithm"
+				CUSTOM_ESP_IKE="${CUSTOM_ESP_IKE}${value}-"
+				ESP_IKE_N=$((ESP_IKE_N - 1))
+				;;
+			dh_group)
+				param="dh_group"
+				CUSTOM_ESP_IKE="${CUSTOM_ESP_IKE}${value}-"
+				ESP_IKE_N=$((ESP_IKE_N - 1))
+				;;
+			*)
+				OK=0
+		esac
+
+		param=$(echo "$param" | xargs)
+		if [ "$param" = "remote_subnet" ]; then
+			uci_add_list "ipsec" "${NAME}_c" "$param" "$value"
+		elif [ "$param" = "local_subnet" ]; then
+			uci_remove "ipsec" "${NAME}_c" "$param"
+			uci_add_list "ipsec" "${NAME}_c" "$param" "$value"
+		elif [ "$param" = "encryption_algorithm" ] || [ "$param" = "hash_algorithm" ] || \
+			[ "$param" = "dh_group" ]; then
+			uci_set "ipsec" "${NAME}_ph1" "$param" "$value"
+			uci_set "ipsec" "${NAME}_ph2" "$param" "$value"
+		else
+			uci_set "ipsec" "$NAME" "$param" "$value"
+		fi
+	done
+
+	[ "$OK" -eq 0 ] && error
+	[ "$REQUIRED" -ne 3 ] && error "There are missing required parameters"
+	[ "$CONFIG" = "true" ] && {
+		insert_rules
+		uci_commit "ipsec"
+		/etc/init.d/firewall reload 1>/dev/null 2>/dev/null
+		/etc/init.d/ipsec reload
+		ipsec restart
+	} || {
+		[ "$ESP_IKE_N" -ne 0 ] && \
+			echo "Warning: Not all proposals specified! This may have negative effect!"
+
+		append "$NAME" "esp" "${CUSTOM_ESP_IKE::-1}" "$IPSEC_VAR_CONN_FILE"
+		append "$NAME" "ike" "${CUSTOM_ESP_IKE::-1}" "$IPSEC_VAR_CONN_FILE"
+
+		cat "$IPSEC_SECRETS_TMP" >> "$IPSEC_VAR_SECRETS_FILE"
+		[ -n "$ENDPOINT" ] && [ -n "$SHARED_KEY" ] && echo \
+			" $ENDPOINT : PSK $SHARED_KEY" > "$IPSEC_VAR_SECRETS_FILE"
+		rm -f "$IPSEC_SECRETS_TMP"
+		insert_temp_rules
+		ipsec restart
+	}
+	echo "IPsec configuration succesfully created and started!"
+}
+
+name_exists() {
+	name_exists=$(uci -q get ipsec.${1})
+	tmp_name=
+
+	while read line; do
+		[ "${line:0:4}" = "conn" ] && {
+			base="${line##*conn }"
+			tmp_name="${base%-*}"
+		}
+	done < "$IPSEC_VAR_CONN_FILE"
+
+	[ "$name_exists" != "remote" ] && [ -z "$tmp_name" ] && return 1
+	return 0
+}
+
+remove() {
+	name_exists "$1" || error "Section with specified name doesn't exist"
+
+	uci_remove "ipsec" "${1}" 2>/dev/null
+	uci_remove "ipsec" "${1}_c" 2>/dev/null
+	uci_remove "ipsec" "${1}_ph1" 2>/dev/null
+	uci_remove "ipsec" "${1}_ph2" 2>/dev/null
+	uci_commit "ipsec"
+	/etc/init.d/ipsec reload
+	ipsec restart
+}
+
+get_last_rule_index() {
+	max=0
+	rules=$(uci show firewall | awk -F '.' '{print $2}')
+	for i in $rules; do
+		[ "$i" -eq "$i" ] 2>/dev/null && [ "$i" -gt "$max" ] && max="$i"
+	done
+
+	echo "$max"
+}
+
+insert_rule() {
+	index=$(get_last_rule_index)
+	index=$((index + 1))
+
+	[ "$1" = "redirect" ] && {
+		uci set "firewall.${index}=redirect"
+		shift
+	} || uci set "firewall.${index}=rule"
+
+	for rule in $@; do
+		option=${rule%%=*}
+		value=${rule##*=}
+
+		[ "$option" = "extra" ] && {
+			uci_set "firewall" "$index" "$option" "-m policy --dir ${value} --pol ipsec"
+			continue
+		}
+
+		uci_set "firewall" "$index" "$option" "$value"
+	done
+
+	uci_set "firewall" "$index" "target" "ACCEPT"
+	uci_set "firewall" "$index" "vpn_type" "IPsec"
+}
+
+insert_rules() {
+	rules=$(uci show firewall | grep "vpn_type")
+
+	for rule in $rules; do
+		rule=$(echo ${rule##*=} | tr -d "'")
+		[ "$rule" = "IPsec" ] && return
+	done
+
+	insert_rule name=Allow-IPsec-ESP proto=esp src=wan
+	insert_rule name=Allow-IPsec-NAT-T proto=udp dest_port=4500 src=wan
+	insert_rule name=Allow-IPsec-IKE proto=udp dest_port=500 src=wan
+	insert_rule name=Allow-IPsec-Forward extra=in dest=* proto=all src=wan
+	insert_rule redirect name=Exclude-IPsec-from-NAT extra=out proto=any dest=wan enabled=1
+	uci_commit "firewall"
+}
+
+insert_temp_rules() {
+	iptables -C zone_wan_forward -m policy --dir in --pol ipsec -m comment --comment "!fw3: Allow-IPsec-Forward" -j ACCEPT || \
+		iptables -A zone_wan_forward -m policy --dir in --pol ipsec -m comment --comment "!fw3: Allow-IPsec-Forward" -j ACCEPT
+	iptables -C zone_wan_input -p esp -m comment --comment "!fw3: Allow-IPsec-ESP" -j ACCEPT || \
+		iptables -A zone_wan_input -p esp -m comment --comment "!fw3: Allow-IPsec-ESP" -j ACCEPT
+	iptables -C zone_wan_input -p udp -m udp --dport 4500 -m comment --comment "!fw3: Allow-IPsec-NAT-T" -j ACCEPT || \
+		iptables -A zone_wan_input -p udp -m udp --dport 4500 -m comment --comment "!fw3: Allow-IPsec-NAT-T" -j ACCEPT
+	iptables -C zone_wan_input -p udp -m udp --dport 500 -m comment --comment "!fw3: Allow-IPsec-IKE" -j ACCEPT || \
+		iptables -A zone_wan_input -p udp -m udp --dport 500 -m comment --comment "!fw3: Allow-IPsec-IKE" -j ACCEPT
+	iptables -t nat -C zone_wan_postrouting -m policy --dir out --pol ipsec -m comment --comment "!fw3: Exclude-IPsec-from-NAT" -j ACCEPT || \
+		iptables -t nat -A zone_wan_postrouting -m policy --dir out --pol ipsec -m comment --comment "!fw3: Exclude-IPsec-from-NAT" -j ACCEPT
+}
+
+case "$1" in
+	-h)
+		help
+		;;
+	-s)
+		shift
+		[ "$#" -eq 0 ] && error
+		setup $@
+		;;
+	-d)
+		shift
+		[ "$#" -eq 0 ] && error
+		remove $1
+		;;
+	*)
+		echo "Wrong input!"
+		help
+esac
+

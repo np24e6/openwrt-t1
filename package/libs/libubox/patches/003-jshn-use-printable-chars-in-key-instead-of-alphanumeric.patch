@@ -1,0 +1,11 @@
+--- a/jshn.c
++++ b/jshn.c
+@@ -99,7 +99,7 @@ static void add_json_string(const char *
+ static void write_key_string(const char *key)
+ {
+ 	while (*key) {
+-		putc(isalnum(*key) ? *key : '_', stdout);
++		putc(isprint(*key) ? *key : '_', stdout);
+ 		key++;
+ 	}
+ }

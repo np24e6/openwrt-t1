@@ -14,6 +14,7 @@ PKG_SOURCE_URL:=@SAVANNAH/quilt
 PKG_HASH:=314b319a6feb13bf9d0f9ffa7ce6683b06919e734a41275087ea457cc9dc6e07
 
 include $(INCLUDE_DIR)/host-build.mk
+include $(INCLUDE_DIR)/gpl.mk
 
 define Host/Configure
 	cd $(HOST_BUILD_DIR) && autoconf

@@ -1,0 +1,46 @@
+diff --git a/blobmsg.h b/blobmsg.h
+index 1f0634d..2b5b29d 100644
+--- a/blobmsg.h
++++ b/blobmsg.h
+@@ -13,6 +13,10 @@
+  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+  */
++#ifdef __cplusplus
++extern "C" {
++#endif
++
+ #ifndef __BLOBMSG_H
+ #define __BLOBMSG_H
+ 
+@@ -361,3 +365,7 @@ int blobmsg_printf(struct blob_buf *buf, const char *name, const char *format, .
+ 	     rem -= blob_pad_len(pos), pos = blob_next(pos))
+ 
+ #endif
++
++#ifdef __cplusplus
++}
++#endif
+diff --git a/blobmsg_json.h b/blobmsg_json.h
+index 9dfc02d..d079148 100644
+--- a/blobmsg_json.h
++++ b/blobmsg_json.h
+@@ -13,6 +13,10 @@
+  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+  */
++#ifdef __cplusplus
++extern "C" {
++#endif
++
+ #ifndef __BLOBMSG_JSON_H
+ #define __BLOBMSG_JSON_H
+ 
+@@ -57,3 +61,7 @@ static inline char *blobmsg_format_json_value_indent(struct blob_attr *attr, int
+ }
+ 
+ #endif
++
++#ifdef __cplusplus
++}
++#endif

@@ -7,6 +7,7 @@ PROJECT_GIT = https://git.openwrt.org
 
 OPENWRT_GIT = $(PROJECT_GIT)
 LEDE_GIT = $(PROJECT_GIT)
+TLT_GIT = git@git.teltonika.lt:teltonika
 
 ifdef PKG_SOURCE_VERSION
   ifndef PKG_VERSION
@@ -68,13 +69,16 @@ check_escape=$(subst ','\'',$(1))
 # $(3): expected hash value
 # $(4): var name of the the form: {PKG_,Download/<name>:}{,MIRROR_}{HASH,MIRROR_HASH}
 check_warn_nofix = $(info $(shell printf "$(_R)WARNING: %s$(_N)" '$(call check_escape,$(call C_$(1),$(2),$(3),$(4)))'))
-ifndef FIXUP
+check_error_nofix = $(error $(shell printf "$(_R)ERROR: %s$(_N)" '$(call check_escape,$(call C_$(1),$(2),$(3),$(4)))'))
+ifdef STRICT
+  check_warn = $(check_error_nofix)
+else ifndef FIXUP
   check_warn = $(check_warn_nofix)
 else
   check_warn = $(if $(filter-out undefined,$(origin F_$(1))),$(filter ,$(shell $(call F_$(1),$(2),$(3),$(4)) >&2)),$(check_warn_nofix))
 endif
 
-gen_sha256sum = $(shell mkhash sha256 $(DL_DIR)/$(1))
+gen_sha256sum = $(shell $(MKHASH) sha256 $(DL_DIR)/$(1))
 
 ifdef FIXUP
 F_hash_deprecated = $(SCRIPT_DIR)/fixup-makefile.pl $(CURDIR)/Makefile fix-hash $(3) $(call gen_sha256sum,$(1)) $(2)
@@ -126,7 +130,8 @@ define DownloadMethod/unknown
 endef
 
 define DownloadMethod/default
-	$(SCRIPT_DIR)/download.pl "$(DL_DIR)" "$(FILE)" "$(HASH)" "$(URL_FILE)" $(foreach url,$(URL),"$(url)") \
+	$(SCRIPT_DIR)/download.pl "$(DL_DIR)" \
+		"$(if $(findstring $(TLT_GIT),$(PKG_SOURCE_URL)),skip-mirrors)" "$(FILE)" "$(HASH)" "$(URL_FILE)" $(foreach url,$(URL),"$(url)") \
 	$(if $(filter check,$(1)), \
 		$(call check_hash,$(FILE),$(HASH),$(2)$(call hash_var,$(MD5SUM))) \
 		$(call check_md5,$(MD5SUM),$(2)MD5SUM,$(2)HASH) \
@@ -137,11 +142,16 @@ endef
 # $(2): "PKG_" if <name> as in Download/<name> is "default", otherwise "Download/<name>:"
 # $(3): shell command sequence to do the download
 define wrap_mirror
-$(if $(if $(MIRROR),$(filter-out x,$(MIRROR_HASH))),$(SCRIPT_DIR)/download.pl "$(DL_DIR)" "$(FILE)" "$(MIRROR_HASH)" "" || ( $(3) ),$(3)) \
+$(if $(if $(MIRROR),$(filter-out x,$(MIRROR_HASH))),$(SCRIPT_DIR)/download.pl "$(DL_DIR)" "$(if $(findstring $(TLT_GIT),$(PKG_SOURCE_URL)),skip-mirrors)" "$(FILE)" "$(MIRROR_HASH)" "" || ( $(3) ),$(3)) \
 $(if $(filter check,$(1)), \
 	$(call check_hash,$(FILE),$(MIRROR_HASH),$(2)MIRROR_$(call hash_var,$(MIRROR_MD5SUM))) \
 	$(call check_md5,$(MIRROR_MD5SUM),$(2)MIRROR_MD5SUM,$(2)MIRROR_HASH) \
 )
+endef
+
+# $(1): shell command sequence to do the download
+define check_pkg_archive
+$(if $(shell "$(TAR)" -tf "$(DL_DIR)/$(FILE)" 2>/dev/null),,( $(1) ))
 endef
 
 define DownloadMethod/cvs
@@ -178,7 +188,7 @@ define DownloadMethod/svn
 endef
 
 define DownloadMethod/git
-	$(call wrap_mirror,$(1),$(2), \
+	$(call check_pkg_archive, \
 		$(call DownloadMethod/rawgit) \
 	)
 endef
@@ -323,4 +333,28 @@ define Download
 		),\
 		$(FILE))
 
+endef
+
+define Download/ParseURL
+$(strip
+  $(if $(findstring @OPENWRT,$(1)),$(subst @OPENWRT,https://sources.cdn.openwrt.org,$(1)), \
+    $(if $(findstring @SF,$(1)),$(subst @SF,https://downloads.sourceforge.net,$(1)), \
+      $(if $(findstring @APACHE,$(1)),$(subst @APACHE,https://mirror.netcologne.de/apache.org,$(1)), \
+        $(if $(findstring @GITHUB,$(1)),$(subst @GITHUB,https://raw.githubusercontent.com,$(1)), \
+          $(if $(findstring @GNU,$(1)),$(subst @GNU,https://mirror.csclub.uwaterloo.ca/gnu,$(1)), \
+            $(if $(findstring @SAVANNAH,$(1)),$(subst @SAVANNAH,https://mirror.netcologne.de/savannah,$(1)), \
+              $(if $(findstring @KERNEL,$(1)),$(subst @KERNEL,https://cdn.kernel.org/pub,$(1)), \
+                $(if $(findstring @GNOME,$(1)),$(subst @GNOME,https://mirror.csclub.uwaterloo.ca/gnome/sources,$(1)), \
+                  $(if $(findstring $(TLT_GIT),$(1)),-, \
+                    $(1) \
+                  ) \
+                ) \
+              ) \
+            ) \
+          ) \
+        ) \
+      ) \
+    ) \
+  ) \
+)
 endef

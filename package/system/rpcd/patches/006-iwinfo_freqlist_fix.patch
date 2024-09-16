@@ -1,0 +1,13 @@
+Index: rpcd-2021-03-11-ccb75178/iwinfo.c
+===================================================================
+--- rpcd-2021-03-11-ccb75178.orig/iwinfo.c
++++ rpcd-2021-03-11-ccb75178/iwinfo.c
+@@ -688,7 +688,7 @@ rpc_iwinfo_freqlist(struct ubus_context
+                     struct ubus_request_data *req, const char *method,
+                     struct blob_attr *msg)
+ {
+-	int i, rv, len, ch;
++	int i, rv, len = 0, ch = -1;
+ 	char res[IWINFO_BUFSIZE];
+ 	struct iwinfo_freqlist_entry *f;
+ 	void *c, *d;

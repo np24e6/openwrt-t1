@@ -1,0 +1,18 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+add_period() {
+	local section="$1"
+	local enabled period
+
+	config_get enabled "$section" "enable_sms_limit"
+	[ -z "$enabled" ] || [ "$enabled" -eq 0 ] && return
+
+	config_get period "$section" "period"
+	[ -z "$period" ] && uci_set "simcard" "$section" "period" "1"
+}
+
+config_load "simcard"
+config_foreach add_period "sim"
+uci_commit "simcard"

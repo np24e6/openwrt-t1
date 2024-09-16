@@ -83,21 +83,22 @@ define Package/opkg/install
 	$(INSTALL_DIR) $(1)/usr/lib/opkg
 	$(INSTALL_DIR) $(1)/bin
 	$(INSTALL_DIR) $(1)/etc/opkg
-	$(INSTALL_DIR) $(1)/etc/uci-defaults
 	$(INSTALL_DATA) ./files/customfeeds.conf $(1)/etc/opkg/customfeeds.conf
 	$(INSTALL_DATA) ./files/opkg$(2).conf $(1)/etc/opkg.conf
-	$(INSTALL_BIN) ./files/20_migrate-feeds $(1)/etc/uci-defaults/
 	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/bin/opkg-cl $(1)/bin/opkg
   ifneq ($(CONFIG_SIGNATURE_CHECK),)
 	echo "option check_signature" >> $(1)/etc/opkg.conf
   endif
 	$(INSTALL_DIR) $(1)/usr/sbin
 	$(INSTALL_BIN) ./files/opkg-key $(1)/usr/sbin/
+	echo src/gz tlt_packages http://opkg.teltonika-networks.com/8c55929b5b2eaf44e6e62f3dbb971e73b2a3bad8e8b27327d659ee6cdeb633e9 > $(1)/etc/opkg/teltonikafeeds.conf
 endef
 
 define Host/Install
 	$(INSTALL_BIN) $(HOST_BUILD_DIR)/src/opkg-cl $(STAGING_DIR_HOST)/bin/opkg
 endef
+
+
 
 $(eval $(call BuildPackage,opkg))
 $(eval $(call HostBuild))

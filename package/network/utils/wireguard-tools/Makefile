@@ -60,6 +60,8 @@ define Package/wireguard-tools/install
 	$(INSTALL_BIN) ./files/wireguard_watchdog $(1)/usr/bin/
 	$(INSTALL_DIR) $(1)/lib/netifd/proto/
 	$(INSTALL_BIN) ./files/wireguard.sh $(1)/lib/netifd/proto/
+	$(INSTALL_DIR) $(1)/etc/hotplug.d/iface/
+	$(INSTALL_BIN) ./files/18-wireguard $(1)/etc/hotplug.d/iface/
 endef
 
 $(eval $(call BuildPackage,wireguard-tools))

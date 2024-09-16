@@ -1,0 +1,14 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+[ "$(uci_get rpcd @rpcd[0] timeout)" -lt "200" ] && {
+	uci_set "rpcd" "@rpcd[0]" "timeout" "200"
+	uci_commit "rpcd"
+}
+[ "$(uci_get rpcd @rpcd[0] socket)" = "/var/run/ubus.sock" ] || exit 0
+
+uci_set "rpcd" "@rpcd[0]" "socket" "/var/run/ubus/ubus.sock"
+uci_commit "rpcd"
+
+exit 0

@@ -5,6 +5,7 @@
 include /lib/upgrade
 
 v "Performing system upgrade..."
+ledman --flash --daemon --force >/dev/null 2>&1 &
 if type 'platform_do_upgrade' >/dev/null 2>/dev/null; then
 	platform_do_upgrade "$IMAGE"
 else
@@ -20,6 +21,9 @@ sleep 1
 
 v "Rebooting system..."
 umount -a
+sleep 1
+umount -a -f
+
 reboot -f
 sleep 5
 echo b 2>/dev/null >/proc/sysrq-trigger

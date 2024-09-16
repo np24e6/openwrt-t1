@@ -9,6 +9,7 @@ PKG_SOURCE_URL:=@KERNEL/software/network/wireless-regdb/
 PKG_HASH:=9e4c02b2a9710df4dbdb327c39612e8cbbae6495987afeddaebab28c1ea3d8fa
 
 PKG_MAINTAINER:=Felix Fietkau <nbd@nbd.name>
+PKG_LICENSE:=GPL-2.0-only
 
 include $(INCLUDE_DIR)/package.mk
 

@@ -1,0 +1,14 @@
+[
+    {
+        "data": "boardData_1_0_IPQ4019_Y9803_wifi0.bin", 
+        "names": [
+            "bus=ahb,bmi-chip-id=0,bmi-board-id=16"
+        ]
+    }, 
+    {
+        "data": "boardData_1_0_IPQ4019_Y9803_wifi1.bin", 
+        "names": [
+            "bus=ahb,bmi-chip-id=0,bmi-board-id=17"
+        ]
+    }
+]

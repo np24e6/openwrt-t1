@@ -1,0 +1,8 @@
+#!/bin/sh
+
+[ "$PLUTO_VERB" = "up-client" ] || exit 0
+
+flush="$(uci get ipsec.${PLUTO_CONNECTION##*-}.flush)"
+
+[ "$flush" -eq 1 ] && echo f > /proc/net/nf_conntrack
+

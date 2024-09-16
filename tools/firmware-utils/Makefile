@@ -11,6 +11,7 @@ PKG_RELEASE := 7
 
 include $(INCLUDE_DIR)/host-build.mk
 include $(INCLUDE_DIR)/kernel.mk
+include $(INCLUDE_DIR)/gpl.mk
 
 define cc
 	$(HOSTCC) \

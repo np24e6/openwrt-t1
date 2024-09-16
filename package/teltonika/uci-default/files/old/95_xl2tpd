@@ -1,0 +1,22 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+fix_xl2tpd() {
+	config_get type "$1" "type"
+	config_get enabled "$1" "enabled" "0"
+	config_get name "$1" "_name"
+
+	[ "$type" = "client" ] && {
+		uci_set "network" "$1" "auto" "$enabled"
+		uci_set "network" "$1" "type" "$type"
+		uci_rename "network" "$1" "$name"
+		uci_remove "xl2tpd" "$1"
+	}
+
+	uci_rename "xl2tpd" "$1" "$name"
+}
+
+config_load "xl2tpd"
+config_foreach fix_xl2tpd "service"
+uci_commit "xl2tpd"

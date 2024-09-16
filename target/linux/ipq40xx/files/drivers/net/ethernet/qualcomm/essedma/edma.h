@@ -392,7 +392,7 @@ struct edma_adapter {
 	struct edma_common_info *edma_cinfo; /* edma common info */
 	struct phy_device *phydev; /* Phy device */
 	struct edma_rfs_flow_table rfs; /* edma rfs flow table */
-	struct net_device_stats stats; /* netdev statistics */
+	struct pcpu_sw_netstats __percpu *stats64; /* netdev statistics */
 	set_rfs_filter_callback_t set_rfs_rule;
 	u32 flags;/* status flags */
 	unsigned long state_flags; /* GMAC up/down flags */
@@ -432,7 +432,7 @@ void edma_free_irqs(struct edma_adapter *adapter);
 irqreturn_t edma_interrupt(int irq, void *dev);
 void edma_write_reg(u16 reg_addr, u32 reg_value);
 void edma_read_reg(u16 reg_addr, volatile u32 *reg_value);
-struct net_device_stats *edma_get_stats(struct net_device *netdev);
+void edma_get_stats64(struct net_device *net, struct rtnl_link_stats64 *stats);
 int edma_set_mac_addr(struct net_device *netdev, void *p);
 int edma_rx_flow_steer(struct net_device *dev, const struct sk_buff *skb,
 		u16 rxq, u32 flow_id);

@@ -1,0 +1,10 @@
+#!/bin/sh
+
+do_stm32_autoflash() {
+	# launch STM32 flash utility
+	[ "$(grep STM32 /proc/device-tree/model)" ] && {
+		/usr/bin/autoflash
+	}
+}
+
+[ "$INITRAMFS" = "1" ] || boot_hook_add preinit_main do_stm32_autoflash

@@ -1,0 +1,13 @@
+diff --git a/asio/include/asio/serial_port_base.hpp b/asio/include/asio/serial_port_base.hpp
+index 1f027601..e2f0c4cf 100644
+--- a/asio/include/asio/serial_port_base.hpp
++++ b/asio/include/asio/serial_port_base.hpp
+@@ -91,7 +91,7 @@ public:
+   class parity
+   {
+   public:
+-    enum type { none, odd, even };
++    enum type { none, odd, even, mark, space };
+     ASIO_DECL explicit parity(type t = none);
+     type value() const;
+     ASIO_DECL ASIO_SYNC_OP_VOID store(

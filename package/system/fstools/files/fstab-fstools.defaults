@@ -1,0 +1,4 @@
+#!/bin/sh
+
+[ ! -f /etc/config/fstab ] && ( block detect > /etc/config/fstab )
+exit 0

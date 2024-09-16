@@ -1,0 +1,21 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+#Rename option 'group_name' to 'group'
+
+rename_option() {
+	local section="$1"
+	local tmp=$(config_get "$section" group_name)
+	[ -n "$tmp" ] && uci_rename sms_gateway "$section" group_name group
+
+	tmp=$(config_get "$section" number)
+	[ -n "$tmp" ] && uci_rename sms_gateway "$section" number tel
+}
+
+config_load sms_gateway
+config_foreach rename_option reply
+config_foreach rename_option fwd_to_http
+config_foreach rename_option fwd_to_sms
+config_foreach rename_option fwd_to_smtp
+uci_commit sms_gateway

@@ -1,0 +1,36 @@
+-- GPS --
+
+latitude OBJECT-TYPE
+	SYNTAX		DisplayString (SIZE (0..255))
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION	"Latitude coordinates"
+	::= { gps 1 }
+
+longitude OBJECT-TYPE
+	SYNTAX		DisplayString (SIZE (0..255))
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION	"Longitude coordinates"
+	::= { gps 2 }
+
+accuracy OBJECT-TYPE
+	SYNTAX		DisplayString (SIZE (0..255))
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION	"Accuracy"
+	::= { gps 3 }
+
+datetime OBJECT-TYPE
+	SYNTAX		DisplayString (SIZE (0..255))
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION	"GPS datetime"
+	::= { gps 4 }
+
+numSatellites OBJECT-TYPE
+	SYNTAX		Integer32
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION	"Number of satellites"
+	::= { gps 5 }

@@ -1,0 +1,18 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+[ -n "$(uci_get system modem disable)" ] || {
+	for m in /sys/class/gpio/modem*_power; do
+		label=$(basename "$m" | awk -F_ '{print $1}')
+		uci -q set "system.${label}=mctl"
+		uci_set "system" "$label" "disable" "0"
+
+		# modem is turned on in preinit but others are not
+		[ "$label" != "modem" ] && /sbin/mctl -p -m "$label"
+	done
+
+	uci_commit "system"
+}
+
+exit 0

@@ -1,0 +1,89 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+DEFAULT_PID=0
+
+set_start_time(){
+	local wday="$1" hour="$2" pid="$3" enabled="$4"
+
+	[ "$wday" -eq 7 ] && wday="0"
+	[ "$hour" -lt 10 ] && hour="0${hour}"
+
+	uci_add "profiles" "scheduler"
+	uci_set "profiles" "@scheduler[-1]" "enabled" "$enabled"
+	uci_set "profiles" "@scheduler[-1]" "profile_id" "$pid"
+	uci_set "profiles" "@scheduler[-1]" "start_day" "$wday"
+	uci_set "profiles" "@scheduler[-1]" "start_time" "$hour:00"
+	uci_set "profiles" "@scheduler[-1]" "period" "week"
+}
+
+set_stop_time(){
+	local wday="$1" hour="$2"
+
+	[ "$wday" -eq 7 ] && wday="0"
+	[ "$hour" -lt 10 ] && hour="0${hour}"
+
+	uci_set "profiles" "@scheduler[-1]" "end_day" "$wday"
+	uci_set "profiles" "@scheduler[-1]" "end_time" "${hour}:00"
+
+}
+
+convert_scheduler(){
+	local section="$1"
+	local enabled days hours
+	local n="1" start="0" old_pid="$DEFAULT_PID"
+
+	config_get enabled "$section" "scheduler" "0"
+	[ "$enabled" -eq 0 ] && [ "$general_enabled" -eq 1 ] && enabled="1"
+	config_get days "$section" "days"
+	[ -z "$days" ] && {
+		uci_remove "profiles" "$section"
+		uci_commit "profiles"
+		return 0
+	}
+
+	for day in ${days}; do
+		hours=$(echo "$day" | grep -o .)
+		hour="0"
+
+		for pid in ${hours}; do
+			if [ "$start" -ne 1 ]; then
+				[ "$pid" -ne "$old_pid" ] && [ "$pid" -ne "$DEFAULT_PID" ] && {
+					start="1"
+					old_pid="$pid"
+					set_start_time "$n" "$hour" "$pid" "$enabled"
+				}
+			else
+				[ "$pid" -ne "$old_pid" ] && {
+					start="0"
+
+					set_stop_time "$n" "$hour"
+					[ "$pid" -ne "$DEFAULT_PID" ] && {
+						start="1"
+						set_start_time "$n" "$hour" "$pid" "$enabled"
+					}
+				}
+			fi
+
+			old_pid="$pid"
+			hour=$((hour+1))
+		done
+
+		n=$((n+1))
+	done
+
+	[ "$start" -eq 1 ] && {
+		start="0"
+		[ "$n" -lt 7 ] && wday=$((n+1)) || wday="1"
+		set_stop_time "$wday" "0"
+	}
+
+	uci_set "profiles" "general" "enabled" "$enabled"
+	uci_remove "profiles" "$section"
+	uci_commit "profiles"
+}
+
+config_load "profiles"
+config_get general_enabled "general" "scheduler" "0"
+convert_scheduler "scheduler"

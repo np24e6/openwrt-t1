@@ -5,9 +5,9 @@ PKG_RELEASE:=1
 
 PKG_SOURCE_PROTO:=git
 PKG_SOURCE_URL=$(PROJECT_GIT)/project/netifd.git
-PKG_SOURCE_DATE:=2021-07-26
-PKG_SOURCE_VERSION:=440eb0647708274cc8d7d9e7c2bb0cfdfba90023
-PKG_MIRROR_HASH:=eed957036ab608fdc49bdf801fc5b4405fcd2a3a5e5d3343ec39898e156c10e9
+PKG_SOURCE_DATE:=2022-01-12
+PKG_SOURCE_VERSION:=5ca5e0b4d058a47d72ba4102acdcec826e203c41
+PKG_MIRROR_HASH:=afe563b13eb6349a304442914513d9a541d59fd7d8bc520b73bd49cbf0ce8342
 PKG_MAINTAINER:=Felix Fietkau <nbd@nbd.name>
 
 PKG_LICENSE:=GPL-2.0
@@ -45,8 +45,19 @@ define Package/netifd/install
 	$(INSTALL_DIR) $(1)/sbin
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/netifd $(1)/sbin/
 	$(CP) ./files/* $(1)/
+	$(if $(CONFIG_USES_SOFT_PORT_MIRROR),, \
+		$(RM) $(1)/lib/netifd/proto/mirror.sh)
 	$(INSTALL_DIR) $(1)/etc/udhcpc.user.d/
 	$(CP) $(PKG_BUILD_DIR)/scripts/* $(1)/lib/netifd/
+
+	$(if $(CONFIG_SMP_SUPPORT),, \
+		$(RM) $(1)/etc/hotplug.d/net/20-smp-packet-steering)
+
+	$(if $(and $(CONFIG_MOBILE_SUPPORT),$(CONFIG_DEV_SINGLE_ETH_PORT)),,\
+    	rm $(1)/etc/hotplug.d/iface/29-setup-mobile-gateway-passthrough-bridge)
+
+	$(if $(CONFIG_ADVANCED_NETWORK),,\
+		$(RM) $(1)/lib/netifd/proto/l2tpv3.sh)
 endef
 
 $(eval $(call BuildPackage,netifd))

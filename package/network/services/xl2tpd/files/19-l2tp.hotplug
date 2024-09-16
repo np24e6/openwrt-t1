@@ -1,0 +1,22 @@
+#!/bin/sh
+
+. /lib/functions.sh
+. /usr/share/libubox/jshn.sh
+
+[ -f /tmp/l2tp/default-status ] || exit 0
+
+config="$(cat /tmp/l2tp/default-status | sed '1q;d')"
+interface="$(cat /tmp/l2tp/default-status | sed '2q;d')"
+default="$(ip route show default | grep -w "$DEVICE" )"
+
+json_load "$(ifstatus $INTERFACE)"
+json_get_var device device
+
+[ "$ACTION" = "ifdown" ] && [ "$device" = "$interface" ] && ifup "$config"
+
+[ -n "$default" ] || exit 0
+
+main="$(ip route show default | grep -v "l2tp-${config}" | head -n 1 | grep -w "$DEVICE")"
+
+[ "$ACTION" = "ifup" ] && [ -n "$main" ] && ifup "$config"
+

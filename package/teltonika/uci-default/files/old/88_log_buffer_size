@@ -1,0 +1,13 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+config_load system
+config_get log_size "system" "log_buffer_size" ""
+
+[ -n "$log_size" ] && return 0
+
+config_get log_size "system" "log_size"
+uci_set system system log_buffer_size "$log_size"
+uci_set system system log_size "200"
+uci_commit system

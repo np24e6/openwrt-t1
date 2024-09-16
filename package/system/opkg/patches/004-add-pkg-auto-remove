@@ -1,0 +1,255 @@
+--- a/libopkg/opkg_cmd.c
++++ b/libopkg/opkg_cmd.c
+@@ -72,6 +72,23 @@ static void print_pkg(pkg_t * pkg)
+ 
+ int opkg_state_changed;
+ 
++static int write_status_files_if_changed_int(void)
++{
++	int ret = 0;
++	if (opkg_state_changed && !conf->noaction) {
++		opkg_msg(INFO, "Writing status file.\n");
++		if (opkg_conf_write_status_files()) {
++			ret = 1;
++		}
++		if (pkg_write_changed_filelists()) {
++			ret = 1;
++		}
++	} else {
++		opkg_msg(DEBUG, "Nothing to be done.\n");
++	}
++	return ret;
++}
++
+ static void write_status_files_if_changed(void)
+ {
+ 	if (opkg_state_changed && !conf->noaction) {
+@@ -442,12 +459,74 @@ error:
+ 
+ static int opkg_remove_cmd(int argc, char **argv);
+ 
++static int purge_g_installed_pkgs() {
++	int i;
++	pkg_t **pkgs = g_installed_pkgs->pkgs;
++	for (i = 0; i < g_installed_pkgs->len; i++) {
++		opkg_msg(NOTICE, "Calling opkg-cleanup for %s", (*(pkgs + i))->name);
++		const char *argv[] = { "/bin/sh", OPKG_CONF_OPKG_CLEANUP_PATH, "-d", OPKG_CONF_DEFAULT_TMP_DIR, "-p", (*(pkgs + i))->name, NULL };
++		xsystem(argv);
++	}
++	return 0;
++}
++
++static int remove_previous_pkgs() {
++	pkg_vec_t *all, *ordered, *visited;
++	int i;
++	pkg_t *pkg;
++	opkg_intercept_t ic;
++	int err = 0;
++
++	all = pkg_vec_alloc();
++
++	pkg_hash_fetch_available(all);
++
++	/* Reorder pkgs in order to be configured according to the Depends: tag
++	   order */
++	opkg_msg(INFO, "Reordering packages before configuring them...\n");
++	ordered = pkg_vec_alloc();
++	visited = pkg_vec_alloc();
++	for (i = 0; i < all->len; i++) {
++		pkg = all->pkgs[i];
++		opkg_recurse_pkgs_in_order(pkg, all, visited, ordered);
++	}
++
++	ic = opkg_prep_intercepts();
++	if (ic == NULL) {
++		err = -1;
++	}
++
++	for (i = 0; i < ordered->len; i++) {
++		pkg = ordered->pkgs[i];
++
++		opkg_msg(INFO, "%s\n", pkg->name);
++		if (pkg->state_status_global == SS_INSTALLED) {
++			opkg_msg(NOTICE, "Removing %s\n", pkg->name);
++			if (opkg_remove_pkg(pkg, 0)) {
++				opkg_msg(NOTICE, "opkg_remove_pkg failed\n");
++			}
++		}
++	}
++
++	write_status_files_if_changed();
++
++	purge_g_installed_pkgs();
++
++	pkg_vec_free(all);
++	pkg_vec_free(ordered);
++	pkg_vec_free(visited);
++
++	return err;
++}
++
+ static int opkg_install_cmd(int argc, char **argv)
+ {
+ 	int i;
+ 	char *arg;
+ 	int err = 0;
+ 
++	g_installed_pkgs = pkg_vec_alloc();
++
+ 	signal(SIGINT, sigint_handler);
+ 
+ 	/*
+@@ -477,7 +556,6 @@ static int opkg_install_cmd(int argc, ch
+ 	for (i = 0; i < argc; i++) {
+ 		arg = argv[i];
+ 		if (opkg_install_by_name(arg)) {
+-			opkg_msg(ERROR, "Cannot install package %s.\n", arg);
+ 			err = -1;
+ 		}
+ 	}
+@@ -485,7 +563,15 @@ static int opkg_install_cmd(int argc, ch
+ 	if (opkg_configure_packages(NULL))
+ 		err = -1;
+ 
+-	write_status_files_if_changed();
++	if (write_status_files_if_changed_int())
++		err = -1;
++
++	if (err != 0 && !conf->no_autoremove) {
++		opkg_msg(NOTICE, "Package installation encountered an "
++				"error, removing previously installed packages.\n");
++		remove_previous_pkgs();
++	}
++	pkg_vec_free(g_installed_pkgs);
+ 
+ 	return err;
+ }
+--- a/libopkg/opkg_conf.c
++++ b/libopkg/opkg_conf.c
+@@ -38,6 +38,7 @@ static char *lock_file = NULL;
+ 
+ static opkg_conf_t _conf;
+ opkg_conf_t *conf = &_conf;
++pkg_vec_t *g_installed_pkgs;
+ 
+ /*
+  * Config file options
+@@ -54,6 +55,7 @@ opkg_option_t options[] = {
+ 	{"force_postinstall", OPKG_OPT_TYPE_BOOL, &_conf.force_postinstall},
+ 	{"force_checksum", OPKG_OPT_TYPE_BOOL, &_conf.force_checksum},
+ 	{"check_signature", OPKG_OPT_TYPE_BOOL, &_conf.check_signature},
++	{"no_autoremove", OPKG_OPT_TYPE_BOOL, &_conf.no_autoremove},
+ 	{"no_check_certificate", OPKG_OPT_TYPE_BOOL, &_conf.no_check_certificate},
+ 	{"ftp_proxy", OPKG_OPT_TYPE_STRING, &_conf.ftp_proxy},
+ 	{"http_proxy", OPKG_OPT_TYPE_STRING, &_conf.http_proxy},
+--- a/libopkg/opkg_conf.h
++++ b/libopkg/opkg_conf.h
+@@ -24,11 +24,14 @@ extern opkg_conf_t *conf;
+ #include <stdarg.h>
+ #include <fnmatch.h>		/* FNM_CASEFOLD */
+ 
++#include "pkg_vec.h"
+ #include "hash_table.h"
+ #include "pkg_src_list.h"
+ #include "pkg_dest_list.h"
+ #include "nv_pair_list.h"
+ 
++extern pkg_vec_t *g_installed_pkgs;
++
+ #define OPKG_CONF_DEFAULT_TMP_DIR_BASE "/tmp"
+ #define OPKG_CONF_TMP_DIR_SUFFIX "opkg-XXXXXX"
+ #define OPKG_CONF_LISTS_DIR  OPKG_STATE_DIR_PREFIX "/lists"
+@@ -41,6 +44,9 @@ extern opkg_conf_t *conf;
+ #define OPKG_CONF_DEFAULT_DEST_NAME "root"
+ #define OPKG_CONF_DEFAULT_DEST_ROOT_DIR "/"
+ 
++#define OPKG_CONF_DEFAULT_TMP_DIR OPKG_CONF_DEFAULT_TMP_DIR_BASE"/custom_package"
++#define OPKG_CONF_OPKG_CLEANUP_PATH "/sbin/opkg-cleanup"
++
+ #define OPKG_CONF_DEFAULT_HASH_LEN 1024
+ 
+ struct opkg_conf {
+@@ -78,6 +84,7 @@ struct opkg_conf {
+ 	int force_remove;
+ 	int force_checksum;
+ 	int check_signature;
++	int no_autoremove;
+ 	int force_signature;
+ 	int no_check_certificate;
+ 	int nodeps;		/* do not follow dependencies */
+--- a/libopkg/opkg_install.c
++++ b/libopkg/opkg_install.c
+@@ -1459,6 +1459,7 @@ int opkg_install_pkg(pkg_t * pkg, int fr
+ 		return 0;
+ 
+ 	/* point of no return: no unwinding after this */
++	pkg_vec_insert(g_installed_pkgs, pkg);
+ 	if (old_pkg) {
+ 		old_pkg->state_want = SW_DEINSTALL;
+ 
+@@ -1508,6 +1509,7 @@ int opkg_install_pkg(pkg_t * pkg, int fr
+ 	opkg_msg(INFO, "Resolving conf files for %s\n", pkg->name);
+ 	resolve_conffiles(pkg);
+ 
++	pkg->state_status_global = SS_INSTALLED;
+ 	pkg->state_status = SS_UNPACKED;
+ 	old_state_flag = pkg->state_flag;
+ 	pkg->state_flag &= ~SF_PREFER;
+--- a/libopkg/pkg.c
++++ b/libopkg/pkg.c
+@@ -1507,7 +1507,6 @@ int pkg_write_filelist(pkg_t * pkg)
+ 
+ 	data.stream = fopen(list_file_name, "w");
+ 	if (!data.stream) {
+-		opkg_perror(ERROR, "Failed to open %s", list_file_name);
+ 		free(list_file_name);
+ 		return -1;
+ 	}
+--- a/libopkg/pkg.h
++++ b/libopkg/pkg.h
+@@ -167,6 +167,7 @@ struct pkg {
+ 	pkg_state_want_t state_want:3;
+ 	pkg_state_flag_t state_flag:11;
+ 	pkg_state_status_t state_status:4;
++	pkg_state_status_t state_status_global:4;
+ 
+ 	abstract_pkg_t *parent;
+ 
+--- a/src/opkg-cl.c
++++ b/src/opkg-cl.c
+@@ -52,6 +52,7 @@ enum {
+ 	ARGS_OPT_AUTOREMOVE,
+ 	ARGS_OPT_CACHE,
+ 	ARGS_OPT_FORCE_SIGNATURE,
++	ARGS_OPT_NO_AUTOREMOVE,
+ 	ARGS_OPT_NO_CHECK_CERTIFICATE,
+ 	ARGS_OPT_VERIFY_PROGRAM,
+ 	ARGS_OPT_SIZE,
+@@ -94,6 +95,8 @@ static struct option long_options[] = {
+ 	{"force_checksum", 0, 0, ARGS_OPT_FORCE_CHECKSUM},
+ 	{"force-signature", 0, 0, ARGS_OPT_FORCE_SIGNATURE},
+ 	{"force_signature", 0, 0, ARGS_OPT_FORCE_SIGNATURE},
++	{"no_autoremove", 0, 0, ARGS_OPT_NO_AUTOREMOVE},
++	{"no-autoremove", 0, 0, ARGS_OPT_NO_AUTOREMOVE},
+ 	{"no-check-certificate", 0, 0, ARGS_OPT_NO_CHECK_CERTIFICATE},
+ 	{"no_check_certificate", 0, 0, ARGS_OPT_NO_CHECK_CERTIFICATE},
+ 	{"noaction", 0, 0, ARGS_OPT_NOACTION},
+@@ -177,6 +180,9 @@ static int args_parse(int argc, char *ar
+ 			free(conf->cache);
+ 			conf->cache = xstrdup(optarg);
+ 			break;
++		case ARGS_OPT_NO_AUTOREMOVE:
++			conf->no_autoremove = 1;
++			break;
+ 		case ARGS_OPT_FORCE_MAINTAINER:
+ 			conf->force_maintainer = 1;
+ 			break;
+@@ -363,6 +369,8 @@ static void usage()
+ 	printf
+ 	    ("\t--force-remove	Remove package even if prerm script fails\n");
+ 	printf("\t--force-checksum	Don't fail on checksum mismatches\n");
++	printf("\t--no-autoremove \tDon't remove all newly installed packages "
++		"and dependencies if size validation fails\n");
+ 	printf("\t--no-check-certificate Don't validate SSL certificates\n");
+ 	printf("\t--noaction		No action -- test only\n");
+ 	printf("\t--download-only	No action -- download only\n");

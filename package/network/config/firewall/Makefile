@@ -28,7 +28,7 @@ define Package/firewall
   SECTION:=net
   CATEGORY:=Base system
   TITLE:=OpenWrt C Firewall
-  DEPENDS:=+libubox +libubus +libuci +libip4tc +IPV6:libip6tc +libxtables +kmod-ipt-core +kmod-ipt-conntrack +IPV6:kmod-nf-conntrack6 +kmod-ipt-nat
+  DEPENDS:=+libubox +libubus +libuci +libip4tc +IPV6:libip6tc +libxtables +kmod-ipt-core +kmod-ipt-conntrack +IPV6:kmod-nf-conntrack6 +kmod-ipt-nat +libnetfilter-conntrack +libmnl
 endef
 
 define Package/firewall/description
@@ -41,8 +41,30 @@ define Package/firewall/conffiles
 endef
 
 TARGET_CFLAGS += -ffunction-sections -fdata-sections -flto
-TARGET_LDFLAGS += -Wl,--gc-sections -flto
+TARGET_LDFLAGS += -Wl,--gc-sections -flto -lmnl -lnetfilter_conntrack
 CMAKE_OPTIONS += $(if $(CONFIG_IPV6),,-DDISABLE_IPV6=1)
+
+FIREWALL_CONFIG="firewall.config"
+
+ifeq ($(TLT_PLATFORM_TAP100), y)
+	FIREWALL_CONFIG=firewall.config-tap100
+endif
+
+ifeq ($(TLT_PLATFORM_TCR1), y)
+	FIREWALL_CONFIG=firewall.config-tcr100
+endif
+
+ifeq ($(TLT_PLATFORM_RUTM), y)
+	FIREWALL_CONFIG=firewall.config-rutm
+endif
+
+ifneq ($(filter y,$(TLT_PLATFORM_RUTX) $(TLT_PLATFORM_RUT2M) $(TLT_PLATFORM_RUT9M) $(TLT_PLATFORM_RUT361)),)
+	FIREWALL_CONFIG=firewall.config-offload
+endif
+
+ifneq ($(filter y,$(TLT_PLATFORM_TRB1) $(TLT_PLATFORM_TRB2) $(TLT_PLATFORM_TRB2M) $(TLT_PLATFORM_TRB5)),)
+	FIREWALL_CONFIG=firewall.config-without-wan
+endif
 
 define Package/firewall/install
 	$(INSTALL_DIR) $(1)/sbin
@@ -52,11 +74,16 @@ define Package/firewall/install
 	$(INSTALL_DIR) $(1)/etc/hotplug.d/iface
 	$(INSTALL_CONF) ./files/firewall.hotplug $(1)/etc/hotplug.d/iface/20-firewall
 	$(INSTALL_DIR) $(1)/etc/config/
-	$(INSTALL_CONF) ./files/firewall.config $(1)/etc/config/firewall
+	$(INSTALL_CONF) ./files/$(FIREWALL_CONFIG) $(1)/etc/config/firewall
 	$(INSTALL_DIR) $(1)/etc/
 	$(INSTALL_CONF) ./files/firewall.user $(1)/etc/firewall.user
 	$(INSTALL_DIR) $(1)/usr/share/fw3
 	$(INSTALL_CONF) $(PKG_BUILD_DIR)/helpers.conf $(1)/usr/share/fw3
+
+	$(if $(TLT_PLATFORM_TAP100),,\
+		$(INSTALL_DIR) $(1)/usr $(1)/usr/bin; \
+		$(INSTALL_BIN) ./files/port-scan-prevention.sh $(1)/usr/bin/port-scan-prevention;)
+
 endef
 
 $(eval $(call BuildPackage,firewall))

@@ -13,10 +13,11 @@ use File::Basename;
 use File::Copy;
 use Text::ParseWords;
 
-@ARGV > 2 or die "Syntax: $0 <target dir> <filename> <hash> <url filename> [<mirror> ...]\n";
+@ARGV > 2 or die "Syntax: $0 <target dir> <skip-mirrors> <filename> <hash> <url filename> [<mirror> ...]\n";
 
 my $url_filename;
 my $target = glob(shift @ARGV);
+my $skip_mirrors = shift @ARGV;
 my $filename = shift @ARGV;
 my $file_hash = shift @ARGV;
 $url_filename = shift @ARGV unless $ARGV[0] =~ /:\/\//;
@@ -65,8 +66,8 @@ sub hash_cmd() {
 	my $len = length($file_hash);
 	my $cmd;
 
-	$len == 64 and return "mkhash sha256";
-	$len == 32 and return "mkhash md5";
+	$len == 64 and return "$ENV{'MKHASH'} sha256";
+	$len == 32 and return "$ENV{'MKHASH'} md5";
 	return undef;
 }
 
@@ -281,6 +282,10 @@ if (-f "$target/$filename") {
 }
 
 while (!-f "$target/$filename") {
+	if ($skip_mirrors eq "skip-mirrors") {
+		die "Skipping mirrors.\n";
+	}
+
 	my $mirror = shift @mirrors;
 	$mirror or die "No more mirrors to try - giving up.\n";
 
@@ -291,4 +296,3 @@ while (!-f "$target/$filename") {
 }
 
 $SIG{INT} = \&cleanup;
-

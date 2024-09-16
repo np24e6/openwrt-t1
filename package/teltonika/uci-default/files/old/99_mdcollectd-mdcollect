@@ -1,0 +1,9 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+if [ -z "$(uci_get mdcollectd config ignore)" ]; then
+  uci_remove_list "mdcollectd" "config" "ignore" "lo"
+else
+  uci_remove_list "mdcollectd" "config" "ignore" "wwan0"
+fi

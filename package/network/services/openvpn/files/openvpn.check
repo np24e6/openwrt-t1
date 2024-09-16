@@ -1,0 +1,770 @@
+#!/bin/sh
+. /lib/functions.sh
+
+tmp="/tmp/etc/"
+PID=""
+client="testc01"                                                          
+server="tests01"
+skey="/etc/vuci-uploads/cbid.openvpn.test01.secretta.key"
+ca_crt="/etc/vuci-uploads/cbid.openvpn.test01.caca.pem"
+server_crt="/etc/vuci-uploads/cbid.openvpn.test01.certserver.pem"
+server_key="/etc/vuci-uploads/cbid.openvpn.test01.keyserver.key"
+client_crt="/etc/vuci-uploads/cbid.openvpn.test01.certclient.pem"
+client_key="/etc/vuci-uploads/cbid.openvpn.test01.keyclient.key" 
+user_pass="/etc/vuci-uploads/cbid.openvpn.test01.userpassuserpass"
+dh="/etc/vuci-uploads/cbid.openvpn.test01.dhdh.pem"
+
+help() {
+		echo "
+Usage: openvpn_check (FLAG) [PARAMETERS] or openvpn_check (and follow instructions)
+
+Setup and test Openvpn connection
+
+Flags:
+		-h,                             display help
+		-s [args],                      setup and start configuration
+
+Parameters (-s):
+		role, [*]                       instance type, server or client (s | c)
+		auth [*]                        authentication type (skey | tls | tls/pass | pass)
+		network_ip [*]                  Remote network IP address, ex.: 192.168.5.0
+		remote [auto]                   Remote host/IP address
+		local_ip [auto]                 Local tunnel endpoint IP
+		remote_ip [auto]                Remote tunnel endpoint IP
+		verb [auto]                     Verbosity level (1-11), default 5
+
+										[*] - required option
+										[auto] - filled automatically if empty
+
+Examples:
+		openvpn_check -s role=s auth=skey network_ip=192.168.5.0
+		openvpn_check -s role=c auth=tls remote=192.168.10.192 network_ip=192.168.5.0 verb=11
+		"
+}
+
+
+cleanup() {
+	local status f
+	echo "-----Removing all additional configuration!-----"
+	[ -e "$skey" ] && rm "$skey"
+	[ -e "$ca_crt" ] && rm "$ca_crt"
+	[ -e "$server_crt" ] && rm "$server_crt"
+	[ -e "$server_key" ] && rm "$server_key"
+	[ -e "$client_crt" ] && rm "$client_crt"
+	[ -e "$client_key" ] && rm "$client_key"
+	[ -e "$user_pass" ] && rm "$user_pass"
+	[ -e "$dh" ] && rm "$dh"		
+	[ -n "$PID" ] && [ -d "/proc/$PID" ] && kill "$PID"
+	uci delete openvpn.${client} 2>/dev/null
+	uci delete openvpn.${server} 2>/dev/null
+	uci commit openvpn
+	[ -e "${tmp}openvpn-${client}.conf" ] && rm ${tmp}openvpn-${client}.conf
+	[ -e "${tmp}openvpn-${server}.conf" ] && rm ${tmp}openvpn-${server}.conf
+	[ -h "/etc/openvpn/auth_${server}" ] && rm /etc/openvpn/auth_${server}
+	for f in "${tmp}"tmp-openvpn-*.conf; do
+			[ -e "$f" ] && rm $f
+	done
+	status=$(/etc/init.d/openvpn status)
+	[ "$status" = "inactive" ] && {
+			echo "-----Starting openvpn service...-----"
+			/etc/init.d/openvpn start
+	}
+	if [ "$ZONE_DEL" = 1 ] || [ "$FORWARDING_SRC_DEL" = 1 ] || [ "$FORWARDING_DST_DEL" = 1 ] || [ "$RULE_DEL" = 1 ];then
+		[ "$ZONE_DEL" = 1 ] && uci delete firewall.@zone[-1]
+		[ "$FORWARDING_SRC_DEL" = 1 ] && uci delete firewall.@forwarding[-1]
+		[ "$FORWARDING_DST_DEL" = 1 ] && uci delete firewall.@forwarding[-1]
+		[ "$RULE_DEL" = 1 ] && uci delete firewall.@rule[-1]
+		uci commit
+		echo "-----Restarting firewall...-----"                                                  
+		/etc/init.d/firewall restart &>/dev/null        
+	fi
+	exit 1                               
+}
+trap cleanup INT
+
+fw_zone() {
+	local section="$1" name
+	config_get name "$section" "name"
+	[ "$name" = 'openvpn' ] && {
+		ZONE=1
+		return
+	}
+}
+
+fw_forwarding_src() {
+	local section="$1" src
+	config_get src "$section" "src"
+	[ "$src" = 'openvpn' ] && {
+		FORWARDING_SRC=1
+		return    
+	}                           
+}               
+
+fw_forwarding_dst() {
+	local section="$1" dest
+	config_get dest "$section" "dest"
+	[ "$dest" = 'openvpn' ] && {
+		FORWARDING_DST=1          
+		return                           
+	}                                        
+}           
+
+fw_rule() {                                                                     
+	local section="$1" vpn_type                                                 
+	config_get vpn_type "$section" "vpn_type"                                       
+	[ "$vpn_type" = 'openvpn' ] && {                                 
+		RULE=1                   
+		return                 
+	}                  
+}         
+
+fw_check() {
+	local add
+	config_load firewall
+	config_foreach fw_zone zone
+	config_foreach fw_forwarding_src forwarding
+	config_foreach fw_forwarding_dst forwarding
+	config_foreach fw_rule rule
+
+	if [ "$ZONE" = "" ] || [ "$FORWARDING_SRC" = "" ] || [ "$FORWARDING_DST" = "" ] || [ "$RULE" = "" ];then
+		echo ""
+		read -p "Missing some default openvpn firewall rules. Do you want add it (y/n)? [y]:" add
+		[ -z "$add" ] && add="y"
+		while [ "$add" != "y" ] && [ "$add" != "n" ];do                     
+			read -p "Missing some default openvpn firewall rules. Do you want add it (y/n)? [y]:" add                    
+		done                   
+
+		[ "$add" = "n" ] && return
+
+		if [ -z "$ZONE" ];then
+			uci add firewall zone &>/dev/null
+			uci set firewall.@zone[-1].device='tun_+'
+			uci set firewall.@zone[-1].name='openvpn'
+			uci set firewall.@zone[-1].masq='1'
+			uci set firewall.@zone[-1].input='ACCEPT'
+			uci set firewall.@zone[-1].forward='REJECT'
+			uci set firewall.@zone[-1].network='openvpn'
+			uci set firewall.@zone[-1].output='ACCEPT'                                              
+			uci commit
+			ZONE_DEL=1 
+		fi
+		if [ -z "$FORWARDING_SRC" ];then
+			uci add firewall forwarding &>/dev/null
+			uci set firewall.@forwarding[-1].dest='lan'
+			uci set firewall.@forwarding[-1].src='openvpn'
+			uci commit
+			FORWARDING_SRC_DEL=1
+		fi
+		if [ -z "$FORWARDING_DST" ];then
+			uci add firewall forwarding &>/dev/null
+			uci set firewall.@forwarding[-1].dest='openvpn'
+			uci set firewall.@forwarding[-1].src='lan'
+			uci commit
+			FORWARDING_DST_DEL=1
+		fi
+		if [ -z "$RULE" ];then
+			uci add firewall rule &>/dev/null
+			uci set firewall.@rule[-1].dest_port='1194'
+			uci set firewall.@rule[-1].src='wan'
+			uci set firewall.@rule[-1].name='Allow-openvpn-traffic'
+			uci set firewall.@rule[-1].target='ACCEPT'
+			uci set firewall.@rule[-1].vpn_type='openvpn'
+			uci set firewall.@rule[-1].proto='tcp udp'
+			uci set firewall.@rule[-1].family='ipv4'
+			uci commit
+			RULE_DEL=1
+		fi
+		echo ""
+		echo "-----Restarting firewall...-----"
+		/etc/init.d/firewall restart &>/dev/null
+	fi
+}
+
+test() {                                               
+	local name=$1 type=$2 running=true ifcfg=false ping1=false ping2=false rt=false out=false status interface
+	echo ""
+	echo "-----Testing configuration - ${name} (/etc/config/openvpn)-----"
+	uci show openvpn.${name} | awk '{print " "$0}' | sed -e "s/ openvpn.${name}=openvpn/config openvpn '"${name}"'/g" | sed -e "s/ openvpn.${name}./\toption /g" | sed -e "s/=/ /g"
+	echo ""                           
+	echo "-----Testing configuration - ${name} (${tmp}openvpn-${name}.conf)-----"
+	cat "${tmp}openvpn-${name}.conf"
+	interface=$(uci get openvpn.${name}.dev 2>/dev/null)
+	[ "$interface" = "tun" ] && interface=tun0
+	[ "$interface" = "tap" ] && interface=tap0                            
+	cp -rf "${tmp}openvpn-${name}.conf" "${tmp}tmp-openvpn-${name}.conf"
+	echo ""
+	[ -z "$VERB" ] && {
+		read -p "Enter verbosity level(verb) (1-11) [5]:" VERB
+		[ -z "$VERB" ] && VERB="5"
+		while ! expr "$VERB" : "[1-9][0-1]*$" >/dev/null;do
+			read -p "Enter verbosity level(verb) (1-11) [5]:" VERB
+		done
+	}
+	echo "verb $VERB" >> "${tmp}tmp-openvpn-${name}.conf"
+	echo "auth-nocache" >> "${tmp}tmp-openvpn-${name}.conf" 
+	status=$(/etc/init.d/openvpn status)                    
+	[ "$status" = "running" ] && {
+		echo ""
+		echo "-----Stopping openvpn service...-----"
+		/etc/init.d/openvpn stop
+	}
+	echo ""
+	echo "-----Start test configuration...-----"
+	openvpn "${tmp}tmp-openvpn-${name}.conf" &
+	export PID=$!
+	while $running; do
+		[ "$ifcfg" = "false" ] && ifconfig | grep ${interface} &>/dev/null && {
+			echo ""
+			echo "-----${interface} interface UP-----"
+			ifconfig | sed -n "/${interface}/,/^$/p"
+			ifcfg=true
+		}
+		[ "$ping1" = "false" ] && ping -c1 ${REMOTE_IP} &>/dev/null && {
+			echo ""
+			echo "-----ping ${REMOTE_IP} - OK-----"
+			ping1=true
+		} 
+		[ "$ping2" = "false" ] && ping -c1 ${NETWORK_IPA} &>/dev/null && {
+			echo ""
+			echo "-----ping ${NETWORK_IPA} - OK-----"
+			ping2=true
+		}
+		[ "$rt" = "false" ] && [ -n "$(route | grep "${name}")" ] && {
+			echo ""
+			echo "-----Created routes:-----"
+			echo "Destination     Gateway         Genmask         Flags Metric Ref    Use Iface"
+			route | grep "${name}"
+			rt=true
+		}
+		[ "$out" = "false" ] && [ "$ifcfg" = "true" ] && [ "$rt" = "true" ] && {
+			echo ""
+			echo "-----Press CTRL+C to EXIT-----"
+			out=true
+		} 
+	done
+}
+
+create_skey() {
+	echo "-----BEGIN OpenVPN Static key V1-----
+a9a21c85f9484830464c7366ed7e2927
+0accdda67785e7e2e0f0e8e1e580bcea
+e15707a0aeba1a3f21e0266e24ed8ff3
+b649b40a288edead39c9c73d9e694048
+c4c29922b29f6808d96e03c3c9f59a1b
+febcbe034989c6f006b886b9f98899e5
+70faf68325823b873563fe3f3eea33d0
+01377fd4279af40d74642b8b554f438c
+f229ee877b228c21745c65e50d573381
+26b5e584fb33596b6ff2d6063ffe942f
+0725bf599b713dca657b8a39e8de8b21
+35ab738d1763bfd413ba7f7348a4560a
+bc6cd719c57f3769d4c68b7b9a4376d4
+f2eac0dfcd5d691e104e44a2124258bb
+d9132ba5e6d3aa3b1965f112acd4bee2
+e9bf95bbea6228f477bca1edc1626b45
+-----END OpenVPN Static key V1-----" > "$skey"
+}
+
+create_tls() {
+	echo "-----BEGIN CERTIFICATE-----
+MIIDSzCCAjOgAwIBAgIUMRabqbBfHQl7ZkYvUPAc2GT3Pc0wDQYJKoZIhvcNAQEL
+BQAwFjEUMBIGA1UEAwwLRWFzeS1SU0EgQ0EwHhcNMjIxMTA0MDk1MzI3WhcNMzIx
+MTAxMDk1MzI3WjAWMRQwEgYDVQQDDAtFYXN5LVJTQSBDQTCCASIwDQYJKoZIhvcN
+AQEBBQADggEPADCCAQoCggEBAL11oGEDph5KlnElDbjXzR0df/u7x3tW/k/RqsNm
+FrUQiARqXbYW3QHrw2CP1ZrsrsxgS3YkC1AJ+kuq+7LLHKCVSxmQXrReVNLZHBF3
+c5AhU/8Nx55PvrmfB9jAA8/fkfIDQ32hIe101i4UAoqoPfJkJ9Cd/+OXpp2J+u5N
+10s8knDt761JgxXqh0pb/MIH9JSgeSOAxXjvufvgxiY2U2mi9mZHmWDJSxpIz5bH
+ZCfd9mn1sAcBoKYFtL//J8zjfDkE0SlZaFRGiTg0eCOwmOajat7OyxLGprQDGR0p
+OSavRtMwIqSZE/mBqD55PJYyYLEXdThy6j+2Yd4b54OHM9UCAwEAAaOBkDCBjTAd
+BgNVHQ4EFgQU0qw9nmHVgcKCvacCO53Rz4nRz0QwUQYDVR0jBEowSIAU0qw9nmHV
+gcKCvacCO53Rz4nRz0ShGqQYMBYxFDASBgNVBAMMC0Vhc3ktUlNBIENBghQxFpup
+sF8dCXtmRi9Q8BzYZPc9zTAMBgNVHRMEBTADAQH/MAsGA1UdDwQEAwIBBjANBgkq
+hkiG9w0BAQsFAAOCAQEANfvQaC3tH1U92N8W5r3TE+TzrGT2b0zXP4jVhztPcGnA
+QAIEyxO7niFD3+uShS29Vuh1QpVTu6J+I8ycHacVowTGQDAdCYtJac46T/ajzzes
+kqgeOQTUmNEAqBNWdDd1T4OTdnmNFr59R7Hs4UbWyDeM2XmsVmP3rXuBGGbNh+l9
+Ht6VohW5H/9yjNpTE1LLK1qe7hLuAZjJsuw8IcCJGZn4QzqvkuwYmZ7a21S8/FJ7
+0CQTkWSD3pJtH6k7lGpZehQ+ezFvNG7LjGeD4DLRx2ounoR6yvACG9CxSvYBM6qp
+7ky61hKDLldAPwaLAMYSoKXUV6lMxWGVfCAm5/D8kw==
+-----END CERTIFICATE-----" > "$ca_crt"
+
+	echo "-----BEGIN CERTIFICATE-----
+MIIDaDCCAlCgAwIBAgIRAI+oCaV5pJEdkc3lxcaOtvIwDQYJKoZIhvcNAQELBQAw
+FjEUMBIGA1UEAwwLRWFzeS1SU0EgQ0EwHhcNMjIxMTA0MDk1MzMyWhcNMzIxMTAx
+MDk1MzMyWjARMQ8wDQYDVQQDDAZzZXJ2ZXIwggEiMA0GCSqGSIb3DQEBAQUAA4IB
+DwAwggEKAoIBAQCipg8HsBGQjS5G0vaYQKLo5ERgZu7pNIETJPzSctZ+NsT/FRpa
+gr6pFT0NshXl4jZsr484HXbvjnKNyjHFrGJpoFbOUWXBAkOP+VK52LBq4TunYpd8
+fZTLLMUjqE6Ss7q9BT80lQW/ofJ/lEoMTGgkUbbprypqsIZ8IVxj7/+SkarntntO
+0QZj2ig2rV2qMmo8oW0Htdhw8VL8scuaMrB2UIb0wua9YqRPvXFUXwaMz0Sh82SM
+4tiLKdJHEbNoi0TNuutUMT5O7U5NjbfcxaVdk6SxCNwwWLmpgc7ko2Tu0Hz0ADFZ
+ZwZy620BUZI2/sdMBbbPiZxhPvBPACd/oP8XAgMBAAGjgbUwgbIwCQYDVR0TBAIw
+ADAdBgNVHQ4EFgQUv9JljLi4+CroNbHL3PP1slhZ5vwwUQYDVR0jBEowSIAU0qw9
+nmHVgcKCvacCO53Rz4nRz0ShGqQYMBYxFDASBgNVBAMMC0Vhc3ktUlNBIENBghQx
+FpupsF8dCXtmRi9Q8BzYZPc9zTATBgNVHSUEDDAKBggrBgEFBQcDATALBgNVHQ8E
+BAMCBaAwEQYDVR0RBAowCIIGc2VydmVyMA0GCSqGSIb3DQEBCwUAA4IBAQAJDxvl
+JjRWOCZ4QQ8BwrjnMIgQU9MqiwQiOWt3XWSIHu1MpmRjaEFqavqsbERYaqXAgfTv
+ngq8C9VczO02FTCtLxYj3ppXZaE4uFSpDIwMIepvQomN0jPpJiPvLrEEDxJqX70k
+DYEARnlHLcu8UgWxv/JXxU7OrSnGH7qeTUbV0e+ppc00+cq0hCF6v5iKcSZn5uYb
+HnJtK+Oe4xBaF7iecXxJrACR2o35u3b+pbhsWqKzQPj5/p3aMazqUba51g6XwBnt
+zjxIo0F9GkyKK+HFUdn4AqiLs32ezN1aaYvMDRH/hm3HBrIdD4LqIELKY1Bpk304
+rFPnZK+5Ay28vWv3
+-----END CERTIFICATE-----" > "$server_crt"
+
+	echo "-----BEGIN PRIVATE KEY-----
+MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQCipg8HsBGQjS5G
+0vaYQKLo5ERgZu7pNIETJPzSctZ+NsT/FRpagr6pFT0NshXl4jZsr484HXbvjnKN
+yjHFrGJpoFbOUWXBAkOP+VK52LBq4TunYpd8fZTLLMUjqE6Ss7q9BT80lQW/ofJ/
+lEoMTGgkUbbprypqsIZ8IVxj7/+SkarntntO0QZj2ig2rV2qMmo8oW0Htdhw8VL8
+scuaMrB2UIb0wua9YqRPvXFUXwaMz0Sh82SM4tiLKdJHEbNoi0TNuutUMT5O7U5N
+jbfcxaVdk6SxCNwwWLmpgc7ko2Tu0Hz0ADFZZwZy620BUZI2/sdMBbbPiZxhPvBP
+ACd/oP8XAgMBAAECggEAHER8DDv/cX338vsrPF7PcWZqs85v6zviyu78uZ6XxKvE
+JQkH4X8jn8M/LygqQh/EkbMZUwlb6Fp7ckUXzWEeYXkqXQUsiBTapSURyZbtYkXu
+1jJ+XXZ966nGQWI49aoi5EMLLxpPO3Tr7lxZWjXVS6qf/ZEh8BTp6pzpr7zAUDqV
+y2xAxImzpz4CFxxFdwB+kIFW7csyc2PcdtEp6QjbwDq0ahbJhS++dYRFlxvNcXsL
+2jLLmJnCMqMK0VV1Ygoay5cVJ9rxVZ98iw5S4CCB7rOfOM7exf9w9BY39WMeExy7
+LGKA/UdRa9dWejCNXmV7azaOewbyJ0xiG0zUxSz+IQKBgQDYMLhrW2fV/91ZiShc
+0z33GKBEb6HxeqSZTJv3cvWyN3R3fxcfPZkXXc54znwCPXDfJ36S/5rXN0jX1Bvm
+N7OyeZ0cSaypEUUazhEkpZ0USmDnmiR8rkT0/cx/6cz6a9vTfqwwI4uQCfRiIc5L
+jN+FomuG7ASKFMXdyXWcVzCwHwKBgQDAmV5BMztVf919sdOn5YUouRyMAHPp3ur1
+adWIC6pjUUeSBssHjlLAS+kOpzWrrm48AUB/197j4BmsuBb1tBzSy9NaGcEbLyoE
+meYUCXTZMgAI6c2ujwS7pWN+0Tuozzh811SDZTq+k4/qhLtuPuSkw/HOCclfHZ8G
+ZE0Ay+NyCQKBgACCDMzjyBiuozyEn/2n2WttOWMvx/ejTCO4FF2+fWlPzAxD1jAS
+mvt9EvEhuxTeRBeiJh/+TcTXsmofa3ldBCUVOBNK8QbsrXbkqRGm+fmEOzoQGKna
+VvskZYifagXknv2ePJVYYAmUnGhmn+95g0TzHsGQaGpSpixhPs+BPPINAoGBAKxf
+FupHjczhmTvLkWBsnJZrxc7PAO7I4YQu6jrOJfqpXeKlTcQ/bnRH/BdvMyup+2Kc
+xDsm2ocbpB7eyz2vqzRF06yJ7DgGKBbiHfbE190jUMCpb7nQqi2+waNYY4qbmzSw
+CyVlzgOOUXlUveLXSw7jh2AdhiooepDf58LUt4TxAoGBALktM8TyfQdjiWLmsCPx
+5fCZVeZpqILSRcwZTX6rq4cvNWYyZbawS6MmfEHCgDJL6zga2K/2AqUUzWrbAE9a
+HTby7umm4ANl6YDGa2gkxfG6gcwDsYEKb+5BpInamMREhst3wvUdJ311/h1dUuJM
+OhzxOt+0C0j2JNXYSBvmkAvo
+-----END PRIVATE KEY-----" > "$server_key"
+
+	echo "-----BEGIN CERTIFICATE-----
+MIIDVTCCAj2gAwIBAgIQCwifVWSImbYni1oiiSv0rzANBgkqhkiG9w0BAQsFADAW
+MRQwEgYDVQQDDAtFYXN5LVJTQSBDQTAeFw0yMjExMDQwOTUzMzZaFw0zMjExMDEw
+OTUzMzZaMBIxEDAOBgNVBAMMB2NsaWVudDEwggEiMA0GCSqGSIb3DQEBAQUAA4IB
+DwAwggEKAoIBAQDSn5U6gpUN7yZSYanjyt+chaV8ddDf/JyhGQpZe63IRLcvB7oj
+4oEujGZQlRnHDSpCtBcgzewVjoTKrmbnpORC6ukk7Lhmj+hLfDE3a6TQ1aIAZvGN
+IB/jED3qYbrI1gpikoQMYaiIO2Z7savBbrBbFgElAK/Ugi1xNmzS2CW5H0CJSg1M
+6cwJJfdOXA+ifq76FMxWDFjtspUeAd/awSYQ5TUgveBm1PIudF+4T4zjPzjNduI5
+0tm4CXfzu9bhTpSaYUNqXJ94zHCZfyy9EWKdisaZ45IpwH3Uyi85oYAw3OSCO6A1
+UJI3DPq838pB4sXX6dryidZ1BshrOgEvSd0nAgMBAAGjgaIwgZ8wCQYDVR0TBAIw
+ADAdBgNVHQ4EFgQU4dFdS0dwLaWNzb3i3o4CuM4g3WUwUQYDVR0jBEowSIAU0qw9
+nmHVgcKCvacCO53Rz4nRz0ShGqQYMBYxFDASBgNVBAMMC0Vhc3ktUlNBIENBghQx
+FpupsF8dCXtmRi9Q8BzYZPc9zTATBgNVHSUEDDAKBggrBgEFBQcDAjALBgNVHQ8E
+BAMCB4AwDQYJKoZIhvcNAQELBQADggEBAFrnYFjbnMqg7xCBi3NwnodApFRY4+xv
+0GB7WQ5D1OoHsfRh6/B0Olav4hJeTM+B9UgAoEL2d9ycmo+BjZqi/0Mw3raELjRs
+kDfSRPfOKsTB5ao8aUbOeTZvn6m1Gjsfqgu8XqV2VAQ99eX8u45gW2FDi7Ps7W0c
+FTD/tqab7N8ws3oXuWrxzuNprDX1xbIYFBZEHDireUCJ058l0ffi9f+WlTP6PuXP
+IX/z4xijSW5H3xlETmlTSq20Kus96Ng7z8Dub2Ivc7uD1Xf6G67yFOWGMc1/OXe/
+z5DVSJeaLTA8l8sF6oSUpkDRr2A1rBIcOs5EeEAF+/6sbatmDpwX2Ak=
+-----END CERTIFICATE-----" > "$client_crt"
+
+	echo "-----BEGIN PRIVATE KEY-----
+MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDSn5U6gpUN7yZS
+Yanjyt+chaV8ddDf/JyhGQpZe63IRLcvB7oj4oEujGZQlRnHDSpCtBcgzewVjoTK
+rmbnpORC6ukk7Lhmj+hLfDE3a6TQ1aIAZvGNIB/jED3qYbrI1gpikoQMYaiIO2Z7
+savBbrBbFgElAK/Ugi1xNmzS2CW5H0CJSg1M6cwJJfdOXA+ifq76FMxWDFjtspUe
+Ad/awSYQ5TUgveBm1PIudF+4T4zjPzjNduI50tm4CXfzu9bhTpSaYUNqXJ94zHCZ
+fyy9EWKdisaZ45IpwH3Uyi85oYAw3OSCO6A1UJI3DPq838pB4sXX6dryidZ1Bshr
+OgEvSd0nAgMBAAECggEADaBldzObkRs3z3yiESq+7NF4s2Sr7tHZEFMeaEuoIpzP
+fStyz3+H/Ar5U51R3Z7sbQRZurWX4I0n6jT+U15HpkysaMcn5vrIfJm8VWmRcDFi
+GcSPPCIn7fjPCKrp+rReV6JDCMoIrUeqibYk9o7CuiHiURKKTaVea0SqJbn2NtPA
+rj5Jayh02/3l7rCRcO1B/zYKCQmrLfrWcRWlpWt1Ay5nK1nasKc5tQfGJ54hL37K
+VuwSNq5K36GXamCgLNeu1pe0Bab1snqhdaClwj0TGYp+gF62LOW6J3BChLUScIiP
+gNWvQexQb+vWC1MJKRLXBMjOXmd9lGJS8Hn22ulkgQKBgQD3M4Qc9Uefk8U0pA1o
+X/6/fJsXgNQyNx7CUB45qkOE3K0Cz3yTIwFTKgy4vMsB8JxJxMgi1Eb4mvY1MGxF
+rYXYjc1jvZS7v0iSIzd74TyUKqu251FESbUOE12pUfq7sHMWzq6am/B43lPgXmvZ
+cD3UyyVYwx1mEuNfI0lCaM15KwKBgQDaHsV56lum4HERHs4plahVIyYRoNRlCzm3
+CQ2/mrAzKGu81oGpXsKSr03cJrsTTXIJvPHRldFXGHVfBXteJ7ebTtbbASELunYb
+TouXkUZ6AQYu67xqJ8djXkJh3JEVT3J+4pLQAfmOduUuOTH6ttY0NlFcEw4CgQ6u
+qqnIJC019QKBgFdtBspfDQeo8VPeuUcyvBvo68jyLRndWKmMQERQrTRt/1pBG2PG
+O4+4DWvAiWOUPxHv4IBA5yDBXVYOXByAdBfUftFJmTKVQgs9HUBYtl4IgVZclOc7
+0ia6PqPFdJGwo+NrEWFoyTFWH//4JNhv085QUlMEHn+dKoDZL+2mtxSlAoGAW/EG
+mqpP8dq/rlDG5D6CU0janiml/eWqcV3unqpsxVOvfk0JIMShzcT5U+g7iRpnDHXJ
+lOfK8ySLLP+Zjgm92kh0RqKGNHRnnoEQVFZXV8wguByEMlcMM/Wik6+utEXl5FhL
+PETo1cWGO2K+j4kMZ7vRtbcOe72826FyqbueFxUCgYEAmIGdAihG9bSaJZCHcdYJ
+B/GgrBaIDtss/lH5fb4zjUbwUxCAU70fp3dKufx0JFcx8y+qxXFN8TYhbOBPxTd5
+us2KWNms8w7+a3WWSu37/VMXS35sWNW4VOmFAccvY2+my/AxBRAV6kEiReeRs52g
+JxVTj2BEW6NpTmErn2OXawU=
+-----END PRIVATE KEY-----" > "$client_key"
+
+	echo "-----BEGIN DH PARAMETERS-----
+MIIBCAKCAQEArEO8w0dzxm2wa1DMFTXKYNvjFphRu05Vnc4IsiKjZE7aliM9nVdU
+PSkJCCmj7PudVpTdtdNlc+wjNvZAkKg052gut16pdPeXPwRRvPsSMcVptdjdF4tT
+DRY5ob8S5VZ0dCAv/XMSo1E1VIs+mUcPw26QYLKSKHrWfsS1bVsrR2pFx/qAZSmL
+tUAAH4C49FdBUJWF3y5fOYrbQtIUeMF0X6uM7CB3cJfUzFbjdJ9WQMNoPmsMCRFP
+NUwu9zx3tg0sX3WI2VZUfYU278zNO+iA+dNIlb44VJJKaFdobN8/tM+iQX4R3RLe
+a1+3Kjb3ltNtwOIftbfDY/5FZceK6MJ8IwIBAg==
+-----END DH PARAMETERS-----" > "$dh"
+}
+
+create_usr_pass() {
+	[ "$input" = "s" ] || [ "$ROLE" = "s" ] && echo "selftest Just4TEST" > "$user_pass"
+	[ "$input" = "c" ] || [ "$ROLE" = "c" ] && {
+		echo "selftest" > "$user_pass"
+		echo "Just4TEST" >> "$user_pass"
+	}
+}
+
+
+create_config() {                                                            
+	local config=$1
+	local auth=$2
+	if [ "$config" = "c" ]; then
+		uci add openvpn openvpn &>/dev/null
+		uci rename openvpn.@openvpn[-1]="${client}"
+		uci set openvpn.${client}._name="$client"
+		uci set openvpn.${client}.nobind='1'
+		uci set openvpn.${client}.persist_key='1'
+		uci set openvpn.${client}.persist_tun='1'
+		uci set openvpn.${client}.enable_custom='0'
+		uci set openvpn.${client}.enable_external='0'
+		uci set openvpn.${client}.port='1194'
+		uci set openvpn.${client}.dev="tun_c_$client"
+		uci set openvpn.${client}.verb='5'
+		uci set openvpn.${client}.type='client'
+		uci set openvpn.${client}.proto='udp'
+		uci set openvpn.${client}.enable='1'
+		[ -z "$REMOTE" ] && {
+			read -p "Enter remote server IP(remote) []:" REMOTE                                                                           
+			while ! expr "$REMOTE" : "[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*$" >/dev/null;do                          
+				read -p "Enter remote server IP(remote) []:" REMOTE 
+			done
+		}
+		uci set openvpn.${client}.remote="$REMOTE"
+		uci set openvpn.${client}.resolv_retry='infinite'
+		[ -z "$NETWORK_IP" ] && {                                                                                                
+			read -p "Enter remote LAN network(network_ip) [192.168.1.0]:" NETWORK_IP                                                             
+			[ -z "$NETWORK_IP" ] && NETWORK_IP="192.168.1.0"                                                                            
+			while ! expr "$NETWORK_IP" : "[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*$" >/dev/null;do                         
+				read -p "Enter remote LAN network(network_ip) [192.168.1.0]:" NETWORK_IP                               
+			done
+		}                                                                                        
+		uci set openvpn.${client}.network_ip="$NETWORK_IP"    
+		NETWORK_IPA="${NETWORK_IP%%.0}.1"                                                                
+		uci set openvpn.${client}.network_mask='255.255.255.0'                                                                                                                 
+		uci set openvpn.${client}.cipher='BF-CBC'                                                    
+		uci set openvpn.${client}.auth='sha1'
+		uci set openvpn.${client}.keepalive='10 120'
+		[ -z "$REMOTE_IP" ] && REMOTE_IP="172.40.0.1"				
+		case "$auth" in                                                         
+			1)
+				uci set openvpn.${client}._auth='skey'
+				uci set openvpn.${client}.secret="$skey"
+				uci set openvpn.${client}._tls_auth='none'
+				[ -z "$LOCAL_IP" ] && LOCAL_IP="172.40.0.2"
+				uci set openvpn.${client}.local_ip='172.40.0.2' 
+				uci set openvpn.${client}.remote_ip="$REMOTE_IP"
+				;;
+
+			2)
+				uci set openvpn.${client}._auth='tls'
+				uci set openvpn.${client}.ca="$ca_crt"
+				uci set openvpn.${client}.cert="$client_crt"
+				uci set openvpn.${client}.key="$client_key"
+				uci set openvpn.${client}.use_pkcs='0'
+				uci set openvpn.${client}._tls_auth='tls-auth'
+				uci set openvpn.${client}.tls_auth="$skey"
+				uci set openvpn.${client}.tls_client='1'
+				uci set openvpn.${client}.mode='p2p'
+				uci set openvpn.${client}._device_files='0'
+				uci set openvpn.${client}.key_direction='1'
+				uci set openvpn.${client}._tls_cipher='all'
+				uci set openvpn.${client}.client='1'
+				;;
+			3)
+				uci set openvpn.${client}._auth='tls/pass'  
+				uci set openvpn.${client}.ca="$ca_crt"
+				uci set openvpn.${client}.cert="$client_crt"
+				uci set openvpn.${client}.key="$client_key"               
+				uci set openvpn.${client}.use_pkcs='0'     
+				uci set openvpn.${client}._tls_auth='tls-auth'
+				uci set openvpn.${client}.tls_auth="$skey"                                                  
+				uci set openvpn.${client}.tls_client='1'  
+				uci set openvpn.${client}.mode='p2p'                                            
+				uci set openvpn.${client}._device_files='0'             
+				uci set openvpn.${client}.key_direction='1'                                       
+				uci set openvpn.${client}._tls_cipher='all'
+				uci set openvpn.${client}.pull='1'
+				uci set openvpn.${client}.auth_user_pass="$user_pass"
+				uci set openvpn.${client}.client='1'
+				;;
+			4)
+				uci set openvpn.${client}._auth='pass'                                                            
+				uci set openvpn.${client}.ca="$ca_crt"                                                                
+				uci set openvpn.${client}.use_pkcs='0'                                                                
+				uci set openvpn.${client}._tls_auth='tls-auth'         
+				uci set openvpn.${client}.tls_auth="$skey"            
+				uci set openvpn.${client}._device_files='0'                                                 
+				uci set openvpn.${client}.key_direction='1'                          
+				uci set openvpn.${client}.pull='1'
+				uci set openvpn.${client}.client='1'                                                                    
+				uci set openvpn.${client}.auth_user_pass="$user_pass"
+				;;
+		esac
+		uci commit openvpn
+		echo ""
+		echo "-----Created openvpn server configuration '$client' (/etc/config/openvpn)-----"
+		echo "-----Restarting openvpn service...-----"
+		/etc/init.d/openvpn restart
+		fw_check
+		[ -e "${tmp}openvpn-${client}.conf" ] && test ${client} "c" || echo "-----ERROR: Config file not created in $tmp-----"
+
+	elif [ "$config" = "s" ]; then
+		uci add openvpn openvpn &>/dev/null                                    
+		uci rename openvpn.@openvpn[-1]="${server}"    
+		uci set openvpn.${server}._name="$server"
+		uci set openvpn.${server}.persist_key='1'
+		uci set openvpn.${server}.port='1194'
+		uci set openvpn.${server}.persist_tun='1'
+		uci set openvpn.${server}.dev="tun_s_$server"
+		uci set openvpn.${server}.verb='5'
+		uci set openvpn.${server}.type='server'
+		uci set openvpn.${server}.proto='udp'
+		uci set openvpn.${server}.enable='1'
+		uci set openvpn.${server}.enable_custom='0'
+		uci set openvpn.${server}.cipher='BF-CBC'
+		uci set openvpn.${server}.auth='sha1'
+		[ -z "$REMOTE_IP" ] && REMOTE_IP="172.40.0.2"
+		case "$auth" in                                   
+			1)
+				uci set openvpn.${server}._auth='skey'
+				uci set openvpn.${server}.secret="$skey"
+				uci set openvpn.${server}._tls_auth='none'
+				[ -z "$LOCAL_IP" ] && LOCAL_IP="172.40.0.1"                                                  
+				[ -z "$NETWORK_IP" ] && {
+					read -p "Enter remote LAN network(network_ip) [192.168.1.0]:" NETWORK_IP                                    
+					[ -z "$NETWORK_IP" ] && NETWORK_IP="192.168.1.0"                       
+					while ! expr "$NETWORK_IP" : "[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*$" >/dev/null;do
+						read -p "Enter remote LAN network(network_ip) [192.168.1.0]:" NETWORK_IP                                                     
+					done
+				}                                                                                                                  
+				uci set openvpn.${server}.network_ip="$NETWORK_IP"                      
+				NETWORK_IPA="${NETWORK_IP%%.0}.1"                                        
+				uci set openvpn.${server}.network_mask='255.255.255.0'               
+				uci set openvpn.${server}.local_ip="$LOCAL_IP"
+				uci set openvpn.${server}.remote_ip="$REMOTE_IP"
+				;;
+			2)
+				uci set openvpn.${server}._auth='tls'
+				uci set openvpn.${server}._tls_auth='tls-auth'
+				uci set openvpn.${server}.ca="$ca_crt"
+				uci set openvpn.${server}.cert="$server_crt"
+				uci set openvpn.${server}.key="$server_key"
+				uci set openvpn.${server}.dh="$dh"
+				uci set openvpn.${server}.tls_auth="$skey"
+				uci set openvpn.${server}.use_pkcs='0'
+				uci set openvpn.${server}.client_to_client='0'
+				uci set openvpn.${server}._device_files='0'
+				uci set openvpn.${server}.key_direction='0'
+				uci set openvpn.${server}._tls_cipher='all'
+				uci set openvpn.${server}._keepalive_tls='10 120'
+				uci set openvpn.${server}.auth='sha1'
+				uci set openvpn.${server}.use_pkcs='0'      
+				uci set openvpn.${server}.server_ip='172.40.0.0'                 
+				uci set openvpn.${server}.server_netmask='255.255.255.0'
+				uci set openvpn.${server}.duplicate_cn='1'
+				;;
+			3)
+				uci set openvpn.${server}._auth='tls/pass'
+				uci set openvpn.${server}._keepalive_tls='10 120'
+				uci set openvpn.${server}._tls_cipher='all'                                
+				uci set openvpn.${server}._tls_auth='tls-auth'       
+				uci set openvpn.${server}.ca="$ca_crt"               
+				uci set openvpn.${server}.cert="$server_crt"                                                          
+				uci set openvpn.${server}.key="$server_key"                                                           
+				uci set openvpn.${server}.dh="$dh"
+				uci set openvpn.${server}.tls_auth="$skey"
+				uci set openvpn.${server}.userpass="$user_pass"                                   
+				uci set openvpn.${server}.use_pkcs='0'                               
+				uci set openvpn.${server}.client_to_client='0'                       
+				uci set openvpn.${server}._device_files='0'                                                           
+				uci set openvpn.${server}.key_direction='0'
+				uci set openvpn.${server}.mode='server'
+				uci set openvpn.${server}.duplicate_cn='1'
+				uci set openvpn.${server}.tls_server='1'
+				uci set openvpn.${server}.server_ip='172.40.0.0'                                                         
+				uci set openvpn.${server}.server_netmask='255.255.255.0'
+				;;
+			4)
+				uci set openvpn.${server}._auth='pass'
+				uci set openvpn.${server}._keepalive_tls='10 120'
+				uci set openvpn.${server}._tls_auth='tls-auth'
+				uci set openvpn.${server}.ca="$ca_crt"                               
+				uci set openvpn.${server}.cert="$server_crt"              
+				uci set openvpn.${server}.key="$server_key"     
+				uci set openvpn.${server}.dh="$dh"
+				uci set openvpn.${server}.userpass="$user_pass"
+				uci set openvpn.${server}.tls_auth="$skey"                                                       
+				uci set openvpn.${server}.use_pkcs='0'
+				uci set openvpn.${server}.duplicate_cn='1'
+				uci set openvpn.${server}.client_to_client='0'      
+				uci set openvpn.${server}._device_files='0'                                     
+				uci set openvpn.${server}.key_direction='0'                                                 
+				uci set openvpn.${server}.mode='server'
+				uci set openvpn.${server}.verify_client_cert='none'
+				uci set openvpn.${server}.server_ip="172.40.0.0"                               
+				uci set openvpn.${server}.server_netmask='255.255.255.0'
+				uci set openvpn.${server}.tls_server='1'
+				;;
+		esac
+
+
+		uci commit openvpn
+		echo ""
+		echo "-----Created openvpn server configuration '$server' (/etc/config/openvpn)-----"
+		echo "-----Restarting openvpn service...-----"
+		/etc/init.d/openvpn restart
+		fw_check
+		[ -e "${tmp}openvpn-${server}.conf" ] && test ${server} "s" || echo "-----ERROR: Config file not created in $tmp-----"
+	fi
+}
+
+config_handler() {                         
+	local section="$1"                 
+	config_get type "$section" "type"  
+	config_get _name "$section" "_name"
+	echo "[$j] $_name ($type)"    
+	j=$((j+1))                   
+}                                     
+									  
+config_load openvpn
+
+if [ -n "$1" ]; then
+	VERB=5 
+	case "$1" in
+		-h)
+			help
+			;;
+		-s)
+			shift
+			[ "$#" -eq 0 ] && echo "Not find setup args! For help use -h" 
+			for i in "$@"; do
+				param=${i%=*}
+				value=${i##*=}
+				[ "$param" = "$value" ] || [ -z "$param" ] || [ -z "$value" ] && "Check setup args! For help use -h"
+				case "$param" in
+					role)
+						if [ "$value" = "s" ] || [ "$value" = "c" ]; then
+							ROLE="$value"
+						fi
+						;;
+					auth)
+						if [ "$value" = "skey" ] || [ "$value" = "tls" ] || [ "$value" = "tls/pass" ] || [ "$value" = "pass" ]; then
+							AUTH="$value"
+						fi
+						;;
+					network_ip)
+						if expr "$value" : "[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*$" >/dev/null; then
+							NETWORK_IP="$value"
+						fi
+						;;
+					remote)                                                                                              
+						if expr "$value" : "[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*$" >/dev/null; then
+							REMOTE="$value"                                                                      
+						fi                                                                                             
+						;;                           
+					local_ip)                                            
+						if expr "$value" : "[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*$" >/dev/null; then
+							LOCAL_IP="$value"                
+						fi
+						;;
+					remote_ip)                                            
+						if expr "$value" : "[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*$" >/dev/null; then
+							REMOTE_IP="$value"                
+						fi
+						;;
+					verb)                                                                                       
+						if expr "$value" : "[1-9][0-1]*$" >/dev/null; then
+							VERB="$value"                                        
+						fi                                      
+						;;       
+				esac
+			done
+
+			if [ "$EXIT" != "1" ]; then
+				case "$AUTH" in                                                                                                                    
+					skey)                                                                                                             
+						create_skey                                                                                            
+						create_config "$ROLE" "1"                                                             
+						;;                                                                                                                  
+					tls)                                                                                                             
+						create_skey                                              
+						create_tls                                                                                             
+						create_config "$ROLE" "2"                                                                        
+						;;                                                     
+					tls/pass)                                                           
+						create_skey                                                                                                         
+						create_tls                                                                                             
+						create_usr_pass                                                                                        
+						create_config "$ROLE" "3"                                                                                     
+						;;
+					pass)                                                                                         
+						create_skey                                   
+						create_tls                                                                                     
+						create_usr_pass                                                                          
+						create_config "$ROLE" "4"                                                         
+						;;                                                                                                                  
+				esac                                         
+			fi
+			;;
+		*)
+			echo "Wrong input! For help use -h"
+			;;
+	esac
+else
+	j=0                                                                                           
+	echo "Select configuration to test:"                                                                               
+	config_foreach config_handler openvpn         
+
+	echo "[s] create custom server config (tests01)"
+	echo "[c] create custom client config (testc01)"
+	echo ""
+	read input
+
+	case "$input" in
+		[0-9])
+			config_name=$(uci get openvpn.@openvpn["$input"]._name 2>/dev/null)
+			type=$(uci get openvpn.@openvpn["$input"].type 2>/dev/null)
+			type=$(printf '%s' "$type" | cut -c 1)
+			REMOTE_IP="$(uci get openvpn.@openvpn["$input"].remote_ip 2>/dev/null)"
+			NETWORK_IP="$(uci get openvpn.@openvpn["$input"].network_ip 2>/dev/null)"
+			NETWORK_IPA="${NETWORK_IP%%.0}.1"
+			fw_check
+			test "$config_name" "$type"
+			;;
+		s|c)
+			echo "Select authentication type:"
+			echo "[1] Static key"
+			echo "[2] TLS"
+			echo "[3] TLS/Password"
+			echo "[4] Password"
+			echo ""
+			read atype
+			case "$atype" in
+				1)
+					create_skey
+					create_config "$input" "$atype"
+					;;
+				2)                                      
+					create_skey
+					create_tls
+					create_config "$input" "$atype"                    
+					;;
+				3|4)                                      
+					create_skey
+					create_tls
+					create_usr_pass
+					create_config "$input" "$atype"                       
+					;;
+				*)
+					echo "Wrong input!"
+					;;
+			esac
+			;;
+		*)
+			echo "Wrong input!"
+			;;
+	esac
+fi
+trap cleanup EXIT

@@ -1,0 +1,15 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+fix_pptp() {
+	config_get type "$1" "type"
+	config_get name "$1" _name
+
+	[ "$type" = "client" ] && uci_remove "pptpd" "$1"
+	[ -n "$name" ] && uci_rename "pptpd" "$1" "$name"
+}
+
+config_load "pptpd"
+config_foreach fix_pptp "service"
+uci_commit "pptpd"

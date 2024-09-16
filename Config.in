@@ -15,13 +15,21 @@ config HAVE_DOT_CONFIG
 
 source "target/Config.in"
 
+source "config/Config-options.in"
+
+source "config/Config-tlt.in"
+
 source "config/Config-images.in"
+
+source "config/Config-gpl.in"
 
 source "config/Config-build.in"
 
 source "config/Config-devel.in"
 
 source "toolchain/Config.in"
+
+source "target/linux/*/Config.in"
 
 source "target/imagebuilder/Config.in"
 

@@ -1,0 +1,21 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+fix_call_action(){
+	local sec="$1"
+	local action reject
+
+	config_get action "$sec" "action"
+	[ -z "$action" ] && {
+		config_get reject "$sec" "reject_incoming_calls" "0"
+		[ "$reject" = 1 ] && action="reject" || action="answer"
+
+		uci_remove "call_utils" "$sec" "reject_incoming_calls"
+		uci_set "call_utils" "$sec" "action" "$action"
+		uci_commit "call_utils"
+	}
+}
+
+config_load "call_utils"
+config_foreach fix_call_action "call"

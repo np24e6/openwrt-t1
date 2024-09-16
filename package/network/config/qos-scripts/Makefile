@@ -12,6 +12,8 @@ PKG_VERSION:=1.3.1
 PKG_RELEASE:=$(AUTORELEASE)
 PKG_LICENSE:=GPL-2.0
 
+PKG_ORIGIN_URL:=https://github.com/openwrt/openwrt/tree/openwrt-21.02/package/network/config/qos-scripts
+
 PKG_MAINTAINER:=Felix Fietkau <nbd@nbd.name>
 
 PKG_BUILD_DIR := $(BUILD_DIR)/$(PKG_NAME)
@@ -21,9 +23,14 @@ include $(INCLUDE_DIR)/package.mk
 define Package/qos-scripts
   SECTION:=utils
   CATEGORY:=Base system
-  DEPENDS:=+tc +kmod-sched-core +kmod-sched-connmark +kmod-ifb +iptables +iptables-mod-ipopt +iptables-mod-conntrack-extra
+  DEPENDS:=+tc +kmod-sched-core +kmod-sched-connmark +kmod-ifb +iptables \
+	  +iptables-mod-ipopt +iptables-mod-conntrack-extra +vuci-app-qos-ui
   TITLE:=QoS scripts
   PKGARCH:=all
+  ifeq (m, $(CONFIG_PACKAGE_qos-scripts))
+    PKG_TLT_NAME:=QoS
+    PKG_ROUTER:=$(TLT_PLATFORM_NAME)
+  endif
 endef
 
 define Package/qos-scripts/description

@@ -1,0 +1,64 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+CONFIG="mosquitto"
+BRIDGE="bridge"
+MQTT="mqtt"
+config_load $CONFIG
+section_number=1
+
+rename() {
+	local section=$1
+        local bridge_connection=$2
+        uci rename "$CONFIG.$section=$section_number"
+        uci_set $CONFIG $section_number "connection_name" $bridge_connection
+        section_number=$((section_number+1))
+}
+
+fix_option(){
+        local section=$1
+        local name=$2
+        config_get temp_value $section $name
+        uci_remove $CONFIG $section $name
+        uci_set $CONFIG $section_number $name $temp_value
+}
+
+fix_bridge(){
+        local section=$1
+
+        config_get remote_addr $section "remote_addr"
+        [ -n "$remote_addr" ] || return
+        uci_remove $CONFIG $section "remote_addr"
+
+        uci_add $CONFIG $BRIDGE $section_number
+        uci_set $CONFIG $section_number "remote_addr" $remote_addr
+        config_get use_tls_ssl $section "use_tls_ssl"
+        uci_set $CONFIG $section_number "use_tls_ssl" $use_tls_ssl
+
+        fix_option $section "client_enabled"
+        fix_option $section "use_remote_tls"
+        fix_option $section "use_bridge_login"
+        fix_option $section "try_private"
+        fix_option $section "cleansession"
+        fix_option $section "remote_port"
+        fix_option $section "bridge_protocol_version"
+        config_get connection_name $section "connection_name"
+        fix_option $section "connection_name"
+
+        section_number=$((section_number+1))
+
+        config_foreach rename "topic" $connection_name
+}
+
+config_load $CONFIG
+config_get local_port $MQTT "local_port"
+
+[ -n "$local_port" ] || return
+
+uci_remove $CONFIG $MQTT "local_port"
+uci_add_list $CONFIG $MQTT "local_port" "$local_port"
+
+config_foreach fix_bridge $MQTT
+
+uci_commit $CONFIG

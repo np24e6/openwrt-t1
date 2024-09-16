@@ -11,6 +11,7 @@ PKG_NAME:=missing-macros
 PKG_RELEASE:=11
 
 include $(INCLUDE_DIR)/host-build.mk
+include $(INCLUDE_DIR)/gpl.mk
 
 define Host/Configure
 endef

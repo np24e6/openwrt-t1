@@ -9,3 +9,6 @@
 /etc/shinit
 /etc/sysctl.conf
 /etc/rc.local
+/etc/firewall.user
+/usr/lib/mdcollectd/mdcollectd.db_new.gz
+/etc/vuci-uploads/

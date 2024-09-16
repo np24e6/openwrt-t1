@@ -696,7 +696,7 @@ static const struct net_device_ops edma_axi_netdev_ops = {
 	.ndo_register_rfs_filter = edma_register_rfs_filter,
 	.ndo_get_default_vlan_tag = edma_get_default_vlan_tag,
 #endif
-	.ndo_get_stats          = edma_get_stats,
+	.ndo_get_stats64          = edma_get_stats64,
 };
 
 /* edma_axi_probe()
@@ -945,6 +945,13 @@ static int edma_axi_probe(struct platform_device *pdev)
 					goto err_register;
 				}
 			}
+		}
+
+		adapter[i]->stats64 = netdev_alloc_pcpu_stats(struct pcpu_sw_netstats);
+		if (!adapter[i]->stats64) {
+			dev_err(&pdev->dev, "failed to allocate percpu stats\n");
+			err = -ENOMEM;
+			goto err_pcpu_stats;
 		}
 
 		adapter[i]->edma_cinfo = edma_cinfo;
@@ -1242,6 +1249,9 @@ err_rmap_alloc_fail:
 	for (i = 0; i < edma_cinfo->num_gmac; i++)
 		unregister_netdev(edma_netdev[i]);
 err_register:
+err_pcpu_stats:
+	for (i = 0; i < edma_cinfo->num_gmac; i++)
+		free_percpu(adapter[i]->stats64);
 err_single_phy_init:
 	iounmap(edma_cinfo->ess_hw_addr);
 	clk_disable_unprepare(edma_cinfo->ess_clk);

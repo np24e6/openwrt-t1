@@ -1,0 +1,63 @@
+#!/bin/sh
+#shellcheck disable=SC3037
+
+print_help() {
+	printf "
+Usage: %s [options] 'commands'
+
+NOTE: Write your commands in order you want them to be executed.
+      Separate commands should end with ';', command segments written in brackets
+      e.g.: \"ls -l; cat file\"
+
+Options:
+	-s SEC	Sleep for SEC seconds between iterations (disabled by default)
+	-k	Keep output in the terminal (instead of overwriting commands' output on each iteration)
+	-v	Verbose output. Forces '-k'
+	-h	Print help and exit
+" "$0"
+	exit
+}
+
+sleep=''
+keep=false
+command=''
+
+while getopts 's::kvh' opt; do
+	case "$opt" in
+	s) sleep="sleep $OPTARG" ;;
+	k) keep=true ;;
+	v)
+		set -x
+		keep=true
+		;;
+	h) print_help ;;
+	*) ;; #commands="${commands} ${OPTARG}" ;;
+	esac
+done
+
+shift $((OPTIND - 1))
+command="$*"
+
+[ -z "$command" ] && {
+	echo "There were no commands provided"
+	print_help
+}
+
+if $keep; then {
+	cursor_top=''
+}; else {
+	cursor_top='\033[H'
+	clear
+}; fi
+
+len=0
+while true; do
+	t="$(eval "$command" 2>&1)"
+	$keep || {
+		new_len=${#t}
+		[ "$new_len" -lt "$len" ] && clear
+		len=$new_len
+	}
+	echo -e "${cursor_top}${t}"
+	$sleep
+done

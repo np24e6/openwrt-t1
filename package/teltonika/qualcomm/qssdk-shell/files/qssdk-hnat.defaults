@@ -1,0 +1,7 @@
+#!/bin/sh
+
+uci -q batch <<EOF
+set network.@hnat[-1].enabled='0'
+commit network
+EOF
+

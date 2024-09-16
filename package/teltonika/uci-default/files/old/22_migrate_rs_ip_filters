@@ -1,0 +1,65 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+CONF="rs"
+CONF_FW="firewall"
+
+migrate_ip_filters() {
+	local section="$1"
+	local rs_section_id=""
+	config_get rs_section_id "$section" "firewall_migration"
+
+	config_get cfgtype "$section" TYPE
+	config_get RS_TYPE "$section" "type"
+	config_foreach add_firewall_rules "ip_filter_$cfgtype" "$section" "$RS_TYPE" "$rs_section_id"
+}
+
+add_firewall_rules() {
+	local section=$1
+	local rs_sect=$2
+	local rs_type=$3
+	local rs_section_id=$4
+
+	config_get INTERFACE "$section" "interface"
+	config_get ALLOW_IP "$section" "allow_ip"
+
+	if [ $rs_type == "modbus" ]; then
+		SERVICE="modbus"
+		RL_NAME="Enable_ModbusGateway_$INTERFACE" && OP_PORT="modbus_port"
+		SERVICE="modbusgwd"
+	elif [ $rs_type == "overip" ]; then
+		SERVICE="overip"
+		RL_NAME="Enable_OverIP_$INTERFACE"
+		OP_PORT="port_listen"
+	else
+		return
+	fi
+
+	config_get PROTO "$rs_sect" "protocol"
+	config_get DESTP "$rs_sect" "$OP_PORT"
+	config_get TAG "$rs_sect" "tag"
+	config_get ENABLED "$rs_sect" "enabled"
+
+	uci_add "$CONF_FW" "rule"
+	uci_set "$CONF_FW" "$CONFIG_SECTION" "proto" "$PROTO"
+	uci_set "$CONF_FW" "$CONFIG_SECTION" "src" "$INTERFACE"
+	uci_set "$CONF_FW" "$CONFIG_SECTION" "tag" "$TAG"
+	uci_set "$CONF_FW" "$CONFIG_SECTION" "name" "$RL_NAME"
+	uci_set "$CONF_FW" "$CONFIG_SECTION" "dest_port" "$DESTP"
+	uci_set "$CONF_FW" "$CONFIG_SECTION" "enabled" "$ENABLED"
+	uci_set "$CONF_FW" "$CONFIG_SECTION" "target" "ACCEPT"
+
+	[ -n "$rs_section_id" ] && uci_set "$CONF_FW" "$CONFIG_SECTION" "service" "$SERVICE"."$rs_section_id"
+
+	for ip in $ALLOW_IP; do
+		uci_add_list "$CONF_FW" "$CONFIG_SECTION" "src_ip" "$ip"
+	done
+}
+
+COUNT=0
+config_load "$CONF"
+config_foreach migrate_ip_filters
+uci_commit "$CONF_FW"
+
+rm /etc/config/"$CONF"

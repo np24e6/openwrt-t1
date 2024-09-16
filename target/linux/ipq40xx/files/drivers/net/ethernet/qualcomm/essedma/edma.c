@@ -571,6 +571,9 @@ static u16 edma_rx_complete(struct edma_common_info *edma_cinfo,
 
 	do {
 		while (sw_next_to_clean != hw_next_to_clean) {
+			struct pcpu_sw_netstats *stats64;
+			unsigned long flags;
+
 			if (!work_to_do)
 				break;
 
@@ -653,7 +656,7 @@ static u16 edma_rx_complete(struct edma_common_info *edma_cinfo,
 				if (rfd_avail < EDMA_RFD_AVAIL_THR) {
 					sw_desc->flags = EDMA_SW_DESC_FLAG_SKB_REUSE;
 					sw_next_to_clean = (sw_next_to_clean + 1) & (erdr->count - 1);
-					adapter->stats.rx_dropped++;
+					adapter->netdev->stats.rx_dropped++;
 					cleaned_count++;
 					drop_count++;
 					if (drop_count == 3) {
@@ -736,8 +739,11 @@ static u16 edma_rx_complete(struct edma_common_info *edma_cinfo,
 			}
 
 			/* Update rx statistics */
-			adapter->stats.rx_packets++;
-			adapter->stats.rx_bytes += length;
+			stats64 = this_cpu_ptr(adapter->stats64);
+			flags = u64_stats_update_begin_irqsave(&stats64->syncp);
+			stats64->rx_packets++;
+			stats64->rx_bytes += length;
+			u64_stats_update_end_irqrestore(&stats64->syncp, flags);
 
 			/* Check if we reached refill threshold */
 			if (cleaned_count >= EDMA_RX_BUFFER_WRITE) {
@@ -1327,14 +1333,34 @@ void edma_adjust_link(struct net_device *netdev)
 	}
 }
 
-/* edma_get_stats()
- *	Statistics api used to retreive the tx/rx statistics
- */
-struct net_device_stats *edma_get_stats(struct net_device *netdev)
+void edma_get_stats64(struct net_device *net, struct rtnl_link_stats64 *stats)
 {
-	struct edma_adapter *adapter = netdev_priv(netdev);
+	struct edma_adapter *adapter = netdev_priv(net);
+	unsigned int start;
+	int cpu;
 
-	return &adapter->stats;
+	netdev_stats_to_stats64(stats, &net->stats);
+
+	for_each_possible_cpu(cpu) {
+		struct pcpu_sw_netstats *stats64;
+		u64 rx_packets, rx_bytes;
+		u64 tx_packets, tx_bytes;
+
+		stats64 = per_cpu_ptr(adapter->stats64, cpu);
+
+		do {
+			start = u64_stats_fetch_begin_irq(&stats64->syncp);
+			rx_packets = stats64->rx_packets;
+			rx_bytes = stats64->rx_bytes;
+			tx_packets = stats64->tx_packets;
+			tx_bytes = stats64->tx_bytes;
+		} while (u64_stats_fetch_retry_irq(&stats64->syncp, start));
+
+		stats->rx_packets += rx_packets;
+		stats->rx_bytes += rx_bytes;
+		stats->tx_packets += tx_packets;
+		stats->tx_bytes += tx_bytes;
+	}
 }
 
 /* edma_xmit()
@@ -1351,6 +1377,8 @@ netdev_tx_t edma_xmit(struct sk_buff *skb,
 	unsigned int flags_transmit = 0;
 	bool packet_is_rstp = false;
 	struct netdev_queue *nq = NULL;
+	struct pcpu_sw_netstats *stats64 = this_cpu_ptr(adapter->stats64);
+	unsigned long flags;
 
 	if (skb_shinfo(skb)->nr_frags) {
 		nr_frags = skb_shinfo(skb)->nr_frags;
@@ -1367,7 +1395,7 @@ netdev_tx_t edma_xmit(struct sk_buff *skb,
 			"skb received with fragments %d which is more than %lu",
 			num_tpds_needed, EDMA_MAX_SKB_FRAGS);
 		dev_kfree_skb_any(skb);
-		adapter->stats.tx_errors++;
+		adapter->netdev->stats.tx_errors++;
 		return NETDEV_TX_OK;
 	}
 
@@ -1423,7 +1451,7 @@ netdev_tx_t edma_xmit(struct sk_buff *skb,
 		flags_transmit, from_cpu, dp_bitmap, packet_is_rstp, nr_frags);
 	if (ret) {
 		dev_kfree_skb_any(skb);
-		adapter->stats.tx_errors++;
+		adapter->netdev->stats.tx_errors++;
 		goto netdev_okay;
 	}
 
@@ -1431,8 +1459,10 @@ netdev_tx_t edma_xmit(struct sk_buff *skb,
 	edma_tx_update_hw_idx(edma_cinfo, skb, queue_id);
 
 	/* update tx statistics */
-	adapter->stats.tx_packets++;
-	adapter->stats.tx_bytes += skb->len;
+	flags = u64_stats_update_begin_irqsave(&stats64->syncp);
+	stats64->tx_packets++;
+	stats64->tx_bytes += skb->len;
+	u64_stats_update_end_irqrestore(&stats64->syncp, flags);
 
 netdev_okay:
 	local_bh_enable();

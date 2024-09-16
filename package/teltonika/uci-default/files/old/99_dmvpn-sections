@@ -1,0 +1,101 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+update_network() {
+	[ "$1" = "${2}_dmvpn_route" ] && {
+		section="${1/_dmvpn}"
+		uci_rename "network" "$1" "$section"
+		uci_set "network" "$section" "service" "dmvpn"
+	}
+
+	config_get proto "$1" "proto"
+	[ "$1" = "$2" ] && [ "$proto" = "gre" ] && uci_set "network" "$1" "service" "dmvpn"
+}
+
+remove_list_suffix() {
+	list=$(uci_get $1 "$2" "$3")
+	uci_remove "$1" "$2" "$3"
+
+	for i in $list; do
+		uci_add_list "$1" "$2" "$3" "${i/_dmvpn/}"
+	done
+}
+
+update_ipsec() {
+	[ "$1" = "$2" ] || [ "$1" = "${2}_c" ] || [ "${1::-3}" = "${2}_ph" ] && {
+		is_dmvpn=$(uci_get "ipsec" "$section" "service")
+		[ "$is_dmvpn" != "dmvpn" ] && {
+			section="1_${1}"
+			uci_rename "ipsec" "$1" "$section"
+			c_prop=$(uci_get "ipsec" "$section" "crypto_proposal")
+			[ -n "$c_prop" ] && uci_set "ipsec" "$section" "crypto_proposal" "1_${c_prop}"
+			tunnel=$(uci_get "ipsec" "$section" "tunnel")
+			transport=$(uci_get "ipsec" "$section" "transport")
+			[ -n "$tunnel" ] && uci_set "ipsec" "$section" "tunnel" "1_${tunnel}"
+			[ -n "$tunnel" ] && remove_list_suffix "ipsec" "$section" "tunnel"
+			[ -n "$transport" ] && remove_list_suffix "ipsec" "$section" "transport"
+			[ -n "$c_prop" ] && remove_list_suffix "ipsec" "$section" "crypto_proposal"
+		}
+	}
+
+	[ "$1" = "${2}_dmvpn" ] || [ "$1" = "${2}_dmvpn_c" ] || [ "${1::-3}" = "${2}_dmvpn_ph" ] && {
+		section="${1/_dmvpn/}"
+		uci_rename "ipsec" "$1" "$section"
+		uci_set "ipsec" "$section" "service" "dmvpn"
+
+		c_prop=$(uci_get "ipsec" "$section" "crypto_proposal")
+		[ -n "$c_prop" ] && uci_set "ipsec" "$section" "crypto_proposal" "${c_prop/_dmvpn/}"
+		tunnel=$(uci_get "ipsec" "$section" "tunnel")
+		transport=$(uci_get "ipsec" "$section" "transport")
+
+		[ -n "$tunnel" ] && remove_list_suffix "ipsec" "$section" "tunnel"
+		[ -n "$transport" ] && remove_list_suffix "ipsec" "$section" "transport"
+		[ -n "$c_prop" ] && remove_list_suffix "ipsec" "$section" "crypto_proposal"
+	}
+}
+
+update_frr() {
+	[ "$1" = "${2}_dmvpn" ] && {
+		section="${1/_dmvpn/}"
+		uci_rename "frr" "$1" "$section"
+		uci_set "frr" "$section" "service" "dmvpn"
+
+		instance=$(uci_get "frr" "$section" "ipsec_instance")
+		[ -n "$instance" ] && instance="${instance/_dmvpn/}" && \
+			uci_set "frr" "$section" "ipsec_instance" "${instance/_dmvpn/}"
+	}
+}
+
+update_tunlink() {
+		local tunlink service
+
+		config_get service "$1" "service"
+		[ "$1" = "$2" ] && [ "$service" = "dmvpn" ] && {
+		config_get tunlink "$1" "tunlink"
+		[[ "$tunlink" = "mob"* ]] && [[ "$tunlink" != *"_4" ]] && uci_set "network" "$1" "tunlink" "${tunlink}_4"
+		}
+}
+
+update_instances() {
+	(
+		config_load "network"
+		config_foreach update_network "interface" "$1"
+		config_foreach update_tunlink "interface" "$1"
+		config_foreach update_network "route" "$1"
+		config_load "ipsec"
+		config_foreach update_ipsec "remote" "$1"
+		config_foreach update_ipsec "connection" "$1"
+		config_foreach update_ipsec "proposal" "$1"
+		config_load "frr"
+		config_foreach update_frr "nhrp_instance" "$1"
+	)
+}
+
+config_load "dmvpn"
+config_foreach update_instances "dmvpn"
+uci_commit "network"
+uci_commit "ipsec"
+uci_commit "frr"
+
+exit 0

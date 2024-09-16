@@ -92,6 +92,9 @@ config HAS_MIPS16
 config RFKILL_SUPPORT
 	bool
 
+config WPS_SUPPORT
+	bool
+
 config NAND_SUPPORT
 	bool
 
@@ -101,10 +104,31 @@ config ARCH_64BIT
 config VIRTIO_SUPPORT
 	bool
 
+config BASEBAND_SUPPORT
+	bool
+
+config BYPASS_OFFLOAD_FEATURE
+	bool
+
+config VERIFIED_BOOT_SUPPORT
+	bool
+
 config USES_ROOTFS_PART
 	bool
 
 config USES_BOOT_PART
+	bool
+
+config SMP_SUPPORT
+	bool
+
+config DSA_SUPPORT
+	bool
+
+config USES_SOFT_PORT_MIRROR
+	bool
+
+config USES_VENDOR_WIFI_DRIVER
 	bool
 
 # Architecture selection

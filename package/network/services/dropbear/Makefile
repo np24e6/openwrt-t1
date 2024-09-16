@@ -37,7 +37,7 @@ PKG_CONFIG_DEPENDS:= \
 include $(INCLUDE_DIR)/package.mk
 
 ifneq ($(DUMP),1)
-  STAMP_CONFIGURED:=$(strip $(STAMP_CONFIGURED))_$(shell echo $(CONFIG_TARGET_INIT_PATH) | mkhash md5)
+  STAMP_CONFIGURED:=$(strip $(STAMP_CONFIGURED))_$(shell echo $(CONFIG_TARGET_INIT_PATH) | $(MKHASH) md5)
 endif
 
 define Package/dropbear/Default
@@ -53,7 +53,7 @@ define Package/dropbear
   SECTION:=net
   CATEGORY:=Base system
   TITLE:=Small SSH2 client/server
-  DEPENDS:= +DROPBEAR_ZLIB:zlib
+  DEPENDS:= +DROPBEAR_ZLIB:zlib +libubus +libubox +liblog
   ALTERNATIVES:=
   $(if $(CONFIG_DROPBEAR_SCP),ALTERNATIVES+= \
 	  100:/usr/bin/scp:/usr/sbin/dropbear,)
@@ -82,7 +82,7 @@ define Package/dropbearconvert
 endef
 
 CONFIGURE_ARGS += \
-	--disable-pam \
+	$(if $(CONFIG_DROPBEAR_UBUS_PAM),--enable-ubus-pam,--disable-ubus-pam ) \
 	--enable-openpty \
 	--enable-syslog \
 	--disable-lastlog \
@@ -202,7 +202,6 @@ define Package/dropbear/install
 	$(INSTALL_DATA) ./files/dropbear.failsafe $(1)/lib/preinit/99_10_failsafe_dropbear
 	$(if $(CONFIG_DROPBEAR_ED25519),touch $(1)/etc/dropbear/dropbear_ed25519_host_key)
 	$(if $(CONFIG_DROPBEAR_ECC),touch $(1)/etc/dropbear/dropbear_ecdsa_host_key)
-	touch $(1)/etc/dropbear/dropbear_rsa_host_key
 endef
 
 define Package/dropbearconvert/install

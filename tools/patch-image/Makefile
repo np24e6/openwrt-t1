@@ -10,6 +10,7 @@ PKG_NAME:=patch-image
 PKG_RELEASE:=1
 
 include $(INCLUDE_DIR)/host-build.mk
+include $(INCLUDE_DIR)/gpl.mk
 
 define Host/Compile
 	$(HOSTCC) $(HOST_CFLAGS) -include endian.h -o $(HOST_BUILD_DIR)/patch-cmdline src/patch-cmdline.c

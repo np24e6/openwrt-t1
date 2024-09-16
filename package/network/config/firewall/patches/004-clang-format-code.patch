@@ -1,0 +1,597 @@
+Index: firewall-2021-03-23-61db17ed/main.c
+===================================================================
+--- firewall-2021-03-23-61db17ed.orig/main.c
++++ firewall-2021-03-23-61db17ed/main.c
+@@ -32,18 +32,15 @@
+ #include "iptables.h"
+ #include "helpers.h"
+ 
+-
+ static enum fw3_family print_family = FW3_FAMILY_ANY;
+ 
+ static struct fw3_state *run_state = NULL;
+ static struct fw3_state *cfg_state = NULL;
+ 
+-
+-static bool
+-build_state(bool runtime)
++static bool build_state(bool runtime)
+ {
+ 	struct fw3_state *state = NULL;
+-	struct uci_package *p = NULL;
++	struct uci_package *p	= NULL;
+ 	FILE *sf;
+ 
+ 	state = calloc(1, sizeof(*state));
+@@ -55,18 +52,15 @@ build_state(bool runtime)
+ 	if (!state->uci)
+ 		error("Out of memory");
+ 
+-	if (runtime)
+-	{
++	if (runtime) {
+ 		sf = fopen(FW3_STATEFILE, "r");
+ 
+-		if (sf)
+-		{
++		if (sf) {
+ 			uci_import(state->uci, sf, "fw3_state", &p, true);
+ 			fclose(sf);
+ 		}
+ 
+-		if (!p)
+-		{
++		if (!p) {
+ 			uci_free_context(state->uci);
+ 			free(state);
+ 
+@@ -76,20 +70,16 @@ build_state(bool runtime)
+ 		state->statefile = true;
+ 
+ 		run_state = state;
+-	}
+-	else
+-	{
++	} else {
+ 		if (!fw3_ubus_connect())
+ 			warn("Failed to connect to ubus");
+ 
+-		if (uci_load(state->uci, "firewall", &p))
+-		{
++		if (uci_load(state->uci, "firewall", &p)) {
+ 			uci_perror(state->uci, NULL);
+ 			error("Failed to load /etc/config/firewall");
+ 		}
+ 
+-		if (!fw3_find_command("ipset"))
+-		{
++		if (!fw3_find_command("ipset")) {
+ 			warn("Unable to locate ipset utility, disabling ipset support");
+ 			state->disable_ipsets = true;
+ 		}
+@@ -97,8 +87,7 @@ build_state(bool runtime)
+ 		cfg_state = state;
+ 	}
+ 
+-
+-	struct blob_buf b = {NULL, NULL, 0, NULL};
++	struct blob_buf b = { NULL, NULL, 0, NULL };
+ 	fw3_ubus_rules(&b);
+ 
+ 	fw3_load_defaults(state, p);
+@@ -114,34 +103,25 @@ build_state(bool runtime)
+ 	return true;
+ }
+ 
+-static void
+-free_state(struct fw3_state *state)
++static void free_state(struct fw3_state *state)
+ {
+ 	struct list_head *cur, *tmp;
+ 
+-	list_for_each_safe(cur, tmp, &state->zones)
+-		fw3_free_zone((struct fw3_zone *)cur);
++	list_for_each_safe(cur, tmp, &state->zones) fw3_free_zone((struct fw3_zone *)cur);
+ 
+-	list_for_each_safe(cur, tmp, &state->rules)
+-		fw3_free_rule((struct fw3_rule *)cur);
++	list_for_each_safe(cur, tmp, &state->rules) fw3_free_rule((struct fw3_rule *)cur);
+ 
+-	list_for_each_safe(cur, tmp, &state->redirects)
+-		fw3_free_redirect((struct fw3_redirect *)cur);
++	list_for_each_safe(cur, tmp, &state->redirects) fw3_free_redirect((struct fw3_redirect *)cur);
+ 
+-	list_for_each_safe(cur, tmp, &state->snats)
+-		fw3_free_snat((struct fw3_snat *)cur);
++	list_for_each_safe(cur, tmp, &state->snats) fw3_free_snat((struct fw3_snat *)cur);
+ 
+-	list_for_each_safe(cur, tmp, &state->forwards)
+-		fw3_free_forward((struct fw3_forward *)cur);
++	list_for_each_safe(cur, tmp, &state->forwards) fw3_free_forward((struct fw3_forward *)cur);
+ 
+-	list_for_each_safe(cur, tmp, &state->ipsets)
+-		fw3_free_ipset((struct fw3_ipset *)cur);
++	list_for_each_safe(cur, tmp, &state->ipsets) fw3_free_ipset((struct fw3_ipset *)cur);
+ 
+-	list_for_each_safe(cur, tmp, &state->includes)
+-		fw3_free_include((struct fw3_include *)cur);
++	list_for_each_safe(cur, tmp, &state->includes) fw3_free_include((struct fw3_include *)cur);
+ 
+-	list_for_each_safe(cur, tmp, &state->cthelpers)
+-		fw3_free_cthelper((struct fw3_cthelper *)cur);
++	list_for_each_safe(cur, tmp, &state->cthelpers) fw3_free_cthelper((struct fw3_cthelper *)cur);
+ 
+ 	uci_free_context(state->uci);
+ 
+@@ -150,15 +130,12 @@ free_state(struct fw3_state *state)
+ 	fw3_ubus_disconnect();
+ }
+ 
+-
+-static bool
+-family_running(enum fw3_family family)
++static bool family_running(enum fw3_family family)
+ {
+ 	return (run_state && has(run_state->defaults.flags, family, family));
+ }
+ 
+-static void
+-family_set(struct fw3_state *state, enum fw3_family family, bool set)
++static void family_set(struct fw3_state *state, enum fw3_family family, bool set)
+ {
+ 	if (!state)
+ 		return;
+@@ -169,18 +146,16 @@ family_set(struct fw3_state *state, enum
+ 		del(state->defaults.flags, family, family);
+ }
+ 
+-static int
+-stop(bool complete)
++static int stop(bool complete)
+ {
+ 	int rv = 1;
+ 	enum fw3_family family;
+ 	enum fw3_table table;
+ 	struct fw3_ipt_handle *handle;
+ 
+-	if (!complete && !run_state)
+-	{
++	if (!complete && !run_state) {
+ 		warn("The firewall appears to be stopped. "
+-			 "Use the 'flush' command to forcefully purge all rules.");
++		     "Use the 'flush' command to forcefully purge all rules.");
+ 
+ 		return rv;
+ 	}
+@@ -188,28 +163,23 @@ stop(bool complete)
+ 	if (!print_family && run_state)
+ 		fw3_hotplug_zones(run_state, false);
+ 
+-	for (family = FW3_FAMILY_V4; family <= FW3_FAMILY_V6; family++)
+-	{
++	for (family = FW3_FAMILY_V4; family <= FW3_FAMILY_V6; family++) {
+ 		if (!complete && !family_running(family))
+ 			continue;
+ 
+-		for (table = FW3_TABLE_FILTER; table <= FW3_TABLE_RAW; table++)
+-		{
++		for (table = FW3_TABLE_FILTER; table <= FW3_TABLE_RAW; table++) {
+ 			if (!fw3_has_table(family == FW3_FAMILY_V6, fw3_flag_names[table]))
+ 				continue;
+ 
+ 			if (!(handle = fw3_ipt_open(family, table)))
+ 				continue;
+ 
+-			info(" * %sing %s %s table", complete ? "Flush" : "Clear",
+-			     fw3_flag_names[family], fw3_flag_names[table]);
++			info(" * %sing %s %s table", complete ? "Flush" : "Clear", fw3_flag_names[family],
++			     fw3_flag_names[table]);
+ 
+-			if (complete)
+-			{
++			if (complete) {
+ 				fw3_flush_all(handle);
+-			}
+-			else if (run_state)
+-			{
++			} else if (run_state) {
+ 				fw3_flush_rules(handle, run_state, false);
+ 				fw3_flush_zones(handle, run_state, false);
+ 			}
+@@ -238,16 +208,14 @@ stop(bool complete)
+ 	return rv;
+ }
+ 
+-static int
+-start(void)
++static int start(void)
+ {
+ 	int rv = 1;
+ 	enum fw3_family family;
+ 	enum fw3_table table;
+ 	struct fw3_ipt_handle *handle;
+ 
+-	for (family = FW3_FAMILY_V4; family <= FW3_FAMILY_V6; family++)
+-	{
++	for (family = FW3_FAMILY_V4; family <= FW3_FAMILY_V6; family++) {
+ 		if (!print_family)
+ 			fw3_create_ipsets(cfg_state, family, false);
+ 
+@@ -257,8 +225,7 @@ start(void)
+ 		if (print_family && family != print_family)
+ 			continue;
+ 
+-		if (!print_family && family_running(family))
+-		{
++		if (!print_family && family_running(family)) {
+ 			warn("The %s firewall appears to be started already. "
+ 			     "If it is indeed empty, remove the %s file and retry.",
+ 			     fw3_flag_names[family], FW3_STATEFILE);
+@@ -266,16 +233,14 @@ start(void)
+ 			continue;
+ 		}
+ 
+-		for (table = FW3_TABLE_FILTER; table <= FW3_TABLE_RAW; table++)
+-		{
++		for (table = FW3_TABLE_FILTER; table <= FW3_TABLE_RAW; table++) {
+ 			if (!fw3_has_table(family == FW3_FAMILY_V6, fw3_flag_names[table]))
+ 				continue;
+ 
+ 			if (!(handle = fw3_ipt_open(family, table)))
+ 				continue;
+ 
+-			info(" * Populating %s %s table",
+-			     fw3_flag_names[family], fw3_flag_names[table]);
++			info(" * Populating %s %s table", fw3_flag_names[family], fw3_flag_names[table]);
+ 
+ 			fw3_print_default_chains(handle, cfg_state, false);
+ 			fw3_print_zone_chains(handle, cfg_state, false);
+@@ -302,13 +267,11 @@ start(void)
+ 		rv = 0;
+ 	}
+ 
+-	if (!rv)
+-	{
++	if (!rv) {
+ 		fw3_flush_conntrack(run_state);
+ 		fw3_set_defaults(cfg_state);
+ 
+-		if (!print_family)
+-		{
++		if (!print_family) {
+ 			fw3_run_includes(cfg_state, false);
+ 			fw3_hotplug_zones(cfg_state, true);
+ 			fw3_write_statefile(cfg_state);
+@@ -318,9 +281,7 @@ start(void)
+ 	return rv;
+ }
+ 
+-
+-static int
+-reload(void)
++static int reload(void)
+ {
+ 	int rv = 1;
+ 	enum fw3_family family;
+@@ -332,21 +293,18 @@ reload(void)
+ 
+ 	fw3_hotplug_zones(run_state, false);
+ 
+-	for (family = FW3_FAMILY_V4; family <= FW3_FAMILY_V6; family++)
+-	{
++	for (family = FW3_FAMILY_V4; family <= FW3_FAMILY_V6; family++) {
+ 		if (!family_running(family))
+ 			goto start;
+ 
+-		for (table = FW3_TABLE_FILTER; table <= FW3_TABLE_RAW; table++)
+-		{
++		for (table = FW3_TABLE_FILTER; table <= FW3_TABLE_RAW; table++) {
+ 			if (!fw3_has_table(family == FW3_FAMILY_V6, fw3_flag_names[table]))
+ 				continue;
+ 
+ 			if (!(handle = fw3_ipt_open(family, table)))
+ 				continue;
+ 
+-			info(" * Clearing %s %s table",
+-			     fw3_flag_names[family], fw3_flag_names[table]);
++			info(" * Clearing %s %s table", fw3_flag_names[family], fw3_flag_names[table]);
+ 
+ 			fw3_flush_rules(handle, run_state, true);
+ 			fw3_flush_zones(handle, run_state, true);
+@@ -366,16 +324,14 @@ start:
+ 
+ 		fw3_create_ipsets(cfg_state, family, true);
+ 
+-		for (table = FW3_TABLE_FILTER; table <= FW3_TABLE_RAW; table++)
+-		{
++		for (table = FW3_TABLE_FILTER; table <= FW3_TABLE_RAW; table++) {
+ 			if (!fw3_has_table(family == FW3_FAMILY_V6, fw3_flag_names[table]))
+ 				continue;
+ 
+ 			if (!(handle = fw3_ipt_open(family, table)))
+ 				continue;
+ 
+-			info(" * Populating %s %s table",
+-			     fw3_flag_names[family], fw3_flag_names[table]);
++			info(" * Populating %s %s table", fw3_flag_names[family], fw3_flag_names[table]);
+ 
+ 			fw3_print_default_chains(handle, cfg_state, true);
+ 			fw3_print_zone_chains(handle, cfg_state, true);
+@@ -399,8 +355,7 @@ start:
+ 		rv = 0;
+ 	}
+ 
+-	if (!rv)
+-	{
++	if (!rv) {
+ 		fw3_flush_conntrack(run_state);
+ 
+ 		fw3_set_defaults(cfg_state);
+@@ -412,20 +367,17 @@ start:
+ 	return rv;
+ }
+ 
+-static int
+-gc(void)
++static int gc(void)
+ {
+ 	enum fw3_family family;
+ 	enum fw3_table table;
+ 	struct fw3_ipt_handle *handle;
+ 
+-	for (family = FW3_FAMILY_V4; family <= FW3_FAMILY_V6; family++)
+-	{
++	for (family = FW3_FAMILY_V4; family <= FW3_FAMILY_V6; family++) {
+ 		if (family == FW3_FAMILY_V6 && cfg_state->defaults.disable_ipv6)
+ 			continue;
+ 
+-		for (table = FW3_TABLE_FILTER; table <= FW3_TABLE_RAW; table++)
+-		{
++		for (table = FW3_TABLE_FILTER; table <= FW3_TABLE_RAW; table++) {
+ 			if (!fw3_has_table(family == FW3_FAMILY_V6, fw3_flag_names[table]))
+ 				continue;
+ 
+@@ -441,18 +393,14 @@ gc(void)
+ 	return 0;
+ }
+ 
+-static int
+-lookup_network(const char *net)
++static int lookup_network(const char *net)
+ {
+ 	struct fw3_zone *z;
+ 	struct fw3_device *d;
+ 
+-	list_for_each_entry(z, &cfg_state->zones, list)
+-	{
+-		list_for_each_entry(d, &z->networks, list)
+-		{
+-			if (!strcmp(d->name, net))
+-			{
++	list_for_each_entry (z, &cfg_state->zones, list) {
++		list_for_each_entry (d, &z->networks, list) {
++			if (!strcmp(d->name, net)) {
+ 				printf("%s\n", z->name);
+ 				return 0;
+ 			}
+@@ -462,18 +410,14 @@ lookup_network(const char *net)
+ 	return 1;
+ }
+ 
+-static int
+-lookup_device(const char *dev)
++static int lookup_device(const char *dev)
+ {
+ 	struct fw3_zone *z;
+ 	struct fw3_device *d;
+ 
+-	list_for_each_entry(z, &cfg_state->zones, list)
+-	{
+-		list_for_each_entry(d, &z->devices, list)
+-		{
+-			if (!strcmp(d->name, dev))
+-			{
++	list_for_each_entry (z, &cfg_state->zones, list) {
++		list_for_each_entry (d, &z->devices, list) {
++			if (!strcmp(d->name, dev)) {
+ 				printf("%s\n", z->name);
+ 				return 0;
+ 			}
+@@ -483,19 +427,16 @@ lookup_device(const char *dev)
+ 	return 1;
+ }
+ 
+-static int
+-lookup_zone(const char *zone, const char *device)
++static int lookup_zone(const char *zone, const char *device)
+ {
+ 	struct fw3_zone *z;
+ 	struct fw3_device *d;
+ 
+-	list_for_each_entry(z, &cfg_state->zones, list)
+-	{
++	list_for_each_entry (z, &cfg_state->zones, list) {
+ 		if (strcmp(z->name, zone))
+ 			continue;
+ 
+-		list_for_each_entry(d, &z->devices, list)
+-		{
++		list_for_each_entry (d, &z->devices, list) {
+ 			if (device && strcmp(device, d->name))
+ 				continue;
+ 
+@@ -512,8 +453,7 @@ lookup_zone(const char *zone, const char
+ 	return 1;
+ }
+ 
+-static int
+-usage(void)
++static int usage(void)
+ {
+ 	fprintf(stderr, "fw3 [-4] [-6] [-q] print\n");
+ 	fprintf(stderr, "fw3 [-q] {start|stop|flush|reload|restart}\n");
+@@ -524,17 +464,14 @@ usage(void)
+ 	return 1;
+ }
+ 
+-
+ int main(int argc, char **argv)
+ {
+ 	int ch, rv = 1;
+-	enum fw3_family family = FW3_FAMILY_ANY;
++	enum fw3_family family	  = FW3_FAMILY_ANY;
+ 	struct fw3_defaults *defs = NULL;
+ 
+-	while ((ch = getopt(argc, argv, "46dqh")) != -1)
+-	{
+-		switch (ch)
+-		{
++	while ((ch = getopt(argc, argv, "46dqh")) != -1) {
++		switch (ch) {
+ 		case '4':
+ 			family = FW3_FAMILY_V4;
+ 			break;
+@@ -548,7 +485,8 @@ int main(int argc, char **argv)
+ 			break;
+ 
+ 		case 'q':
+-			if (freopen("/dev/null", "w", stderr)) {}
++			if (freopen("/dev/null", "w", stderr)) {
++			}
+ 			break;
+ 
+ 		case 'h':
+@@ -560,20 +498,15 @@ int main(int argc, char **argv)
+ 	build_state(false);
+ 	defs = &cfg_state->defaults;
+ 
+-	if (optind >= argc)
+-	{
++	if (optind >= argc) {
+ 		rv = usage();
+ 		goto out;
+ 	}
+ 
+-	if (!strcmp(argv[optind], "print"))
+-	{
+-		if (family == FW3_FAMILY_ANY)
+-		{
++	if (!strcmp(argv[optind], "print")) {
++		if (family == FW3_FAMILY_ANY) {
+ 			family = FW3_FAMILY_V4;
+-		}
+-		else if (family == FW3_FAMILY_V6)
+-		{
++		} else if (family == FW3_FAMILY_V6) {
+ 			if (defs->disable_ipv6)
+ 				warn("IPv6 rules globally disabled in configuration");
+ #ifdef DISABLE_IPV6
+@@ -582,87 +515,61 @@ int main(int argc, char **argv)
+ #endif
+ 		}
+ 
+-		if (freopen("/dev/null", "w", stderr)) {};
++		if (freopen("/dev/null", "w", stderr)) {
++		};
+ 
+ 		cfg_state->disable_ipsets = true;
+-		print_family = family;
+-		fw3_pr_debug = true;
++		print_family		  = family;
++		fw3_pr_debug		  = true;
+ 
+-		if (fw3_lock())
+-		{
++		if (fw3_lock()) {
+ 			build_state(true);
+ 			rv = start();
+ 			fw3_unlock();
+ 		}
+-	}
+-	else if (!strcmp(argv[optind], "start"))
+-	{
+-		if (fw3_lock())
+-		{
++	} else if (!strcmp(argv[optind], "start")) {
++		if (fw3_lock()) {
+ 			build_state(true);
+ 			rv = start();
+ 			fw3_unlock();
+ 		}
+-	}
+-	else if (!strcmp(argv[optind], "stop"))
+-	{
+-		if (fw3_lock())
+-		{
++	} else if (!strcmp(argv[optind], "stop")) {
++		if (fw3_lock()) {
+ 			build_state(true);
+ 			rv = stop(false);
+ 			fw3_unlock();
+ 		}
+-	}
+-	else if (!strcmp(argv[optind], "flush"))
+-	{
+-		if (fw3_lock())
+-		{
++	} else if (!strcmp(argv[optind], "flush")) {
++		if (fw3_lock()) {
+ 			build_state(true);
+ 			rv = stop(true);
+ 			fw3_unlock();
+ 		}
+-	}
+-	else if (!strcmp(argv[optind], "restart"))
+-	{
+-		if (fw3_lock())
+-		{
++	} else if (!strcmp(argv[optind], "restart")) {
++		if (fw3_lock()) {
+ 			build_state(true);
+ 			stop(true);
+ 			rv = start();
+ 			fw3_unlock();
+ 		}
+-	}
+-	else if (!strcmp(argv[optind], "reload"))
+-	{
+-		if (fw3_lock())
+-		{
++	} else if (!strcmp(argv[optind], "reload")) {
++		if (fw3_lock()) {
+ 			build_state(true);
+ 			rv = reload();
+ 			fw3_unlock();
+ 		}
+-	}
+-	else if (!strcmp(argv[optind], "gc"))
+-	{
+-		if (fw3_lock())
+-		{
++	} else if (!strcmp(argv[optind], "gc")) {
++		if (fw3_lock()) {
+ 			rv = gc();
+ 			fw3_unlock();
+ 		}
+-	}
+-	else if (!strcmp(argv[optind], "network") && (optind + 1) < argc)
+-	{
++	} else if (!strcmp(argv[optind], "network") && (optind + 1) < argc) {
+ 		rv = lookup_network(argv[optind + 1]);
+-	}
+-	else if (!strcmp(argv[optind], "device") && (optind + 1) < argc)
+-	{
++	} else if (!strcmp(argv[optind], "device") && (optind + 1) < argc) {
+ 		rv = lookup_device(argv[optind + 1]);
+-	}
+-	else if (!strcmp(argv[optind], "zone") && (optind + 1) < argc)
+-	{
++	} else if (!strcmp(argv[optind], "zone") && (optind + 1) < argc) {
+ 		rv = lookup_zone(argv[optind + 1], argv[optind + 2]);
+-	}
+-	else
+-	{
++	} else {
+ 		rv = usage();
+ 	}
+ 

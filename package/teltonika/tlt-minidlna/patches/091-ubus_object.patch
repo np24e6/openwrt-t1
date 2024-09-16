@@ -1,0 +1,220 @@
+Index: git/Makefile.am
+===================================================================
+--- git.orig/Makefile.am
++++ git/Makefile.am
+@@ -28,7 +28,8 @@ minidlnad_SOURCES = minidlna.c upnphttp.
+ 			sql.c utils.c metadata.c scanner.c monitor.c \
+ 			tivo_utils.c tivo_beacon.c tivo_commands.c \
+ 			playlist.c image_utils.c albumart.c log.c \
+-			containers.c avahi.c tagutils/tagutils.c
++			containers.c avahi.c tagutils/tagutils.c \
++			ubus/ubus.c
+ 
+ if HAVE_KQUEUE
+ minidlnad_SOURCES += kqueue.c monitor_kqueue.c
+@@ -62,7 +62,10 @@ minidlnad_LDADD = \
+ 	@LIBEXIF_LIBS@ \
+ 	@LIBINTL@ \
+ 	@LIBICONV@ \
+-	-lFLAC $(flacogglibs) $(vorbislibs) $(avahilibs)
++	-lFLAC $(flacogglibs) $(vorbislibs) $(avahilibs) \
++	-lubus -lubox
++
++minidlnad_LDFLAGS = -pthread
+
+ testupnpdescgen_SOURCES = testupnpdescgen.c upnpdescgen.c
+ testupnpdescgen_LDADD = \
+Index: git/log.h
+===================================================================
+--- git.orig/log.h
++++ git/log.h
+@@ -40,6 +40,7 @@ enum _log_facility
+   L_HTTP,
+   L_SSDP,
+   L_TIVO,
++  L_UBUS,
+   L_MAX
+ };
+ 
+Index: git/minidlna.c
+===================================================================
+--- git.orig/minidlna.c
++++ git/minidlna.c
+@@ -98,6 +98,7 @@
+ #include "tivo_beacon.h"
+ #include "tivo_utils.h"
+ #include "avahi.h"
++#include "ubus/ubus.h"
+ 
+ #if SQLITE_VERSION_NUMBER < 3005001
+ # warning "Your SQLite3 library appears to be too old!  Please use 3.5.1 or newer."
+@@ -1213,6 +1214,8 @@ main(int argc, char **argv)
+ 	reload_ifaces(0);
+ 	lastnotifytime.tv_sec = time(NULL) + runtime_vars.notify_interval;
+ 
++	dlna_ubus_init();
++
+ 	/* main loop */
+ 	while (!quitting)
+ 	{
+@@ -1320,6 +1323,8 @@ main(int argc, char **argv)
+ 	}
+ 
+ shutdown:
++	dlna_ubus_free();
++
+ 	/* kill the scanner */
+ 	if (GETFLAG(SCANNING_MASK) && scanner_pid)
+ 		kill(scanner_pid, SIGKILL);
+Index: git/ubus/ubus.c
+===================================================================
+--- /dev/null
++++ git/ubus/ubus.c
+@@ -0,0 +1,125 @@
++#include <arpa/inet.h>
++#include <libubus.h>
++#include <netinet/in.h>
++#include <pthread.h>
++#include <stdlib.h>
++
++#include "log.h"
++#include "sql.h"
++#include "upnpglobalvars.h"
++
++static int get_status_method(struct ubus_context *ctx, struct ubus_object *obj, struct ubus_request_data *req,
++			     const char *method, struct blob_attr *msg)
++{
++	int audio	= sql_get_int_field(db, "SELECT count(*) from DETAILS where MIME glob 'a*'");
++	int video	= sql_get_int_field(db, "SELECT count(*) from DETAILS where MIME glob 'v*'");
++	int images	= sql_get_int_field(db, "SELECT count(*) from DETAILS where MIME glob 'i*'");
++	int connections = 0;
++
++	struct blob_buf b = { 0 };
++	blob_buf_init(&b, 0);
++
++	blobmsg_add_u32(&b, "audio", audio);
++	blobmsg_add_u32(&b, "video", video);
++	blobmsg_add_u32(&b, "images", images);
++
++	void *a = blobmsg_open_array(&b, "clients");
++	for (int i = 0; i < CLIENT_CACHE_SLOTS; i++) {
++		if (!clients[i].addr.s_addr) {
++			continue;
++		}
++
++		char mac_str[6 * 2 + 5 + 1] = { 0 };
++		snprintf(mac_str, sizeof(mac_str), "%02X:%02X:%02X:%02X:%02X:%02X", clients[i].mac[0],
++			 clients[i].mac[1], clients[i].mac[2], clients[i].mac[3], clients[i].mac[4],
++			 clients[i].mac[5]);
++
++		void *c = blobmsg_open_table(&b, NULL);
++		blobmsg_add_u32(&b, "id", i);
++		blobmsg_add_string(&b, "type", clients[i].type->name);
++		blobmsg_add_string(&b, "ip", inet_ntoa(clients[i].addr));
++		blobmsg_add_string(&b, "mac", mac_str);
++		blobmsg_add_u32(&b, "connections", clients[i].connections);
++		blobmsg_close_table(&b, c);
++
++		connections += clients[i].connections;
++	}
++
++	blobmsg_close_array(&b, a);
++	blobmsg_add_u32(&b, "connections", connections);
++
++	ubus_send_reply(ctx, req, b.head);
++
++	blob_buf_free(&b);
++	return UBUS_STATUS_OK;
++}
++
++static struct ubus_method dlna_methods[] = {
++	UBUS_METHOD_NOARG("get_status", get_status_method),
++};
++
++static struct ubus_object_type dlna_type = UBUS_OBJECT_TYPE("dlna_type", dlna_methods);
++
++static struct ubus_object dlna_object = { .name	     = "dlna",
++					  .type	     = &dlna_type,
++					  .methods   = dlna_methods,
++					  .n_methods = ARRAY_SIZE(dlna_methods) };
++
++static struct ubus_context *ubus;
++static pthread_t ubus_thread = 0;
++
++static void *dlna_ubus_thread(void *arg)
++{
++	uloop_run();
++	uloop_done();
++	return NULL;
++}
++
++int dlna_ubus_init(void)
++{
++	int ret = 0;
++
++	if (ubus) {
++		DPRINTF(E_ERROR, L_UBUS, "Ubus already intialized");
++		ret = -1;
++		goto end;
++	}
++
++	ubus = ubus_connect(NULL);
++	if (!ubus) {
++		DPRINTF(E_ERROR, L_UBUS, "Failed to connect to ubus.");
++		ret = 1;
++		goto end;
++	}
++
++	ubus_add_uloop(ubus);
++
++	ret = ubus_add_object(ubus, &dlna_object);
++	if (ret) {
++		DPRINTF(E_ERROR, L_UBUS, "Failed to connect to ubus: %s", ubus_strerror(ret));
++		dlna_ubus_free();
++		goto end;
++	}
++
++	ret = pthread_create(&ubus_thread, NULL, dlna_ubus_thread, NULL);
++	if (ret) {
++		DPRINTF(E_ERROR, L_UBUS, "Failed to create ubus thread");
++		dlna_ubus_free();
++		goto end;
++	}
++
++end:
++	return ret;
++}
++
++void dlna_ubus_free(void)
++{
++	if (ubus_thread) {
++		pthread_cancel(ubus_thread);
++		ubus_thread = 0;
++	}
++	if (ubus) {
++		ubus_free(ubus);
++		ubus = NULL;
++	}
++}
+Index: git/ubus/ubus.h
+===================================================================
+--- /dev/null
++++ git/ubus/ubus.h
+@@ -0,0 +1,5 @@
++#ifndef _UBUS_H_
++#define _UBUS_H_
++int dlna_ubus_init(void);
++void dlna_ubus_free(void);
++#endif
+Index: git/log.c
+===================================================================
+--- git.orig/log.c
++++ git/log.c
+@@ -42,6 +42,7 @@ const char *facility_name[] = {
+ 	"http",
+ 	"ssdp",
+ 	"tivo",
++	"ubus",
+ 	0
+ };
+ 

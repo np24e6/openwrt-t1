@@ -1,0 +1,5796 @@
+--- a/drivers/tty/serial/8250/8250.h
++++ b/drivers/tty/serial/8250/8250.h
+@@ -1,4 +1,4 @@
+-// SPDX-License-Identifier: GPL-2.0+
++/* SPDX-License-Identifier: GPL-2.0+ */
+ /*
+  *  Driver for 8250/16550-type serial ports
+  *
+@@ -7,6 +7,7 @@
+  *  Copyright (C) 2001 Russell King.
+  */
+ 
++#include <linux/bits.h>
+ #include <linux/serial_8250.h>
+ #include <linux/serial_reg.h>
+ #include <linux/dmaengine.h>
+@@ -70,24 +71,25 @@ struct serial8250_config {
+ 	unsigned int	flags;
+ };
+ 
+-#define UART_CAP_FIFO	(1 << 8)	/* UART has FIFO */
+-#define UART_CAP_EFR	(1 << 9)	/* UART has EFR */
+-#define UART_CAP_SLEEP	(1 << 10)	/* UART has IER sleep */
+-#define UART_CAP_AFE	(1 << 11)	/* MCR-based hw flow control */
+-#define UART_CAP_UUE	(1 << 12)	/* UART needs IER bit 6 set (Xscale) */
+-#define UART_CAP_RTOIE	(1 << 13)	/* UART needs IER bit 4 set (Xscale, Tegra) */
+-#define UART_CAP_HFIFO	(1 << 14)	/* UART has a "hidden" FIFO */
+-#define UART_CAP_RPM	(1 << 15)	/* Runtime PM is active while idle */
+-#define UART_CAP_IRDA	(1 << 16)	/* UART supports IrDA line discipline */
+-#define UART_CAP_MINI	(1 << 17)	/* Mini UART on BCM283X family lacks:
++#define UART_CAP_FIFO	BIT(8)	/* UART has FIFO */
++#define UART_CAP_EFR	BIT(9)	/* UART has EFR */
++#define UART_CAP_SLEEP	BIT(10)	/* UART has IER sleep */
++#define UART_CAP_AFE	BIT(11)	/* MCR-based hw flow control */
++#define UART_CAP_UUE	BIT(12)	/* UART needs IER bit 6 set (Xscale) */
++#define UART_CAP_RTOIE	BIT(13)	/* UART needs IER bit 4 set (Xscale, Tegra) */
++#define UART_CAP_HFIFO	BIT(14)	/* UART has a "hidden" FIFO */
++#define UART_CAP_RPM	BIT(15)	/* Runtime PM is active while idle */
++#define UART_CAP_IRDA	BIT(16)	/* UART supports IrDA line discipline */
++#define UART_CAP_MINI	BIT(17)	/* Mini UART on BCM283X family lacks:
+ 					 * STOP PARITY EPAR SPAR WLEN5 WLEN6
+ 					 */
+ 
+-#define UART_BUG_QUOT	(1 << 0)	/* UART has buggy quot LSB */
+-#define UART_BUG_TXEN	(1 << 1)	/* UART has buggy TX IIR status */
+-#define UART_BUG_NOMSR	(1 << 2)	/* UART has buggy MSR status bits (Au1x00) */
+-#define UART_BUG_THRE	(1 << 3)	/* UART has buggy THRE reassertion */
+-#define UART_BUG_PARITY	(1 << 4)	/* UART mishandles parity if FIFO enabled */
++#define UART_BUG_QUOT	BIT(0)	/* UART has buggy quot LSB */
++#define UART_BUG_TXEN	BIT(1)	/* UART has buggy TX IIR status */
++#define UART_BUG_NOMSR	BIT(2)	/* UART has buggy MSR status bits (Au1x00) */
++#define UART_BUG_THRE	BIT(3)	/* UART has buggy THRE reassertion */
++#define UART_BUG_PARITY	BIT(4)	/* UART mishandles parity if FIFO enabled */
++#define UART_BUG_TXRACE	BIT(5)	/* UART Tx fails to set remote DR */
+ 
+ 
+ #ifdef CONFIG_SERIAL_8250_SHARE_IRQ
+@@ -156,8 +158,11 @@ void serial8250_rpm_put(struct uart_8250
+ void serial8250_rpm_get_tx(struct uart_8250_port *p);
+ void serial8250_rpm_put_tx(struct uart_8250_port *p);
+ 
+-int serial8250_em485_init(struct uart_8250_port *p);
++int serial8250_em485_config(struct uart_port *port, struct serial_rs485 *rs485);
++void serial8250_em485_start_tx(struct uart_8250_port *p);
++void serial8250_em485_stop_tx(struct uart_8250_port *p);
+ void serial8250_em485_destroy(struct uart_8250_port *p);
++int serial8250_console_exit(struct uart_port *port);
+ 
+ /* MCR <-> TIOCM conversion */
+ static inline int serial8250_TIOCM_to_MCR(int tiocm)
+@@ -237,16 +242,8 @@ static inline int serial8250_in_MCR(stru
+ 	return mctrl;
+ }
+ 
+-#if defined(__alpha__) && !defined(CONFIG_PCI)
+-/*
+- * Digital did something really horribly wrong with the OUT1 and OUT2
+- * lines on at least some ALPHA's.  The failure mode is that if either
+- * is cleared, the machine locks up with endless interrupts.
+- */
+-#define ALPHA_KLUDGE_MCR  (UART_MCR_OUT2 | UART_MCR_OUT1)
+-#else
+-#define ALPHA_KLUDGE_MCR 0
+-#endif
++bool alpha_jensen(void);
++void alpha_jensen_set_mctrl(struct uart_port *port, unsigned int mctrl);
+ 
+ #ifdef CONFIG_SERIAL_8250_PNP
+ int serial8250_pnp_init(void);
+--- /dev/null
++++ b/drivers/tty/serial/8250/8250_alpha.c
+@@ -0,0 +1,21 @@
++// SPDX-License-Identifier: GPL-2.0+
++
++#include <asm/machvec.h>
++#include "8250.h"
++
++bool alpha_jensen(void)
++{
++	return !strcmp(alpha_mv.vector_name, "Jensen");
++}
++
++void alpha_jensen_set_mctrl(struct uart_port *port, unsigned int mctrl)
++{
++	/*
++	 * Digital did something really horribly wrong with the OUT1 and OUT2
++	 * lines on Alpha Jensen.  The failure mode is that if either is
++	 * cleared, the machine locks up with endless interrupts.
++	 */
++	mctrl |= TIOCM_OUT1 | TIOCM_OUT2;
++
++	serial8250_do_set_mctrl(port, mctrl);
++}
+--- a/drivers/tty/serial/8250/8250_aspeed_vuart.c
++++ b/drivers/tty/serial/8250/8250_aspeed_vuart.c
+@@ -5,15 +5,13 @@
+  *    Copyright (C) 2016 Jeremy Kerr <jk@ozlabs.org>, IBM Corp.
+  *    Copyright (C) 2006 Arnd Bergmann <arnd@arndb.de>, IBM Corp.
+  */
+-#if defined(CONFIG_SERIAL_8250_CONSOLE) && defined(CONFIG_MAGIC_SYSRQ)
+-#define SUPPORT_SYSRQ
+-#endif
+-
+ #include <linux/device.h>
+ #include <linux/module.h>
+ #include <linux/of_address.h>
+ #include <linux/of_irq.h>
+ #include <linux/of_platform.h>
++#include <linux/regmap.h>
++#include <linux/mfd/syscon.h>
+ #include <linux/tty.h>
+ #include <linux/tty_flip.h>
+ #include <linux/clk.h>
+@@ -22,6 +20,7 @@
+ 
+ #define ASPEED_VUART_GCRA		0x20
+ #define ASPEED_VUART_GCRA_VUART_EN		BIT(0)
++#define ASPEED_VUART_GCRA_HOST_SIRQ_POLARITY	BIT(1)
+ #define ASPEED_VUART_GCRA_DISABLE_HOST_TX_DISCARD BIT(5)
+ #define ASPEED_VUART_GCRB		0x24
+ #define ASPEED_VUART_GCRB_HOST_SIRQ_MASK	GENMASK(7, 4)
+@@ -29,9 +28,12 @@
+ #define ASPEED_VUART_ADDRL		0x28
+ #define ASPEED_VUART_ADDRH		0x2c
+ 
++#define ASPEED_VUART_DEFAULT_LPC_ADDR	0x3f8
++#define ASPEED_VUART_DEFAULT_SIRQ	4
++#define ASPEED_VUART_DEFAULT_SIRQ_POLARITY	IRQ_TYPE_LEVEL_LOW
++
+ struct aspeed_vuart {
+ 	struct device		*dev;
+-	void __iomem		*regs;
+ 	struct clk		*clk;
+ 	int			line;
+ 	struct timer_list	unthrottle_timer;
+@@ -61,34 +63,53 @@ static const int unthrottle_timeout = HZ
+  * different system (though most of them use 3f8/4).
+  */
+ 
++static inline u8 aspeed_vuart_readb(struct aspeed_vuart *vuart, u8 reg)
++{
++	return readb(vuart->port->port.membase + reg);
++}
++
++static inline void aspeed_vuart_writeb(struct aspeed_vuart *vuart, u8 val, u8 reg)
++{
++	writeb(val, vuart->port->port.membase + reg);
++}
++
+ static ssize_t lpc_address_show(struct device *dev,
+ 				struct device_attribute *attr, char *buf)
+ {
+ 	struct aspeed_vuart *vuart = dev_get_drvdata(dev);
+ 	u16 addr;
+ 
+-	addr = (readb(vuart->regs + ASPEED_VUART_ADDRH) << 8) |
+-		(readb(vuart->regs + ASPEED_VUART_ADDRL));
++	addr = (aspeed_vuart_readb(vuart, ASPEED_VUART_ADDRH) << 8) |
++		(aspeed_vuart_readb(vuart, ASPEED_VUART_ADDRL));
+ 
+ 	return snprintf(buf, PAGE_SIZE - 1, "0x%x\n", addr);
+ }
+ 
++static int aspeed_vuart_set_lpc_address(struct aspeed_vuart *vuart, u32 addr)
++{
++	if (addr > U16_MAX)
++		return -EINVAL;
++
++	aspeed_vuart_writeb(vuart, addr >> 8, ASPEED_VUART_ADDRH);
++	aspeed_vuart_writeb(vuart, addr >> 0, ASPEED_VUART_ADDRL);
++
++	return 0;
++}
++
+ static ssize_t lpc_address_store(struct device *dev,
+ 				 struct device_attribute *attr,
+ 				 const char *buf, size_t count)
+ {
+ 	struct aspeed_vuart *vuart = dev_get_drvdata(dev);
+-	unsigned long val;
++	u32 val;
+ 	int err;
+ 
+-	err = kstrtoul(buf, 0, &val);
++	err = kstrtou32(buf, 0, &val);
+ 	if (err)
+ 		return err;
+ 
+-	writeb(val >> 8, vuart->regs + ASPEED_VUART_ADDRH);
+-	writeb(val >> 0, vuart->regs + ASPEED_VUART_ADDRL);
+-
+-	return count;
++	err = aspeed_vuart_set_lpc_address(vuart, val);
++	return err ? : count;
+ }
+ 
+ static DEVICE_ATTR_RW(lpc_address);
+@@ -99,40 +120,95 @@ static ssize_t sirq_show(struct device *
+ 	struct aspeed_vuart *vuart = dev_get_drvdata(dev);
+ 	u8 reg;
+ 
+-	reg = readb(vuart->regs + ASPEED_VUART_GCRB);
++	reg = aspeed_vuart_readb(vuart, ASPEED_VUART_GCRB);
+ 	reg &= ASPEED_VUART_GCRB_HOST_SIRQ_MASK;
+ 	reg >>= ASPEED_VUART_GCRB_HOST_SIRQ_SHIFT;
+ 
+ 	return snprintf(buf, PAGE_SIZE - 1, "%u\n", reg);
+ }
+ 
++static int aspeed_vuart_set_sirq(struct aspeed_vuart *vuart, u32 sirq)
++{
++	u8 reg;
++
++	if (sirq > (ASPEED_VUART_GCRB_HOST_SIRQ_MASK >> ASPEED_VUART_GCRB_HOST_SIRQ_SHIFT))
++		return -EINVAL;
++
++	sirq <<= ASPEED_VUART_GCRB_HOST_SIRQ_SHIFT;
++	sirq &= ASPEED_VUART_GCRB_HOST_SIRQ_MASK;
++
++	reg = aspeed_vuart_readb(vuart, ASPEED_VUART_GCRB);
++	reg &= ~ASPEED_VUART_GCRB_HOST_SIRQ_MASK;
++	reg |= sirq;
++	aspeed_vuart_writeb(vuart, reg, ASPEED_VUART_GCRB);
++
++	return 0;
++}
++
+ static ssize_t sirq_store(struct device *dev, struct device_attribute *attr,
+ 			  const char *buf, size_t count)
+ {
+ 	struct aspeed_vuart *vuart = dev_get_drvdata(dev);
+ 	unsigned long val;
+ 	int err;
+-	u8 reg;
+ 
+ 	err = kstrtoul(buf, 0, &val);
+ 	if (err)
+ 		return err;
+ 
+-	val <<= ASPEED_VUART_GCRB_HOST_SIRQ_SHIFT;
+-	val &= ASPEED_VUART_GCRB_HOST_SIRQ_MASK;
++	err = aspeed_vuart_set_sirq(vuart, val);
++	return err ? : count;
++}
+ 
+-	reg = readb(vuart->regs + ASPEED_VUART_GCRB);
+-	reg &= ~ASPEED_VUART_GCRB_HOST_SIRQ_MASK;
+-	reg |= val;
+-	writeb(reg, vuart->regs + ASPEED_VUART_GCRB);
++static DEVICE_ATTR_RW(sirq);
++
++static ssize_t sirq_polarity_show(struct device *dev,
++				  struct device_attribute *attr, char *buf)
++{
++	struct aspeed_vuart *vuart = dev_get_drvdata(dev);
++	u8 reg;
++
++	reg = aspeed_vuart_readb(vuart, ASPEED_VUART_GCRA);
++	reg &= ASPEED_VUART_GCRA_HOST_SIRQ_POLARITY;
++
++	return snprintf(buf, PAGE_SIZE - 1, "%u\n", reg ? 1 : 0);
++}
++
++static void aspeed_vuart_set_sirq_polarity(struct aspeed_vuart *vuart,
++					   bool polarity)
++{
++	u8 reg = aspeed_vuart_readb(vuart, ASPEED_VUART_GCRA);
++
++	if (polarity)
++		reg |= ASPEED_VUART_GCRA_HOST_SIRQ_POLARITY;
++	else
++		reg &= ~ASPEED_VUART_GCRA_HOST_SIRQ_POLARITY;
++
++	aspeed_vuart_writeb(vuart, reg, ASPEED_VUART_GCRA);
++}
++
++static ssize_t sirq_polarity_store(struct device *dev,
++				   struct device_attribute *attr,
++				   const char *buf, size_t count)
++{
++	struct aspeed_vuart *vuart = dev_get_drvdata(dev);
++	unsigned long val;
++	int err;
++
++	err = kstrtoul(buf, 0, &val);
++	if (err)
++		return err;
++
++	aspeed_vuart_set_sirq_polarity(vuart, val != 0);
+ 
+ 	return count;
+ }
+ 
+-static DEVICE_ATTR_RW(sirq);
++static DEVICE_ATTR_RW(sirq_polarity);
+ 
+ static struct attribute *aspeed_vuart_attrs[] = {
+ 	&dev_attr_sirq.attr,
++	&dev_attr_sirq_polarity.attr,
+ 	&dev_attr_lpc_address.attr,
+ 	NULL,
+ };
+@@ -143,14 +219,14 @@ static const struct attribute_group aspe
+ 
+ static void aspeed_vuart_set_enabled(struct aspeed_vuart *vuart, bool enabled)
+ {
+-	u8 reg = readb(vuart->regs + ASPEED_VUART_GCRA);
++	u8 reg = aspeed_vuart_readb(vuart, ASPEED_VUART_GCRA);
+ 
+ 	if (enabled)
+ 		reg |= ASPEED_VUART_GCRA_VUART_EN;
+ 	else
+ 		reg &= ~ASPEED_VUART_GCRA_VUART_EN;
+ 
+-	writeb(reg, vuart->regs + ASPEED_VUART_GCRA);
++	aspeed_vuart_writeb(vuart, reg, ASPEED_VUART_GCRA);
+ }
+ 
+ static void aspeed_vuart_set_host_tx_discard(struct aspeed_vuart *vuart,
+@@ -158,7 +234,7 @@ static void aspeed_vuart_set_host_tx_dis
+ {
+ 	u8 reg;
+ 
+-	reg = readb(vuart->regs + ASPEED_VUART_GCRA);
++	reg = aspeed_vuart_readb(vuart, ASPEED_VUART_GCRA);
+ 
+ 	/* If the DISABLE_HOST_TX_DISCARD bit is set, discard is disabled */
+ 	if (!discard)
+@@ -166,7 +242,7 @@ static void aspeed_vuart_set_host_tx_dis
+ 	else
+ 		reg &= ~ASPEED_VUART_GCRA_DISABLE_HOST_TX_DISCARD;
+ 
+-	writeb(reg, vuart->regs + ASPEED_VUART_GCRA);
++	aspeed_vuart_writeb(vuart, reg, ASPEED_VUART_GCRA);
+ }
+ 
+ static int aspeed_vuart_startup(struct uart_port *uart_port)
+@@ -254,7 +330,7 @@ static int aspeed_vuart_handle_irq(struc
+ 	struct uart_8250_port *up = up_to_u8250p(port);
+ 	unsigned int iir, lsr;
+ 	unsigned long flags;
+-	int space, count;
++	unsigned int space, count;
+ 
+ 	iir = serial_port_in(port, UART_IIR);
+ 
+@@ -273,14 +349,12 @@ static int aspeed_vuart_handle_irq(struc
+ 			struct aspeed_vuart *vuart = port->private_data;
+ 			__aspeed_vuart_set_throttle(up, true);
+ 
+-			if (!timer_pending(&vuart->unthrottle_timer)) {
+-				vuart->port = up;
++			if (!timer_pending(&vuart->unthrottle_timer))
+ 				mod_timer(&vuart->unthrottle_timer,
+ 					  jiffies + unthrottle_timeout);
+-			}
+ 
+ 		} else {
+-			count = min(space, 256);
++			count = min(space, 256U);
+ 
+ 			do {
+ 				serial8250_read_char(up, lsr);
+@@ -302,14 +376,48 @@ static int aspeed_vuart_handle_irq(struc
+ 	return 1;
+ }
+ 
++static void aspeed_vuart_auto_configure_sirq_polarity(
++	struct aspeed_vuart *vuart, struct device_node *syscon_np,
++	u32 reg_offset, u32 reg_mask)
++{
++	struct regmap *regmap;
++	u32 value;
++
++	regmap = syscon_node_to_regmap(syscon_np);
++	if (IS_ERR(regmap)) {
++		dev_warn(vuart->dev,
++			 "could not get regmap for aspeed,sirq-polarity-sense\n");
++		return;
++	}
++	if (regmap_read(regmap, reg_offset, &value)) {
++		dev_warn(vuart->dev, "could not read hw strap table\n");
++		return;
++	}
++
++	aspeed_vuart_set_sirq_polarity(vuart, (value & reg_mask) == 0);
++}
++
++static int aspeed_vuart_map_irq_polarity(u32 dt)
++{
++	switch (dt) {
++	case IRQ_TYPE_LEVEL_LOW:
++		return 0;
++	case IRQ_TYPE_LEVEL_HIGH:
++		return 1;
++	default:
++		return -EINVAL;
++	}
++}
++
+ static int aspeed_vuart_probe(struct platform_device *pdev)
+ {
++	struct of_phandle_args sirq_polarity_sense_args;
+ 	struct uart_8250_port port;
+ 	struct aspeed_vuart *vuart;
+ 	struct device_node *np;
+ 	struct resource *res;
+-	u32 clk, prop;
+-	int rc;
++	u32 clk, prop, sirq[2];
++	int rc, sirq_polarity;
+ 
+ 	np = pdev->dev.of_node;
+ 
+@@ -321,13 +429,9 @@ static int aspeed_vuart_probe(struct pla
+ 	timer_setup(&vuart->unthrottle_timer, aspeed_vuart_unthrottle_exp, 0);
+ 
+ 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+-	vuart->regs = devm_ioremap_resource(&pdev->dev, res);
+-	if (IS_ERR(vuart->regs))
+-		return PTR_ERR(vuart->regs);
+ 
+ 	memset(&port, 0, sizeof(port));
+ 	port.port.private_data = vuart;
+-	port.port.membase = vuart->regs;
+ 	port.port.mapbase = res->start;
+ 	port.port.mapsize = resource_size(res);
+ 	port.port.startup = aspeed_vuart_startup;
+@@ -336,6 +440,8 @@ static int aspeed_vuart_probe(struct pla
+ 	port.port.unthrottle = aspeed_vuart_unthrottle;
+ 	port.port.status = UPSTAT_SYNC_FIFO;
+ 	port.port.dev = &pdev->dev;
++	port.port.has_sysrq = IS_ENABLED(CONFIG_SERIAL_8250_CONSOLE);
++	port.bugs |= UART_BUG_TXRACE;
+ 
+ 	rc = sysfs_create_group(&vuart->dev->kobj, &aspeed_vuart_attr_group);
+ 	if (rc < 0)
+@@ -383,7 +489,7 @@ static int aspeed_vuart_probe(struct pla
+ 	port.port.iotype = UPIO_MEM;
+ 	port.port.type = PORT_16550A;
+ 	port.port.uartclk = clk;
+-	port.port.flags = UPF_SHARE_IRQ | UPF_BOOT_AUTOCONF
++	port.port.flags = UPF_SHARE_IRQ | UPF_BOOT_AUTOCONF | UPF_IOREMAP
+ 		| UPF_FIXED_PORT | UPF_FIXED_TYPE | UPF_NO_THRE_TEST;
+ 
+ 	if (of_property_read_bool(np, "no-loopback-test"))
+@@ -400,6 +506,52 @@ static int aspeed_vuart_probe(struct pla
+ 		goto err_clk_disable;
+ 
+ 	vuart->line = rc;
++	vuart->port = serial8250_get_port(vuart->line);
++
++	rc = of_parse_phandle_with_fixed_args(
++		np, "aspeed,sirq-polarity-sense", 2, 0,
++		&sirq_polarity_sense_args);
++	if (rc < 0) {
++		dev_dbg(&pdev->dev,
++			"aspeed,sirq-polarity-sense property not found\n");
++	} else {
++		aspeed_vuart_auto_configure_sirq_polarity(
++			vuart, sirq_polarity_sense_args.np,
++			sirq_polarity_sense_args.args[0],
++			BIT(sirq_polarity_sense_args.args[1]));
++		of_node_put(sirq_polarity_sense_args.np);
++	}
++
++	rc = of_property_read_u32(np, "aspeed,lpc-io-reg", &prop);
++	if (rc < 0)
++		prop = ASPEED_VUART_DEFAULT_LPC_ADDR;
++
++	rc = aspeed_vuart_set_lpc_address(vuart, prop);
++	if (rc < 0) {
++		dev_err(&pdev->dev, "invalid value in aspeed,lpc-io-reg property\n");
++		goto err_clk_disable;
++	}
++
++	rc = of_property_read_u32_array(np, "aspeed,lpc-interrupts", sirq, 2);
++	if (rc < 0) {
++		sirq[0] = ASPEED_VUART_DEFAULT_SIRQ;
++		sirq[1] = ASPEED_VUART_DEFAULT_SIRQ_POLARITY;
++	}
++
++	rc = aspeed_vuart_set_sirq(vuart, sirq[0]);
++	if (rc < 0) {
++		dev_err(&pdev->dev, "invalid sirq number in aspeed,lpc-interrupts property\n");
++		goto err_clk_disable;
++	}
++
++	sirq_polarity = aspeed_vuart_map_irq_polarity(sirq[1]);
++	if (sirq_polarity < 0) {
++		dev_err(&pdev->dev, "invalid sirq polarity in aspeed,lpc-interrupts property\n");
++		rc = sirq_polarity;
++		goto err_clk_disable;
++	}
++
++	aspeed_vuart_set_sirq_polarity(vuart, sirq_polarity);
+ 
+ 	aspeed_vuart_set_enabled(vuart, true);
+ 	aspeed_vuart_set_host_tx_discard(vuart, true);
+--- a/drivers/tty/serial/8250/8250_bcm2835aux.c
++++ b/drivers/tty/serial/8250/8250_bcm2835aux.c
+@@ -6,6 +6,10 @@
+  *
+  * Based on 8250_lpc18xx.c:
+  * Copyright (C) 2015 Joachim Eastwood <manabian@gmail.com>
++ *
++ * The bcm2835aux is capable of RTS auto flow-control, but this driver doesn't
++ * take advantage of it yet.  When adding support, be sure not to enable it
++ * simultaneously to rs485.
+  */
+ 
+ #include <linux/clk.h>
+@@ -16,14 +20,67 @@
+ 
+ #include "8250.h"
+ 
++#define BCM2835_AUX_UART_CNTL		8
++#define BCM2835_AUX_UART_CNTL_RXEN	0x01 /* Receiver enable */
++#define BCM2835_AUX_UART_CNTL_TXEN	0x02 /* Transmitter enable */
++#define BCM2835_AUX_UART_CNTL_AUTORTS	0x04 /* RTS set by RX fill level */
++#define BCM2835_AUX_UART_CNTL_AUTOCTS	0x08 /* CTS stops transmitter */
++#define BCM2835_AUX_UART_CNTL_RTS3	0x00 /* RTS set until 3 chars left */
++#define BCM2835_AUX_UART_CNTL_RTS2	0x10 /* RTS set until 2 chars left */
++#define BCM2835_AUX_UART_CNTL_RTS1	0x20 /* RTS set until 1 chars left */
++#define BCM2835_AUX_UART_CNTL_RTS4	0x30 /* RTS set until 4 chars left */
++#define BCM2835_AUX_UART_CNTL_RTSINV	0x40 /* Invert auto RTS polarity */
++#define BCM2835_AUX_UART_CNTL_CTSINV	0x80 /* Invert auto CTS polarity */
++
++/**
++ * struct bcm2835aux_data - driver private data of BCM2835 auxiliary UART
++ * @clk: clock producer of the port's uartclk
++ * @line: index of the port's serial8250_ports[] entry
++ * @cntl: cached copy of CNTL register
++ */
+ struct bcm2835aux_data {
+-	struct uart_8250_port uart;
+ 	struct clk *clk;
+ 	int line;
++	u32 cntl;
+ };
+ 
++static void bcm2835aux_rs485_start_tx(struct uart_8250_port *up)
++{
++	if (!(up->port.rs485.flags & SER_RS485_RX_DURING_TX)) {
++		struct bcm2835aux_data *data = dev_get_drvdata(up->port.dev);
++
++		data->cntl &= ~BCM2835_AUX_UART_CNTL_RXEN;
++		serial_out(up, BCM2835_AUX_UART_CNTL, data->cntl);
++	}
++
++	/*
++	 * On the bcm2835aux, the MCR register contains no other
++	 * flags besides RTS.  So no need for a read-modify-write.
++	 */
++	if (up->port.rs485.flags & SER_RS485_RTS_ON_SEND)
++		serial8250_out_MCR(up, 0);
++	else
++		serial8250_out_MCR(up, UART_MCR_RTS);
++}
++
++static void bcm2835aux_rs485_stop_tx(struct uart_8250_port *up)
++{
++	if (up->port.rs485.flags & SER_RS485_RTS_AFTER_SEND)
++		serial8250_out_MCR(up, 0);
++	else
++		serial8250_out_MCR(up, UART_MCR_RTS);
++
++	if (!(up->port.rs485.flags & SER_RS485_RX_DURING_TX)) {
++		struct bcm2835aux_data *data = dev_get_drvdata(up->port.dev);
++
++		data->cntl |= BCM2835_AUX_UART_CNTL_RXEN;
++		serial_out(up, BCM2835_AUX_UART_CNTL, data->cntl);
++	}
++}
++
+ static int bcm2835aux_serial_probe(struct platform_device *pdev)
+ {
++	struct uart_8250_port up = { };
+ 	struct bcm2835aux_data *data;
+ 	struct resource *res;
+ 	int ret;
+@@ -34,31 +91,33 @@ static int bcm2835aux_serial_probe(struc
+ 		return -ENOMEM;
+ 
+ 	/* initialize data */
+-	spin_lock_init(&data->uart.port.lock);
+-	data->uart.capabilities = UART_CAP_FIFO | UART_CAP_MINI;
+-	data->uart.port.dev = &pdev->dev;
+-	data->uart.port.regshift = 2;
+-	data->uart.port.type = PORT_16550;
+-	data->uart.port.iotype = UPIO_MEM;
+-	data->uart.port.fifosize = 8;
+-	data->uart.port.flags = UPF_SHARE_IRQ |
+-				UPF_FIXED_PORT |
+-				UPF_FIXED_TYPE |
+-				UPF_SKIP_TEST;
++	up.capabilities = UART_CAP_FIFO | UART_CAP_MINI;
++	up.port.dev = &pdev->dev;
++	up.port.regshift = 2;
++	up.port.type = PORT_16550;
++	up.port.iotype = UPIO_MEM;
++	up.port.fifosize = 8;
++	up.port.flags = UPF_SHARE_IRQ | UPF_FIXED_PORT | UPF_FIXED_TYPE |
++			UPF_SKIP_TEST | UPF_IOREMAP;
++	up.port.rs485_config = serial8250_em485_config;
++	up.rs485_start_tx = bcm2835aux_rs485_start_tx;
++	up.rs485_stop_tx = bcm2835aux_rs485_stop_tx;
++
++	/* initialize cached copy with power-on reset value */
++	data->cntl = BCM2835_AUX_UART_CNTL_RXEN | BCM2835_AUX_UART_CNTL_TXEN;
++
++	platform_set_drvdata(pdev, data);
+ 
+ 	/* get the clock - this also enables the HW */
+ 	data->clk = devm_clk_get(&pdev->dev, NULL);
+-	ret = PTR_ERR_OR_ZERO(data->clk);
+-	if (ret) {
+-		dev_err(&pdev->dev, "could not get clk: %d\n", ret);
+-		return ret;
+-	}
++	if (IS_ERR(data->clk))
++		return dev_err_probe(&pdev->dev, PTR_ERR(data->clk), "could not get clk\n");
+ 
+ 	/* get the interrupt */
+ 	ret = platform_get_irq(pdev, 0);
+ 	if (ret < 0)
+ 		return ret;
+-	data->uart.port.irq = ret;
++	up.port.irq = ret;
+ 
+ 	/* map the main registers */
+ 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+@@ -66,15 +125,13 @@ static int bcm2835aux_serial_probe(struc
+ 		dev_err(&pdev->dev, "memory resource not found");
+ 		return -EINVAL;
+ 	}
+-	data->uart.port.membase = devm_ioremap_resource(&pdev->dev, res);
+-	ret = PTR_ERR_OR_ZERO(data->uart.port.membase);
+-	if (ret)
+-		return ret;
++	up.port.mapbase = res->start;
++	up.port.mapsize = resource_size(res);
+ 
+ 	/* Check for a fixed line number */
+ 	ret = of_alias_get_id(pdev->dev.of_node, "serial");
+ 	if (ret >= 0)
+-		data->uart.port.line = ret;
++		up.port.line = ret;
+ 
+ 	/* enable the clock as a last step */
+ 	ret = clk_prepare_enable(data->clk);
+@@ -89,19 +146,16 @@ static int bcm2835aux_serial_probe(struc
+ 	 * so we have to multiply the actual clock by 2
+ 	 * to get identical baudrates.
+ 	 */
+-	data->uart.port.uartclk = clk_get_rate(data->clk) * 2;
++	up.port.uartclk = clk_get_rate(data->clk) * 2;
+ 
+ 	/* register the port */
+-	ret = serial8250_register_8250_port(&data->uart);
++	ret = serial8250_register_8250_port(&up);
+ 	if (ret < 0) {
+-		dev_err(&pdev->dev, "unable to register 8250 port - %d\n",
+-			ret);
++		dev_err_probe(&pdev->dev, ret, "unable to register 8250 port\n");
+ 		goto dis_clk;
+ 	}
+ 	data->line = ret;
+ 
+-	platform_set_drvdata(pdev, data);
+-
+ 	return 0;
+ 
+ dis_clk:
+@@ -135,6 +189,24 @@ static struct platform_driver bcm2835aux
+ };
+ module_platform_driver(bcm2835aux_serial_driver);
+ 
++#ifdef CONFIG_SERIAL_8250_CONSOLE
++
++static int __init early_bcm2835aux_setup(struct earlycon_device *device,
++					const char *options)
++{
++	if (!device->port.membase)
++		return -ENODEV;
++
++	device->port.iotype = UPIO_MEM32;
++	device->port.regshift = 2;
++
++	return early_serial8250_setup(device, NULL);
++}
++
++OF_EARLYCON_DECLARE(bcm2835aux, "brcm,bcm2835-aux-uart",
++		    early_bcm2835aux_setup);
++#endif
++
+ MODULE_DESCRIPTION("BCM2835 auxiliar UART driver");
+ MODULE_AUTHOR("Martin Sperl <kernel@martin.sperl.org>");
+ MODULE_LICENSE("GPL v2");
+--- a/drivers/tty/serial/8250/8250_core.c
++++ b/drivers/tty/serial/8250/8250_core.c
+@@ -172,7 +172,6 @@ static void serial_do_unlink(struct irq_
+ static int serial_link_irq_chain(struct uart_8250_port *up)
+ {
+ 	struct hlist_head *h;
+-	struct hlist_node *n;
+ 	struct irq_info *i;
+ 	int ret;
+ 
+@@ -180,13 +179,11 @@ static int serial_link_irq_chain(struct
+ 
+ 	h = &irq_lists[up->port.irq % NR_IRQ_HASH];
+ 
+-	hlist_for_each(n, h) {
+-		i = hlist_entry(n, struct irq_info, node);
++	hlist_for_each_entry(i, h, node)
+ 		if (i->irq == up->port.irq)
+ 			break;
+-	}
+ 
+-	if (n == NULL) {
++	if (i == NULL) {
+ 		i = kzalloc(sizeof(struct irq_info), GFP_KERNEL);
+ 		if (i == NULL) {
+ 			mutex_unlock(&hash_mutex);
+@@ -220,25 +217,18 @@ static int serial_link_irq_chain(struct
+ 
+ static void serial_unlink_irq_chain(struct uart_8250_port *up)
+ {
+-	/*
+-	 * yes, some broken gcc emit "warning: 'i' may be used uninitialized"
+-	 * but no, we are not going to take a patch that assigns NULL below.
+-	 */
+ 	struct irq_info *i;
+-	struct hlist_node *n;
+ 	struct hlist_head *h;
+ 
+ 	mutex_lock(&hash_mutex);
+ 
+ 	h = &irq_lists[up->port.irq % NR_IRQ_HASH];
+ 
+-	hlist_for_each(n, h) {
+-		i = hlist_entry(n, struct irq_info, node);
++	hlist_for_each_entry(i, h, node)
+ 		if (i->irq == up->port.irq)
+ 			break;
+-	}
+ 
+-	BUG_ON(n == NULL);
++	BUG_ON(i == NULL);
+ 	BUG_ON(i->head == NULL);
+ 
+ 	if (list_empty(i->head))
+@@ -331,9 +321,9 @@ static int univ8250_setup_irq(struct uar
+ 	 * hardware interrupt, we use a timer-based system.  The original
+ 	 * driver used to do this with IRQ0.
+ 	 */
+-	if (!port->irq) {
++	if (!port->irq)
+ 		mod_timer(&up->timer, jiffies + uart_poll_timeout(port));
+-	} else
++	else
+ 		retval = serial_link_irq_chain(up);
+ 
+ 	return retval;
+@@ -519,11 +509,10 @@ static void __init serial8250_isa_init_p
+ 
+ 		up->ops = &univ8250_driver_ops;
+ 
+-		/*
+-		 * ALPHA_KLUDGE_MCR needs to be killed.
+-		 */
+-		up->mcr_mask = ~ALPHA_KLUDGE_MCR;
+-		up->mcr_force = ALPHA_KLUDGE_MCR;
++		if (IS_ENABLED(CONFIG_ALPHA_JENSEN) ||
++		    (IS_ENABLED(CONFIG_ALPHA_GENERIC) && alpha_jensen()))
++			port->set_mctrl = alpha_jensen_set_mctrl;
++
+ 		serial8250_set_defaults(up);
+ 	}
+ 
+@@ -608,6 +597,14 @@ static int univ8250_console_setup(struct
+ 	return retval;
+ }
+ 
++static int univ8250_console_exit(struct console *co)
++{
++	struct uart_port *port;
++
++	port = &serial8250_ports[co->index].port;
++	return serial8250_console_exit(port);
++}
++
+ /**
+  *	univ8250_console_match - non-standard console matching
+  *	@co:	  registering console
+@@ -667,6 +664,7 @@ static struct console univ8250_console =
+ 	.device		= uart_console_device,
+ 	.setup		= univ8250_console_setup,
+ 	.match		= univ8250_console_match,
++//	.exit		= univ8250_console_exit,
+ 	.flags		= CON_PRINTBUFFER | CON_ANYTIME,
+ 	.index		= -1,
+ 	.data		= &serial8250_reg,
+@@ -753,6 +751,7 @@ void serial8250_suspend_port(int line)
+ 	if (!console_suspend_enabled && uart_console(port) &&
+ 	    port->type != PORT_8250) {
+ 		unsigned char canary = 0xa5;
++
+ 		serial_out(up, UART_SCR, canary);
+ 		if (serial_in(up, UART_SCR) == canary)
+ 			up->canary = canary;
+@@ -815,6 +814,7 @@ static int serial8250_probe(struct platf
+ 		uart.port.flags		= p->flags;
+ 		uart.port.mapbase	= p->mapbase;
+ 		uart.port.hub6		= p->hub6;
++//		uart.port.has_sysrq	= p->has_sysrq;
+ 		uart.port.private_data	= p->private_data;
+ 		uart.port.type		= p->type;
+ 		uart.port.serial_in	= p->serial_in;
+@@ -905,7 +905,7 @@ static struct platform_device *serial825
+  */
+ static DEFINE_MUTEX(serial_mutex);
+ 
+-static struct uart_8250_port *serial8250_find_match_or_unused(struct uart_port *port)
++static struct uart_8250_port *serial8250_find_match_or_unused(const struct uart_port *port)
+ {
+ 	int i;
+ 
+@@ -970,7 +970,7 @@ static void serial_8250_overrun_backoff_
+  *
+  *	On success the port is ready to use and the line number is returned.
+  */
+-int serial8250_register_8250_port(struct uart_8250_port *up)
++int serial8250_register_8250_port(const struct uart_8250_port *up)
+ {
+ 	struct uart_8250_port *uart;
+ 	int ret = -ENOSPC;
+@@ -1006,14 +1006,18 @@ int serial8250_register_8250_port(struct
+ 		uart->port.unthrottle	= up->port.unthrottle;
+ 		uart->port.rs485_config	= up->port.rs485_config;
+ 		uart->port.rs485	= up->port.rs485;
++		uart->rs485_start_tx	= up->rs485_start_tx;
++		uart->rs485_stop_tx	= up->rs485_stop_tx;
+ 		uart->dma		= up->dma;
+ 
+ 		/* Take tx_loadsz from fifosize if it wasn't set separately */
+ 		if (uart->port.fifosize && !uart->tx_loadsz)
+ 			uart->tx_loadsz = uart->port.fifosize;
+ 
+-		if (up->port.dev)
++		if (up->port.dev) {
+ 			uart->port.dev = up->port.dev;
++			uart_get_rs485_mode(uart->port.dev, &uart->port.rs485);
++		}
+ 
+ 		if (up->port.flags & UPF_FIXED_TYPE)
+ 			uart->port.type = up->port.type;
+--- a/drivers/tty/serial/8250/8250_dw.c
++++ b/drivers/tty/serial/8250/8250_dw.c
+@@ -19,6 +19,8 @@
+ #include <linux/of_irq.h>
+ #include <linux/of_platform.h>
+ #include <linux/platform_device.h>
++#include <linux/workqueue.h>
++#include <linux/notifier.h>
+ #include <linux/slab.h>
+ #include <linux/acpi.h>
+ #include <linux/clk.h>
+@@ -43,6 +45,8 @@ struct dw8250_data {
+ 	int			msr_mask_off;
+ 	struct clk		*clk;
+ 	struct clk		*pclk;
++	struct notifier_block	clk_notifier;
++	struct work_struct	clk_work;
+ 	struct reset_control	*rst;
+ 
+ 	unsigned int		skip_autocfg:1;
+@@ -54,6 +58,16 @@ static inline struct dw8250_data *to_dw8
+ 	return container_of(data, struct dw8250_data, data);
+ }
+ 
++static inline struct dw8250_data *clk_to_dw8250_data(struct notifier_block *nb)
++{
++	return container_of(nb, struct dw8250_data, clk_notifier);
++}
++
++static inline struct dw8250_data *work_to_dw8250_data(struct work_struct *work)
++{
++	return container_of(work, struct dw8250_data, clk_work);
++}
++
+ static inline int dw8250_modify_msr(struct uart_port *p, int offset, int value)
+ {
+ 	struct dw8250_data *d = to_dw8250_data(p->private_data);
+@@ -263,6 +277,46 @@ static int dw8250_handle_irq(struct uart
+ 	return 0;
+ }
+ 
++static void dw8250_clk_work_cb(struct work_struct *work)
++{
++	struct dw8250_data *d = work_to_dw8250_data(work);
++	struct uart_8250_port *up;
++	unsigned long rate;
++
++	rate = clk_get_rate(d->clk);
++	if (rate <= 0)
++		return;
++
++	up = serial8250_get_port(d->data.line);
++
++	serial8250_update_uartclk(&up->port, rate);
++}
++
++static int dw8250_clk_notifier_cb(struct notifier_block *nb,
++				  unsigned long event, void *data)
++{
++	struct dw8250_data *d = clk_to_dw8250_data(nb);
++
++	/*
++	 * We have no choice but to defer the uartclk update due to two
++	 * deadlocks. First one is caused by a recursive mutex lock which
++	 * happens when clk_set_rate() is called from dw8250_set_termios().
++	 * Second deadlock is more tricky and is caused by an inverted order of
++	 * the clk and tty-port mutexes lock. It happens if clock rate change
++	 * is requested asynchronously while set_termios() is executed between
++	 * tty-port mutex lock and clk_set_rate() function invocation and
++	 * vise-versa. Anyway if we didn't have the reference clock alteration
++	 * in the dw8250_set_termios() method we wouldn't have needed this
++	 * deferred event handling complication.
++	 */
++	if (event == POST_RATE_CHANGE) {
++		queue_work(system_unbound_wq, &d->clk_work);
++		return NOTIFY_OK;
++	}
++
++	return NOTIFY_DONE;
++}
++
+ static void
+ dw8250_do_pm(struct uart_port *port, unsigned int state, unsigned int old)
+ {
+@@ -278,33 +332,25 @@ dw8250_do_pm(struct uart_port *port, uns
+ static void dw8250_set_termios(struct uart_port *p, struct ktermios *termios,
+ 			       struct ktermios *old)
+ {
+-	unsigned int baud = tty_termios_baud_rate(termios);
++	unsigned long newrate = tty_termios_baud_rate(termios) * 16;
+ 	struct dw8250_data *d = to_dw8250_data(p->private_data);
+ 	long rate;
+ 	int ret;
+ 
+-	if (IS_ERR(d->clk))
+-		goto out;
+-
+ 	clk_disable_unprepare(d->clk);
+-	rate = clk_round_rate(d->clk, baud * 16);
+-	if (rate < 0)
+-		ret = rate;
+-	else if (rate == 0)
+-		ret = -ENOENT;
+-	else
+-		ret = clk_set_rate(d->clk, rate);
++	rate = clk_round_rate(d->clk, newrate);
++	if (rate > 0) {
++		/*
++		 * Note that any clock-notifer worker will block in
++		 * serial8250_update_uartclk() until we are done.
++		 */
++		ret = clk_set_rate(d->clk, newrate);
++		if (!ret)
++			p->uartclk = rate;
++	}
+ 	clk_prepare_enable(d->clk);
+ 
+-	if (!ret)
+-		p->uartclk = rate;
+-
+-out:
+-	p->status &= ~UPSTAT_AUTOCTS;
+-	if (termios->c_cflag & CRTSCTS)
+-		p->status |= UPSTAT_AUTOCTS;
+-
+-	serial8250_do_set_termios(p, termios, old);
++	dw8250_do_set_termios(p, termios, old);
+ }
+ 
+ static void dw8250_set_ldisc(struct uart_port *p, struct ktermios *termios)
+@@ -343,8 +389,9 @@ static bool dw8250_idma_filter(struct dm
+ 
+ static void dw8250_quirks(struct uart_port *p, struct dw8250_data *data)
+ {
+-	if (p->dev->of_node) {
+-		struct device_node *np = p->dev->of_node;
++	struct device_node *np = p->dev->of_node;
++
++	if (np) {
+ 		int id;
+ 
+ 		/* get index of serial line, if found in DT aliases */
+@@ -361,13 +408,17 @@ static void dw8250_quirks(struct uart_po
+ 			data->skip_autocfg = true;
+ 		}
+ #endif
+-		if (of_device_is_big_endian(p->dev->of_node)) {
++
++		if (of_device_is_big_endian(np)) {
+ 			p->iotype = UPIO_MEM32BE;
+ 			p->serial_in = dw8250_serial_in32be;
+ 			p->serial_out = dw8250_serial_out32be;
+ 		}
++
+ 		if (of_device_is_compatible(np, "marvell,armada-38x-uart"))
+ 			p->serial_out = dw8250_serial_out38x;
++		if (of_device_is_compatible(np, "starfive,jh7100-uart"))
++			p->set_termios = dw8250_do_set_termios;
+ 
+ 	} else if (acpi_dev_present("APMC0D08", NULL, -1)) {
+ 		p->iotype = UPIO_MEM32;
+@@ -473,19 +524,21 @@ static int dw8250_probe(struct platform_
+ 	device_property_read_u32(dev, "clock-frequency", &p->uartclk);
+ 
+ 	/* If there is separate baudclk, get the rate from it. */
+-	data->clk = devm_clk_get(dev, "baudclk");
+-	if (IS_ERR(data->clk) && PTR_ERR(data->clk) != -EPROBE_DEFER)
+-		data->clk = devm_clk_get(dev, NULL);
+-	if (IS_ERR(data->clk) && PTR_ERR(data->clk) == -EPROBE_DEFER)
+-		return -EPROBE_DEFER;
+-	if (!IS_ERR_OR_NULL(data->clk)) {
+-		err = clk_prepare_enable(data->clk);
+-		if (err)
+-			dev_warn(dev, "could not enable optional baudclk: %d\n",
+-				 err);
+-		else
+-			p->uartclk = clk_get_rate(data->clk);
+-	}
++	data->clk = devm_clk_get_optional(dev, "baudclk");
++	if (data->clk == NULL)
++		data->clk = devm_clk_get_optional(dev, NULL);
++	if (IS_ERR(data->clk))
++		return PTR_ERR(data->clk);
++
++	INIT_WORK(&data->clk_work, dw8250_clk_work_cb);
++	data->clk_notifier.notifier_call = dw8250_clk_notifier_cb;
++
++	err = clk_prepare_enable(data->clk);
++	if (err)
++		dev_warn(dev, "could not enable optional baudclk: %d\n", err);
++
++	if (data->clk)
++		p->uartclk = clk_get_rate(data->clk);
+ 
+ 	/* If no clock rate is defined, fail. */
+ 	if (!p->uartclk) {
+@@ -494,17 +547,16 @@ static int dw8250_probe(struct platform_
+ 		goto err_clk;
+ 	}
+ 
+-	data->pclk = devm_clk_get(dev, "apb_pclk");
+-	if (IS_ERR(data->pclk) && PTR_ERR(data->pclk) == -EPROBE_DEFER) {
+-		err = -EPROBE_DEFER;
++	data->pclk = devm_clk_get_optional(dev, "apb_pclk");
++	if (IS_ERR(data->pclk)) {
++		err = PTR_ERR(data->pclk);
+ 		goto err_clk;
+ 	}
+-	if (!IS_ERR(data->pclk)) {
+-		err = clk_prepare_enable(data->pclk);
+-		if (err) {
+-			dev_err(dev, "could not enable apb_pclk\n");
+-			goto err_clk;
+-		}
++
++	err = clk_prepare_enable(data->pclk);
++	if (err) {
++		dev_err(dev, "could not enable apb_pclk\n");
++		goto err_clk;
+ 	}
+ 
+ 	data->rst = devm_reset_control_get_optional_exclusive(dev, NULL);
+@@ -536,6 +588,19 @@ static int dw8250_probe(struct platform_
+ 		goto err_reset;
+ 	}
+ 
++	/*
++	 * Some platforms may provide a reference clock shared between several
++	 * devices. In this case any clock state change must be known to the
++	 * UART port at least post factum.
++	 */
++	if (data->clk) {
++		err = clk_notifier_register(data->clk, &data->clk_notifier);
++		if (err)
++			dev_warn(p->dev, "Failed to set the clock notifier\n");
++		else
++			queue_work(system_unbound_wq, &data->clk_work);
++	}
++
+ 	platform_set_drvdata(pdev, data);
+ 
+ 	pm_runtime_set_active(dev);
+@@ -547,12 +612,10 @@ err_reset:
+ 	reset_control_assert(data->rst);
+ 
+ err_pclk:
+-	if (!IS_ERR(data->pclk))
+-		clk_disable_unprepare(data->pclk);
++	clk_disable_unprepare(data->pclk);
+ 
+ err_clk:
+-	if (!IS_ERR(data->clk))
+-		clk_disable_unprepare(data->clk);
++	clk_disable_unprepare(data->clk);
+ 
+ 	return err;
+ }
+@@ -564,15 +627,19 @@ static int dw8250_remove(struct platform
+ 
+ 	pm_runtime_get_sync(dev);
+ 
++	if (data->clk) {
++		clk_notifier_unregister(data->clk, &data->clk_notifier);
++
++		flush_work(&data->clk_work);
++	}
++
+ 	serial8250_unregister_port(data->data.line);
+ 
+ 	reset_control_assert(data->rst);
+ 
+-	if (!IS_ERR(data->pclk))
+-		clk_disable_unprepare(data->pclk);
++	clk_disable_unprepare(data->pclk);
+ 
+-	if (!IS_ERR(data->clk))
+-		clk_disable_unprepare(data->clk);
++	clk_disable_unprepare(data->clk);
+ 
+ 	pm_runtime_disable(dev);
+ 	pm_runtime_put_noidle(dev);
+@@ -605,11 +672,9 @@ static int dw8250_runtime_suspend(struct
+ {
+ 	struct dw8250_data *data = dev_get_drvdata(dev);
+ 
+-	if (!IS_ERR(data->clk))
+-		clk_disable_unprepare(data->clk);
++	clk_disable_unprepare(data->clk);
+ 
+-	if (!IS_ERR(data->pclk))
+-		clk_disable_unprepare(data->pclk);
++	clk_disable_unprepare(data->pclk);
+ 
+ 	return 0;
+ }
+@@ -618,11 +683,9 @@ static int dw8250_runtime_resume(struct
+ {
+ 	struct dw8250_data *data = dev_get_drvdata(dev);
+ 
+-	if (!IS_ERR(data->pclk))
+-		clk_prepare_enable(data->pclk);
++	clk_prepare_enable(data->pclk);
+ 
+-	if (!IS_ERR(data->clk))
+-		clk_prepare_enable(data->clk);
++	clk_prepare_enable(data->clk);
+ 
+ 	return 0;
+ }
+@@ -638,6 +701,7 @@ static const struct of_device_id dw8250_
+ 	{ .compatible = "cavium,octeon-3860-uart" },
+ 	{ .compatible = "marvell,armada-38x-uart" },
+ 	{ .compatible = "renesas,rzn1-uart" },
++	{ .compatible = "starfive,jh7100-uart" },
+ 	{ /* Sentinel */ }
+ };
+ MODULE_DEVICE_TABLE(of, dw8250_of_match);
+@@ -652,6 +716,7 @@ static const struct acpi_device_id dw825
+ 	{ "APMC0D08", 0},
+ 	{ "AMD0020", 0 },
+ 	{ "AMDI0020", 0 },
++	{ "AMDI0022", 0 },
+ 	{ "BRCM2032", 0 },
+ 	{ "HISI0031", 0 },
+ 	{ },
+--- a/drivers/tty/serial/8250/8250_dwlib.c
++++ b/drivers/tty/serial/8250/8250_dwlib.c
+@@ -77,6 +77,16 @@ static void dw8250_set_divisor(struct ua
+ 	serial8250_do_set_divisor(p, baud, quot, quot_frac);
+ }
+ 
++void dw8250_do_set_termios(struct uart_port *p, struct ktermios *termios, struct ktermios *old)
++{
++	p->status &= ~UPSTAT_AUTOCTS;
++	if (termios->c_cflag & CRTSCTS)
++		p->status |= UPSTAT_AUTOCTS;
++
++	serial8250_do_set_termios(p, termios, old);
++}
++EXPORT_SYMBOL_GPL(dw8250_do_set_termios);
++
+ void dw8250_setup_port(struct uart_port *p)
+ {
+ 	struct uart_8250_port *up = up_to_u8250p(p);
+--- a/drivers/tty/serial/8250/8250_dwlib.h
++++ b/drivers/tty/serial/8250/8250_dwlib.h
+@@ -1,4 +1,4 @@
+-// SPDX-License-Identifier: GPL-2.0+
++/* SPDX-License-Identifier: GPL-2.0+ */
+ /* Synopsys DesignWare 8250 library header file. */
+ 
+ #include <linux/types.h>
+@@ -16,4 +16,5 @@ struct dw8250_port_data {
+ 	u8			dlf_size;
+ };
+ 
++void dw8250_do_set_termios(struct uart_port *p, struct ktermios *termios, struct ktermios *old);
+ void dw8250_setup_port(struct uart_port *p);
+--- a/drivers/tty/serial/8250/8250_early.c
++++ b/drivers/tty/serial/8250/8250_early.c
+@@ -109,6 +109,28 @@ static void early_serial8250_write(struc
+ 	uart_console_write(port, s, count, serial_putc);
+ }
+ 
++#ifdef CONFIG_CONSOLE_POLL
++static int early_serial8250_read(struct console *console,
++				 char *s, unsigned int count)
++{
++	struct earlycon_device *device = console->data;
++	struct uart_port *port = &device->port;
++	unsigned int status;
++	int num_read = 0;
++
++	while (num_read < count) {
++		status = serial8250_early_in(port, UART_LSR);
++		if (!(status & UART_LSR_DR))
++			break;
++		s[num_read++] = serial8250_early_in(port, UART_RX);
++	}
++
++	return num_read;
++}
++#else
++#define early_serial8250_read NULL
++#endif
++
+ static void __init init_port(struct earlycon_device *device)
+ {
+ 	struct uart_port *port = &device->port;
+@@ -149,6 +171,7 @@ int __init early_serial8250_setup(struct
+ 		init_port(device);
+ 
+ 	device->con->write = early_serial8250_write;
++	device->con->read = early_serial8250_read;
+ 	return 0;
+ }
+ EARLYCON_DECLARE(uart8250, early_serial8250_setup);
+@@ -181,9 +204,6 @@ OF_EARLYCON_DECLARE(omap8250, "ti,omap4-
+ 
+ #ifdef CONFIG_SERIAL_8250_RT288X
+ 
+-unsigned int au_serial_in(struct uart_port *p, int offset);
+-void au_serial_out(struct uart_port *p, int offset, int value);
+-
+ static int __init early_au_setup(struct earlycon_device *dev, const char *opt)
+ {
+ 	dev->port.serial_in = au_serial_in;
+--- a/drivers/tty/serial/8250/8250_em.c
++++ b/drivers/tty/serial/8250/8250_em.c
+@@ -39,7 +39,7 @@ static void serial8250_em_serial_out(str
+ 		break;
+ 	case UART_IER: /* IER @ 0x04 */
+ 		value &= 0x0f; /* only 4 valid bits - not Xscale */
+-		/* fall-through */
++		fallthrough;
+ 	case UART_DLL_EM: /* DLL @ 0x24 (+9) */
+ 	case UART_DLM_EM: /* DLM @ 0x28 (+9) */
+ 		writel(value, p->membase + (offset << 2));
+@@ -78,14 +78,18 @@ static void serial8250_em_serial_dl_writ
+ 
+ static int serial8250_em_probe(struct platform_device *pdev)
+ {
+-	struct resource *regs = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+-	struct resource *irq = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
+ 	struct serial8250_em_priv *priv;
+ 	struct uart_8250_port up;
+-	int ret;
++	struct resource *regs;
++	int irq, ret;
+ 
+-	if (!regs || !irq) {
+-		dev_err(&pdev->dev, "missing registers or irq\n");
++	irq = platform_get_irq(pdev, 0);
++	if (irq < 0)
++		return irq;
++
++	regs = platform_get_resource(pdev, IORESOURCE_MEM, 0);
++	if (!regs) {
++		dev_err(&pdev->dev, "missing registers\n");
+ 		return -EINVAL;
+ 	}
+ 
+@@ -101,7 +105,7 @@ static int serial8250_em_probe(struct pl
+ 
+ 	memset(&up, 0, sizeof(up));
+ 	up.port.mapbase = regs->start;
+-	up.port.irq = irq->start;
++	up.port.irq = irq;
+ 	up.port.type = PORT_UNKNOWN;
+ 	up.port.flags = UPF_BOOT_AUTOCONF | UPF_FIXED_PORT | UPF_IOREMAP;
+ 	up.port.dev = &pdev->dev;
+--- a/drivers/tty/serial/8250/8250_exar.c
++++ b/drivers/tty/serial/8250/8250_exar.c
+@@ -25,13 +25,13 @@
+ 
+ #include "8250.h"
+ 
+-#define PCI_DEVICE_ID_ACCES_COM_2S		0x1052
+-#define PCI_DEVICE_ID_ACCES_COM_4S		0x105d
+-#define PCI_DEVICE_ID_ACCES_COM_8S		0x106c
+-#define PCI_DEVICE_ID_ACCES_COM232_8		0x10a8
+-#define PCI_DEVICE_ID_ACCES_COM_2SM		0x10d2
+-#define PCI_DEVICE_ID_ACCES_COM_4SM		0x10db
+-#define PCI_DEVICE_ID_ACCES_COM_8SM		0x10ea
++#define PCI_DEVICE_ID_ACCESSIO_COM_2S		0x1052
++#define PCI_DEVICE_ID_ACCESSIO_COM_4S		0x105d
++#define PCI_DEVICE_ID_ACCESSIO_COM_8S		0x106c
++#define PCI_DEVICE_ID_ACCESSIO_COM232_8		0x10a8
++#define PCI_DEVICE_ID_ACCESSIO_COM_2SM		0x10d2
++#define PCI_DEVICE_ID_ACCESSIO_COM_4SM		0x10db
++#define PCI_DEVICE_ID_ACCESSIO_COM_8SM		0x10ea
+ 
+ #define PCI_DEVICE_ID_COMMTECH_4224PCI335	0x0002
+ #define PCI_DEVICE_ID_COMMTECH_4222PCI335	0x0004
+@@ -114,6 +114,7 @@ struct exar8250;
+ struct exar8250_platform {
+ 	int (*rs485_config)(struct uart_port *, struct serial_rs485 *);
+ 	int (*register_gpio)(struct pci_dev *, struct uart_8250_port *);
++	void (*unregister_gpio)(struct uart_8250_port *);
+ };
+ 
+ /**
+@@ -135,7 +136,7 @@ struct exar8250 {
+ 	unsigned int		nr;
+ 	struct exar8250_board	*board;
+ 	void __iomem		*virt;
+-	int			line[0];
++	int			line[];
+ };
+ 
+ static void exar_pm(struct uart_port *port, unsigned int state, unsigned int old)
+@@ -174,10 +175,27 @@ static void xr17v35x_set_divisor(struct
+ 	serial_port_out(p, 0x2, quot_frac);
+ }
+ 
++static int xr17v35x_startup(struct uart_port *port)
++{
++	/*
++	 * First enable access to IER [7:5], ISR [5:4], FCR [5:4],
++	 * MCR [7:5] and MSR [7:0]
++	 */
++	serial_port_out(port, UART_XR_EFR, UART_EFR_ECB);
++
++	/*
++	 * Make sure all interrups are masked until initialization is
++	 * complete and the FIFOs are cleared
++	 */
++	serial_port_out(port, UART_IER, 0);
++
++	return serial8250_do_startup(port);
++}
++
+ static void exar_shutdown(struct uart_port *port)
+ {
+ 	unsigned char lsr;
+-	bool tx_complete = 0;
++	bool tx_complete = false;
+ 	struct uart_8250_port *up = up_to_u8250p(port);
+ 	struct circ_buf *xmit = &port->state->xmit;
+ 	int i = 0;
+@@ -185,9 +203,9 @@ static void exar_shutdown(struct uart_po
+ 	do {
+ 		lsr = serial_in(up, UART_LSR);
+ 		if (lsr & (UART_LSR_TEMT | UART_LSR_THRE))
+-			tx_complete = 1;
++			tx_complete = true;
+ 		else
+-			tx_complete = 0;
++			tx_complete = false;
+ 		usleep_range(1000, 1100);
+ 	} while (!uart_circ_empty(xmit) && !tx_complete && i++ < 1000);
+ 
+@@ -220,6 +238,8 @@ static int default_setup(struct exar8250
+ 
+ 		port->port.get_divisor = xr17v35x_get_divisor;
+ 		port->port.set_divisor = xr17v35x_set_divisor;
++
++		port->port.startup = xr17v35x_startup;
+ 	} else {
+ 		port->port.type = PORT_XR17D15X;
+ 	}
+@@ -333,9 +353,8 @@ static void setup_gpio(struct pci_dev *p
+ 	writeb(0x00, p + UART_EXAR_MPIOOD_15_8);
+ }
+ 
+-static void *
+-__xr17v35x_register_gpio(struct pci_dev *pcidev,
+-			 const struct property_entry *properties)
++static struct platform_device *__xr17v35x_register_gpio(struct pci_dev *pcidev,
++							const struct software_node *node)
+ {
+ 	struct platform_device *pdev;
+ 
+@@ -346,7 +365,7 @@ __xr17v35x_register_gpio(struct pci_dev
+ 	pdev->dev.parent = &pcidev->dev;
+ 	ACPI_COMPANION_SET(&pdev->dev, ACPI_COMPANION(&pcidev->dev));
+ 
+-	if (platform_device_add_properties(pdev, properties) < 0 ||
++	if (device_add_software_node(&pdev->dev, node) < 0 ||
+ 	    platform_device_add(pdev) < 0) {
+ 		platform_device_put(pdev);
+ 		return NULL;
+@@ -355,22 +374,40 @@ __xr17v35x_register_gpio(struct pci_dev
+ 	return pdev;
+ }
+ 
++static void __xr17v35x_unregister_gpio(struct platform_device *pdev)
++{
++	device_remove_software_node(&pdev->dev);
++	platform_device_unregister(pdev);
++}
++
+ static const struct property_entry exar_gpio_properties[] = {
+ 	PROPERTY_ENTRY_U32("exar,first-pin", 0),
+ 	PROPERTY_ENTRY_U32("ngpios", 16),
+ 	{ }
+ };
+ 
+-static int xr17v35x_register_gpio(struct pci_dev *pcidev,
+-				  struct uart_8250_port *port)
++static const struct software_node exar_gpio_node = {
++	.properties = exar_gpio_properties,
++};
++
++static int xr17v35x_register_gpio(struct pci_dev *pcidev, struct uart_8250_port *port)
+ {
+ 	if (pcidev->vendor == PCI_VENDOR_ID_EXAR)
+ 		port->port.private_data =
+-			__xr17v35x_register_gpio(pcidev, exar_gpio_properties);
++			__xr17v35x_register_gpio(pcidev, &exar_gpio_node);
+ 
+ 	return 0;
+ }
+ 
++static void xr17v35x_unregister_gpio(struct uart_8250_port *port)
++{
++	if (!port->port.private_data)
++		return;
++
++	__xr17v35x_unregister_gpio(port->port.private_data);
++	port->port.private_data = NULL;
++}
++
+ static int generic_rs485_config(struct uart_port *port,
+ 				struct serial_rs485 *rs485)
+ {
+@@ -396,6 +433,7 @@ static int generic_rs485_config(struct u
+ 
+ static const struct exar8250_platform exar8250_default_platform = {
+ 	.register_gpio = xr17v35x_register_gpio,
++	.unregister_gpio = xr17v35x_unregister_gpio,
+ 	.rs485_config = generic_rs485_config,
+ };
+ 
+@@ -438,6 +476,10 @@ static const struct property_entry iot20
+ 	{ }
+ };
+ 
++static const struct software_node iot2040_gpio_node = {
++	.properties = iot2040_gpio_properties,
++};
++
+ static int iot2040_register_gpio(struct pci_dev *pcidev,
+ 			      struct uart_8250_port *port)
+ {
+@@ -449,7 +491,7 @@ static int iot2040_register_gpio(struct
+ 	writeb(IOT2040_UARTS_GPIO_HI_MODE, p + UART_EXAR_MPIOSEL_15_8);
+ 
+ 	port->port.private_data =
+-		__xr17v35x_register_gpio(pcidev, iot2040_gpio_properties);
++		__xr17v35x_register_gpio(pcidev, &iot2040_gpio_node);
+ 
+ 	return 0;
+ }
+@@ -457,6 +499,7 @@ static int iot2040_register_gpio(struct
+ static const struct exar8250_platform iot2040_platform = {
+ 	.rs485_config = iot2040_rs485_config,
+ 	.register_gpio = iot2040_register_gpio,
++	.unregister_gpio = xr17v35x_unregister_gpio,
+ };
+ 
+ /*
+@@ -474,23 +517,27 @@ static const struct dmi_system_id exar_p
+ 	{}
+ };
+ 
++static const struct exar8250_platform *exar_get_platform(void)
++{
++	const struct dmi_system_id *dmi_match;
++
++	dmi_match = dmi_first_match(exar_platforms);
++	if (dmi_match)
++		return dmi_match->driver_data;
++
++	return &exar8250_default_platform;
++}
++
+ static int
+ pci_xr17v35x_setup(struct exar8250 *priv, struct pci_dev *pcidev,
+ 		   struct uart_8250_port *port, int idx)
+ {
+-	const struct exar8250_platform *platform;
+-	const struct dmi_system_id *dmi_match;
++	const struct exar8250_platform *platform = exar_get_platform();
+ 	unsigned int offset = idx * 0x400;
+ 	unsigned int baud = 7812500;
+ 	u8 __iomem *p;
+ 	int ret;
+ 
+-	dmi_match = dmi_first_match(exar_platforms);
+-	if (dmi_match)
+-		platform = dmi_match->driver_data;
+-	else
+-		platform = &exar8250_default_platform;
+-
+ 	port->port.uartclk = baud * 16;
+ 	port->port.rs485_config = platform->rs485_config;
+ 
+@@ -524,12 +571,11 @@ pci_xr17v35x_setup(struct exar8250 *priv
+ 
+ static void pci_xr17v35x_exit(struct pci_dev *pcidev)
+ {
++	const struct exar8250_platform *platform = exar_get_platform();
+ 	struct exar8250 *priv = pci_get_drvdata(pcidev);
+ 	struct uart_8250_port *port = serial8250_get_port(priv->line[0]);
+-	struct platform_device *pdev = port->port.private_data;
+ 
+-	platform_device_unregister(pdev);
+-	port->port.private_data = NULL;
++	platform->unregister_gpio(port);
+ }
+ 
+ static inline void exar_misc_clear(struct exar8250 *priv)
+@@ -764,9 +810,7 @@ static const struct exar8250_board pbn_e
+ 		(kernel_ulong_t)&bd					\
+ 	}
+ 
+-#define EXAR_DEVICE(vend, devid, bd) {					\
+-	PCI_VDEVICE(vend, PCI_DEVICE_ID_##devid), (kernel_ulong_t)&bd	\
+-	}
++#define EXAR_DEVICE(vend, devid, bd) { PCI_DEVICE_DATA(vend, devid, &bd) }
+ 
+ #define IBM_DEVICE(devid, sdevid, bd) {			\
+ 	PCI_DEVICE_SUB(					\
+@@ -778,14 +822,13 @@ static const struct exar8250_board pbn_e
+ 	}
+ 
+ static const struct pci_device_id exar_pci_tbl[] = {
+-	EXAR_DEVICE(ACCESSIO, ACCES_COM_2S, acces_com_2x),
+-	EXAR_DEVICE(ACCESSIO, ACCES_COM_4S, acces_com_4x),
+-	EXAR_DEVICE(ACCESSIO, ACCES_COM_8S, acces_com_8x),
+-	EXAR_DEVICE(ACCESSIO, ACCES_COM232_8, acces_com_8x),
+-	EXAR_DEVICE(ACCESSIO, ACCES_COM_2SM, acces_com_2x),
+-	EXAR_DEVICE(ACCESSIO, ACCES_COM_4SM, acces_com_4x),
+-	EXAR_DEVICE(ACCESSIO, ACCES_COM_8SM, acces_com_8x),
+-
++	EXAR_DEVICE(ACCESSIO, COM_2S, acces_com_2x),
++	EXAR_DEVICE(ACCESSIO, COM_4S, acces_com_4x),
++	EXAR_DEVICE(ACCESSIO, COM_8S, acces_com_8x),
++	EXAR_DEVICE(ACCESSIO, COM232_8, acces_com_8x),
++	EXAR_DEVICE(ACCESSIO, COM_2SM, acces_com_2x),
++	EXAR_DEVICE(ACCESSIO, COM_4SM, acces_com_4x),
++	EXAR_DEVICE(ACCESSIO, COM_8SM, acces_com_8x),
+ 
+ 	CONNECT_DEVICE(XR17C152, UART_2_232, pbn_connect),
+ 	CONNECT_DEVICE(XR17C154, UART_4_232, pbn_connect),
+@@ -803,24 +846,24 @@ static const struct pci_device_id exar_p
+ 	IBM_DEVICE(XR17C152, SATURN_SERIAL_ONE_PORT, pbn_exar_ibm_saturn),
+ 
+ 	/* Exar Corp. XR17C15[248] Dual/Quad/Octal UART */
+-	EXAR_DEVICE(EXAR, EXAR_XR17C152, pbn_exar_XR17C15x),
+-	EXAR_DEVICE(EXAR, EXAR_XR17C154, pbn_exar_XR17C15x),
+-	EXAR_DEVICE(EXAR, EXAR_XR17C158, pbn_exar_XR17C15x),
++	EXAR_DEVICE(EXAR, XR17C152, pbn_exar_XR17C15x),
++	EXAR_DEVICE(EXAR, XR17C154, pbn_exar_XR17C15x),
++	EXAR_DEVICE(EXAR, XR17C158, pbn_exar_XR17C15x),
+ 
+ 	/* Exar Corp. XR17V[48]35[248] Dual/Quad/Octal/Hexa PCIe UARTs */
+-	EXAR_DEVICE(EXAR, EXAR_XR17V352, pbn_exar_XR17V35x),
+-	EXAR_DEVICE(EXAR, EXAR_XR17V354, pbn_exar_XR17V35x),
+-	EXAR_DEVICE(EXAR, EXAR_XR17V358, pbn_exar_XR17V35x),
+-	EXAR_DEVICE(EXAR, EXAR_XR17V4358, pbn_exar_XR17V4358),
+-	EXAR_DEVICE(EXAR, EXAR_XR17V8358, pbn_exar_XR17V8358),
+-	EXAR_DEVICE(COMMTECH, COMMTECH_4222PCIE, pbn_fastcom35x_2),
+-	EXAR_DEVICE(COMMTECH, COMMTECH_4224PCIE, pbn_fastcom35x_4),
+-	EXAR_DEVICE(COMMTECH, COMMTECH_4228PCIE, pbn_fastcom35x_8),
+-
+-	EXAR_DEVICE(COMMTECH, COMMTECH_4222PCI335, pbn_fastcom335_2),
+-	EXAR_DEVICE(COMMTECH, COMMTECH_4224PCI335, pbn_fastcom335_4),
+-	EXAR_DEVICE(COMMTECH, COMMTECH_2324PCI335, pbn_fastcom335_4),
+-	EXAR_DEVICE(COMMTECH, COMMTECH_2328PCI335, pbn_fastcom335_8),
++	EXAR_DEVICE(EXAR, XR17V352, pbn_exar_XR17V35x),
++	EXAR_DEVICE(EXAR, XR17V354, pbn_exar_XR17V35x),
++	EXAR_DEVICE(EXAR, XR17V358, pbn_exar_XR17V35x),
++	EXAR_DEVICE(EXAR, XR17V4358, pbn_exar_XR17V4358),
++	EXAR_DEVICE(EXAR, XR17V8358, pbn_exar_XR17V8358),
++	EXAR_DEVICE(COMMTECH, 4222PCIE, pbn_fastcom35x_2),
++	EXAR_DEVICE(COMMTECH, 4224PCIE, pbn_fastcom35x_4),
++	EXAR_DEVICE(COMMTECH, 4228PCIE, pbn_fastcom35x_8),
++
++	EXAR_DEVICE(COMMTECH, 4222PCI335, pbn_fastcom335_2),
++	EXAR_DEVICE(COMMTECH, 4224PCI335, pbn_fastcom335_4),
++	EXAR_DEVICE(COMMTECH, 2324PCI335, pbn_fastcom335_4),
++	EXAR_DEVICE(COMMTECH, 2328PCI335, pbn_fastcom335_8),
+ 	{ 0, }
+ };
+ MODULE_DEVICE_TABLE(pci, exar_pci_tbl);
+--- a/drivers/tty/serial/8250/8250_fintek.c
++++ b/drivers/tty/serial/8250/8250_fintek.c
+@@ -19,6 +19,7 @@
+ #define CHIP_ID2  0x21
+ #define CHIP_ID_F81865 0x0407
+ #define CHIP_ID_F81866 0x1010
++#define CHIP_ID_F81966 0x0215
+ #define CHIP_ID_F81216AD 0x1602
+ #define CHIP_ID_F81216H 0x0501
+ #define CHIP_ID_F81216 0x0802
+@@ -62,9 +63,9 @@
+ #define F81216_LDN_HIGH	0x4
+ 
+ /*
+- * F81866 registers
++ * F81866/966 registers
+  *
+- * The IRQ setting mode of F81866 is not the same with F81216 series.
++ * The IRQ setting mode of F81866/966 is not the same with F81216 series.
+  *	Level/Low: IRQ_MODE0:0, IRQ_MODE1:0
+  *	Edge/High: IRQ_MODE0:1, IRQ_MODE1:0
+  *
+@@ -155,6 +156,7 @@ static int fintek_8250_check_id(struct f
+ 	switch (chip) {
+ 	case CHIP_ID_F81865:
+ 	case CHIP_ID_F81866:
++	case CHIP_ID_F81966:
+ 	case CHIP_ID_F81216AD:
+ 	case CHIP_ID_F81216H:
+ 	case CHIP_ID_F81216:
+@@ -171,6 +173,7 @@ static int fintek_8250_get_ldn_range(str
+ 				     int *max)
+ {
+ 	switch (pdata->pid) {
++	case CHIP_ID_F81966:
+ 	case CHIP_ID_F81865:
+ 	case CHIP_ID_F81866:
+ 		*min = F81866_LDN_LOW;
+@@ -248,10 +251,11 @@ static void fintek_8250_set_irq_mode(str
+ 	sio_write_reg(pdata, LDN, pdata->index);
+ 
+ 	switch (pdata->pid) {
++	case CHIP_ID_F81966:
+ 	case CHIP_ID_F81866:
+ 		sio_write_mask_reg(pdata, F81866_FIFO_CTRL, F81866_IRQ_MODE1,
+ 				   0);
+-		/* fall through */
++		fallthrough;
+ 	case CHIP_ID_F81865:
+ 		sio_write_mask_reg(pdata, F81866_IRQ_MODE, F81866_IRQ_SHARE,
+ 				   F81866_IRQ_SHARE);
+@@ -274,6 +278,7 @@ static void fintek_8250_set_max_fifo(str
+ {
+ 	switch (pdata->pid) {
+ 	case CHIP_ID_F81216H: /* 128Bytes FIFO */
++	case CHIP_ID_F81966:
+ 	case CHIP_ID_F81866:
+ 		sio_write_mask_reg(pdata, FIFO_CTRL,
+ 				   FIFO_MODE_MASK | RXFTHR_MODE_MASK,
+@@ -309,6 +314,7 @@ static void fintek_8250_set_termios(stru
+ 	case CHIP_ID_F81216H:
+ 		reg = RS485;
+ 		break;
++	case CHIP_ID_F81966:
+ 	case CHIP_ID_F81866:
+ 		reg = F81866_UART_CLK;
+ 		break;
+@@ -355,6 +361,7 @@ static void fintek_8250_set_termios_hand
+ 
+ 	switch (pdata->pid) {
+ 	case CHIP_ID_F81216H:
++	case CHIP_ID_F81966:
+ 	case CHIP_ID_F81866:
+ 		uart->port.set_termios = fintek_8250_set_termios;
+ 		break;
+@@ -424,6 +431,7 @@ static void fintek_8250_set_rs485_handle
+ 	switch (pdata->pid) {
+ 	case CHIP_ID_F81216AD:
+ 	case CHIP_ID_F81216H:
++	case CHIP_ID_F81966:
+ 	case CHIP_ID_F81866:
+ 	case CHIP_ID_F81865:
+ 		uart->port.rs485_config = fintek_8250_rs485_config;
+--- a/drivers/tty/serial/8250/8250_fsl.c
++++ b/drivers/tty/serial/8250/8250_fsl.c
+@@ -1,19 +1,12 @@
+ // SPDX-License-Identifier: GPL-2.0
+-#if defined(CONFIG_SERIAL_8250_CONSOLE) && defined(CONFIG_MAGIC_SYSRQ)
+-#define SUPPORT_SYSRQ
+-#endif
+-
+-#include <linux/serial_reg.h>
+-#include <linux/serial_8250.h>
+-
+-#include "8250.h"
+-
+ /*
+  * Freescale 16550 UART "driver", Copyright (C) 2011 Paul Gortmaker.
++ * Copyright 2020 NXP
++ * Copyright 2020 Puresoftware Ltd.
+  *
+  * This isn't a full driver; it just provides an alternate IRQ
+- * handler to deal with an errata.  Everything else is just
+- * using the bog standard 8250 support.
++ * handler to deal with an errata and provide ACPI wrapper.
++ * Everything else is just using the bog standard 8250 support.
+  *
+  * We follow code flow of serial8250_default_handle_irq() but add
+  * a check for a break and insert a dummy read on the Rx for the
+@@ -24,6 +17,12 @@
+  * IRQ event to the next one.
+  */
+ 
++#include <linux/acpi.h>
++#include <linux/serial_reg.h>
++#include <linux/serial_8250.h>
++
++#include "8250.h"
++
+ int fsl8250_handle_irq(struct uart_port *port)
+ {
+ 	unsigned char lsr, orig_lsr;
+@@ -35,7 +34,7 @@ int fsl8250_handle_irq(struct uart_port
+ 
+ 	iir = port->serial_in(port, UART_IIR);
+ 	if (iir & UART_IIR_NO_INT) {
+-		spin_unlock_irqrestore(&up->port.lock, flags);
++		spin_unlock(&up->port.lock);
+ 		return 0;
+ 	}
+ 
+@@ -43,7 +42,7 @@ int fsl8250_handle_irq(struct uart_port
+ 	if (unlikely(up->lsr_saved_flags & UART_LSR_BI)) {
+ 		up->lsr_saved_flags &= ~UART_LSR_BI;
+ 		port->serial_in(port, UART_RX);
+-		spin_unlock_irqrestore(&up->port.lock, flags);
++		spin_unlock(&up->port.lock);
+ 		return 1;
+ 	}
+ 
+@@ -75,11 +74,100 @@ int fsl8250_handle_irq(struct uart_port
+ 
+ 	serial8250_modem_status(up);
+ 
+-	if (lsr & UART_LSR_THRE)
++	if ((lsr & UART_LSR_THRE) && (up->ier & UART_IER_THRI))
+ 		serial8250_tx_chars(up);
+ 
+ 	up->lsr_saved_flags = orig_lsr;
+ 	uart_unlock_and_check_sysrq(&up->port, flags);
++
+ 	return 1;
+ }
+ EXPORT_SYMBOL_GPL(fsl8250_handle_irq);
++
++#ifdef CONFIG_ACPI
++struct fsl8250_data {
++	int	line;
++};
++
++static int fsl8250_acpi_probe(struct platform_device *pdev)
++{
++	struct fsl8250_data *data;
++	struct uart_8250_port port8250;
++	struct device *dev = &pdev->dev;
++	struct resource *regs;
++
++	int ret, irq;
++
++	regs = platform_get_resource(pdev, IORESOURCE_MEM, 0);
++	if (!regs) {
++		dev_err(dev, "no registers defined\n");
++		return -EINVAL;
++	}
++
++	irq = platform_get_irq(pdev, 0);
++	if (irq < 0)
++		return irq;
++
++	memset(&port8250, 0, sizeof(port8250));
++
++	ret = device_property_read_u32(dev, "clock-frequency",
++					&port8250.port.uartclk);
++	if (ret)
++		return ret;
++
++	spin_lock_init(&port8250.port.lock);
++
++	port8250.port.mapbase           = regs->start;
++	port8250.port.irq               = irq;
++	port8250.port.handle_irq        = fsl8250_handle_irq;
++	port8250.port.type              = PORT_16550A;
++	port8250.port.flags             = UPF_SHARE_IRQ | UPF_BOOT_AUTOCONF
++						| UPF_FIXED_PORT | UPF_IOREMAP
++						| UPF_FIXED_TYPE;
++	port8250.port.dev               = dev;
++	port8250.port.mapsize           = resource_size(regs);
++	port8250.port.iotype            = UPIO_MEM;
++	port8250.port.irqflags          = IRQF_SHARED;
++
++	port8250.port.membase = devm_ioremap(dev,  port8250.port.mapbase,
++							port8250.port.mapsize);
++	if (!port8250.port.membase)
++		return -ENOMEM;
++
++	data = devm_kzalloc(dev, sizeof(*data), GFP_KERNEL);
++	if (!data)
++		return -ENOMEM;
++
++	data->line = serial8250_register_8250_port(&port8250);
++	if (data->line < 0)
++		return data->line;
++
++	platform_set_drvdata(pdev, data);
++	return 0;
++}
++
++static int fsl8250_acpi_remove(struct platform_device *pdev)
++{
++	struct fsl8250_data *data = platform_get_drvdata(pdev);
++
++	serial8250_unregister_port(data->line);
++	return 0;
++}
++
++static const struct acpi_device_id fsl_8250_acpi_id[] = {
++	{ "NXP0018", 0 },
++	{ },
++};
++MODULE_DEVICE_TABLE(acpi, fsl_8250_acpi_id);
++
++static struct platform_driver fsl8250_platform_driver = {
++	.driver = {
++		.name			= "fsl-16550-uart",
++		.acpi_match_table	= ACPI_PTR(fsl_8250_acpi_id),
++	},
++	.probe			= fsl8250_acpi_probe,
++	.remove			= fsl8250_acpi_remove,
++};
++
++module_platform_driver(fsl8250_platform_driver);
++#endif
+--- a/drivers/tty/serial/8250/8250_gsc.c
++++ b/drivers/tty/serial/8250/8250_gsc.c
+@@ -55,7 +55,7 @@ static int __init serial_init_chip(struc
+ 	uart.port.uartclk	= (dev->id.sversion != 0xad) ?
+ 					7272727 : 1843200;
+ 	uart.port.mapbase	= address;
+-	uart.port.membase	= ioremap_nocache(address, 16);
++	uart.port.membase	= ioremap(address, 16);
+ 	if (!uart.port.membase) {
+ 		dev_warn(&dev->dev, "Failed to map memory\n");
+ 		return -ENOMEM;
+--- a/drivers/tty/serial/8250/8250_ingenic.c
++++ b/drivers/tty/serial/8250/8250_ingenic.c
+@@ -207,22 +207,24 @@ static unsigned int ingenic_uart_serial_
+ static int ingenic_uart_probe(struct platform_device *pdev)
+ {
+ 	struct uart_8250_port uart = {};
+-	struct resource *regs = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+-	struct resource *irq = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
+ 	struct ingenic_uart_data *data;
+ 	const struct ingenic_uart_config *cdata;
+-	const struct of_device_id *match;
+-	int err, line;
++	struct resource *regs;
++	int irq, err, line;
+ 
+-	match = of_match_device(of_match, &pdev->dev);
+-	if (!match) {
++	cdata = of_device_get_match_data(&pdev->dev);
++	if (!cdata) {
+ 		dev_err(&pdev->dev, "Error: No device match found\n");
+ 		return -ENODEV;
+ 	}
+-	cdata = match->data;
+ 
+-	if (!regs || !irq) {
+-		dev_err(&pdev->dev, "no registers/irq defined\n");
++	irq = platform_get_irq(pdev, 0);
++	if (irq < 0)
++		return irq;
++
++	regs = platform_get_resource(pdev, IORESOURCE_MEM, 0);
++	if (!regs) {
++		dev_err(&pdev->dev, "no registers defined\n");
+ 		return -EINVAL;
+ 	}
+ 
+@@ -238,7 +240,7 @@ static int ingenic_uart_probe(struct pla
+ 	uart.port.regshift = 2;
+ 	uart.port.serial_out = ingenic_uart_serial_out;
+ 	uart.port.serial_in = ingenic_uart_serial_in;
+-	uart.port.irq = irq->start;
++	uart.port.irq = irq;
+ 	uart.port.dev = &pdev->dev;
+ 	uart.port.fifosize = cdata->fifosize;
+ 	uart.tx_loadsz = cdata->tx_loadsz;
+@@ -255,22 +257,14 @@ static int ingenic_uart_probe(struct pla
+ 		return -ENOMEM;
+ 
+ 	data->clk_module = devm_clk_get(&pdev->dev, "module");
+-	if (IS_ERR(data->clk_module)) {
+-		err = PTR_ERR(data->clk_module);
+-		if (err != -EPROBE_DEFER)
+-			dev_err(&pdev->dev,
+-				"unable to get module clock: %d\n", err);
+-		return err;
+-	}
++	if (IS_ERR(data->clk_module))
++		return dev_err_probe(&pdev->dev, PTR_ERR(data->clk_module),
++				     "unable to get module clock\n");
+ 
+ 	data->clk_baud = devm_clk_get(&pdev->dev, "baud");
+-	if (IS_ERR(data->clk_baud)) {
+-		err = PTR_ERR(data->clk_baud);
+-		if (err != -EPROBE_DEFER)
+-			dev_err(&pdev->dev,
+-				"unable to get baud clock: %d\n", err);
+-		return err;
+-	}
++	if (IS_ERR(data->clk_baud))
++		return dev_err_probe(&pdev->dev, PTR_ERR(data->clk_baud),
++				     "unable to get baud clock\n");
+ 
+ 	err = clk_prepare_enable(data->clk_module);
+ 	if (err) {
+--- a/drivers/tty/serial/8250/8250_lpss.c
++++ b/drivers/tty/serial/8250/8250_lpss.c
+@@ -100,11 +100,7 @@ static void byt_set_termios(struct uart_
+ 	reg |= BYT_PRV_CLK_EN | BYT_PRV_CLK_UPDATE;
+ 	writel(reg, p->membase + BYT_PRV_CLK);
+ 
+-	p->status &= ~UPSTAT_AUTOCTS;
+-	if (termios->c_cflag & CRTSCTS)
+-		p->status |= UPSTAT_AUTOCTS;
+-
+-	serial8250_do_set_termios(p, termios, old);
++	dw8250_do_set_termios(p, termios, old);
+ }
+ 
+ static unsigned int byt_get_mctrl(struct uart_port *port)
+@@ -156,6 +152,24 @@ static int byt_serial_setup(struct lpss8
+ 	return 0;
+ }
+ 
++static int ehl_serial_setup(struct lpss8250 *lpss, struct uart_port *port)
++{
++	struct uart_8250_dma *dma = &lpss->data.dma;
++	struct uart_8250_port *up = up_to_u8250p(port);
++
++	/*
++	 * This simply makes the checks in the 8250_port to try the DMA
++	 * channel request which in turn uses the magic of ACPI tables
++	 * parsing (see drivers/dma/acpi-dma.c for the details) and
++	 * matching with the registered General Purpose DMA controllers.
++	 */
++	up->dma = dma;
++
++	port->set_termios = dw8250_do_set_termios;
++
++	return 0;
++}
++
+ #ifdef CONFIG_SERIAL_8250_DMA
+ static const struct dw_dma_platform_data qrk_serial_dma_pdata = {
+ 	.nr_channels = 2,
+@@ -221,17 +235,6 @@ static void qrk_serial_exit_dma(struct l
+ 
+ static int qrk_serial_setup(struct lpss8250 *lpss, struct uart_port *port)
+ {
+-	struct pci_dev *pdev = to_pci_dev(port->dev);
+-	int ret;
+-
+-	pci_set_master(pdev);
+-
+-	ret = pci_alloc_irq_vectors(pdev, 1, 1, PCI_IRQ_ALL_TYPES);
+-	if (ret < 0)
+-		return ret;
+-
+-	port->irq = pci_irq_vector(pdev, 0);
+-
+ 	qrk_serial_setup_dma(lpss, port);
+ 	return 0;
+ }
+@@ -300,16 +303,22 @@ static int lpss8250_probe(struct pci_dev
+ 	if (ret)
+ 		return ret;
+ 
++	pci_set_master(pdev);
++
+ 	lpss = devm_kzalloc(&pdev->dev, sizeof(*lpss), GFP_KERNEL);
+ 	if (!lpss)
+ 		return -ENOMEM;
+ 
++	ret = pci_alloc_irq_vectors(pdev, 1, 1, PCI_IRQ_ALL_TYPES);
++	if (ret < 0)
++		return ret;
++
+ 	lpss->board = (struct lpss8250_board *)id->driver_data;
+ 
+ 	memset(&uart, 0, sizeof(struct uart_8250_port));
+ 
+ 	uart.port.dev = &pdev->dev;
+-	uart.port.irq = pdev->irq;
++	uart.port.irq = pci_irq_vector(pdev, 0);
+ 	uart.port.private_data = &lpss->data;
+ 	uart.port.type = PORT_16550A;
+ 	uart.port.iotype = UPIO_MEM;
+@@ -344,6 +353,7 @@ static int lpss8250_probe(struct pci_dev
+ err_exit:
+ 	if (lpss->board->exit)
+ 		lpss->board->exit(lpss);
++	pci_free_irq_vectors(pdev);
+ 	return ret;
+ }
+ 
+@@ -355,6 +365,7 @@ static void lpss8250_remove(struct pci_d
+ 
+ 	if (lpss->board->exit)
+ 		lpss->board->exit(lpss);
++	pci_free_irq_vectors(pdev);
+ }
+ 
+ static const struct lpss8250_board byt_board = {
+@@ -366,6 +377,7 @@ static const struct lpss8250_board byt_b
+ static const struct lpss8250_board ehl_board = {
+ 	.freq = 200000000,
+ 	.base_baud = 12500000,
++	.setup = ehl_serial_setup,
+ };
+ 
+ static const struct lpss8250_board qrk_board = {
+--- a/drivers/tty/serial/8250/8250_men_mcb.c
++++ b/drivers/tty/serial/8250/8250_men_mcb.c
+@@ -51,7 +51,7 @@ static u32 men_lookup_uartclk(struct mcb
+ 	return clkval;
+ }
+ 
+-static unsigned int get_num_ports(struct mcb_device *mdev,
++static int get_num_ports(struct mcb_device *mdev,
+ 				  void __iomem *membase)
+ {
+ 	switch (mdev->id) {
+@@ -140,7 +140,7 @@ static void serial_8250_men_mcb_remove(s
+ 		return;
+ 
+ 	num_ports = get_num_ports(mdev, data[0].uart.port.membase);
+-	if (num_ports < 0 || num_ports > 4) {
++	if (num_ports <= 0 || num_ports > 4) {
+ 		dev_err(&mdev->dev, "error retrieving number of ports!\n");
+ 		return;
+ 	}
+@@ -174,3 +174,4 @@ MODULE_AUTHOR("Michael Moese <michael.mo
+ MODULE_ALIAS("mcb:16z125");
+ MODULE_ALIAS("mcb:16z025");
+ MODULE_ALIAS("mcb:16z057");
++MODULE_IMPORT_NS(MCB);
+--- a/drivers/tty/serial/8250/8250_mtk.c
++++ b/drivers/tty/serial/8250/8250_mtk.c
+@@ -32,6 +32,7 @@
+ #define MTK_UART_RXTRI_AD	0x14	/* RX Trigger address */
+ #define MTK_UART_FRACDIV_L	0x15	/* Fractional divider LSB address */
+ #define MTK_UART_FRACDIV_M	0x16	/* Fractional divider MSB address */
++#define MTK_UART_DEBUG0	0x18
+ #define MTK_UART_IER_XOFFI	0x20	/* Enable XOFF character interrupt */
+ #define MTK_UART_IER_RTSI	0x40	/* Enable RTS Modem status interrupt */
+ #define MTK_UART_IER_CTSI	0x80	/* Enable CTS Modem status interrupt */
+@@ -415,9 +416,18 @@ mtk8250_set_termios(struct uart_port *po
+ static int __maybe_unused mtk8250_runtime_suspend(struct device *dev)
+ {
+ 	struct mtk8250_data *data = dev_get_drvdata(dev);
++	struct uart_8250_port *up = serial8250_get_port(data->line);
+ 
+-	clk_disable_unprepare(data->uart_clk);
+-	clk_disable_unprepare(data->bus_clk);
++	/* wait until UART in idle status */
++	while
++		(serial_in(up, MTK_UART_DEBUG0));
++
++	if (data->clk_count == 0U) {
++		dev_dbg(dev, "%s clock count is 0\n", __func__);
++	} else {
++		clk_disable_unprepare(data->bus_clk);
++		data->clk_count--;
++	}
+ 
+ 	return 0;
+ }
+@@ -427,16 +437,16 @@ static int __maybe_unused mtk8250_runtim
+ 	struct mtk8250_data *data = dev_get_drvdata(dev);
+ 	int err;
+ 
+-	err = clk_prepare_enable(data->uart_clk);
+-	if (err) {
+-		dev_warn(dev, "Can't enable clock\n");
+-		return err;
+-	}
+-
+-	err = clk_prepare_enable(data->bus_clk);
+-	if (err) {
+-		dev_warn(dev, "Can't enable bus clock\n");
+-		return err;
++	if (data->clk_count > 0U) {
++		dev_dbg(dev, "%s clock count is %d\n", __func__,
++			data->clk_count);
++	} else {
++		err = clk_prepare_enable(data->bus_clk);
++		if (err) {
++			dev_warn(dev, "Can't enable bus clock\n");
++			return err;
++		}
++		data->clk_count++;
+ 	}
+ 
+ 	return 0;
+@@ -446,12 +456,14 @@ static void
+ mtk8250_do_pm(struct uart_port *port, unsigned int state, unsigned int old)
+ {
+ 	if (!state)
+-		pm_runtime_get_sync(port->dev);
++		if (!mtk8250_runtime_resume(port->dev))
++			pm_runtime_get_sync(port->dev);
+ 
+ 	serial8250_do_pm(port, state, old);
+ 
+ 	if (state)
+-		pm_runtime_put_sync_suspend(port->dev);
++		if (!pm_runtime_put_sync_suspend(port->dev))
++			mtk8250_runtime_suspend(port->dev);
+ }
+ 
+ #ifdef CONFIG_SERIAL_8250_DMA
+@@ -509,13 +521,17 @@ static int mtk8250_probe_of(struct platf
+ static int mtk8250_probe(struct platform_device *pdev)
+ {
+ 	struct uart_8250_port uart = {};
+-	struct resource *regs = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+-	struct resource *irq = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
+ 	struct mtk8250_data *data;
+-	int err;
++	struct resource *regs;
++	int irq, err;
+ 
+-	if (!regs || !irq) {
+-		dev_err(&pdev->dev, "no registers/irq defined\n");
++	irq = platform_get_irq(pdev, 0);
++	if (irq < 0)
++		return irq;
++
++	regs = platform_get_resource(pdev, IORESOURCE_MEM, 0);
++	if (!regs) {
++		dev_err(&pdev->dev, "no registers defined\n");
+ 		return -EINVAL;
+ 	}
+ 
+@@ -528,6 +544,8 @@ static int mtk8250_probe(struct platform
+ 	if (!data)
+ 		return -ENOMEM;
+ 
++	data->clk_count = 0;
++
+ 	if (pdev->dev.of_node) {
+ 		err = mtk8250_probe_of(pdev, &uart.port, data);
+ 		if (err)
+@@ -537,7 +555,7 @@ static int mtk8250_probe(struct platform
+ 
+ 	spin_lock_init(&uart.port.lock);
+ 	uart.port.mapbase = regs->start;
+-	uart.port.irq = irq->start;
++	uart.port.irq = irq;
+ 	uart.port.pm = mtk8250_do_pm;
+ 	uart.port.type = PORT_16550;
+ 	uart.port.flags = UPF_BOOT_AUTOCONF | UPF_FIXED_PORT;
+@@ -560,20 +578,25 @@ static int mtk8250_probe(struct platform
+ 
+ 	platform_set_drvdata(pdev, data);
+ 
++	pm_runtime_enable(&pdev->dev);
+ 	err = mtk8250_runtime_resume(&pdev->dev);
+ 	if (err)
+-		return err;
++		goto err_pm_disable;
+ 
+ 	data->line = serial8250_register_8250_port(&uart);
+-	if (data->line < 0)
+-		return data->line;
+-
+-	pm_runtime_set_active(&pdev->dev);
+-	pm_runtime_enable(&pdev->dev);
++	if (data->line < 0) {
++		err = data->line;
++		goto err_pm_disable;
++	}
+ 
+ 	data->rx_wakeup_irq = platform_get_irq_optional(pdev, 1);
+ 
+ 	return 0;
++
++err_pm_disable:
++	pm_runtime_disable(&pdev->dev);
++
++	return err;
+ }
+ 
+ static int mtk8250_remove(struct platform_device *pdev)
+@@ -583,11 +606,13 @@ static int mtk8250_remove(struct platfor
+ 	pm_runtime_get_sync(&pdev->dev);
+ 
+ 	serial8250_unregister_port(data->line);
+-	mtk8250_runtime_suspend(&pdev->dev);
+ 
+ 	pm_runtime_disable(&pdev->dev);
+ 	pm_runtime_put_noidle(&pdev->dev);
+ 
++	if (!pm_runtime_status_suspended(&pdev->dev))
++		mtk8250_runtime_suspend(&pdev->dev);
++
+ 	return 0;
+ }
+ 
+@@ -660,6 +685,7 @@ static int __init early_mtk8250_setup(st
+ 		return -ENODEV;
+ 
+ 	device->port.iotype = UPIO_MEM32;
++	device->port.regshift = 2;
+ 
+ 	return early_serial8250_setup(device, NULL);
+ }
+--- a/drivers/tty/serial/8250/8250_of.c
++++ b/drivers/tty/serial/8250/8250_of.c
+@@ -7,7 +7,6 @@
+ #include <linux/console.h>
+ #include <linux/module.h>
+ #include <linux/slab.h>
+-#include <linux/delay.h>
+ #include <linux/serial_core.h>
+ #include <linux/serial_reg.h>
+ #include <linux/of_address.h>
+@@ -26,37 +25,16 @@ struct of_serial_info {
+ 	int line;
+ };
+ 
+-#ifdef CONFIG_ARCH_TEGRA
+-static void tegra_serial_handle_break(struct uart_port *p)
+-{
+-	unsigned int status, tmout = 10000;
+-
+-	do {
+-		status = p->serial_in(p, UART_LSR);
+-		if (status & (UART_LSR_FIFOE | UART_LSR_BRK_ERROR_BITS))
+-			status = p->serial_in(p, UART_RX);
+-		else
+-			break;
+-		if (--tmout == 0)
+-			break;
+-		udelay(1);
+-	} while (1);
+-}
+-#else
+-static inline void tegra_serial_handle_break(struct uart_port *port)
+-{
+-}
+-#endif
+-
+ /*
+  * Fill a struct uart_port for a given device node
+  */
+ static int of_platform_serial_setup(struct platform_device *ofdev,
+-			int type, struct uart_port *port,
++			int type, struct uart_8250_port *up,
+ 			struct of_serial_info *info)
+ {
+ 	struct resource resource;
+ 	struct device_node *np = ofdev->dev.of_node;
++	struct uart_port *port = &up->port;
+ 	u32 clk, spd, prop;
+ 	int ret, irq;
+ 
+@@ -186,12 +164,11 @@ static int of_platform_serial_setup(stru
+ 		port->flags |= UPF_SKIP_TEST;
+ 
+ 	port->dev = &ofdev->dev;
++	port->rs485_config = serial8250_em485_config;
++	up->rs485_start_tx = serial8250_em485_start_tx;
++	up->rs485_stop_tx = serial8250_em485_stop_tx;
+ 
+ 	switch (type) {
+-	case PORT_TEGRA:
+-		port->handle_break = tegra_serial_handle_break;
+-		break;
+-
+ 	case PORT_RT2880:
+ 		port->iotype = UPIO_AU;
+ 		break;
+@@ -199,8 +176,10 @@ static int of_platform_serial_setup(stru
+ 
+ 	if (IS_ENABLED(CONFIG_SERIAL_8250_FSL) &&
+ 	    (of_device_is_compatible(np, "fsl,ns16550") ||
+-	     of_device_is_compatible(np, "fsl,16550-FIFO64")))
++	     of_device_is_compatible(np, "fsl,16550-FIFO64"))) {
+ 		port->handle_irq = fsl8250_handle_irq;
++//		port->has_sysrq = IS_ENABLED(CONFIG_SERIAL_8250_CONSOLE);
++	}
+ 
+ 	return 0;
+ err_unprepare:
+@@ -222,6 +201,10 @@ static int of_platform_serial_probe(stru
+ 	u32 tx_threshold;
+ 	int ret;
+ 
++	if (IS_ENABLED(CONFIG_SERIAL_8250_BCM7271) &&
++	    of_device_is_compatible(ofdev->dev.of_node, "brcm,bcm7271-uart"))
++		return -ENODEV;
++
+ 	port_type = (unsigned long)of_device_get_match_data(&ofdev->dev);
+ 	if (port_type == PORT_UNKNOWN)
+ 		return -EINVAL;
+@@ -234,7 +217,7 @@ static int of_platform_serial_probe(stru
+ 		return -ENOMEM;
+ 
+ 	memset(&port8250, 0, sizeof(port8250));
+-	ret = of_platform_serial_setup(ofdev, port_type, &port8250.port, info);
++	ret = of_platform_serial_setup(ofdev, port_type, &port8250, info);
+ 	if (ret)
+ 		goto err_free;
+ 
+@@ -334,7 +317,6 @@ static const struct of_device_id of_plat
+ 	{ .compatible = "ns16550",  .data = (void *)PORT_16550, },
+ 	{ .compatible = "ns16750",  .data = (void *)PORT_16750, },
+ 	{ .compatible = "ns16850",  .data = (void *)PORT_16850, },
+-	{ .compatible = "nvidia,tegra20-uart", .data = (void *)PORT_TEGRA, },
+ 	{ .compatible = "nxp,lpc3220-uart", .data = (void *)PORT_LPC3220, },
+ 	{ .compatible = "ralink,rt2880-uart", .data = (void *)PORT_RT2880, },
+ 	{ .compatible = "intel,xscale-uart", .data = (void *)PORT_XSCALE, },
+@@ -349,6 +331,7 @@ static const struct of_device_id of_plat
+ 	{ .compatible = "mrvl,mmp-uart",
+ 		.data = (void *)PORT_XSCALE, },
+ 	{ .compatible = "ti,da830-uart", .data = (void *)PORT_DA830, },
++	{ .compatible = "nuvoton,wpcm450-uart", .data = (void *)PORT_NPCM, },
+ 	{ .compatible = "nuvoton,npcm750-uart", .data = (void *)PORT_NPCM, },
+ 	{ /* end of list */ },
+ };
+--- a/drivers/tty/serial/8250/8250_omap.c
++++ b/drivers/tty/serial/8250/8250_omap.c
+@@ -8,10 +8,6 @@
+  *
+  */
+ 
+-#if defined(CONFIG_SERIAL_8250_CONSOLE) && defined(CONFIG_MAGIC_SYSRQ)
+-#define SUPPORT_SYSRQ
+-#endif
+-
+ #include <linux/clk.h>
+ #include <linux/device.h>
+ #include <linux/io.h>
+@@ -31,6 +27,7 @@
+ #include <linux/pm_qos.h>
+ #include <linux/pm_wakeirq.h>
+ #include <linux/dma-mapping.h>
++#include <linux/sys_soc.h>
+ 
+ #include "8250.h"
+ 
+@@ -44,6 +41,9 @@
+  * The same errata is applicable to AM335x and DRA7x processors too.
+  */
+ #define UART_ERRATA_CLOCK_DISABLE	(1 << 3)
++#define	UART_HAS_EFR2			BIT(4)
++#define UART_HAS_RHR_IT_DIS		BIT(5)
++#define UART_RX_TIMEOUT_QUIRK		BIT(6)
+ 
+ #define OMAP_UART_FCR_RX_TRIG		6
+ #define OMAP_UART_FCR_TX_TRIG		4
+@@ -97,6 +97,17 @@
+ #define OMAP_UART_REV_52 0x0502
+ #define OMAP_UART_REV_63 0x0603
+ 
++/* Interrupt Enable Register 2 */
++#define UART_OMAP_IER2			0x1B
++#define UART_OMAP_IER2_RHR_IT_DIS	BIT(2)
++
++/* Enhanced features register 2 */
++#define UART_OMAP_EFR2			0x23
++#define UART_OMAP_EFR2_TIMEOUT_BEHAVE	BIT(6)
++
++/* RX FIFO occupancy indicator */
++#define UART_OMAP_RX_LVL		0x19
++
+ struct omap8250_priv {
+ 	int line;
+ 	u8 habit;
+@@ -109,6 +120,8 @@ struct omap8250_priv {
+ 	u8 delayed_restore;
+ 	u16 quot;
+ 
++	u8 tx_trigger;
++	u8 rx_trigger;
+ 	bool is_suspending;
+ 	int wakeirq;
+ 	int wakeups_enabled;
+@@ -122,6 +135,17 @@ struct omap8250_priv {
+ 	bool throttled;
+ };
+ 
++struct omap8250_dma_params {
++	u32 rx_size;
++	u8 rx_trigger;
++	u8 tx_trigger;
++};
++
++struct omap8250_platdata {
++	struct omap8250_dma_params *dma_params;
++	u8 habit;
++};
++
+ #ifdef CONFIG_SERIAL_8250_DMA
+ static void omap_8250_rx_dma_flush(struct uart_8250_port *p);
+ #else
+@@ -278,8 +302,8 @@ static void omap8250_restore_regs(struct
+ 	serial_out(up, UART_TI752_TCR, OMAP_UART_TCR_RESTORE(16) |
+ 			OMAP_UART_TCR_HALT(52));
+ 	serial_out(up, UART_TI752_TLR,
+-		   TRIGGER_TLR_MASK(TX_TRIGGER) << UART_TI752_TLR_TX |
+-		   TRIGGER_TLR_MASK(RX_TRIGGER) << UART_TI752_TLR_RX);
++		   TRIGGER_TLR_MASK(priv->tx_trigger) << UART_TI752_TLR_TX |
++		   TRIGGER_TLR_MASK(priv->rx_trigger) << UART_TI752_TLR_RX);
+ 
+ 	serial_out(up, UART_LCR, 0);
+ 
+@@ -419,8 +443,8 @@ static void omap_8250_set_termios(struct
+ 	 * This is because threshold and trigger values are the same.
+ 	 */
+ 	up->fcr = UART_FCR_ENABLE_FIFO;
+-	up->fcr |= TRIGGER_FCR_MASK(TX_TRIGGER) << OMAP_UART_FCR_TX_TRIG;
+-	up->fcr |= TRIGGER_FCR_MASK(RX_TRIGGER) << OMAP_UART_FCR_RX_TRIG;
++	up->fcr |= TRIGGER_FCR_MASK(priv->tx_trigger) << OMAP_UART_FCR_TX_TRIG;
++	up->fcr |= TRIGGER_FCR_MASK(priv->rx_trigger) << OMAP_UART_FCR_RX_TRIG;
+ 
+ 	priv->scr = OMAP_UART_SCR_RX_TRIG_GRANU1_MASK | OMAP_UART_SCR_TX_EMPTY |
+ 		OMAP_UART_SCR_TX_TRIG_GRANU1_MASK;
+@@ -499,6 +523,11 @@ static void omap_8250_pm(struct uart_por
+ static void omap_serial_fill_features_erratas(struct uart_8250_port *up,
+ 					      struct omap8250_priv *priv)
+ {
++	static const struct soc_device_attribute k3_soc_devices[] = {
++		{ .family = "AM65X",  },
++		{ .family = "J721E", .revision = "SR1.0" },
++		{ /* sentinel */ }
++	};
+ 	u32 mvr, scheme;
+ 	u16 revision, major, minor;
+ 
+@@ -546,6 +575,14 @@ static void omap_serial_fill_features_er
+ 	default:
+ 		break;
+ 	}
++
++	/*
++	 * AM65x SR1.0, AM65x SR2.0 and J721e SR1.0 don't
++	 * don't have RHR_IT_DIS bit in IER2 register. So drop to flag
++	 * to enable errata workaround.
++	 */
++	if (soc_device_match(k3_soc_devices))
++		priv->habit &= ~UART_HAS_RHR_IT_DIS;
+ }
+ 
+ static void omap8250_uart_qos_work(struct work_struct *work)
+@@ -553,7 +590,7 @@ static void omap8250_uart_qos_work(struc
+ 	struct omap8250_priv *priv;
+ 
+ 	priv = container_of(work, struct omap8250_priv, qos_work);
+-	pm_qos_update_request(&priv->pm_qos_request, priv->latency);
++	cpu_latency_qos_update_request(&priv->pm_qos_request, priv->latency);
+ }
+ 
+ #ifdef CONFIG_SERIAL_8250_DMA
+@@ -563,8 +600,9 @@ static int omap_8250_dma_handle_irq(stru
+ static irqreturn_t omap8250_irq(int irq, void *dev_id)
+ {
+ 	struct uart_port *port = dev_id;
++	struct omap8250_priv *priv = port->private_data;
+ 	struct uart_8250_port *up = up_to_u8250p(port);
+-	unsigned int iir;
++	unsigned int iir, lsr;
+ 	int ret;
+ 
+ #ifdef CONFIG_SERIAL_8250_DMA
+@@ -575,8 +613,39 @@ static irqreturn_t omap8250_irq(int irq,
+ #endif
+ 
+ 	serial8250_rpm_get(up);
++	lsr = serial_port_in(port, UART_LSR);
+ 	iir = serial_port_in(port, UART_IIR);
+ 	ret = serial8250_handle_irq(port, iir);
++
++	/*
++	 * On K3 SoCs, it is observed that RX TIMEOUT is signalled after
++	 * FIFO has been drained, in which case a dummy read of RX FIFO
++	 * is required to clear RX TIMEOUT condition.
++	 */
++	if (priv->habit & UART_RX_TIMEOUT_QUIRK &&
++	    (iir & UART_IIR_RX_TIMEOUT) == UART_IIR_RX_TIMEOUT &&
++	    serial_port_in(port, UART_OMAP_RX_LVL) == 0) {
++		serial_port_in(port, UART_RX);
++	}
++
++	/* Stop processing interrupts on input overrun */
++	if ((lsr & UART_LSR_OE) && up->overrun_backoff_time_ms > 0) {
++		unsigned long delay;
++
++		up->ier = port->serial_in(port, UART_IER);
++		if (up->ier & (UART_IER_RLSI | UART_IER_RDI)) {
++			port->ops->stop_rx(port);
++		} else {
++			/* Keep restarting the timer until
++			 * the input overrun subsides.
++			 */
++			cancel_delayed_work(&up->overrun_backoff);
++		}
++
++		delay = msecs_to_jiffies(up->overrun_backoff_time_ms);
++		schedule_delayed_work(&up->overrun_backoff, delay);
++	}
++
+ 	serial8250_rpm_put(up);
+ 
+ 	return IRQ_RETVAL(ret);
+@@ -634,7 +703,7 @@ static int omap_8250_startup(struct uart
+ 		priv->wer |= OMAP_UART_TX_WAKEUP_EN;
+ 	serial_out(up, UART_OMAP_WER, priv->wer);
+ 
+-	if (up->dma)
++	if (up->dma && !(priv->habit & UART_HAS_EFR2))
+ 		up->dma->rx_dma(up);
+ 
+ 	pm_runtime_mark_last_busy(port->dev);
+@@ -659,6 +728,8 @@ static void omap_8250_shutdown(struct ua
+ 	pm_runtime_get_sync(port->dev);
+ 
+ 	serial_out(up, UART_OMAP_WER, 0);
++	if (priv->habit & UART_HAS_EFR2)
++		serial_out(up, UART_OMAP_EFR2, 0x0);
+ 
+ 	up->ier = 0;
+ 	serial_out(up, UART_IER, 0);
+@@ -682,14 +753,12 @@ static void omap_8250_shutdown(struct ua
+ static void omap_8250_throttle(struct uart_port *port)
+ {
+ 	struct omap8250_priv *priv = port->private_data;
+-	struct uart_8250_port *up = up_to_u8250p(port);
+ 	unsigned long flags;
+ 
+ 	pm_runtime_get_sync(port->dev);
+ 
+ 	spin_lock_irqsave(&port->lock, flags);
+-	up->ier &= ~(UART_IER_RLSI | UART_IER_RDI);
+-	serial_out(up, UART_IER, up->ier);
++	port->ops->stop_rx(port);
+ 	priv->throttled = true;
+ 	spin_unlock_irqrestore(&port->lock, flags);
+ 
+@@ -697,36 +766,6 @@ static void omap_8250_throttle(struct ua
+ 	pm_runtime_put_autosuspend(port->dev);
+ }
+ 
+-static int omap_8250_rs485_config(struct uart_port *port,
+-				  struct serial_rs485 *rs485)
+-{
+-	struct uart_8250_port *up = up_to_u8250p(port);
+-
+-	/* Clamp the delays to [0, 100ms] */
+-	rs485->delay_rts_before_send = min(rs485->delay_rts_before_send, 100U);
+-	rs485->delay_rts_after_send  = min(rs485->delay_rts_after_send, 100U);
+-
+-	port->rs485 = *rs485;
+-
+-	/*
+-	 * Both serial8250_em485_init and serial8250_em485_destroy
+-	 * are idempotent
+-	 */
+-	if (rs485->flags & SER_RS485_ENABLED) {
+-		int ret = serial8250_em485_init(up);
+-
+-		if (ret) {
+-			rs485->flags &= ~SER_RS485_ENABLED;
+-			port->rs485.flags &= ~SER_RS485_ENABLED;
+-		}
+-		return ret;
+-	}
+-
+-	serial8250_em485_destroy(up);
+-
+-	return 0;
+-}
+-
+ static void omap_8250_unthrottle(struct uart_port *port)
+ {
+ 	struct omap8250_priv *priv = port->private_data;
+@@ -740,6 +779,7 @@ static void omap_8250_unthrottle(struct
+ 	if (up->dma)
+ 		up->dma->rx_dma(up);
+ 	up->ier |= UART_IER_RLSI | UART_IER_RDI;
++	port->read_status_mask |= UART_LSR_DR;
+ 	serial_out(up, UART_IER, up->ier);
+ 	spin_unlock_irqrestore(&port->lock, flags);
+ 
+@@ -750,35 +790,60 @@ static void omap_8250_unthrottle(struct
+ #ifdef CONFIG_SERIAL_8250_DMA
+ static int omap_8250_rx_dma(struct uart_8250_port *p);
+ 
++/* Must be called while priv->rx_dma_lock is held */
+ static void __dma_rx_do_complete(struct uart_8250_port *p)
+ {
+-	struct omap8250_priv	*priv = p->port.private_data;
+ 	struct uart_8250_dma    *dma = p->dma;
+ 	struct tty_port         *tty_port = &p->port.state->port;
++	struct omap8250_priv	*priv = p->port.private_data;
++	struct dma_chan		*rxchan = dma->rxchan;
++	dma_cookie_t		cookie;
+ 	struct dma_tx_state     state;
+ 	int                     count;
+-	unsigned long		flags;
+ 	int			ret;
+-
+-	spin_lock_irqsave(&priv->rx_dma_lock, flags);
++	u32			reg;
+ 
+ 	if (!dma->rx_running)
+-		goto unlock;
++		goto out;
+ 
++	cookie = dma->rx_cookie;
+ 	dma->rx_running = 0;
+-	dmaengine_tx_status(dma->rxchan, dma->rx_cookie, &state);
+ 
+-	count = dma->rx_size - state.residue;
+-	if (count < dma->rx_size)
+-		dmaengine_terminate_async(dma->rxchan);
++	/* Re-enable RX FIFO interrupt now that transfer is complete */
++	if (priv->habit & UART_HAS_RHR_IT_DIS) {
++		reg = serial_in(p, UART_OMAP_IER2);
++		reg &= ~UART_OMAP_IER2_RHR_IT_DIS;
++		serial_out(p, UART_OMAP_IER2, UART_OMAP_IER2_RHR_IT_DIS);
++	}
++
++	dmaengine_tx_status(rxchan, cookie, &state);
++
++	count = dma->rx_size - state.residue + state.in_flight_bytes;
++	if (count < dma->rx_size) {
++		dmaengine_terminate_async(rxchan);
++
++		/*
++		 * Poll for teardown to complete which guarantees in
++		 * flight data is drained.
++		 */
++		if (state.in_flight_bytes) {
++			int poll_count = 25;
++
++			while (dmaengine_tx_status(rxchan, cookie, NULL) &&
++			       poll_count--)
++				cpu_relax();
++
++			if (poll_count == -1)
++				dev_err(p->port.dev, "teardown incomplete\n");
++		}
++	}
+ 	if (!count)
+-		goto unlock;
++		goto out;
+ 	ret = tty_insert_flip_string(tty_port, dma->rx_buf, count);
+ 
+ 	p->port.icount.rx += ret;
+ 	p->port.icount.buf_overrun += count - ret;
+-unlock:
+-	spin_unlock_irqrestore(&priv->rx_dma_lock, flags);
++out:
+ 
+ 	tty_flip_buffer_push(tty_port);
+ }
+@@ -804,8 +869,12 @@ static void __dma_rx_complete(void *para
+ 		return;
+ 	}
+ 	__dma_rx_do_complete(p);
+-	if (!priv->throttled)
+-		omap_8250_rx_dma(p);
++	if (!priv->throttled) {
++		p->ier |= UART_IER_RLSI | UART_IER_RDI;
++		serial_out(p, UART_IER, p->ier);
++		if (!(priv->habit & UART_HAS_EFR2))
++			omap_8250_rx_dma(p);
++	}
+ 
+ 	spin_unlock_irqrestore(&p->port.lock, flags);
+ }
+@@ -831,9 +900,8 @@ static void omap_8250_rx_dma_flush(struc
+ 		if (WARN_ON_ONCE(ret))
+ 			priv->rx_dma_broken = true;
+ 	}
+-	spin_unlock_irqrestore(&priv->rx_dma_lock, flags);
+-
+ 	__dma_rx_do_complete(p);
++	spin_unlock_irqrestore(&priv->rx_dma_lock, flags);
+ }
+ 
+ static int omap_8250_rx_dma(struct uart_8250_port *p)
+@@ -843,14 +911,27 @@ static int omap_8250_rx_dma(struct uart_
+ 	int				err = 0;
+ 	struct dma_async_tx_descriptor  *desc;
+ 	unsigned long			flags;
++	u32				reg;
+ 
+ 	if (priv->rx_dma_broken)
+ 		return -EINVAL;
+ 
+ 	spin_lock_irqsave(&priv->rx_dma_lock, flags);
+ 
+-	if (dma->rx_running)
++	if (dma->rx_running) {
++		enum dma_status state;
++
++		state = dmaengine_tx_status(dma->rxchan, dma->rx_cookie, NULL);
++		if (state == DMA_COMPLETE) {
++			/*
++			 * Disable RX interrupts to allow RX DMA completion
++			 * callback to run.
++			 */
++			p->ier &= ~(UART_IER_RLSI | UART_IER_RDI);
++			serial_out(p, UART_IER, p->ier);
++		}
+ 		goto out;
++	}
+ 
+ 	desc = dmaengine_prep_slave_single(dma->rxchan, dma->rx_addr,
+ 					   dma->rx_size, DMA_DEV_TO_MEM,
+@@ -866,6 +947,17 @@ static int omap_8250_rx_dma(struct uart_
+ 
+ 	dma->rx_cookie = dmaengine_submit(desc);
+ 
++	/*
++	 * Disable RX FIFO interrupt while RX DMA is enabled, else
++	 * spurious interrupt may be raised when data is in the RX FIFO
++	 * but is yet to be drained by DMA.
++	 */
++	if (priv->habit & UART_HAS_RHR_IT_DIS) {
++		reg = serial_in(p, UART_OMAP_IER2);
++		reg |= UART_OMAP_IER2_RHR_IT_DIS;
++		serial_out(p, UART_OMAP_IER2, UART_OMAP_IER2_RHR_IT_DIS);
++	}
++
+ 	dma_async_issue_pending(dma->rxchan);
+ out:
+ 	spin_unlock_irqrestore(&priv->rx_dma_lock, flags);
+@@ -1021,6 +1113,46 @@ static bool handle_rx_dma(struct uart_82
+ 	return omap_8250_rx_dma(up);
+ }
+ 
++static unsigned char omap_8250_handle_rx_dma(struct uart_8250_port *up,
++					     u8 iir, unsigned char status)
++{
++	if ((status & (UART_LSR_DR | UART_LSR_BI)) &&
++	    (iir & UART_IIR_RDI)) {
++		if (handle_rx_dma(up, iir)) {
++			status = serial8250_rx_chars(up, status);
++			omap_8250_rx_dma(up);
++		}
++	}
++
++	return status;
++}
++
++static void am654_8250_handle_rx_dma(struct uart_8250_port *up, u8 iir,
++				     unsigned char status)
++{
++	/*
++	 * Queue a new transfer if FIFO has data.
++	 */
++	if ((status & (UART_LSR_DR | UART_LSR_BI)) &&
++	    (up->ier & UART_IER_RDI)) {
++		omap_8250_rx_dma(up);
++		serial_out(up, UART_OMAP_EFR2, UART_OMAP_EFR2_TIMEOUT_BEHAVE);
++	} else if ((iir & 0x3f) == UART_IIR_RX_TIMEOUT) {
++		/*
++		 * Disable RX timeout, read IIR to clear
++		 * current timeout condition, clear EFR2 to
++		 * periodic timeouts, re-enable interrupts.
++		 */
++		up->ier &= ~(UART_IER_RLSI | UART_IER_RDI);
++		serial_out(up, UART_IER, up->ier);
++		omap_8250_rx_dma_flush(up);
++		serial_in(up, UART_IIR);
++		serial_out(up, UART_OMAP_EFR2, 0x0);
++		up->ier |= UART_IER_RLSI | UART_IER_RDI;
++		serial_out(up, UART_IER, up->ier);
++	}
++}
++
+ /*
+  * This is mostly serial8250_handle_irq(). We have a slightly different DMA
+  * hoook for RX/TX and need different logic for them in the ISR. Therefore we
+@@ -1029,8 +1161,8 @@ static bool handle_rx_dma(struct uart_82
+ static int omap_8250_dma_handle_irq(struct uart_port *port)
+ {
+ 	struct uart_8250_port *up = up_to_u8250p(port);
++	struct omap8250_priv *priv = up->port.private_data;
+ 	unsigned char status;
+-	unsigned long flags;
+ 	u8 iir;
+ 
+ 	serial8250_rpm_get(up);
+@@ -1038,19 +1170,18 @@ static int omap_8250_dma_handle_irq(stru
+ 	iir = serial_port_in(port, UART_IIR);
+ 	if (iir & UART_IIR_NO_INT) {
+ 		serial8250_rpm_put(up);
+-		return 0;
++		return IRQ_HANDLED;
+ 	}
+ 
+-	spin_lock_irqsave(&port->lock, flags);
++	spin_lock(&port->lock);
+ 
+ 	status = serial_port_in(port, UART_LSR);
+ 
+-	if (status & (UART_LSR_DR | UART_LSR_BI)) {
+-		if (handle_rx_dma(up, iir)) {
+-			status = serial8250_rx_chars(up, status);
+-			omap_8250_rx_dma(up);
+-		}
+-	}
++	if (priv->habit & UART_HAS_EFR2)
++		am654_8250_handle_rx_dma(up, iir, status);
++	else
++		status = omap_8250_handle_rx_dma(up, iir, status);
++
+ 	serial8250_modem_status(up);
+ 	if (status & UART_LSR_THRE && up->dma->tx_err) {
+ 		if (uart_tx_stopped(&up->port) ||
+@@ -1067,7 +1198,8 @@ static int omap_8250_dma_handle_irq(stru
+ 		}
+ 	}
+ 
+-	uart_unlock_and_check_sysrq(port, flags);
++	uart_unlock_and_check_sysrq(port);
++
+ 	serial8250_rpm_put(up);
+ 	return 1;
+ }
+@@ -1092,35 +1224,63 @@ static int omap8250_no_handle_irq(struct
+ 	return 0;
+ }
+ 
+-static const u8 omap4_habit = UART_ERRATA_CLOCK_DISABLE;
+-static const u8 am3352_habit = OMAP_DMA_TX_KICK | UART_ERRATA_CLOCK_DISABLE;
+-static const u8 dra742_habit = UART_ERRATA_CLOCK_DISABLE;
++static struct omap8250_dma_params am654_dma = {
++	.rx_size = SZ_2K,
++	.rx_trigger = 1,
++	.tx_trigger = TX_TRIGGER,
++};
++
++static struct omap8250_dma_params am33xx_dma = {
++	.rx_size = RX_TRIGGER,
++	.rx_trigger = RX_TRIGGER,
++	.tx_trigger = TX_TRIGGER,
++};
++
++static struct omap8250_platdata am654_platdata = {
++	.dma_params	= &am654_dma,
++	.habit		= UART_HAS_EFR2 | UART_HAS_RHR_IT_DIS |
++			  UART_RX_TIMEOUT_QUIRK,
++};
++
++static struct omap8250_platdata am33xx_platdata = {
++	.dma_params	= &am33xx_dma,
++	.habit		= OMAP_DMA_TX_KICK | UART_ERRATA_CLOCK_DISABLE,
++};
++
++static struct omap8250_platdata omap4_platdata = {
++	.dma_params	= &am33xx_dma,
++	.habit		= UART_ERRATA_CLOCK_DISABLE,
++};
+ 
+ static const struct of_device_id omap8250_dt_ids[] = {
+-	{ .compatible = "ti,am654-uart" },
++	{ .compatible = "ti,am654-uart", .data = &am654_platdata, },
+ 	{ .compatible = "ti,omap2-uart" },
+ 	{ .compatible = "ti,omap3-uart" },
+-	{ .compatible = "ti,omap4-uart", .data = &omap4_habit, },
+-	{ .compatible = "ti,am3352-uart", .data = &am3352_habit, },
+-	{ .compatible = "ti,am4372-uart", .data = &am3352_habit, },
+-	{ .compatible = "ti,dra742-uart", .data = &dra742_habit, },
++	{ .compatible = "ti,omap4-uart", .data = &omap4_platdata, },
++	{ .compatible = "ti,am3352-uart", .data = &am33xx_platdata, },
++	{ .compatible = "ti,am4372-uart", .data = &am33xx_platdata, },
++	{ .compatible = "ti,dra742-uart", .data = &omap4_platdata, },
+ 	{},
+ };
+ MODULE_DEVICE_TABLE(of, omap8250_dt_ids);
+ 
+ static int omap8250_probe(struct platform_device *pdev)
+ {
+-	struct resource *regs = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+-	struct resource *irq = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
+ 	struct device_node *np = pdev->dev.of_node;
+ 	struct omap8250_priv *priv;
++	const struct omap8250_platdata *pdata;
+ 	struct uart_8250_port up;
+-	int ret;
++	struct resource *regs;
+ 	void __iomem *membase;
+-	const struct of_device_id *id;
++	int irq, ret;
+ 
+-	if (!regs || !irq) {
+-		dev_err(&pdev->dev, "missing registers or irq\n");
++	irq = platform_get_irq(pdev, 0);
++	if (irq < 0)
++		return irq;
++
++	regs = platform_get_resource(pdev, IORESOURCE_MEM, 0);
++	if (!regs) {
++		dev_err(&pdev->dev, "missing registers\n");
+ 		return -EINVAL;
+ 	}
+ 
+@@ -1128,7 +1288,7 @@ static int omap8250_probe(struct platfor
+ 	if (!priv)
+ 		return -ENOMEM;
+ 
+-	membase = devm_ioremap_nocache(&pdev->dev, regs->start,
++	membase = devm_ioremap(&pdev->dev, regs->start,
+ 				       resource_size(regs));
+ 	if (!membase)
+ 		return -ENODEV;
+@@ -1137,7 +1297,7 @@ static int omap8250_probe(struct platfor
+ 	up.port.dev = &pdev->dev;
+ 	up.port.mapbase = regs->start;
+ 	up.port.membase = membase;
+-	up.port.irq = irq->start;
++	up.port.irq = irq;
+ 	/*
+ 	 * It claims to be 16C750 compatible however it is a little different.
+ 	 * It has EFR and has no FCR7_64byte bit. The AFE (which it claims to
+@@ -1172,7 +1332,10 @@ static int omap8250_probe(struct platfor
+ 	up.port.shutdown = omap_8250_shutdown;
+ 	up.port.throttle = omap_8250_throttle;
+ 	up.port.unthrottle = omap_8250_unthrottle;
+-	up.port.rs485_config = omap_8250_rs485_config;
++	up.port.rs485_config = serial8250_em485_config;
++	up.rs485_start_tx = serial8250_em485_start_tx;
++	up.rs485_stop_tx = serial8250_em485_stop_tx;
++	up.port.has_sysrq = IS_ENABLED(CONFIG_SERIAL_8250_CONSOLE);
+ 
+ 	ret = of_alias_get_id(np, "serial");
+ 	if (ret < 0) {
+@@ -1193,11 +1356,15 @@ static int omap8250_probe(struct platfor
+ 		}
+ 	}
+ 
++	if (of_property_read_u32(np, "overrun-throttle-ms",
++				 &up.overrun_backoff_time_ms) != 0)
++		up.overrun_backoff_time_ms = 0;
++
+ 	priv->wakeirq = irq_of_parse_and_map(np, 1);
+ 
+-	id = of_match_device(of_match_ptr(omap8250_dt_ids), &pdev->dev);
+-	if (id && id->data)
+-		priv->habit |= *(u8 *)id->data;
++	pdata = of_device_get_match_data(&pdev->dev);
++	if (pdata)
++		priv->habit |= pdata->habit;
+ 
+ 	if (!up.port.uartclk) {
+ 		up.port.uartclk = DEFAULT_CLK_SPEED;
+@@ -1206,10 +1373,9 @@ static int omap8250_probe(struct platfor
+ 			 DEFAULT_CLK_SPEED);
+ 	}
+ 
+-	priv->latency = PM_QOS_CPU_DMA_LAT_DEFAULT_VALUE;
+-	priv->calc_latency = PM_QOS_CPU_DMA_LAT_DEFAULT_VALUE;
+-	pm_qos_add_request(&priv->pm_qos_request, PM_QOS_CPU_DMA_LATENCY,
+-			   priv->latency);
++	priv->latency = PM_QOS_CPU_LATENCY_DEFAULT_VALUE;
++	priv->calc_latency = PM_QOS_CPU_LATENCY_DEFAULT_VALUE;
++	cpu_latency_qos_add_request(&priv->pm_qos_request, priv->latency);
+ 	INIT_WORK(&priv->qos_work, omap8250_uart_qos_work);
+ 
+ 	spin_lock_init(&priv->rx_dma_lock);
+@@ -1234,6 +1400,8 @@ static int omap8250_probe(struct platfor
+ 
+ 	omap_serial_fill_features_erratas(&up, priv);
+ 	up.port.handle_irq = omap8250_no_handle_irq;
++	priv->rx_trigger = RX_TRIGGER;
++	priv->tx_trigger = TX_TRIGGER;
+ #ifdef CONFIG_SERIAL_8250_DMA
+ 	/*
+ 	 * Oh DMA support. If there are no DMA properties in the DT then
+@@ -1245,13 +1413,26 @@ static int omap8250_probe(struct platfor
+ 	 */
+ 	ret = of_property_count_strings(np, "dma-names");
+ 	if (ret == 2) {
++		struct omap8250_dma_params *dma_params = NULL;
++
+ 		up.dma = &priv->omap8250_dma;
+-		priv->omap8250_dma.fn = the_no_dma_filter_fn;
+-		priv->omap8250_dma.tx_dma = omap_8250_tx_dma;
+-		priv->omap8250_dma.rx_dma = omap_8250_rx_dma;
+-		priv->omap8250_dma.rx_size = RX_TRIGGER;
+-		priv->omap8250_dma.rxconf.src_maxburst = RX_TRIGGER;
+-		priv->omap8250_dma.txconf.dst_maxburst = TX_TRIGGER;
++		up.dma->fn = the_no_dma_filter_fn;
++		up.dma->tx_dma = omap_8250_tx_dma;
++		up.dma->rx_dma = omap_8250_rx_dma;
++		if (pdata)
++			dma_params = pdata->dma_params;
++
++		if (dma_params) {
++			up.dma->rx_size = dma_params->rx_size;
++			up.dma->rxconf.src_maxburst = dma_params->rx_trigger;
++			up.dma->txconf.dst_maxburst = dma_params->tx_trigger;
++			priv->rx_trigger = dma_params->rx_trigger;
++			priv->tx_trigger = dma_params->tx_trigger;
++		} else {
++			up.dma->rx_size = RX_TRIGGER;
++			up.dma->rxconf.src_maxburst = RX_TRIGGER;
++			up.dma->txconf.dst_maxburst = TX_TRIGGER;
++		}
+ 	}
+ #endif
+ 	ret = serial8250_register_8250_port(&up);
+@@ -1285,7 +1466,7 @@ static int omap8250_remove(struct platfo
+ 	flush_work(&priv->qos_work);
+ 	pm_runtime_disable(&pdev->dev);
+ 	serial8250_unregister_port(priv->line);
+-	pm_qos_remove_request(&priv->pm_qos_request);
++	cpu_latency_qos_remove_request(&priv->pm_qos_request);
+ 	device_init_wakeup(&pdev->dev, false);
+ 	return 0;
+ }
+@@ -1435,7 +1616,7 @@ static int omap8250_runtime_suspend(stru
+ 	if (up->dma && up->dma->rxchan)
+ 		omap_8250_rx_dma_flush(up);
+ 
+-	priv->latency = PM_QOS_CPU_DMA_LAT_DEFAULT_VALUE;
++	priv->latency = PM_QOS_CPU_LATENCY_DEFAULT_VALUE;
+ 	schedule_work(&priv->qos_work);
+ 
+ 	return 0;
+@@ -1455,7 +1636,7 @@ static int omap8250_runtime_resume(struc
+ 	if (omap8250_lost_context(up))
+ 		omap8250_restore_regs(up);
+ 
+-	if (up->dma && up->dma->rxchan)
++	if (up->dma && up->dma->rxchan && !(priv->habit & UART_HAS_EFR2))
+ 		omap_8250_rx_dma(up);
+ 
+ 	priv->latency = priv->calc_latency;
+--- a/drivers/tty/serial/8250/8250_pci.c
++++ b/drivers/tty/serial/8250/8250_pci.c
+@@ -48,14 +48,12 @@ struct f815xxa_data {
+ 	int idx;
+ };
+ 
+-#define PCI_NUM_BAR_RESOURCES	6
+-
+ struct serial_private {
+ 	struct pci_dev		*dev;
+ 	unsigned int		nr;
+ 	struct pci_serial_quirk	*quirk;
+ 	const struct pciserial_board *board;
+-	int			line[0];
++	int			line[];
+ };
+ 
+ #define PCI_DEVICE_ID_HPE_PCI_SERIAL	0x37e
+@@ -77,13 +75,12 @@ static int pci_default_setup(struct seri
+ 
+ static void moan_device(const char *str, struct pci_dev *dev)
+ {
+-	dev_err(&dev->dev,
+-	       "%s: %s\n"
++	pci_err(dev, "%s\n"
+ 	       "Please send the output of lspci -vv, this\n"
+ 	       "message (0x%04x,0x%04x,0x%04x,0x%04x), the\n"
+ 	       "manufacturer and name of serial board or\n"
+ 	       "modem board to <linux-serial@vger.kernel.org>.\n",
+-	       pci_name(dev), str, dev->vendor, dev->device,
++	       str, dev->vendor, dev->device,
+ 	       dev->subsystem_vendor, dev->subsystem_device);
+ }
+ 
+@@ -93,7 +90,7 @@ setup_port(struct serial_private *priv,
+ {
+ 	struct pci_dev *dev = priv->dev;
+ 
+-	if (bar >= PCI_NUM_BAR_RESOURCES)
++	if (bar >= PCI_STD_NUM_BARS)
+ 		return -EINVAL;
+ 
+ 	if (pci_resource_flags(dev, bar) & IORESOURCE_MEM) {
+@@ -240,7 +237,7 @@ static int pci_inteli960ni_init(struct p
+ 	/* is firmware started? */
+ 	pci_read_config_dword(dev, 0x44, &oldval);
+ 	if (oldval == 0x00001000L) { /* RESET value */
+-		dev_dbg(&dev->dev, "Local i960 firmware missing\n");
++		pci_dbg(dev, "Local i960 firmware missing\n");
+ 		return -ENODEV;
+ 	}
+ 	return 0;
+@@ -281,7 +278,7 @@ static int pci_plx9050_init(struct pci_d
+ 	/*
+ 	 * enable/disable interrupts
+ 	 */
+-	p = ioremap_nocache(pci_resource_start(dev, 0), 0x80);
++	p = ioremap(pci_resource_start(dev, 0), 0x80);
+ 	if (p == NULL)
+ 		return -ENOMEM;
+ 	writel(irq_config, p + 0x4c);
+@@ -305,7 +302,7 @@ static void pci_plx9050_exit(struct pci_
+ 	/*
+ 	 * disable interrupts
+ 	 */
+-	p = ioremap_nocache(pci_resource_start(dev, 0), 0x80);
++	p = ioremap(pci_resource_start(dev, 0), 0x80);
+ 	if (p != NULL) {
+ 		writel(0, p + 0x4c);
+ 
+@@ -481,7 +478,7 @@ static int pci_siig10x_init(struct pci_d
+ 		break;
+ 	}
+ 
+-	p = ioremap_nocache(pci_resource_start(dev, 0), 0x80);
++	p = ioremap(pci_resource_start(dev, 0), 0x80);
+ 	if (p == NULL)
+ 		return -ENOMEM;
+ 
+@@ -517,7 +514,7 @@ static int pci_siig_init(struct pci_dev
+ 
+ 	if (type == 0x1000)
+ 		return pci_siig10x_init(dev);
+-	else if (type == 0x2000)
++	if (type == 0x2000)
+ 		return pci_siig20x_init(dev);
+ 
+ 	moan_device("Unknown SIIG card", dev);
+@@ -590,9 +587,8 @@ static int pci_timedia_probe(struct pci_
+ 	 * (0,2,3,5,6: serial only -- 7,8,9: serial + parallel)
+ 	 */
+ 	if ((dev->subsystem_device & 0x00f0) >= 0x70) {
+-		dev_info(&dev->dev,
+-			"ignoring Timedia subdevice %04x for parport_serial\n",
+-			dev->subsystem_device);
++		pci_info(dev, "ignoring Timedia subdevice %04x for parport_serial\n",
++			 dev->subsystem_device);
+ 		return -ENODEV;
+ 	}
+ 
+@@ -637,7 +633,7 @@ pci_timedia_setup(struct serial_private
+ 		break;
+ 	case 3:
+ 		offset = board->uart_offset;
+-		/* FALLTHROUGH */
++		fallthrough;
+ 	case 4: /* BAR 2 */
+ 	case 5: /* BAR 3 */
+ 	case 6: /* BAR 4 */
+@@ -794,9 +790,9 @@ static int pci_netmos_9900_setup(struct
+ 		bar = 3 * idx;
+ 
+ 		return setup_port(priv, port, bar, 0, board->reg_shift);
+-	} else {
+-		return pci_default_setup(priv, board, port, idx);
+ 	}
++
++	return pci_default_setup(priv, board, port, idx);
+ }
+ 
+ /* the 99xx series comes with a range of device IDs and a variety
+@@ -829,8 +825,7 @@ static int pci_netmos_9900_numports(stru
+ 		if (sub_serports > 0)
+ 			return sub_serports;
+ 
+-		dev_err(&dev->dev,
+-			"NetMos/Mostech serial driver ignoring port on ambiguous config.\n");
++		pci_err(dev, "NetMos/Mostech serial driver ignoring port on ambiguous config.\n");
+ 		return 0;
+ 	}
+ 
+@@ -899,18 +894,16 @@ static int pci_netmos_init(struct pci_de
+ /* enable IO_Space bit */
+ #define ITE_887x_POSIO_ENABLE		(1 << 31)
+ 
++/* inta_addr are the configuration addresses of the ITE */
++static const short inta_addr[] = { 0x2a0, 0x2c0, 0x220, 0x240, 0x1e0, 0x200, 0x280 };
+ static int pci_ite887x_init(struct pci_dev *dev)
+ {
+-	/* inta_addr are the configuration addresses of the ITE */
+-	static const short inta_addr[] = { 0x2a0, 0x2c0, 0x220, 0x240, 0x1e0,
+-							0x200, 0x280, 0 };
+ 	int ret, i, type;
+ 	struct resource *iobase = NULL;
+ 	u32 miscr, uartbar, ioport;
+ 
+ 	/* search for the base-ioport */
+-	i = 0;
+-	while (inta_addr[i] && iobase == NULL) {
++	for (i = 0; i < ARRAY_SIZE(inta_addr); i++) {
+ 		iobase = request_region(inta_addr[i], ITE_887x_IOSIZE,
+ 								"ite887x");
+ 		if (iobase != NULL) {
+@@ -927,13 +920,11 @@ static int pci_ite887x_init(struct pci_d
+ 				break;
+ 			}
+ 			release_region(iobase->start, ITE_887x_IOSIZE);
+-			iobase = NULL;
+ 		}
+-		i++;
+ 	}
+ 
+-	if (!inta_addr[i]) {
+-		dev_err(&dev->dev, "ite887x: could not find iobase\n");
++	if (i == ARRAY_SIZE(inta_addr)) {
++		pci_err(dev, "could not find iobase\n");
+ 		return -ENODEV;
+ 	}
+ 
+@@ -1028,9 +1019,7 @@ static int pci_endrun_init(struct pci_de
+ 	/* EndRun device */
+ 	if (deviceID == 0x07000200) {
+ 		number_uarts = ioread8(p + 4);
+-		dev_dbg(&dev->dev,
+-			"%d ports detected on EndRun PCI Express device\n",
+-			number_uarts);
++		pci_dbg(dev, "%d ports detected on EndRun PCI Express device\n", number_uarts);
+ 	}
+ 	pci_iounmap(dev, p);
+ 	return number_uarts;
+@@ -1060,9 +1049,7 @@ static int pci_oxsemi_tornado_init(struc
+ 	/* Tornado device */
+ 	if (deviceID == 0x07000200) {
+ 		number_uarts = ioread8(p + 4);
+-		dev_dbg(&dev->dev,
+-			"%d ports detected on Oxford PCI Express device\n",
+-			number_uarts);
++		pci_dbg(dev, "%d ports detected on Oxford PCI Express device\n", number_uarts);
+ 	}
+ 	pci_iounmap(dev, p);
+ 	return number_uarts;
+@@ -1076,13 +1063,6 @@ static int pci_asix_setup(struct serial_
+ 	return pci_default_setup(priv, board, port, idx);
+ }
+ 
+-/* Quatech devices have their own extra interface features */
+-
+-struct quatech_feature {
+-	u16 devid;
+-	bool amcc;
+-};
+-
+ #define QPCR_TEST_FOR1		0x3F
+ #define QPCR_TEST_GET1		0x00
+ #define QPCR_TEST_FOR2		0x40
+@@ -1098,42 +1078,30 @@ struct quatech_feature {
+ #define QOPR_CLOCK_X8		0x0003
+ #define QOPR_CLOCK_RATE_MASK	0x0003
+ 
+-
+-static struct quatech_feature quatech_cards[] = {
+-	{ PCI_DEVICE_ID_QUATECH_QSC100,   1 },
+-	{ PCI_DEVICE_ID_QUATECH_DSC100,   1 },
+-	{ PCI_DEVICE_ID_QUATECH_DSC100E,  0 },
+-	{ PCI_DEVICE_ID_QUATECH_DSC200,   1 },
+-	{ PCI_DEVICE_ID_QUATECH_DSC200E,  0 },
+-	{ PCI_DEVICE_ID_QUATECH_ESC100D,  1 },
+-	{ PCI_DEVICE_ID_QUATECH_ESC100M,  1 },
+-	{ PCI_DEVICE_ID_QUATECH_QSCP100,  1 },
+-	{ PCI_DEVICE_ID_QUATECH_DSCP100,  1 },
+-	{ PCI_DEVICE_ID_QUATECH_QSCP200,  1 },
+-	{ PCI_DEVICE_ID_QUATECH_DSCP200,  1 },
+-	{ PCI_DEVICE_ID_QUATECH_ESCLP100, 0 },
+-	{ PCI_DEVICE_ID_QUATECH_QSCLP100, 0 },
+-	{ PCI_DEVICE_ID_QUATECH_DSCLP100, 0 },
+-	{ PCI_DEVICE_ID_QUATECH_SSCLP100, 0 },
+-	{ PCI_DEVICE_ID_QUATECH_QSCLP200, 0 },
+-	{ PCI_DEVICE_ID_QUATECH_DSCLP200, 0 },
+-	{ PCI_DEVICE_ID_QUATECH_SSCLP200, 0 },
+-	{ PCI_DEVICE_ID_QUATECH_SPPXP_100, 0 },
++/* Quatech devices have their own extra interface features */
++static struct pci_device_id quatech_cards[] = {
++	{ PCI_DEVICE_DATA(QUATECH, QSC100,   1) },
++	{ PCI_DEVICE_DATA(QUATECH, DSC100,   1) },
++	{ PCI_DEVICE_DATA(QUATECH, DSC100E,  0) },
++	{ PCI_DEVICE_DATA(QUATECH, DSC200,   1) },
++	{ PCI_DEVICE_DATA(QUATECH, DSC200E,  0) },
++	{ PCI_DEVICE_DATA(QUATECH, ESC100D,  1) },
++	{ PCI_DEVICE_DATA(QUATECH, ESC100M,  1) },
++	{ PCI_DEVICE_DATA(QUATECH, QSCP100,  1) },
++	{ PCI_DEVICE_DATA(QUATECH, DSCP100,  1) },
++	{ PCI_DEVICE_DATA(QUATECH, QSCP200,  1) },
++	{ PCI_DEVICE_DATA(QUATECH, DSCP200,  1) },
++	{ PCI_DEVICE_DATA(QUATECH, ESCLP100, 0) },
++	{ PCI_DEVICE_DATA(QUATECH, QSCLP100, 0) },
++	{ PCI_DEVICE_DATA(QUATECH, DSCLP100, 0) },
++	{ PCI_DEVICE_DATA(QUATECH, SSCLP100, 0) },
++	{ PCI_DEVICE_DATA(QUATECH, QSCLP200, 0) },
++	{ PCI_DEVICE_DATA(QUATECH, DSCLP200, 0) },
++	{ PCI_DEVICE_DATA(QUATECH, SSCLP200, 0) },
++	{ PCI_DEVICE_DATA(QUATECH, SPPXP_100, 0) },
+ 	{ 0, }
+ };
+ 
+-static int pci_quatech_amcc(u16 devid)
+-{
+-	struct quatech_feature *qf = &quatech_cards[0];
+-	while (qf->devid) {
+-		if (qf->devid == devid)
+-			return qf->amcc;
+-		qf++;
+-	}
+-	pr_err("quatech: unknown port type '0x%04X'.\n", devid);
+-	return 0;
+-};
+-
+ static int pci_quatech_rqopr(struct uart_8250_port *port)
+ {
+ 	unsigned long base = port->port.iobase;
+@@ -1293,7 +1261,16 @@ static int pci_quatech_rs422(struct uart
+ 
+ static int pci_quatech_init(struct pci_dev *dev)
+ {
+-	if (pci_quatech_amcc(dev->device)) {
++	const struct pci_device_id *match;
++	bool amcc = false;
++
++	match = pci_match_id(quatech_cards, dev);
++	if (match)
++		amcc = match->driver_data;
++	else
++		pci_err(dev, "unknown port type '0x%04X'.\n", dev->device);
++
++	if (amcc) {
+ 		unsigned long base = pci_resource_start(dev, 0);
+ 		if (base) {
+ 			u32 tmp;
+@@ -1301,7 +1278,7 @@ static int pci_quatech_init(struct pci_d
+ 			outl(inl(base + 0x38) | 0x00002000, base + 0x38);
+ 			tmp = inl(base + 0x3c);
+ 			outl(tmp | 0x01000000, base + 0x3c);
+-			outl(tmp &= ~0x01000000, base + 0x3c);
++			outl(tmp & ~0x01000000, base + 0x3c);
+ 		}
+ 	}
+ 	return 0;
+@@ -1317,14 +1294,10 @@ static int pci_quatech_setup(struct seri
+ 	port->port.uartclk = pci_quatech_clock(port);
+ 	/* For now just warn about RS422 */
+ 	if (pci_quatech_rs422(port))
+-		pr_warn("quatech: software control of RS422 features not currently supported.\n");
++		pci_warn(priv->dev, "software control of RS422 features not currently supported.\n");
+ 	return pci_default_setup(priv, board, port, idx);
+ }
+ 
+-static void pci_quatech_exit(struct pci_dev *dev)
+-{
+-}
+-
+ static int pci_default_setup(struct serial_private *priv,
+ 		  const struct pciserial_board *board,
+ 		  struct uart_8250_port *port, int idx)
+@@ -1345,89 +1318,6 @@ static int pci_default_setup(struct seri
+ 
+ 	return setup_port(priv, port, bar, offset, board->reg_shift);
+ }
+-static void
+-pericom_do_set_divisor(struct uart_port *port, unsigned int baud,
+-			       unsigned int quot, unsigned int quot_frac)
+-{
+-	int scr;
+-	int lcr;
+-
+-	for (scr = 16; scr > 4; scr--) {
+-		unsigned int maxrate = port->uartclk / scr;
+-		unsigned int divisor = max(maxrate / baud, 1U);
+-		int delta = maxrate / divisor - baud;
+-
+-		if (baud > maxrate + baud / 50)
+-			continue;
+-
+-		if (delta > baud / 50)
+-			divisor++;
+-
+-		if (divisor > 0xffff)
+-			continue;
+-
+-		/* Update delta due to possible divisor change */
+-		delta = maxrate / divisor - baud;
+-		if (abs(delta) < baud / 50) {
+-			lcr = serial_port_in(port, UART_LCR);
+-			serial_port_out(port, UART_LCR, lcr | 0x80);
+-			serial_port_out(port, UART_DLL, divisor & 0xff);
+-			serial_port_out(port, UART_DLM, divisor >> 8 & 0xff);
+-			serial_port_out(port, 2, 16 - scr);
+-			serial_port_out(port, UART_LCR, lcr);
+-			return;
+-		}
+-	}
+-}
+-static int pci_pericom_setup(struct serial_private *priv,
+-		  const struct pciserial_board *board,
+-		  struct uart_8250_port *port, int idx)
+-{
+-	unsigned int bar, offset = board->first_offset, maxnr;
+-
+-	bar = FL_GET_BASE(board->flags);
+-	if (board->flags & FL_BASE_BARS)
+-		bar += idx;
+-	else
+-		offset += idx * board->uart_offset;
+-
+-
+-	maxnr = (pci_resource_len(priv->dev, bar) - board->first_offset) >>
+-		(board->reg_shift + 3);
+-
+-	if (board->flags & FL_REGION_SZ_CAP && idx >= maxnr)
+-		return 1;
+-
+-	port->port.set_divisor = pericom_do_set_divisor;
+-
+-	return setup_port(priv, port, bar, offset, board->reg_shift);
+-}
+-
+-static int pci_pericom_setup_four_at_eight(struct serial_private *priv,
+-		  const struct pciserial_board *board,
+-		  struct uart_8250_port *port, int idx)
+-{
+-	unsigned int bar, offset = board->first_offset, maxnr;
+-
+-	bar = FL_GET_BASE(board->flags);
+-	if (board->flags & FL_BASE_BARS)
+-		bar += idx;
+-	else
+-		offset += idx * board->uart_offset;
+-
+-	if (idx==3)
+-		offset = 0x38;
+-
+-	maxnr = (pci_resource_len(priv->dev, bar) - board->first_offset) >>
+-		(board->reg_shift + 3);
+-
+-	if (board->flags & FL_REGION_SZ_CAP && idx >= maxnr)
+-		return 1;
+-
+-	port->port.set_divisor = pericom_do_set_divisor;
+-
+-	return setup_port(priv, port, bar, offset, board->reg_shift);
+-}
+ 
+ static int
+ ce4100_serial_setup(struct serial_private *priv,
+@@ -1531,7 +1421,7 @@ static int pci_fintek_setup(struct seria
+ 	/* Get the io address from configuration space */
+ 	pci_read_config_word(pdev, config_base + 4, &iobase);
+ 
+-	dev_dbg(&pdev->dev, "%s: idx=%d iobase=0x%x", __func__, idx, iobase);
++	pci_dbg(pdev, "idx=%d iobase=0x%x", idx, iobase);
+ 
+ 	port->port.iotype = UPIO_PORT;
+ 	port->port.iobase = iobase;
+@@ -1695,7 +1585,7 @@ static int skip_tx_en_setup(struct seria
+ 			struct uart_8250_port *port, int idx)
+ {
+ 	port->port.quirks |= UPQ_NO_TXEN_TEST;
+-	dev_dbg(&priv->dev->dev,
++	pci_dbg(priv->dev,
+ 		"serial8250: skipping TxEn test for device [%04x:%04x] subsystem [%04x:%04x]\n",
+ 		priv->dev->vendor, priv->dev->device,
+ 		priv->dev->subsystem_vendor, priv->dev->subsystem_device);
+@@ -1786,6 +1676,39 @@ pci_wch_ch38x_setup(struct serial_privat
+ 	return pci_default_setup(priv, board, port, idx);
+ }
+ 
++
++#define CH384_XINT_ENABLE_REG   0xEB
++#define CH384_XINT_ENABLE_BIT   0x02
++
++static int pci_wch_ch38x_init(struct pci_dev *dev)
++{
++	int max_port;
++	unsigned long iobase;
++
++
++	switch (dev->device) {
++	case 0x3853: /* 8 ports */
++		max_port = 8;
++		break;
++	default:
++		return -EINVAL;
++	}
++
++	iobase = pci_resource_start(dev, 0);
++	outb(CH384_XINT_ENABLE_BIT, iobase + CH384_XINT_ENABLE_REG);
++
++	return max_port;
++}
++
++static void pci_wch_ch38x_exit(struct pci_dev *dev)
++{
++	unsigned long iobase;
++
++	iobase = pci_resource_start(dev, 0);
++	outb(0x0, iobase + CH384_XINT_ENABLE_REG);
++}
++
++
+ static int
+ pci_sunix_setup(struct serial_private *priv,
+ 		const struct pciserial_board *board,
+@@ -1877,44 +1800,9 @@ pci_moxa_setup(struct serial_private *pr
+ #define PCIE_VENDOR_ID_WCH		0x1c00
+ #define PCIE_DEVICE_ID_WCH_CH382_2S1P	0x3250
+ #define PCIE_DEVICE_ID_WCH_CH384_4S	0x3470
++#define PCIE_DEVICE_ID_WCH_CH384_8S	0x3853
+ #define PCIE_DEVICE_ID_WCH_CH382_2S	0x3253
+ 
+-#define PCI_VENDOR_ID_ACCESIO			0x494f
+-#define PCI_DEVICE_ID_ACCESIO_PCIE_COM_2SDB	0x1051
+-#define PCI_DEVICE_ID_ACCESIO_MPCIE_COM_2S	0x1053
+-#define PCI_DEVICE_ID_ACCESIO_PCIE_COM_4SDB	0x105C
+-#define PCI_DEVICE_ID_ACCESIO_MPCIE_COM_4S	0x105E
+-#define PCI_DEVICE_ID_ACCESIO_PCIE_COM232_2DB	0x1091
+-#define PCI_DEVICE_ID_ACCESIO_MPCIE_COM232_2	0x1093
+-#define PCI_DEVICE_ID_ACCESIO_PCIE_COM232_4DB	0x1099
+-#define PCI_DEVICE_ID_ACCESIO_MPCIE_COM232_4	0x109B
+-#define PCI_DEVICE_ID_ACCESIO_PCIE_COM_2SMDB	0x10D1
+-#define PCI_DEVICE_ID_ACCESIO_MPCIE_COM_2SM	0x10D3
+-#define PCI_DEVICE_ID_ACCESIO_PCIE_COM_4SMDB	0x10DA
+-#define PCI_DEVICE_ID_ACCESIO_MPCIE_COM_4SM	0x10DC
+-#define PCI_DEVICE_ID_ACCESIO_MPCIE_ICM485_1	0x1108
+-#define PCI_DEVICE_ID_ACCESIO_MPCIE_ICM422_2	0x1110
+-#define PCI_DEVICE_ID_ACCESIO_MPCIE_ICM485_2	0x1111
+-#define PCI_DEVICE_ID_ACCESIO_MPCIE_ICM422_4	0x1118
+-#define PCI_DEVICE_ID_ACCESIO_MPCIE_ICM485_4	0x1119
+-#define PCI_DEVICE_ID_ACCESIO_PCIE_ICM_2S	0x1152
+-#define PCI_DEVICE_ID_ACCESIO_PCIE_ICM_4S	0x115A
+-#define PCI_DEVICE_ID_ACCESIO_PCIE_ICM232_2	0x1190
+-#define PCI_DEVICE_ID_ACCESIO_MPCIE_ICM232_2	0x1191
+-#define PCI_DEVICE_ID_ACCESIO_PCIE_ICM232_4	0x1198
+-#define PCI_DEVICE_ID_ACCESIO_MPCIE_ICM232_4	0x1199
+-#define PCI_DEVICE_ID_ACCESIO_PCIE_ICM_2SM	0x11D0
+-#define PCI_DEVICE_ID_ACCESIO_PCIE_COM422_4	0x105A
+-#define PCI_DEVICE_ID_ACCESIO_PCIE_COM485_4	0x105B
+-#define PCI_DEVICE_ID_ACCESIO_PCIE_COM422_8	0x106A
+-#define PCI_DEVICE_ID_ACCESIO_PCIE_COM485_8	0x106B
+-#define PCI_DEVICE_ID_ACCESIO_PCIE_COM232_4	0x1098
+-#define PCI_DEVICE_ID_ACCESIO_PCIE_COM232_8	0x10A9
+-#define PCI_DEVICE_ID_ACCESIO_PCIE_COM_4SM	0x10D9
+-#define PCI_DEVICE_ID_ACCESIO_PCIE_COM_8SM	0x10E9
+-#define PCI_DEVICE_ID_ACCESIO_PCIE_ICM_4SM	0x11D8
+-
+-
+ #define	PCI_DEVICE_ID_MOXA_CP102E	0x1024
+ #define	PCI_DEVICE_ID_MOXA_CP102EL	0x1025
+ #define	PCI_DEVICE_ID_MOXA_CP104EL_A	0x1045
+@@ -1940,7 +1828,7 @@ pci_moxa_setup(struct serial_private *pr
+  * This list is ordered alphabetically by vendor then device.
+  * Specific entries must come before more generic entries.
+  */
+-static struct pci_serial_quirk pci_serial_quirks[] __refdata = {
++static struct pci_serial_quirk pci_serial_quirks[] = {
+ 	/*
+ 	* ADDI-DATA GmbH communication cards <info@addi-data.com>
+ 	*/
+@@ -2169,7 +2057,6 @@ static struct pci_serial_quirk pci_seria
+ 		.subdevice	= PCI_ANY_ID,
+ 		.init		= pci_quatech_init,
+ 		.setup		= pci_quatech_setup,
+-		.exit		= pci_quatech_exit,
+ 	},
+ 	/*
+ 	 * Panacom
+@@ -2193,16 +2080,6 @@ static struct pci_serial_quirk pci_seria
+ 		.exit		= pci_plx9050_exit,
+ 	},
+ 	/*
+-	 * Pericom (Only 7954 - It have a offset jump for port 4)
+-	 */
+-	{
+-		.vendor		= PCI_VENDOR_ID_PERICOM,
+-		.device		= PCI_DEVICE_ID_PERICOM_PI7C9X7954,
+-		.subvendor	= PCI_ANY_ID,
+-		.subdevice	= PCI_ANY_ID,
+-		.setup		= pci_pericom_setup_four_at_eight,
+-	},
+-	/*
+ 	 * PLX
+ 	 */
+ 	{
+@@ -2232,125 +2109,7 @@ static struct pci_serial_quirk pci_seria
+ 		.setup		= pci_default_setup,
+ 		.exit		= pci_plx9050_exit,
+ 	},
+-	{
+-		.vendor     = PCI_VENDOR_ID_ACCESIO,
+-		.device     = PCI_DEVICE_ID_ACCESIO_PCIE_COM_4SDB,
+-		.subvendor  = PCI_ANY_ID,
+-		.subdevice  = PCI_ANY_ID,
+-		.setup      = pci_pericom_setup_four_at_eight,
+-	},
+-	{
+-		.vendor     = PCI_VENDOR_ID_ACCESIO,
+-		.device     = PCI_DEVICE_ID_ACCESIO_MPCIE_COM_4S,
+-		.subvendor  = PCI_ANY_ID,
+-		.subdevice  = PCI_ANY_ID,
+-		.setup      = pci_pericom_setup_four_at_eight,
+-	},
+-	{
+-		.vendor     = PCI_VENDOR_ID_ACCESIO,
+-		.device     = PCI_DEVICE_ID_ACCESIO_PCIE_COM232_4DB,
+-		.subvendor  = PCI_ANY_ID,
+-		.subdevice  = PCI_ANY_ID,
+-		.setup      = pci_pericom_setup_four_at_eight,
+-	},
+-	{
+-		.vendor     = PCI_VENDOR_ID_ACCESIO,
+-		.device     = PCI_DEVICE_ID_ACCESIO_MPCIE_COM232_4,
+-		.subvendor  = PCI_ANY_ID,
+-		.subdevice  = PCI_ANY_ID,
+-		.setup      = pci_pericom_setup_four_at_eight,
+-	},
+-	{
+-		.vendor     = PCI_VENDOR_ID_ACCESIO,
+-		.device     = PCI_DEVICE_ID_ACCESIO_PCIE_COM_4SMDB,
+-		.subvendor  = PCI_ANY_ID,
+-		.subdevice  = PCI_ANY_ID,
+-		.setup      = pci_pericom_setup_four_at_eight,
+-	},
+-	{
+-		.vendor     = PCI_VENDOR_ID_ACCESIO,
+-		.device     = PCI_DEVICE_ID_ACCESIO_MPCIE_COM_4SM,
+-		.subvendor  = PCI_ANY_ID,
+-		.subdevice  = PCI_ANY_ID,
+-		.setup      = pci_pericom_setup_four_at_eight,
+-	},
+-	{
+-		.vendor     = PCI_VENDOR_ID_ACCESIO,
+-		.device     = PCI_DEVICE_ID_ACCESIO_MPCIE_ICM422_4,
+-		.subvendor  = PCI_ANY_ID,
+-		.subdevice  = PCI_ANY_ID,
+-		.setup      = pci_pericom_setup_four_at_eight,
+-	},
+-	{
+-		.vendor     = PCI_VENDOR_ID_ACCESIO,
+-		.device     = PCI_DEVICE_ID_ACCESIO_MPCIE_ICM485_4,
+-		.subvendor  = PCI_ANY_ID,
+-		.subdevice  = PCI_ANY_ID,
+-		.setup      = pci_pericom_setup_four_at_eight,
+-	},
+-	{
+-		.vendor     = PCI_VENDOR_ID_ACCESIO,
+-		.device     = PCI_DEVICE_ID_ACCESIO_PCIE_ICM232_4,
+-		.subvendor  = PCI_ANY_ID,
+-		.subdevice  = PCI_ANY_ID,
+-		.setup      = pci_pericom_setup_four_at_eight,
+-	},
+-	{
+-		.vendor     = PCI_VENDOR_ID_ACCESIO,
+-		.device     = PCI_DEVICE_ID_ACCESIO_PCIE_ICM_4S,
+-		.subvendor  = PCI_ANY_ID,
+-		.subdevice  = PCI_ANY_ID,
+-		.setup      = pci_pericom_setup_four_at_eight,
+-	},
+-	{
+-		.vendor     = PCI_VENDOR_ID_ACCESIO,
+-		.device     = PCI_DEVICE_ID_ACCESIO_MPCIE_ICM232_4,
+-		.subvendor  = PCI_ANY_ID,
+-		.subdevice  = PCI_ANY_ID,
+-		.setup      = pci_pericom_setup_four_at_eight,
+-	},
+-	{
+-		.vendor     = PCI_VENDOR_ID_ACCESIO,
+-		.device     = PCI_DEVICE_ID_ACCESIO_PCIE_COM422_4,
+-		.subvendor  = PCI_ANY_ID,
+-		.subdevice  = PCI_ANY_ID,
+-		.setup      = pci_pericom_setup_four_at_eight,
+-	},
+-	{
+-		.vendor     = PCI_VENDOR_ID_ACCESIO,
+-		.device     = PCI_DEVICE_ID_ACCESIO_PCIE_COM485_4,
+-		.subvendor  = PCI_ANY_ID,
+-		.subdevice  = PCI_ANY_ID,
+-		.setup      = pci_pericom_setup_four_at_eight,
+-	},
+-	{
+-		.vendor     = PCI_VENDOR_ID_ACCESIO,
+-		.device     = PCI_DEVICE_ID_ACCESIO_PCIE_COM232_4,
+-		.subvendor  = PCI_ANY_ID,
+-		.subdevice  = PCI_ANY_ID,
+-		.setup      = pci_pericom_setup_four_at_eight,
+-	},
+-	{
+-		.vendor     = PCI_VENDOR_ID_ACCESIO,
+-		.device     = PCI_DEVICE_ID_ACCESIO_PCIE_COM_4SM,
+-		.subvendor  = PCI_ANY_ID,
+-		.subdevice  = PCI_ANY_ID,
+-		.setup      = pci_pericom_setup_four_at_eight,
+-	},
+-	{
+-		.vendor     = PCI_VENDOR_ID_ACCESIO,
+-		.device     = PCI_DEVICE_ID_ACCESIO_PCIE_ICM_4SM,
+-		.subvendor  = PCI_ANY_ID,
+-		.subdevice  = PCI_ANY_ID,
+-		.setup      = pci_pericom_setup_four_at_eight,
+-	},
+-	{
+-		.vendor     = PCI_VENDOR_ID_ACCESIO,
+-		.device     = PCI_ANY_ID,
+-		.subvendor  = PCI_ANY_ID,
+-		.subdevice  = PCI_ANY_ID,
+-		.setup      = pci_pericom_setup,
+-	},	/*
++	/*
+ 	 * SBS Technologies, Inc., PMC-OCTALPRO 232
+ 	 */
+ 	{
+@@ -2669,6 +2428,16 @@ static struct pci_serial_quirk pci_seria
+ 		.subdevice      = PCI_ANY_ID,
+ 		.setup          = pci_wch_ch38x_setup,
+ 	},
++	/* WCH CH384 8S card (16850 clone) */
++	{
++		.vendor         = PCIE_VENDOR_ID_WCH,
++		.device         = PCIE_DEVICE_ID_WCH_CH384_8S,
++		.subvendor      = PCI_ANY_ID,
++		.subdevice      = PCI_ANY_ID,
++		.init           = pci_wch_ch38x_init,
++		.exit		= pci_wch_ch38x_exit,
++		.setup          = pci_wch_ch38x_setup,
++	},
+ 	/*
+ 	 * ASIX devices with FIFO bug
+ 	 */
+@@ -2778,15 +2547,6 @@ static struct pci_serial_quirk *find_qui
+ 	return quirk;
+ }
+ 
+-static inline int get_pci_irq(struct pci_dev *dev,
+-				const struct pciserial_board *board)
+-{
+-	if (board->flags & FL_NOIRQ)
+-		return 0;
+-	else
+-		return dev->irq;
+-}
+-
+ /*
+  * This is the configuration table for all of the PCI serial boards
+  * which we support.  It is directly indexed by the pci_board_num_t enum
+@@ -2829,7 +2589,7 @@ enum pci_board_num_t {
+ 	pbn_b0_2_1843200,
+ 	pbn_b0_4_1843200,
+ 
+-	pbn_b0_1_4000000,
++	pbn_b0_1_3906250,
+ 
+ 	pbn_b0_bt_1_115200,
+ 	pbn_b0_bt_2_115200,
+@@ -2909,10 +2669,10 @@ enum pci_board_num_t {
+ 	pbn_plx_romulus,
+ 	pbn_endrun_2_3906250,
+ 	pbn_oxsemi,
+-	pbn_oxsemi_1_4000000,
+-	pbn_oxsemi_2_4000000,
+-	pbn_oxsemi_4_4000000,
+-	pbn_oxsemi_8_4000000,
++	pbn_oxsemi_1_3906250,
++	pbn_oxsemi_2_3906250,
++	pbn_oxsemi_4_3906250,
++	pbn_oxsemi_8_3906250,
+ 	pbn_intel_i960,
+ 	pbn_sgi_ioc3,
+ 	pbn_computone_4,
+@@ -2940,15 +2700,16 @@ enum pci_board_num_t {
+ 	pbn_fintek_F81512A,
+ 	pbn_wch382_2,
+ 	pbn_wch384_4,
+-	pbn_pericom_PI7C9X7951,
+-	pbn_pericom_PI7C9X7952,
+-	pbn_pericom_PI7C9X7954,
+-	pbn_pericom_PI7C9X7958,
++	pbn_wch384_8,
+ 	pbn_sunix_pci_1s,
+ 	pbn_sunix_pci_2s,
+ 	pbn_sunix_pci_4s,
+ 	pbn_sunix_pci_8s,
+ 	pbn_sunix_pci_16s,
++	pbn_titan_1_4000000,
++	pbn_titan_2_4000000,
++	pbn_titan_4_4000000,
++	pbn_titan_8_4000000,
+ 	pbn_moxa8250_2p,
+ 	pbn_moxa8250_4p,
+ 	pbn_moxa8250_8p,
+@@ -3054,10 +2815,10 @@ static struct pciserial_board pci_boards
+ 		.uart_offset	= 8,
+ 	},
+ 
+-	[pbn_b0_1_4000000] = {
++	[pbn_b0_1_3906250] = {
+ 		.flags		= FL_BASE0,
+ 		.num_ports	= 1,
+-		.base_baud	= 4000000,
++		.base_baud	= 3906250,
+ 		.uart_offset	= 8,
+ 	},
+ 
+@@ -3452,31 +3213,31 @@ static struct pciserial_board pci_boards
+ 		.base_baud	= 115200,
+ 		.uart_offset	= 8,
+ 	},
+-	[pbn_oxsemi_1_4000000] = {
++	[pbn_oxsemi_1_3906250] = {
+ 		.flags		= FL_BASE0,
+ 		.num_ports	= 1,
+-		.base_baud	= 4000000,
++		.base_baud	= 3906250,
+ 		.uart_offset	= 0x200,
+ 		.first_offset	= 0x1000,
+ 	},
+-	[pbn_oxsemi_2_4000000] = {
++	[pbn_oxsemi_2_3906250] = {
+ 		.flags		= FL_BASE0,
+ 		.num_ports	= 2,
+-		.base_baud	= 4000000,
++		.base_baud	= 3906250,
+ 		.uart_offset	= 0x200,
+ 		.first_offset	= 0x1000,
+ 	},
+-	[pbn_oxsemi_4_4000000] = {
++	[pbn_oxsemi_4_3906250] = {
+ 		.flags		= FL_BASE0,
+ 		.num_ports	= 4,
+-		.base_baud	= 4000000,
++		.base_baud	= 3906250,
+ 		.uart_offset	= 0x200,
+ 		.first_offset	= 0x1000,
+ 	},
+-	[pbn_oxsemi_8_4000000] = {
++	[pbn_oxsemi_8_3906250] = {
+ 		.flags		= FL_BASE0,
+ 		.num_ports	= 8,
+-		.base_baud	= 4000000,
++		.base_baud	= 3906250,
+ 		.uart_offset	= 0x200,
+ 		.first_offset	= 0x1000,
+ 	},
+@@ -3677,32 +3438,12 @@ static struct pciserial_board pci_boards
+ 		.uart_offset    = 8,
+ 		.first_offset   = 0xC0,
+ 	},
+-	/*
+-	 * Pericom PI7C9X795[1248] Uno/Dual/Quad/Octal UART
+-	 */
+-	[pbn_pericom_PI7C9X7951] = {
+-		.flags          = FL_BASE0,
+-		.num_ports      = 1,
+-		.base_baud      = 921600,
+-		.uart_offset	= 0x8,
+-	},
+-	[pbn_pericom_PI7C9X7952] = {
+-		.flags          = FL_BASE0,
+-		.num_ports      = 2,
+-		.base_baud      = 921600,
+-		.uart_offset	= 0x8,
+-	},
+-	[pbn_pericom_PI7C9X7954] = {
+-		.flags          = FL_BASE0,
+-		.num_ports      = 4,
+-		.base_baud      = 921600,
+-		.uart_offset	= 0x8,
+-	},
+-	[pbn_pericom_PI7C9X7958] = {
+-		.flags          = FL_BASE0,
+-		.num_ports      = 8,
+-		.base_baud      = 921600,
+-		.uart_offset	= 0x8,
++	[pbn_wch384_8] = {
++		.flags		= FL_BASE0,
++		.num_ports	= 8,
++		.base_baud      = 115200,
++		.uart_offset    = 8,
++		.first_offset   = 0x00,
+ 	},
+ 	[pbn_sunix_pci_1s] = {
+ 		.num_ports	= 1,
+@@ -3729,6 +3470,34 @@ static struct pciserial_board pci_boards
+ 		.base_baud      = 921600,
+ 		.uart_offset	= 0x8,
+ 	},
++	[pbn_titan_1_4000000] = {
++		.flags		= FL_BASE0,
++		.num_ports	= 1,
++		.base_baud	= 4000000,
++		.uart_offset	= 0x200,
++		.first_offset	= 0x1000,
++	},
++	[pbn_titan_2_4000000] = {
++		.flags		= FL_BASE0,
++		.num_ports	= 2,
++		.base_baud	= 4000000,
++		.uart_offset	= 0x200,
++		.first_offset	= 0x1000,
++	},
++	[pbn_titan_4_4000000] = {
++		.flags		= FL_BASE0,
++		.num_ports	= 4,
++		.base_baud	= 4000000,
++		.uart_offset	= 0x200,
++		.first_offset	= 0x1000,
++	},
++	[pbn_titan_8_4000000] = {
++		.flags		= FL_BASE0,
++		.num_ports	= 8,
++		.base_baud	= 4000000,
++		.uart_offset	= 0x200,
++		.first_offset	= 0x1000,
++	},
+ 	[pbn_moxa8250_2p] = {
+ 		.flags		= FL_BASE1,
+ 		.num_ports      = 2,
+@@ -3787,6 +3556,10 @@ static const struct pci_device_id blackl
+ 	{ PCI_VDEVICE(EXAR, PCI_ANY_ID), },
+ 	{ PCI_VDEVICE(COMMTECH, PCI_ANY_ID), },
+ 
++	/* Pericom devices */
++	{ PCI_VDEVICE(PERICOM, PCI_ANY_ID), },
++	{ PCI_VDEVICE(ACCESSIO, PCI_ANY_ID), },
++
+ 	/* End of the black list */
+ 	{ }
+ };
+@@ -3828,7 +3601,7 @@ serial_pci_guess_board(struct pci_dev *d
+ 		return -ENODEV;
+ 
+ 	num_iomem = num_port = 0;
+-	for (i = 0; i < PCI_NUM_BAR_RESOURCES; i++) {
++	for (i = 0; i < PCI_STD_NUM_BARS; i++) {
+ 		if (pci_resource_flags(dev, i) & IORESOURCE_IO) {
+ 			num_port++;
+ 			if (first_port == -1)
+@@ -3856,7 +3629,7 @@ serial_pci_guess_board(struct pci_dev *d
+ 	 */
+ 	first_port = -1;
+ 	num_port = 0;
+-	for (i = 0; i < PCI_NUM_BAR_RESOURCES; i++) {
++	for (i = 0; i < PCI_STD_NUM_BARS; i++) {
+ 		if (pci_resource_flags(dev, i) & IORESOURCE_IO &&
+ 		    pci_resource_len(dev, i) == 8 &&
+ 		    (first_port == -1 || (first_port + num_port) == i)) {
+@@ -3919,9 +3692,7 @@ pciserial_init_ports(struct pci_dev *dev
+ 			nr_ports = rc;
+ 	}
+ 
+-	priv = kzalloc(sizeof(struct serial_private) +
+-		       sizeof(unsigned int) * nr_ports,
+-		       GFP_KERNEL);
++	priv = kzalloc(struct_size(priv, line, nr_ports), GFP_KERNEL);
+ 	if (!priv) {
+ 		priv = ERR_PTR(-ENOMEM);
+ 		goto err_deinit;
+@@ -3938,12 +3709,12 @@ pciserial_init_ports(struct pci_dev *dev
+ 		uart.port.irq = 0;
+ 	} else {
+ 		if (pci_match_id(pci_use_msi, dev)) {
+-			dev_dbg(&dev->dev, "Using MSI(-X) interrupts\n");
++			pci_dbg(dev, "Using MSI(-X) interrupts\n");
+ 			pci_set_master(dev);
+ 			uart.port.flags &= ~UPF_SHARE_IRQ;
+ 			rc = pci_alloc_irq_vectors(dev, 1, 1, PCI_IRQ_ALL_TYPES);
+ 		} else {
+-			dev_dbg(&dev->dev, "Using legacy interrupts\n");
++			pci_dbg(dev, "Using legacy interrupts\n");
+ 			rc = pci_alloc_irq_vectors(dev, 1, 1, PCI_IRQ_LEGACY);
+ 		}
+ 		if (rc < 0) {
+@@ -3961,12 +3732,12 @@ pciserial_init_ports(struct pci_dev *dev
+ 		if (quirk->setup(priv, board, &uart, i))
+ 			break;
+ 
+-		dev_dbg(&dev->dev, "Setup PCI port: port %lx, irq %d, type %d\n",
++		pci_dbg(dev, "Setup PCI port: port %lx, irq %d, type %d\n",
+ 			uart.port.iobase, uart.port.irq, uart.port.iotype);
+ 
+ 		priv->line[i] = serial8250_register_8250_port(&uart);
+ 		if (priv->line[i] < 0) {
+-			dev_err(&dev->dev,
++			pci_err(dev,
+ 				"Couldn't register serial port %lx, irq %d, type %d, error %d\n",
+ 				uart.port.iobase, uart.port.irq,
+ 				uart.port.iotype, priv->line[i]);
+@@ -4062,8 +3833,7 @@ pciserial_init_one(struct pci_dev *dev,
+ 	}
+ 
+ 	if (ent->driver_data >= ARRAY_SIZE(pci_boards)) {
+-		dev_err(&dev->dev, "invalid driver_data: %ld\n",
+-			ent->driver_data);
++		pci_err(dev, "invalid driver_data: %ld\n", ent->driver_data);
+ 		return -EINVAL;
+ 	}
+ 
+@@ -4146,7 +3916,7 @@ static int pciserial_resume_one(struct d
+ 		err = pci_enable_device(pdev);
+ 		/* FIXME: We cannot simply error out here */
+ 		if (err)
+-			dev_err(dev, "Unable to re-enable ports, trying to continue.\n");
++			pci_err(pdev, "Unable to re-enable ports, trying to continue.\n");
+ 		pciserial_resume_ports(priv);
+ 	}
+ 	return 0;
+@@ -4455,158 +4225,158 @@ static const struct pci_device_id serial
+ 	 */
+ 	{	PCI_VENDOR_ID_OXSEMI, 0xc101,    /* OXPCIe952 1 Legacy UART */
+ 		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
+-		pbn_b0_1_4000000 },
++		pbn_b0_1_3906250 },
+ 	{	PCI_VENDOR_ID_OXSEMI, 0xc105,    /* OXPCIe952 1 Legacy UART */
+ 		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
+-		pbn_b0_1_4000000 },
++		pbn_b0_1_3906250 },
+ 	{	PCI_VENDOR_ID_OXSEMI, 0xc11b,    /* OXPCIe952 1 Native UART */
+ 		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
+-		pbn_oxsemi_1_4000000 },
++		pbn_oxsemi_1_3906250 },
+ 	{	PCI_VENDOR_ID_OXSEMI, 0xc11f,    /* OXPCIe952 1 Native UART */
+ 		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
+-		pbn_oxsemi_1_4000000 },
++		pbn_oxsemi_1_3906250 },
+ 	{	PCI_VENDOR_ID_OXSEMI, 0xc120,    /* OXPCIe952 1 Legacy UART */
+ 		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
+-		pbn_b0_1_4000000 },
++		pbn_b0_1_3906250 },
+ 	{	PCI_VENDOR_ID_OXSEMI, 0xc124,    /* OXPCIe952 1 Legacy UART */
+ 		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
+-		pbn_b0_1_4000000 },
++		pbn_b0_1_3906250 },
+ 	{	PCI_VENDOR_ID_OXSEMI, 0xc138,    /* OXPCIe952 1 Native UART */
+ 		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
+-		pbn_oxsemi_1_4000000 },
++		pbn_oxsemi_1_3906250 },
+ 	{	PCI_VENDOR_ID_OXSEMI, 0xc13d,    /* OXPCIe952 1 Native UART */
+ 		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
+-		pbn_oxsemi_1_4000000 },
++		pbn_oxsemi_1_3906250 },
+ 	{	PCI_VENDOR_ID_OXSEMI, 0xc140,    /* OXPCIe952 1 Legacy UART */
+ 		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
+-		pbn_b0_1_4000000 },
++		pbn_b0_1_3906250 },
+ 	{	PCI_VENDOR_ID_OXSEMI, 0xc141,    /* OXPCIe952 1 Legacy UART */
+ 		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
+-		pbn_b0_1_4000000 },
++		pbn_b0_1_3906250 },
+ 	{	PCI_VENDOR_ID_OXSEMI, 0xc144,    /* OXPCIe952 1 Legacy UART */
+ 		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
+-		pbn_b0_1_4000000 },
++		pbn_b0_1_3906250 },
+ 	{	PCI_VENDOR_ID_OXSEMI, 0xc145,    /* OXPCIe952 1 Legacy UART */
+ 		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
+-		pbn_b0_1_4000000 },
++		pbn_b0_1_3906250 },
+ 	{	PCI_VENDOR_ID_OXSEMI, 0xc158,    /* OXPCIe952 2 Native UART */
+ 		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
+-		pbn_oxsemi_2_4000000 },
++		pbn_oxsemi_2_3906250 },
+ 	{	PCI_VENDOR_ID_OXSEMI, 0xc15d,    /* OXPCIe952 2 Native UART */
+ 		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
+-		pbn_oxsemi_2_4000000 },
++		pbn_oxsemi_2_3906250 },
+ 	{	PCI_VENDOR_ID_OXSEMI, 0xc208,    /* OXPCIe954 4 Native UART */
+ 		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
+-		pbn_oxsemi_4_4000000 },
++		pbn_oxsemi_4_3906250 },
+ 	{	PCI_VENDOR_ID_OXSEMI, 0xc20d,    /* OXPCIe954 4 Native UART */
+ 		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
+-		pbn_oxsemi_4_4000000 },
++		pbn_oxsemi_4_3906250 },
+ 	{	PCI_VENDOR_ID_OXSEMI, 0xc308,    /* OXPCIe958 8 Native UART */
+ 		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
+-		pbn_oxsemi_8_4000000 },
++		pbn_oxsemi_8_3906250 },
+ 	{	PCI_VENDOR_ID_OXSEMI, 0xc30d,    /* OXPCIe958 8 Native UART */
+ 		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
+-		pbn_oxsemi_8_4000000 },
++		pbn_oxsemi_8_3906250 },
+ 	{	PCI_VENDOR_ID_OXSEMI, 0xc40b,    /* OXPCIe200 1 Native UART */
+ 		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
+-		pbn_oxsemi_1_4000000 },
++		pbn_oxsemi_1_3906250 },
+ 	{	PCI_VENDOR_ID_OXSEMI, 0xc40f,    /* OXPCIe200 1 Native UART */
+ 		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
+-		pbn_oxsemi_1_4000000 },
++		pbn_oxsemi_1_3906250 },
+ 	{	PCI_VENDOR_ID_OXSEMI, 0xc41b,    /* OXPCIe200 1 Native UART */
+ 		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
+-		pbn_oxsemi_1_4000000 },
++		pbn_oxsemi_1_3906250 },
+ 	{	PCI_VENDOR_ID_OXSEMI, 0xc41f,    /* OXPCIe200 1 Native UART */
+ 		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
+-		pbn_oxsemi_1_4000000 },
++		pbn_oxsemi_1_3906250 },
+ 	{	PCI_VENDOR_ID_OXSEMI, 0xc42b,    /* OXPCIe200 1 Native UART */
+ 		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
+-		pbn_oxsemi_1_4000000 },
++		pbn_oxsemi_1_3906250 },
+ 	{	PCI_VENDOR_ID_OXSEMI, 0xc42f,    /* OXPCIe200 1 Native UART */
+ 		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
+-		pbn_oxsemi_1_4000000 },
++		pbn_oxsemi_1_3906250 },
+ 	{	PCI_VENDOR_ID_OXSEMI, 0xc43b,    /* OXPCIe200 1 Native UART */
+ 		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
+-		pbn_oxsemi_1_4000000 },
++		pbn_oxsemi_1_3906250 },
+ 	{	PCI_VENDOR_ID_OXSEMI, 0xc43f,    /* OXPCIe200 1 Native UART */
+ 		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
+-		pbn_oxsemi_1_4000000 },
++		pbn_oxsemi_1_3906250 },
+ 	{	PCI_VENDOR_ID_OXSEMI, 0xc44b,    /* OXPCIe200 1 Native UART */
+ 		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
+-		pbn_oxsemi_1_4000000 },
++		pbn_oxsemi_1_3906250 },
+ 	{	PCI_VENDOR_ID_OXSEMI, 0xc44f,    /* OXPCIe200 1 Native UART */
+ 		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
+-		pbn_oxsemi_1_4000000 },
++		pbn_oxsemi_1_3906250 },
+ 	{	PCI_VENDOR_ID_OXSEMI, 0xc45b,    /* OXPCIe200 1 Native UART */
+ 		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
+-		pbn_oxsemi_1_4000000 },
++		pbn_oxsemi_1_3906250 },
+ 	{	PCI_VENDOR_ID_OXSEMI, 0xc45f,    /* OXPCIe200 1 Native UART */
+ 		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
+-		pbn_oxsemi_1_4000000 },
++		pbn_oxsemi_1_3906250 },
+ 	{	PCI_VENDOR_ID_OXSEMI, 0xc46b,    /* OXPCIe200 1 Native UART */
+ 		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
+-		pbn_oxsemi_1_4000000 },
++		pbn_oxsemi_1_3906250 },
+ 	{	PCI_VENDOR_ID_OXSEMI, 0xc46f,    /* OXPCIe200 1 Native UART */
+ 		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
+-		pbn_oxsemi_1_4000000 },
++		pbn_oxsemi_1_3906250 },
+ 	{	PCI_VENDOR_ID_OXSEMI, 0xc47b,    /* OXPCIe200 1 Native UART */
+ 		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
+-		pbn_oxsemi_1_4000000 },
++		pbn_oxsemi_1_3906250 },
+ 	{	PCI_VENDOR_ID_OXSEMI, 0xc47f,    /* OXPCIe200 1 Native UART */
+ 		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
+-		pbn_oxsemi_1_4000000 },
++		pbn_oxsemi_1_3906250 },
+ 	{	PCI_VENDOR_ID_OXSEMI, 0xc48b,    /* OXPCIe200 1 Native UART */
+ 		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
+-		pbn_oxsemi_1_4000000 },
++		pbn_oxsemi_1_3906250 },
+ 	{	PCI_VENDOR_ID_OXSEMI, 0xc48f,    /* OXPCIe200 1 Native UART */
+ 		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
+-		pbn_oxsemi_1_4000000 },
++		pbn_oxsemi_1_3906250 },
+ 	{	PCI_VENDOR_ID_OXSEMI, 0xc49b,    /* OXPCIe200 1 Native UART */
+ 		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
+-		pbn_oxsemi_1_4000000 },
++		pbn_oxsemi_1_3906250 },
+ 	{	PCI_VENDOR_ID_OXSEMI, 0xc49f,    /* OXPCIe200 1 Native UART */
+ 		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
+-		pbn_oxsemi_1_4000000 },
++		pbn_oxsemi_1_3906250 },
+ 	{	PCI_VENDOR_ID_OXSEMI, 0xc4ab,    /* OXPCIe200 1 Native UART */
+ 		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
+-		pbn_oxsemi_1_4000000 },
++		pbn_oxsemi_1_3906250 },
+ 	{	PCI_VENDOR_ID_OXSEMI, 0xc4af,    /* OXPCIe200 1 Native UART */
+ 		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
+-		pbn_oxsemi_1_4000000 },
++		pbn_oxsemi_1_3906250 },
+ 	{	PCI_VENDOR_ID_OXSEMI, 0xc4bb,    /* OXPCIe200 1 Native UART */
+ 		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
+-		pbn_oxsemi_1_4000000 },
++		pbn_oxsemi_1_3906250 },
+ 	{	PCI_VENDOR_ID_OXSEMI, 0xc4bf,    /* OXPCIe200 1 Native UART */
+ 		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
+-		pbn_oxsemi_1_4000000 },
++		pbn_oxsemi_1_3906250 },
+ 	{	PCI_VENDOR_ID_OXSEMI, 0xc4cb,    /* OXPCIe200 1 Native UART */
+ 		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
+-		pbn_oxsemi_1_4000000 },
++		pbn_oxsemi_1_3906250 },
+ 	{	PCI_VENDOR_ID_OXSEMI, 0xc4cf,    /* OXPCIe200 1 Native UART */
+ 		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
+-		pbn_oxsemi_1_4000000 },
++		pbn_oxsemi_1_3906250 },
+ 	/*
+ 	 * Mainpine Inc. IQ Express "Rev3" utilizing OxSemi Tornado
+ 	 */
+ 	{	PCI_VENDOR_ID_MAINPINE, 0x4000,	/* IQ Express 1 Port V.34 Super-G3 Fax */
+ 		PCI_VENDOR_ID_MAINPINE, 0x4001, 0, 0,
+-		pbn_oxsemi_1_4000000 },
++		pbn_oxsemi_1_3906250 },
+ 	{	PCI_VENDOR_ID_MAINPINE, 0x4000,	/* IQ Express 2 Port V.34 Super-G3 Fax */
+ 		PCI_VENDOR_ID_MAINPINE, 0x4002, 0, 0,
+-		pbn_oxsemi_2_4000000 },
++		pbn_oxsemi_2_3906250 },
+ 	{	PCI_VENDOR_ID_MAINPINE, 0x4000,	/* IQ Express 4 Port V.34 Super-G3 Fax */
+ 		PCI_VENDOR_ID_MAINPINE, 0x4004, 0, 0,
+-		pbn_oxsemi_4_4000000 },
++		pbn_oxsemi_4_3906250 },
+ 	{	PCI_VENDOR_ID_MAINPINE, 0x4000,	/* IQ Express 8 Port V.34 Super-G3 Fax */
+ 		PCI_VENDOR_ID_MAINPINE, 0x4008, 0, 0,
+-		pbn_oxsemi_8_4000000 },
++		pbn_oxsemi_8_3906250 },
+ 
+ 	/*
+ 	 * Digi/IBM PCIe 2-port Async EIA-232 Adapter utilizing OxSemi Tornado
+ 	 */
+ 	{	PCI_VENDOR_ID_DIGI, PCIE_DEVICE_ID_NEO_2_OX_IBM,
+ 		PCI_SUBVENDOR_ID_IBM, PCI_ANY_ID, 0, 0,
+-		pbn_oxsemi_2_4000000 },
++		pbn_oxsemi_2_3906250 },
+ 
+ 	/*
+ 	 * SBS Technologies, Inc. P-Octal and PMC-OCTPRO cards,
+@@ -4680,22 +4450,22 @@ static const struct pci_device_id serial
+ 		pbn_b0_4_921600 },
+ 	{	PCI_VENDOR_ID_TITAN, PCI_DEVICE_ID_TITAN_100E,
+ 		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
+-		pbn_oxsemi_1_4000000 },
++		pbn_titan_1_4000000 },
+ 	{	PCI_VENDOR_ID_TITAN, PCI_DEVICE_ID_TITAN_200E,
+ 		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
+-		pbn_oxsemi_2_4000000 },
++		pbn_titan_2_4000000 },
+ 	{	PCI_VENDOR_ID_TITAN, PCI_DEVICE_ID_TITAN_400E,
+ 		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
+-		pbn_oxsemi_4_4000000 },
++		pbn_titan_4_4000000 },
+ 	{	PCI_VENDOR_ID_TITAN, PCI_DEVICE_ID_TITAN_800E,
+ 		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
+-		pbn_oxsemi_8_4000000 },
++		pbn_titan_8_4000000 },
+ 	{	PCI_VENDOR_ID_TITAN, PCI_DEVICE_ID_TITAN_200EI,
+ 		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
+-		pbn_oxsemi_2_4000000 },
++		pbn_titan_2_4000000 },
+ 	{	PCI_VENDOR_ID_TITAN, PCI_DEVICE_ID_TITAN_200EISI,
+ 		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
+-		pbn_oxsemi_2_4000000 },
++		pbn_titan_2_4000000 },
+ 	{	PCI_VENDOR_ID_TITAN, PCI_DEVICE_ID_TITAN_200V3,
+ 		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
+ 		pbn_b0_bt_2_921600 },
+@@ -4984,127 +4754,6 @@ static const struct pci_device_id serial
+ 		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
+ 		pbn_b3_8_115200 },
+ 	/*
+-	 * Pericom PI7C9X795[1248] Uno/Dual/Quad/Octal UART
+-	 */
+-	{   PCI_VENDOR_ID_PERICOM, PCI_DEVICE_ID_PERICOM_PI7C9X7951,
+-		PCI_ANY_ID, PCI_ANY_ID,
+-		0,
+-		0, pbn_pericom_PI7C9X7951 },
+-	{   PCI_VENDOR_ID_PERICOM, PCI_DEVICE_ID_PERICOM_PI7C9X7952,
+-		PCI_ANY_ID, PCI_ANY_ID,
+-		0,
+-		0, pbn_pericom_PI7C9X7952 },
+-	{   PCI_VENDOR_ID_PERICOM, PCI_DEVICE_ID_PERICOM_PI7C9X7954,
+-		PCI_ANY_ID, PCI_ANY_ID,
+-		0,
+-		0, pbn_pericom_PI7C9X7954 },
+-	{   PCI_VENDOR_ID_PERICOM, PCI_DEVICE_ID_PERICOM_PI7C9X7958,
+-		PCI_ANY_ID, PCI_ANY_ID,
+-		0,
+-		0, pbn_pericom_PI7C9X7958 },
+-	/*
+-	 * ACCES I/O Products quad
+-	 */
+-	{	PCI_VENDOR_ID_ACCESIO, PCI_DEVICE_ID_ACCESIO_PCIE_COM_2SDB,
+-		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
+-		pbn_pericom_PI7C9X7952 },
+-	{	PCI_VENDOR_ID_ACCESIO, PCI_DEVICE_ID_ACCESIO_MPCIE_COM_2S,
+-		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
+-		pbn_pericom_PI7C9X7952 },
+-	{	PCI_VENDOR_ID_ACCESIO, PCI_DEVICE_ID_ACCESIO_PCIE_COM_4SDB,
+-		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
+-		pbn_pericom_PI7C9X7954 },
+-	{	PCI_VENDOR_ID_ACCESIO, PCI_DEVICE_ID_ACCESIO_MPCIE_COM_4S,
+-		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
+-		pbn_pericom_PI7C9X7954 },
+-	{	PCI_VENDOR_ID_ACCESIO, PCI_DEVICE_ID_ACCESIO_PCIE_COM232_2DB,
+-		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
+-		pbn_pericom_PI7C9X7952 },
+-	{	PCI_VENDOR_ID_ACCESIO, PCI_DEVICE_ID_ACCESIO_MPCIE_COM232_2,
+-		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
+-		pbn_pericom_PI7C9X7952 },
+-	{	PCI_VENDOR_ID_ACCESIO, PCI_DEVICE_ID_ACCESIO_PCIE_COM232_4DB,
+-		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
+-		pbn_pericom_PI7C9X7954 },
+-	{	PCI_VENDOR_ID_ACCESIO, PCI_DEVICE_ID_ACCESIO_MPCIE_COM232_4,
+-		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
+-		pbn_pericom_PI7C9X7954 },
+-	{	PCI_VENDOR_ID_ACCESIO, PCI_DEVICE_ID_ACCESIO_PCIE_COM_2SMDB,
+-		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
+-		pbn_pericom_PI7C9X7952 },
+-	{	PCI_VENDOR_ID_ACCESIO, PCI_DEVICE_ID_ACCESIO_MPCIE_COM_2SM,
+-		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
+-		pbn_pericom_PI7C9X7952 },
+-	{	PCI_VENDOR_ID_ACCESIO, PCI_DEVICE_ID_ACCESIO_PCIE_COM_4SMDB,
+-		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
+-		pbn_pericom_PI7C9X7954 },
+-	{	PCI_VENDOR_ID_ACCESIO, PCI_DEVICE_ID_ACCESIO_MPCIE_COM_4SM,
+-		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
+-		pbn_pericom_PI7C9X7954 },
+-	{	PCI_VENDOR_ID_ACCESIO, PCI_DEVICE_ID_ACCESIO_MPCIE_ICM485_1,
+-		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
+-		pbn_pericom_PI7C9X7951 },
+-	{	PCI_VENDOR_ID_ACCESIO, PCI_DEVICE_ID_ACCESIO_MPCIE_ICM422_2,
+-		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
+-		pbn_pericom_PI7C9X7952 },
+-	{	PCI_VENDOR_ID_ACCESIO, PCI_DEVICE_ID_ACCESIO_MPCIE_ICM485_2,
+-		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
+-		pbn_pericom_PI7C9X7952 },
+-	{	PCI_VENDOR_ID_ACCESIO, PCI_DEVICE_ID_ACCESIO_MPCIE_ICM422_4,
+-		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
+-		pbn_pericom_PI7C9X7954 },
+-	{	PCI_VENDOR_ID_ACCESIO, PCI_DEVICE_ID_ACCESIO_MPCIE_ICM485_4,
+-		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
+-		pbn_pericom_PI7C9X7954 },
+-	{	PCI_VENDOR_ID_ACCESIO, PCI_DEVICE_ID_ACCESIO_PCIE_ICM_2S,
+-		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
+-		pbn_pericom_PI7C9X7952 },
+-	{	PCI_VENDOR_ID_ACCESIO, PCI_DEVICE_ID_ACCESIO_PCIE_ICM_4S,
+-		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
+-		pbn_pericom_PI7C9X7954 },
+-	{	PCI_VENDOR_ID_ACCESIO, PCI_DEVICE_ID_ACCESIO_PCIE_ICM232_2,
+-		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
+-		pbn_pericom_PI7C9X7952 },
+-	{	PCI_VENDOR_ID_ACCESIO, PCI_DEVICE_ID_ACCESIO_MPCIE_ICM232_2,
+-		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
+-		pbn_pericom_PI7C9X7952 },
+-	{	PCI_VENDOR_ID_ACCESIO, PCI_DEVICE_ID_ACCESIO_PCIE_ICM232_4,
+-		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
+-		pbn_pericom_PI7C9X7954 },
+-	{	PCI_VENDOR_ID_ACCESIO, PCI_DEVICE_ID_ACCESIO_MPCIE_ICM232_4,
+-		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
+-		pbn_pericom_PI7C9X7954 },
+-	{	PCI_VENDOR_ID_ACCESIO, PCI_DEVICE_ID_ACCESIO_PCIE_ICM_2SM,
+-		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
+-		pbn_pericom_PI7C9X7952 },
+-	{	PCI_VENDOR_ID_ACCESIO, PCI_DEVICE_ID_ACCESIO_PCIE_COM422_4,
+-		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
+-		pbn_pericom_PI7C9X7954 },
+-	{	PCI_VENDOR_ID_ACCESIO, PCI_DEVICE_ID_ACCESIO_PCIE_COM485_4,
+-		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
+-		pbn_pericom_PI7C9X7954 },
+-	{	PCI_VENDOR_ID_ACCESIO, PCI_DEVICE_ID_ACCESIO_PCIE_COM422_8,
+-		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
+-		pbn_pericom_PI7C9X7958 },
+-	{	PCI_VENDOR_ID_ACCESIO, PCI_DEVICE_ID_ACCESIO_PCIE_COM485_8,
+-		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
+-		pbn_pericom_PI7C9X7958 },
+-	{	PCI_VENDOR_ID_ACCESIO, PCI_DEVICE_ID_ACCESIO_PCIE_COM232_4,
+-		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
+-		pbn_pericom_PI7C9X7954 },
+-	{	PCI_VENDOR_ID_ACCESIO, PCI_DEVICE_ID_ACCESIO_PCIE_COM232_8,
+-		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
+-		pbn_pericom_PI7C9X7958 },
+-	{	PCI_VENDOR_ID_ACCESIO, PCI_DEVICE_ID_ACCESIO_PCIE_COM_4SM,
+-		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
+-		pbn_pericom_PI7C9X7954 },
+-	{	PCI_VENDOR_ID_ACCESIO, PCI_DEVICE_ID_ACCESIO_PCIE_COM_8SM,
+-		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
+-		pbn_pericom_PI7C9X7958 },
+-	{	PCI_VENDOR_ID_ACCESIO, PCI_DEVICE_ID_ACCESIO_PCIE_ICM_4SM,
+-		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
+-		pbn_pericom_PI7C9X7954 },
+-	/*
+ 	 * Topic TP560 Data/Fax/Voice 56k modem (reported by Evan Clarke)
+ 	 */
+ 	{	PCI_VENDOR_ID_TOPIC, PCI_DEVICE_ID_TOPIC_TP560,
+@@ -5705,6 +5354,9 @@ static const struct pci_device_id serial
+ 		PCI_ANY_ID, PCI_ANY_ID,
+ 		0, 0, pbn_wch384_4 },
+ 
++	{	PCIE_VENDOR_ID_WCH, PCIE_DEVICE_ID_WCH_CH384_8S,
++		PCI_ANY_ID, PCI_ANY_ID,
++		0, 0, pbn_wch384_8 },
+ 	/*
+ 	 * Realtek RealManage
+ 	 */
+--- a/drivers/tty/serial/8250/8250_pnp.c
++++ b/drivers/tty/serial/8250/8250_pnp.c
+@@ -13,6 +13,7 @@
+ #include <linux/pnp.h>
+ #include <linux/string.h>
+ #include <linux/kernel.h>
++#include <linux/property.h>
+ #include <linux/serial_core.h>
+ #include <linux/bitops.h>
+ 
+@@ -55,10 +56,6 @@ static const struct pnp_device_id pnp_de
+ 	{	"BRI1400",		0	},
+ 	/* Boca 33.6 Kbps Internal FD34FSVD */
+ 	{	"BRI3400",		0	},
+-	/* Boca 33.6 Kbps Internal FD34FSVD */
+-	{	"BRI0A49",		0	},
+-	/* Best Data Products Inc. Smart One 336F PnP Modem */
+-	{	"BDP3336",		0	},
+ 	/* Computer Peripherals Inc */
+ 	/* EuroViVa CommCenter-33.6 SP PnP */
+ 	{	"CPI4050",		0	},
+@@ -475,6 +472,7 @@ serial_pnp_probe(struct pnp_dev *dev, co
+ 	if (pnp_irq_flags(dev, 0) & IORESOURCE_IRQ_SHAREABLE)
+ 		uart.port.flags |= UPF_SHARE_IRQ;
+ 	uart.port.uartclk = 1843200;
++	device_property_read_u32(&dev->dev, "clock-frequency", &uart.port.uartclk);
+ 	uart.port.dev = &dev->dev;
+ 
+ 	line = serial8250_register_8250_port(&uart);
+--- a/drivers/tty/serial/8250/8250_port.c
++++ b/drivers/tty/serial/8250/8250_port.c
+@@ -11,15 +11,12 @@
+  *  membase is an 'ioremapped' cookie.
+  */
+ 
+-#if defined(CONFIG_SERIAL_8250_CONSOLE) && defined(CONFIG_MAGIC_SYSRQ)
+-#define SUPPORT_SYSRQ
+-#endif
+-
+ #include <linux/module.h>
+ #include <linux/moduleparam.h>
+ #include <linux/ioport.h>
+ #include <linux/init.h>
+ #include <linux/console.h>
++#include <linux/gpio/consumer.h>
+ #include <linux/sysrq.h>
+ #include <linux/delay.h>
+ #include <linux/platform_device.h>
+@@ -566,17 +563,6 @@ static void serial8250_clear_fifos(struc
+ 	}
+ }
+ 
+-static inline void serial8250_em485_rts_after_send(struct uart_8250_port *p)
+-{
+-	unsigned char mcr = serial8250_in_MCR(p);
+-
+-	if (p->port.rs485.flags & SER_RS485_RTS_AFTER_SEND)
+-		mcr |= UART_MCR_RTS;
+-	else
+-		mcr &= ~UART_MCR_RTS;
+-	serial8250_out_MCR(p, mcr);
+-}
+-
+ static enum hrtimer_restart serial8250_em485_handle_start_tx(struct hrtimer *t);
+ static enum hrtimer_restart serial8250_em485_handle_stop_tx(struct hrtimer *t);
+ 
+@@ -624,7 +610,7 @@ EXPORT_SYMBOL_GPL(serial8250_rpm_put);
+  *
+  *	Return 0 - success, -errno - otherwise
+  */
+-int serial8250_em485_init(struct uart_8250_port *p)
++static int serial8250_em485_init(struct uart_8250_port *p)
+ {
+ 	if (p->em485)
+ 		return 0;
+@@ -641,11 +627,12 @@ int serial8250_em485_init(struct uart_82
+ 	p->em485->start_tx_timer.function = &serial8250_em485_handle_start_tx;
+ 	p->em485->port = p;
+ 	p->em485->active_timer = NULL;
+-	serial8250_em485_rts_after_send(p);
++	p->em485->tx_stopped = true;
++
++	p->rs485_stop_tx(p);
+ 
+ 	return 0;
+ }
+-EXPORT_SYMBOL_GPL(serial8250_em485_init);
+ 
+ /**
+  *	serial8250_em485_destroy() - put uart_8250_port into normal state
+@@ -673,6 +660,55 @@ void serial8250_em485_destroy(struct uar
+ }
+ EXPORT_SYMBOL_GPL(serial8250_em485_destroy);
+ 
++/**
++ * serial8250_em485_config() - generic ->rs485_config() callback
++ * @port: uart port
++ * @rs485: rs485 settings
++ *
++ * Generic callback usable by 8250 uart drivers to activate rs485 settings
++ * if the uart is incapable of driving RTS as a Transmit Enable signal in
++ * hardware, relying on software emulation instead.
++ */
++int serial8250_em485_config(struct uart_port *port, struct serial_rs485 *rs485)
++{
++	struct uart_8250_port *up = up_to_u8250p(port);
++
++	/* pick sane settings if the user hasn't */
++	if (!!(rs485->flags & SER_RS485_RTS_ON_SEND) ==
++	    !!(rs485->flags & SER_RS485_RTS_AFTER_SEND)) {
++		rs485->flags |= SER_RS485_RTS_ON_SEND;
++		rs485->flags &= ~SER_RS485_RTS_AFTER_SEND;
++	}
++
++	/* clamp the delays to [0, 100ms] */
++	rs485->delay_rts_before_send = min(rs485->delay_rts_before_send, 100U);
++	rs485->delay_rts_after_send  = min(rs485->delay_rts_after_send, 100U);
++
++	memset(rs485->padding, 0, sizeof(rs485->padding));
++	port->rs485 = *rs485;
++
++//	gpiod_set_value(port->rs485_term_gpio,
++//			rs485->flags & SER_RS485_TERMINATE_BUS);
++
++	/*
++	 * Both serial8250_em485_init() and serial8250_em485_destroy()
++	 * are idempotent.
++	 */
++	if (rs485->flags & SER_RS485_ENABLED) {
++		int ret = serial8250_em485_init(up);
++
++		if (ret) {
++			rs485->flags &= ~SER_RS485_ENABLED;
++			port->rs485.flags &= ~SER_RS485_ENABLED;
++		}
++		return ret;
++	}
++
++	serial8250_em485_destroy(up);
++	return 0;
++}
++EXPORT_SYMBOL_GPL(serial8250_em485_config);
++
+ /*
+  * These two wrappers ensure that enable_runtime_pm_tx() can be called more than
+  * once and disable_runtime_pm_tx() will still disable RPM because the fifo is
+@@ -1006,6 +1042,9 @@ static void autoconfig_16550a(struct uar
+ 	up->port.type = PORT_16550A;
+ 	up->capabilities |= UART_CAP_FIFO;
+ 
++	if (!IS_ENABLED(CONFIG_SERIAL_8250_16550A_VARIANTS))
++		return;
++
+ 	/*
+ 	 * Check for presence of the EFR when DLAB is set.
+ 	 * Only ST16C650V1 UARTs pass this test.
+@@ -1299,7 +1338,7 @@ static void autoconfig(struct uart_8250_
+ 	up->tx_loadsz = uart_config[port->type].tx_loadsz;
+ 
+ 	if (port->type == PORT_UNKNOWN)
+-		goto out_lock;
++		goto out_unlock;
+ 
+ 	/*
+ 	 * Reset the UART.
+@@ -1316,7 +1355,7 @@ static void autoconfig(struct uart_8250_
+ 	else
+ 		serial_out(up, UART_IER, 0);
+ 
+-out_lock:
++out_unlock:
+ 	spin_unlock_irqrestore(&port->lock, flags);
+ 
+ 	/*
+@@ -1326,8 +1365,8 @@ out_lock:
+ 		fintek_8250_probe(up);
+ 
+ 	if (up->capabilities != old_capabilities) {
+-		pr_warn("%s: detected caps %08x should be %08x\n",
+-			port->name, old_capabilities, up->capabilities);
++		dev_warn(port->dev, "detected caps %08x should be %08x\n",
++			 old_capabilities, up->capabilities);
+ 	}
+ out:
+ 	DEBUG_AUTOCONF("iir=%d ", scratch);
+@@ -1402,9 +1441,21 @@ static void serial8250_stop_rx(struct ua
+ 	serial8250_rpm_put(up);
+ }
+ 
+-static void __do_stop_tx_rs485(struct uart_8250_port *p)
++/**
++ * serial8250_em485_stop_tx() - generic ->rs485_stop_tx() callback
++ * @p: uart 8250 port
++ *
++ * Generic callback usable by 8250 uart drivers to stop rs485 transmission.
++ */
++void serial8250_em485_stop_tx(struct uart_8250_port *p)
+ {
+-	serial8250_em485_rts_after_send(p);
++	unsigned char mcr = serial8250_in_MCR(p);
++
++	if (p->port.rs485.flags & SER_RS485_RTS_AFTER_SEND)
++		mcr |= UART_MCR_RTS;
++	else
++		mcr &= ~UART_MCR_RTS;
++	serial8250_out_MCR(p, mcr);
+ 
+ 	/*
+ 	 * Empty the RX FIFO, we are not interested in anything
+@@ -1418,33 +1469,31 @@ static void __do_stop_tx_rs485(struct ua
+ 		serial_port_out(&p->port, UART_IER, p->ier);
+ 	}
+ }
++EXPORT_SYMBOL_GPL(serial8250_em485_stop_tx);
++
+ static enum hrtimer_restart serial8250_em485_handle_stop_tx(struct hrtimer *t)
+ {
+-	struct uart_8250_em485 *em485;
+-	struct uart_8250_port *p;
++	struct uart_8250_em485 *em485 = container_of(t, struct uart_8250_em485,
++			stop_tx_timer);
++	struct uart_8250_port *p = em485->port;
+ 	unsigned long flags;
+ 
+-	em485 = container_of(t, struct uart_8250_em485, stop_tx_timer);
+-	p = em485->port;
+-
+ 	serial8250_rpm_get(p);
+ 	spin_lock_irqsave(&p->port.lock, flags);
+ 	if (em485->active_timer == &em485->stop_tx_timer) {
+-		__do_stop_tx_rs485(p);
++		p->rs485_stop_tx(p);
+ 		em485->active_timer = NULL;
++		em485->tx_stopped = true;
+ 	}
+ 	spin_unlock_irqrestore(&p->port.lock, flags);
+ 	serial8250_rpm_put(p);
++
+ 	return HRTIMER_NORESTART;
+ }
+ 
+ static void start_hrtimer_ms(struct hrtimer *hrt, unsigned long msec)
+ {
+-	long sec = msec / 1000;
+-	long nsec = (msec % 1000) * 1000000;
+-	ktime_t t = ktime_set(sec, nsec);
+-
+-	hrtimer_start(hrt, t, HRTIMER_MODE_REL);
++	hrtimer_start(hrt, ms_to_ktime(msec), HRTIMER_MODE_REL);
+ }
+ 
+ static void __stop_tx_rs485(struct uart_8250_port *p)
+@@ -1452,7 +1501,7 @@ static void __stop_tx_rs485(struct uart_
+ 	struct uart_8250_em485 *em485 = p->em485;
+ 
+ 	/*
+-	 * __do_stop_tx_rs485 is going to set RTS according to config
++	 * rs485_stop_tx() is going to set RTS according to config
+ 	 * AND flush RX FIFO if required.
+ 	 */
+ 	if (p->port.rs485.delay_rts_after_send > 0) {
+@@ -1460,7 +1509,9 @@ static void __stop_tx_rs485(struct uart_
+ 		start_hrtimer_ms(&em485->stop_tx_timer,
+ 				   p->port.rs485.delay_rts_after_send);
+ 	} else {
+-		__do_stop_tx_rs485(p);
++		p->rs485_stop_tx(p);
++		em485->active_timer = NULL;
++		em485->tx_stopped = true;
+ 	}
+ }
+ 
+@@ -1487,8 +1538,6 @@ static inline void __stop_tx(struct uart
+ 		if ((lsr & BOTH_EMPTY) != BOTH_EMPTY)
+ 			return;
+ 
+-		em485->active_timer = NULL;
+-
+ 		__stop_tx_rs485(p);
+ 	}
+ 	__do_stop_tx(p);
+@@ -1538,37 +1587,42 @@ static inline void __start_tx(struct uar
+ 	}
+ }
+ 
+-static inline void start_tx_rs485(struct uart_port *port)
++/**
++ * serial8250_em485_start_tx() - generic ->rs485_start_tx() callback
++ * @up: uart 8250 port
++ *
++ * Generic callback usable by 8250 uart drivers to start rs485 transmission.
++ * Assumes that setting the RTS bit in the MCR register means RTS is high.
++ * (Some chips use inverse semantics.)  Further assumes that reception is
++ * stoppable by disabling the UART_IER_RDI interrupt.  (Some chips set the
++ * UART_LSR_DR bit even when UART_IER_RDI is disabled, foiling this approach.)
++ */
++void serial8250_em485_start_tx(struct uart_8250_port *up)
+ {
+-	struct uart_8250_port *up = up_to_u8250p(port);
+-	struct uart_8250_em485 *em485 = up->em485;
+-	unsigned char mcr;
++	unsigned char mcr = serial8250_in_MCR(up);
+ 
+ 	if (!(up->port.rs485.flags & SER_RS485_RX_DURING_TX))
+ 		serial8250_stop_rx(&up->port);
+ 
+-	/*
+-	 * While serial8250_em485_handle_stop_tx() is a noop if
+-	 * em485->active_timer != &em485->stop_tx_timer, it might happen that
+-	 * the timer is still armed and triggers only after the current bunch of
+-	 * chars is send and em485->active_timer == &em485->stop_tx_timer again.
+-	 * So cancel the timer. There is still a theoretical race condition if
+-	 * the timer is already running and only comes around to check for
+-	 * em485->active_timer when &em485->stop_tx_timer is armed again.
+-	 */
+-	if (em485->active_timer == &em485->stop_tx_timer)
+-		hrtimer_try_to_cancel(&em485->stop_tx_timer);
++	if (up->port.rs485.flags & SER_RS485_RTS_ON_SEND)
++		mcr |= UART_MCR_RTS;
++	else
++		mcr &= ~UART_MCR_RTS;
++	serial8250_out_MCR(up, mcr);
++}
++EXPORT_SYMBOL_GPL(serial8250_em485_start_tx);
++
++static inline void start_tx_rs485(struct uart_port *port)
++{
++	struct uart_8250_port *up = up_to_u8250p(port);
++	struct uart_8250_em485 *em485 = up->em485;
+ 
+ 	em485->active_timer = NULL;
+ 
+-	mcr = serial8250_in_MCR(up);
+-	if (!!(up->port.rs485.flags & SER_RS485_RTS_ON_SEND) !=
+-	    !!(mcr & UART_MCR_RTS)) {
+-		if (up->port.rs485.flags & SER_RS485_RTS_ON_SEND)
+-			mcr |= UART_MCR_RTS;
+-		else
+-			mcr &= ~UART_MCR_RTS;
+-		serial8250_out_MCR(up, mcr);
++	if (em485->tx_stopped) {
++		em485->tx_stopped = false;
++
++		up->rs485_start_tx(up);
+ 
+ 		if (up->port.rs485.delay_rts_before_send > 0) {
+ 			em485->active_timer = &em485->start_tx_timer;
+@@ -1583,19 +1637,18 @@ static inline void start_tx_rs485(struct
+ 
+ static enum hrtimer_restart serial8250_em485_handle_start_tx(struct hrtimer *t)
+ {
+-	struct uart_8250_em485 *em485;
+-	struct uart_8250_port *p;
++	struct uart_8250_em485 *em485 = container_of(t, struct uart_8250_em485,
++			start_tx_timer);
++	struct uart_8250_port *p = em485->port;
+ 	unsigned long flags;
+ 
+-	em485 = container_of(t, struct uart_8250_em485, start_tx_timer);
+-	p = em485->port;
+-
+ 	spin_lock_irqsave(&p->port.lock, flags);
+ 	if (em485->active_timer == &em485->start_tx_timer) {
+ 		__start_tx(&p->port);
+ 		em485->active_timer = NULL;
+ 	}
+ 	spin_unlock_irqrestore(&p->port.lock, flags);
++
+ 	return HRTIMER_NORESTART;
+ }
+ 
+@@ -1705,7 +1758,7 @@ void serial8250_read_char(struct uart_82
+ 		lsr &= port->read_status_mask;
+ 
+ 		if (lsr & UART_LSR_BI) {
+-			pr_debug("%s: handling break\n", __func__);
++			dev_dbg(port->dev, "handling break\n");
+ 			flag = TTY_BREAK;
+ 		} else if (lsr & UART_LSR_PE)
+ 			flag = TTY_PARITY;
+@@ -1765,6 +1818,18 @@ void serial8250_tx_chars(struct uart_825
+ 	count = up->tx_loadsz;
+ 	do {
+ 		serial_out(up, UART_TX, xmit->buf[xmit->tail]);
++		if (up->bugs & UART_BUG_TXRACE) {
++			/*
++			 * The Aspeed BMC virtual UARTs have a bug where data
++			 * may get stuck in the BMC's Tx FIFO from bursts of
++			 * writes on the APB interface.
++			 *
++			 * Delay back-to-back writes by a read cycle to avoid
++			 * stalling the VUART. Read a register that won't have
++			 * side-effects and discard the result.
++			 */
++			serial_in(up, UART_SCR);
++		}
+ 		xmit->tail = (xmit->tail + 1) & (UART_XMIT_SIZE - 1);
+ 		port->icount.tx++;
+ 		if (uart_circ_empty(xmit))
+@@ -1838,9 +1903,9 @@ static bool handle_rx_dma(struct uart_82
+ int serial8250_handle_irq(struct uart_port *port, unsigned int iir)
+ {
+ 	unsigned char status;
+-	unsigned long flags;
+ 	struct uart_8250_port *up = up_to_u8250p(port);
+ 	bool skip_rx = false;
++	unsigned long flags;
+ 
+ 	if (iir & UART_IIR_NO_INT)
+ 		return 0;
+@@ -1872,6 +1937,7 @@ int serial8250_handle_irq(struct uart_po
+ 		serial8250_tx_chars(up);
+ 
+ 	uart_unlock_and_check_sysrq(port, flags);
++
+ 	return 1;
+ }
+ EXPORT_SYMBOL_GPL(serial8250_handle_irq);
+@@ -1965,7 +2031,7 @@ void serial8250_do_set_mctrl(struct uart
+ 
+ 	mcr = serial8250_TIOCM_to_MCR(mctrl);
+ 
+-	mcr = (mcr & up->mcr_mask) | up->mcr_force | up->mcr;
++	mcr |= up->mcr;
+ 
+ 	serial8250_out_MCR(up, mcr);
+ }
+@@ -1995,10 +2061,7 @@ static void serial8250_break_ctl(struct
+ 	serial8250_rpm_put(up);
+ }
+ 
+-/*
+- *	Wait for transmitter & holding register to empty
+- */
+-static void wait_for_xmitr(struct uart_8250_port *up, int bits)
++static void wait_for_lsr(struct uart_8250_port *up, int bits)
+ {
+ 	unsigned int status, tmout = 10000;
+ 
+@@ -2015,6 +2078,16 @@ static void wait_for_xmitr(struct uart_8
+ 		udelay(1);
+ 		touch_nmi_watchdog();
+ 	}
++}
++
++/*
++ *	Wait for transmitter & holding register to empty
++ */
++static void wait_for_xmitr(struct uart_8250_port *up, int bits)
++{
++	unsigned int tmout;
++
++	wait_for_lsr(up, bits);
+ 
+ 	/* Wait up to 1s for flow control if necessary */
+ 	if (up->port.flags & UPF_CONS_FLOW) {
+@@ -2152,20 +2225,6 @@ int serial8250_do_startup(struct uart_po
+ 	enable_rsa(up);
+ #endif
+ 
+-	if (port->type == PORT_XR17V35X) {
+-		/*
+-		 * First enable access to IER [7:5], ISR [5:4], FCR [5:4],
+-		 * MCR [7:5] and MSR [7:0]
+-		 */
+-		serial_port_out(port, UART_XR_EFR, UART_EFR_ECB);
+-
+-		/*
+-		 * Make sure all interrups are masked until initialization is
+-		 * complete and the FIFOs are cleared
+-		 */
+-		serial_port_out(port, UART_IER, 0);
+-	}
+-
+ 	/*
+ 	 * Clear the FIFO buffers and disable them.
+ 	 * (they will be reenabled in set_termios())
+@@ -2187,7 +2246,7 @@ int serial8250_do_startup(struct uart_po
+ 	 */
+ 	if (!(port->flags & UPF_BUGGY_UART) &&
+ 	    (serial_port_in(port, UART_LSR) == 0xff)) {
+-		pr_info_ratelimited("%s: LSR safety check engaged!\n", port->name);
++		dev_info_ratelimited(port->dev, "LSR safety check engaged!\n");
+ 		retval = -ENODEV;
+ 		goto out;
+ 	}
+@@ -2219,8 +2278,7 @@ int serial8250_do_startup(struct uart_po
+ 	     (port->type == PORT_ALTR_16550_F128)) && (port->fifosize > 1)) {
+ 		/* Bounds checking of TX threshold (valid 0 to fifosize-2) */
+ 		if ((up->tx_loadsz < 2) || (up->tx_loadsz > port->fifosize)) {
+-			pr_err("%s TX FIFO Threshold errors, skipping\n",
+-			       port->name);
++			dev_err(port->dev, "TX FIFO Threshold errors, skipping\n");
+ 		} else {
+ 			serial_port_out(port, UART_ALTR_AFR,
+ 					UART_ALTR_EN_TXFIFO_LW);
+@@ -2324,8 +2382,7 @@ int serial8250_do_startup(struct uart_po
+ 	if (lsr & UART_LSR_TEMT && iir & UART_IIR_NO_INT) {
+ 		if (!(up->bugs & UART_BUG_TXEN)) {
+ 			up->bugs |= UART_BUG_TXEN;
+-			pr_debug("%s - enabling bad tx status workarounds\n",
+-				 port->name);
++			dev_dbg(port->dev, "enabling bad tx status workarounds\n");
+ 		}
+ 	} else {
+ 		up->bugs &= ~UART_BUG_TXEN;
+@@ -2350,10 +2407,14 @@ dont_test_tx_en:
+ 	 * Request DMA channels for both RX and TX.
+ 	 */
+ 	if (up->dma) {
+-		retval = serial8250_request_dma(up);
+-		if (retval) {
+-			pr_warn_ratelimited("%s - failed to request DMA\n",
+-					    port->name);
++		const char *msg = NULL;
++
++		if (uart_console(port))
++			msg = "forbid DMA for kernel console";
++		else if (serial8250_request_dma(up))
++			msg = "failed to request DMA";
++		if (msg) {
++			dev_warn_ratelimited(port->dev, "%s\n", msg);
+ 			up->dma = NULL;
+ 		}
+ 	}
+@@ -2464,19 +2525,45 @@ static unsigned int serial8250_do_get_di
+ 					      unsigned int baud,
+ 					      unsigned int *frac)
+ {
++	upf_t magic_multiplier = port->flags & UPF_MAGIC_MULTIPLIER;
+ 	struct uart_8250_port *up = up_to_u8250p(port);
+ 	unsigned int quot;
+ 
+ 	/*
+-	 * Handle magic divisors for baud rates above baud_base on
+-	 * SMSC SuperIO chips.
++	 * Handle magic divisors for baud rates above baud_base on SMSC
++	 * Super I/O chips.  We clamp custom rates from clk/6 and clk/12
++	 * up to clk/4 (0x8001) and clk/8 (0x8002) respectively.  These
++	 * magic divisors actually reprogram the baud rate generator's
++	 * reference clock derived from chips's 14.318MHz clock input.
++	 *
++	 * Documentation claims that with these magic divisors the base
++	 * frequencies of 7.3728MHz and 3.6864MHz are used respectively
++	 * for the extra baud rates of 460800bps and 230400bps rather
++	 * than the usual base frequency of 1.8462MHz.  However empirical
++	 * evidence contradicts that.
+ 	 *
++	 * Instead bit 7 of the DLM register (bit 15 of the divisor) is
++	 * effectively used as a clock prescaler selection bit for the
++	 * base frequency of 7.3728MHz, always used.  If set to 0, then
++	 * the base frequency is divided by 4 for use by the Baud Rate
++	 * Generator, for the usual arrangement where the value of 1 of
++	 * the divisor produces the baud rate of 115200bps.  Conversely,
++	 * if set to 1 and high-speed operation has been enabled with the
++	 * Serial Port Mode Register in the Device Configuration Space,
++	 * then the base frequency is supplied directly to the Baud Rate
++	 * Generator, so for the divisor values of 0x8001, 0x8002, 0x8003,
++	 * 0x8004, etc. the respective baud rates produced are 460800bps,
++	 * 230400bps, 153600bps, 115200bps, etc.
++	 *
++	 * In all cases only low 15 bits of the divisor are used to divide
++	 * the baud base and therefore 32767 is the maximum divisor value
++	 * possible, even though documentation says that the programmable
++	 * Baud Rate Generator is capable of dividing the internal PLL
++	 * clock by any divisor from 1 to 65535.
+ 	 */
+-	if ((port->flags & UPF_MAGIC_MULTIPLIER) &&
+-	    baud == (port->uartclk/4))
++	if (magic_multiplier && baud >= port->uartclk / 6)
+ 		quot = 0x8001;
+-	else if ((port->flags & UPF_MAGIC_MULTIPLIER) &&
+-		 baud == (port->uartclk/8))
++	else if (magic_multiplier && baud >= port->uartclk / 12)
+ 		quot = 0x8002;
+ 	else if (up->port.type == PORT_NPCM)
+ 		quot = npcm_get_divisor(up, baud);
+@@ -2606,6 +2693,62 @@ static unsigned int serial8250_get_baud_
+ 	return uart_get_baud_rate(port, termios, old, min, max);
+ }
+ 
++/*
++ * Note in order to avoid the tty port mutex deadlock don't use the next method
++ * within the uart port callbacks. Primarily it's supposed to be utilized to
++ * handle a sudden reference clock rate change.
++ */
++void serial8250_update_uartclk(struct uart_port *port, unsigned int uartclk)
++{
++	struct uart_8250_port *up = up_to_u8250p(port);
++	struct tty_port *tport = &port->state->port;
++	unsigned int baud, quot, frac = 0;
++	struct ktermios *termios;
++	struct tty_struct *tty;
++	unsigned long flags;
++
++	tty = tty_port_tty_get(tport);
++	if (!tty) {
++		mutex_lock(&tport->mutex);
++		port->uartclk = uartclk;
++		mutex_unlock(&tport->mutex);
++		return;
++	}
++
++	down_write(&tty->termios_rwsem);
++	mutex_lock(&tport->mutex);
++
++	if (port->uartclk == uartclk)
++		goto out_unlock;
++
++	port->uartclk = uartclk;
++
++	if (!tty_port_initialized(tport))
++		goto out_unlock;
++
++	termios = &tty->termios;
++
++	baud = serial8250_get_baud_rate(port, termios, NULL);
++	quot = serial8250_get_divisor(port, baud, &frac);
++
++	serial8250_rpm_get(up);
++	spin_lock_irqsave(&port->lock, flags);
++
++	uart_update_timeout(port, termios->c_cflag, baud);
++
++	serial8250_set_divisor(port, baud, quot, frac);
++	serial_port_out(port, UART_LCR, up->lcr);
++
++	spin_unlock_irqrestore(&port->lock, flags);
++	serial8250_rpm_put(up);
++
++out_unlock:
++	mutex_unlock(&tport->mutex);
++	up_write(&tty->termios_rwsem);
++	tty_kref_put(tty);
++}
++EXPORT_SYMBOL_GPL(serial8250_update_uartclk);
++
+ void
+ serial8250_do_set_termios(struct uart_port *port, struct ktermios *termios,
+ 			  struct ktermios *old)
+@@ -2842,7 +2985,7 @@ static int serial8250_request_std_resour
+ 		}
+ 
+ 		if (port->flags & UPF_IOREMAP) {
+-			port->membase = ioremap_nocache(port->mapbase, size);
++			port->membase = ioremap(port->mapbase, size);
+ 			if (!port->membase) {
+ 				release_mem_region(port->mapbase, size);
+ 				ret = -ENOMEM;
+@@ -2953,7 +3096,7 @@ static int do_serial8250_get_rxtrig(stru
+ 	return rxtrig_bytes;
+ }
+ 
+-static ssize_t serial8250_get_attr_rx_trig_bytes(struct device *dev,
++static ssize_t rx_trig_bytes_show(struct device *dev,
+ 	struct device_attribute *attr, char *buf)
+ {
+ 	struct tty_port *port = dev_get_drvdata(dev);
+@@ -2963,7 +3106,7 @@ static ssize_t serial8250_get_attr_rx_tr
+ 	if (rxtrig_bytes < 0)
+ 		return rxtrig_bytes;
+ 
+-	return snprintf(buf, PAGE_SIZE, "%d\n", rxtrig_bytes);
++	return sysfs_emit(buf, "%d\n", rxtrig_bytes);
+ }
+ 
+ static int do_set_rxtrig(struct tty_port *port, unsigned char bytes)
+@@ -2999,7 +3142,7 @@ static int do_serial8250_set_rxtrig(stru
+ 	return ret;
+ }
+ 
+-static ssize_t serial8250_set_attr_rx_trig_bytes(struct device *dev,
++static ssize_t rx_trig_bytes_store(struct device *dev,
+ 	struct device_attribute *attr, const char *buf, size_t count)
+ {
+ 	struct tty_port *port = dev_get_drvdata(dev);
+@@ -3020,18 +3163,16 @@ static ssize_t serial8250_set_attr_rx_tr
+ 	return count;
+ }
+ 
+-static DEVICE_ATTR(rx_trig_bytes, S_IRUSR | S_IWUSR | S_IRGRP,
+-		   serial8250_get_attr_rx_trig_bytes,
+-		   serial8250_set_attr_rx_trig_bytes);
++static DEVICE_ATTR_RW(rx_trig_bytes);
+ 
+ static struct attribute *serial8250_dev_attrs[] = {
+ 	&dev_attr_rx_trig_bytes.attr,
+-	NULL,
+-	};
++	NULL
++};
+ 
+ static struct attribute_group serial8250_dev_attr_group = {
+ 	.attrs = serial8250_dev_attrs,
+-	};
++};
+ 
+ static void register_dev_spec_attr_grp(struct uart_8250_port *up)
+ {
+@@ -3060,6 +3201,9 @@ static void serial8250_config_port(struc
+ 	if (flags & UART_CONFIG_TYPE)
+ 		autoconfig(up);
+ 
++	if (port->rs485.flags & SER_RS485_ENABLED)
++		port->rs485_config(port, &port->rs485);
++
+ 	/* if access method is AU, it is a 16550 with a quirk */
+ 	if (port->type == PORT_16550A && port->iotype == UPIO_AU)
+ 		up->bugs |= UART_BUG_NOMSR;
+@@ -3131,6 +3275,7 @@ void serial8250_init_port(struct uart_82
+ 
+ 	spin_lock_init(&port->lock);
+ 	port->ops = &serial8250_pops;
++//	port->has_sysrq = IS_ENABLED(CONFIG_SERIAL_8250_CONSOLE);
+ 
+ 	up->cur_iotype = 0xFF;
+ }
+@@ -3196,7 +3341,36 @@ static void serial8250_console_restore(s
+ 
+ 	serial8250_set_divisor(port, baud, quot, frac);
+ 	serial_port_out(port, UART_LCR, up->lcr);
+-	serial8250_out_MCR(up, up->mcr | UART_MCR_DTR | UART_MCR_RTS);
++	serial8250_out_MCR(up, UART_MCR_DTR | UART_MCR_RTS);
++}
++
++/*
++ * Print a string to the serial port using the device FIFO
++ *
++ * It sends fifosize bytes and then waits for the fifo
++ * to get empty.
++ */
++static void serial8250_console_fifo_write(struct uart_8250_port *up,
++					  const char *s, unsigned int count)
++{
++	int i;
++	const char *end = s + count;
++	unsigned int fifosize = up->port.fifosize;
++	bool cr_sent = false;
++
++	while (s != end) {
++		wait_for_lsr(up, UART_LSR_THRE);
++
++		for (i = 0; i < fifosize && s != end; ++i) {
++			if (*s == '\n' && !cr_sent) {
++				serial_out(up, UART_TX, '\r');
++				cr_sent = true;
++			} else {
++				serial_out(up, UART_TX, *s++);
++				cr_sent = false;
++			}
++		}
++	}
+ }
+ 
+ /*
+@@ -3204,19 +3378,21 @@ static void serial8250_console_restore(s
+  *	any possible real use of the port...
+  *
+  *	The console_lock must be held when we get here.
++ *
++ *	Doing runtime PM is really a bad idea for the kernel console.
++ *	Thus, we assume the function is called when device is powered up.
+  */
+ void serial8250_console_write(struct uart_8250_port *up, const char *s,
+ 			      unsigned int count)
+ {
++	struct uart_8250_em485 *em485 = up->em485;
+ 	struct uart_port *port = &up->port;
+ 	unsigned long flags;
+-	unsigned int ier;
++	unsigned int ier, use_fifo;
+ 	int locked = 1;
+ 
+ 	touch_nmi_watchdog();
+ 
+-	serial8250_rpm_get(up);
+-
+ 	if (oops_in_progress)
+ 		locked = spin_trylock_irqsave(&port->lock, flags);
+ 	else
+@@ -3238,13 +3414,39 @@ void serial8250_console_write(struct uar
+ 		up->canary = 0;
+ 	}
+ 
+-	uart_console_write(port, s, count, serial8250_console_putchar);
++	if (em485) {
++		if (em485->tx_stopped)
++			up->rs485_start_tx(up);
++		mdelay(port->rs485.delay_rts_before_send);
++	}
++
++	use_fifo = (up->capabilities & UART_CAP_FIFO) &&
++		port->fifosize > 1 &&
++		(serial_port_in(port, UART_FCR) & UART_FCR_ENABLE_FIFO) &&
++		/*
++		 * After we put a data in the fifo, the controller will send
++		 * it regardless of the CTS state. Therefore, only use fifo
++		 * if we don't use control flow.
++		 */
++		!(up->port.flags & UPF_CONS_FLOW);
++
++	if (likely(use_fifo))
++		serial8250_console_fifo_write(up, s, count);
++	else
++		uart_console_write(port, s, count, serial8250_console_putchar);
+ 
+ 	/*
+ 	 *	Finally, wait for transmitter to become empty
+ 	 *	and restore the IER
+ 	 */
+ 	wait_for_xmitr(up, BOTH_EMPTY);
++
++	if (em485) {
++		mdelay(port->rs485.delay_rts_after_send);
++		if (em485->tx_stopped)
++			up->rs485_stop_tx(up);
++	}
++
+ 	serial_port_out(port, UART_IER, ier);
+ 
+ 	/*
+@@ -3259,7 +3461,6 @@ void serial8250_console_write(struct uar
+ 
+ 	if (locked)
+ 		spin_unlock_irqrestore(&port->lock, flags);
+-	serial8250_rpm_put(up);
+ }
+ 
+ static unsigned int probe_baud(struct uart_port *port)
+@@ -3283,6 +3484,7 @@ int serial8250_console_setup(struct uart
+ 	int bits = 8;
+ 	int parity = 'n';
+ 	int flow = 'n';
++	int ret;
+ 
+ 	if (!port->iobase && !port->membase)
+ 		return -ENODEV;
+@@ -3292,7 +3494,22 @@ int serial8250_console_setup(struct uart
+ 	else if (probe)
+ 		baud = probe_baud(port);
+ 
+-	return uart_set_options(port, port->cons, baud, parity, bits, flow);
++	ret = uart_set_options(port, port->cons, baud, parity, bits, flow);
++	if (ret)
++		return ret;
++
++	if (port->dev)
++		pm_runtime_get_sync(port->dev);
++
++	return 0;
++}
++
++int serial8250_console_exit(struct uart_port *port)
++{
++	if (port->dev)
++		pm_runtime_put_sync(port->dev);
++
++	return 0;
+ }
+ 
+ #endif /* CONFIG_SERIAL_8250_CONSOLE */
+--- a/drivers/tty/serial/8250/8250_pxa.c
++++ b/drivers/tty/serial/8250/8250_pxa.c
+@@ -18,7 +18,6 @@
+ #include <linux/serial_core.h>
+ #include <linux/serial_reg.h>
+ #include <linux/of.h>
+-#include <linux/of_irq.h>
+ #include <linux/of_platform.h>
+ #include <linux/platform_device.h>
+ #include <linux/slab.h>
+@@ -93,12 +92,15 @@ static int serial_pxa_probe(struct platf
+ {
+ 	struct uart_8250_port uart = {};
+ 	struct pxa8250_data *data;
+-	struct resource *mmres, *irqres;
+-	int ret;
++	struct resource *mmres;
++	int irq, ret;
++
++	irq = platform_get_irq(pdev, 0);
++	if (irq < 0)
++		return irq;
+ 
+ 	mmres = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+-	irqres = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
+-	if (!mmres || !irqres)
++	if (!mmres)
+ 		return -ENODEV;
+ 
+ 	data = devm_kzalloc(&pdev->dev, sizeof(*data), GFP_KERNEL);
+@@ -121,9 +123,9 @@ static int serial_pxa_probe(struct platf
+ 	uart.port.iotype = UPIO_MEM32;
+ 	uart.port.mapbase = mmres->start;
+ 	uart.port.regshift = 2;
+-	uart.port.irq = irqres->start;
++	uart.port.irq = irq;
+ 	uart.port.fifosize = 64;
+-	uart.port.flags = UPF_IOREMAP | UPF_SKIP_TEST;
++	uart.port.flags = UPF_IOREMAP | UPF_SKIP_TEST | UPF_FIXED_TYPE;
+ 	uart.port.dev = &pdev->dev;
+ 	uart.port.uartclk = clk_get_rate(data->clk);
+ 	uart.port.pm = serial_pxa_pm;
+--- a/drivers/tty/serial/8250/8250_uniphier.c
++++ b/drivers/tty/serial/8250/8250_uniphier.c
+@@ -75,7 +75,7 @@ static unsigned int uniphier_serial_in(s
+ 		break;
+ 	case UART_LCR:
+ 		valshift = 8;
+-		/* fall through */
++		fallthrough;
+ 	case UART_MCR:
+ 		offset = UNIPHIER_UART_LCR_MCR;
+ 		break;
+@@ -101,7 +101,7 @@ static void uniphier_serial_out(struct u
+ 	case UART_SCR:
+ 		/* No SCR for this hardware.  Use CHAR as a scratch register */
+ 		valshift = 8;
+-		/* fall through */
++		fallthrough;
+ 	case UART_FCR:
+ 		offset = UNIPHIER_UART_CHAR_FCR;
+ 		break;
+@@ -109,7 +109,7 @@ static void uniphier_serial_out(struct u
+ 		valshift = 8;
+ 		/* Divisor latch access bit does not exist. */
+ 		value &= ~UART_LCR_DLAB;
+-		/* fall through */
++		fallthrough;
+ 	case UART_MCR:
+ 		offset = UNIPHIER_UART_LCR_MCR;
+ 		break;
+--- a/drivers/tty/serial/8250/Kconfig
++++ b/drivers/tty/serial/8250/Kconfig
+@@ -9,14 +9,13 @@ config SERIAL_8250
+ 	depends on !S390
+ 	select SERIAL_CORE
+ 	select SERIAL_MCTRL_GPIO if GPIOLIB
+-	---help---
++	help
+ 	  This selects whether you want to include the driver for the standard
+ 	  serial ports.  The standard answer is Y.  People who might say N
+ 	  here are those that are setting up dedicated Ethernet WWW/FTP
+ 	  servers, or users that have one of the various bus mice instead of a
+ 	  serial mouse and don't intend to use their machine's standard serial
+-	  port for anything.  (Note that the Cyclades multi serial port driver
+-	  does not need this driver built in for it to work.)
++	  port for anything.
+ 
+ 	  To compile this driver as a module, choose M here: the
+ 	  module will be called 8250.
+@@ -39,7 +38,7 @@ config SERIAL_8250_DEPRECATED_OPTIONS
+ 	bool "Support 8250_core.* kernel options (DEPRECATED)"
+ 	depends on SERIAL_8250
+ 	default y
+-	---help---
++	help
+ 	  In 3.7 we renamed 8250 to 8250_core by mistake, so now we have to
+ 	  accept kernel parameters in both forms like 8250_core.nr_uarts=4 and
+ 	  8250.nr_uarts=4. We now renamed the module back to 8250, but if
+@@ -56,14 +55,25 @@ config SERIAL_8250_PNP
+ 	bool "8250/16550 PNP device support" if EXPERT
+ 	depends on SERIAL_8250 && PNP
+ 	default y
+-	---help---
++	help
+ 	  This builds standard PNP serial support. You may be able to
+ 	  disable this feature if you only need legacy serial support.
+ 
++config SERIAL_8250_16550A_VARIANTS
++	bool "Support for variants of the 16550A serial port"
++	depends on SERIAL_8250
++	default !X86
++	help
++	  The 8250 driver can probe for many variants of the venerable 16550A
++	  serial port. Doing so takes additional time at boot.
++
++	  On modern systems, especially those using serial only for a simple
++	  console, you can say N here.
++
+ config SERIAL_8250_FINTEK
+ 	bool "Support for Fintek F81216A LPC to 4 UART RS485 API"
+ 	depends on SERIAL_8250
+-	---help---
++	help
+ 	  Selecting this option will add support for the RS485 capabilities
+ 	  of the Fintek F81216A LPC to 4 UART.
+ 
+@@ -77,7 +87,7 @@ config SERIAL_8250_CONSOLE
+ 	depends on SERIAL_8250=y
+ 	select SERIAL_CORE_CONSOLE
+ 	select SERIAL_EARLYCON
+-	---help---
++	help
+ 	  If you say Y here, it will be possible to use a serial port as the
+ 	  system console (the system console is the device which receives all
+ 	  kernel messages and warnings and which allows logins in single user
+@@ -147,7 +157,7 @@ config SERIAL_8250_HP300
+ config SERIAL_8250_CS
+ 	tristate "8250/16550 PCMCIA device support"
+ 	depends on PCMCIA && SERIAL_8250
+-	---help---
++	help
+ 	  Say Y here to enable support for 16-bit PCMCIA serial devices,
+ 	  including serial port cards, modems, and the modem functions of
+ 	  multi-function Ethernet/modem cards. (PCMCIA- or PC-cards are
+@@ -211,11 +221,11 @@ config SERIAL_8250_MANY_PORTS
+ 	  Say Y here if you have dumb serial boards other than the four
+ 	  standard COM 1/2/3/4 ports. This may happen if you have an AST
+ 	  FourPort, Accent Async, Boca (read the Boca mini-HOWTO, available
+-	  from <http://www.tldp.org/docs.html#howto>), or other custom
++	  from <https://www.tldp.org/docs.html#howto>), or other custom
+ 	  serial port hardware which acts similar to standard serial port
+ 	  hardware. If you only use the standard COM 1/2/3/4 ports, you can
+ 	  say N here to save some memory. You can also say Y if you have an
+-	  "intelligent" multiport card such as Cyclades, Digiboards, etc.
++	  "intelligent" multiport card such as Digiboards, etc.
+ 
+ #
+ # Multi-port serial cards
+@@ -243,6 +253,7 @@ config SERIAL_8250_ASPEED_VUART
+ 	tristate "Aspeed Virtual UART"
+ 	depends on SERIAL_8250
+ 	depends on OF
++	depends on REGMAP && MFD_SYSCON
+ 	help
+ 	  If you want to use the virtual UART (VUART) device on Aspeed
+ 	  BMC platforms, enable this option. This enables the 16550A-
+@@ -254,7 +265,7 @@ config SERIAL_8250_BOCA
+ 	depends on SERIAL_8250 != n && ISA && SERIAL_8250_MANY_PORTS
+ 	help
+ 	  Say Y here if you have a Boca serial board.  Please read the Boca
+-	  mini-HOWTO, available from <http://www.tldp.org/docs.html#howto>
++	  mini-HOWTO, available from <https://www.tldp.org/docs.html#howto>
+ 
+ 	  To compile this driver as a module, choose M here: the module
+ 	  will be called 8250_boca.
+@@ -334,7 +345,7 @@ config SERIAL_8250_BCM2835AUX
+ 
+ 	  Features and limitations of the UART are
+ 	    Registers are similar to 16650 registers,
+-              set bits in the control registers that are unsupported
++	      set bits in the control registers that are unsupported
+ 	      are ignored and read back as 0
+ 	    7/8 bit operation with 1 start and 1 stop bit
+ 	    8 symbols deep fifo for rx and tx
+@@ -350,9 +361,13 @@ config SERIAL_8250_BCM2835AUX
+ 	  If unsure, say N.
+ 
+ config SERIAL_8250_FSL
+-	bool
++	bool "Freescale 16550 UART support" if COMPILE_TEST && !(PPC || ARM || ARM64)
+ 	depends on SERIAL_8250_CONSOLE
+ 	default PPC || ARM || ARM64
++	help
++	  Selecting this option enables a workaround for a break-detection
++	  erratum for Freescale 16550 UARTs in the 8250 driver. It also
++	  enables support for ACPI enumeration.
+ 
+ config SERIAL_8250_DW
+ 	tristate "Support for Synopsys DesignWare 8250 quirks"
+@@ -364,12 +379,25 @@ config SERIAL_8250_DW
+ 
+ config SERIAL_8250_EM
+ 	tristate "Support for Emma Mobile integrated serial port"
+-	depends on SERIAL_8250 && ARM && HAVE_CLK
++	depends on SERIAL_8250 && HAVE_CLK
++	depends on (ARM && ARCH_RENESAS) || COMPILE_TEST
+ 	help
+ 	  Selecting this option will add support for the integrated serial
+ 	  port hardware found on the Emma Mobile line of processors.
+ 	  If unsure, say N.
+ 
++config SERIAL_8250_IOC3
++	tristate "SGI IOC3 8250 UART support"
++	depends on SERIAL_8250
++	depends on SGI_MFD_IOC3 || COMPILE_TEST
++	select SERIAL_8250_EXTENDED
++	select SERIAL_8250_SHARE_IRQ
++	help
++	  Enable this if you have a SGI Origin or Octane machine. This module
++	  provides basic serial support by directly driving the UART chip
++	  behind the IOC3 device on those systems.  Maximum baud speed is
++	  38400bps using this driver.
++
+ config SERIAL_8250_RT288X
+ 	bool "Ralink RT288x/RT305x/RT3662/RT3883 serial port support"
+ 	depends on SERIAL_8250
+@@ -381,7 +409,8 @@ config SERIAL_8250_RT288X
+ 
+ config SERIAL_8250_OMAP
+ 	tristate "Support for OMAP internal UART (8250 based driver)"
+-	depends on SERIAL_8250 && (ARCH_OMAP2PLUS || ARCH_K3)
++	depends on SERIAL_8250
++	depends on ARCH_OMAP2PLUS || ARCH_K3 || COMPILE_TEST
+ 	help
+ 	  If you have a machine based on an Texas Instruments OMAP CPU you
+ 	  can enable its onboard serial ports by enabling this option.
+@@ -417,7 +446,8 @@ config SERIAL_8250_LPC18XX
+ 
+ config SERIAL_8250_MT6577
+ 	tristate "Mediatek serial port support"
+-	depends on SERIAL_8250 && ARCH_MEDIATEK
++	depends on SERIAL_8250
++	depends on ARCH_MEDIATEK || COMPILE_TEST
+ 	help
+ 	  If you have a Mediatek based board and want to use the
+ 	  serial port, say Y to this option. If unsure, say N.
+@@ -468,16 +498,43 @@ config SERIAL_8250_MID
+ 	  present on the UART found on Intel Medfield SOC and various other
+ 	  Intel platforms.
+ 
++config SERIAL_8250_PERICOM
++	tristate "Support for Pericom and Acces I/O serial ports"
++	default SERIAL_8250
++	depends on SERIAL_8250 && PCI
++	help
++	  Selecting this option will enable handling of the extra features
++	  present on the Pericom and Acces I/O UARTs.
++
+ config SERIAL_8250_PXA
+ 	tristate "PXA serial port support"
+ 	depends on SERIAL_8250
+-	depends on ARCH_PXA || ARCH_MMP
++	depends on ARCH_PXA || ARCH_MMP || COMPILE_TEST
+ 	help
+ 	  If you have a machine based on an Intel XScale PXA2xx CPU you can
+ 	  enable its onboard serial ports by enabling this option. The option is
+ 	  applicable to both devicetree and legacy boards, and early console is
+ 	  part of its support.
+ 
++config SERIAL_8250_TEGRA
++	tristate "8250 support for Tegra serial ports"
++	default SERIAL_8250
++	depends on SERIAL_8250
++	depends on ARCH_TEGRA || COMPILE_TEST
++	help
++	  Select this option if you have machine with an NVIDIA Tegra SoC and
++	  wish to enable 8250 serial driver for the Tegra serial interfaces.
++
++config SERIAL_8250_BCM7271
++	tristate "Broadcom 8250 based serial port"
++	depends on SERIAL_8250 && (ARCH_BRCMSTB || COMPILE_TEST)
++	default ARCH_BRCMSTB
++	help
++	  If you have a Broadcom STB based board and want to use the
++	  enhanced features of the Broadcom 8250 based serial port,
++	  including DMA support and high accuracy BAUD rates, say
++	  Y to this option. If unsure, say N.
++
+ config SERIAL_OF_PLATFORM
+ 	tristate "Devicetree based probing for 8250 ports"
+ 	depends on SERIAL_8250 && OF
+--- a/drivers/tty/serial/8250/Makefile
++++ b/drivers/tty/serial/8250/Makefile
+@@ -5,6 +5,8 @@
+ 
+ obj-$(CONFIG_SERIAL_8250)		+= 8250.o 8250_base.o
+ 8250-y					:= 8250_core.o
++8250-$(CONFIG_ALPHA_GENERIC)		+= 8250_alpha.o
++8250-$(CONFIG_ALPHA_JENSEN)		+= 8250_alpha.o
+ 8250-$(CONFIG_SERIAL_8250_PNP)		+= 8250_pnp.o
+ 8250_base-y				:= 8250_port.o
+ 8250_base-$(CONFIG_SERIAL_8250_DMA)	+= 8250_dma.o
+@@ -28,6 +30,7 @@ obj-$(CONFIG_SERIAL_8250_FSL)		+= 8250_f
+ obj-$(CONFIG_SERIAL_8250_MEN_MCB)	+= 8250_men_mcb.o
+ obj-$(CONFIG_SERIAL_8250_DW)		+= 8250_dw.o
+ obj-$(CONFIG_SERIAL_8250_EM)		+= 8250_em.o
++obj-$(CONFIG_SERIAL_8250_IOC3)		+= 8250_ioc3.o
+ obj-$(CONFIG_SERIAL_8250_OMAP)		+= 8250_omap.o
+ obj-$(CONFIG_SERIAL_8250_LPC18XX)	+= 8250_lpc18xx.o
+ obj-$(CONFIG_SERIAL_8250_MT6577)	+= 8250_mtk.o
+@@ -35,7 +38,10 @@ obj-$(CONFIG_SERIAL_8250_UNIPHIER)	+= 82
+ obj-$(CONFIG_SERIAL_8250_INGENIC)	+= 8250_ingenic.o
+ obj-$(CONFIG_SERIAL_8250_LPSS)		+= 8250_lpss.o
+ obj-$(CONFIG_SERIAL_8250_MID)		+= 8250_mid.o
++# obj-$(CONFIG_SERIAL_8250_PERICOM)	+= 8250_pericom.o
+ obj-$(CONFIG_SERIAL_8250_PXA)		+= 8250_pxa.o
++obj-$(CONFIG_SERIAL_8250_TEGRA)		+= 8250_tegra.o
++obj-$(CONFIG_SERIAL_8250_BCM7271)	+= 8250_bcm7271.o
+ obj-$(CONFIG_SERIAL_OF_PLATFORM)	+= 8250_of.o
+ 
+ CFLAGS_8250_ingenic.o += -I$(srctree)/scripts/dtc/libfdt
+--- a/include/linux/serial_8250.h
++++ b/include/linux/serial_8250.h
+@@ -25,6 +25,7 @@ struct plat_serial8250_port {
+ 	unsigned char	regshift;	/* register shift */
+ 	unsigned char	iotype;		/* UPIO_* */
+ 	unsigned char	hub6;
++	unsigned char	has_sysrq;	/* supports magic SysRq */
+ 	upf_t		flags;		/* UPF_* flags */
+ 	unsigned int	type;		/* If UPF_FIXED_TYPE */
+ 	unsigned int	(*serial_in)(struct uart_port *, int);
+@@ -80,6 +81,7 @@ struct uart_8250_em485 {
+ 	struct hrtimer		stop_tx_timer;  /* "rs485 stop tx" timer */
+ 	struct hrtimer		*active_timer;  /* pointer to active timer */
+ 	struct uart_8250_port	*port;          /* for hrtimer callbacks */
++	unsigned int		tx_stopped:1;	/* tx is currently stopped */
+ };
+ 
+ /*
+@@ -102,8 +104,6 @@ struct uart_8250_port {
+ 	unsigned char		ier;
+ 	unsigned char		lcr;
+ 	unsigned char		mcr;
+-	unsigned char		mcr_mask;	/* mask of user bits */
+-	unsigned char		mcr_force;	/* mask of forced bits */
+ 	unsigned char		cur_iotype;	/* Running I/O type */
+ 	unsigned int		rpm_tx_active;
+ 	unsigned char		canary;		/* non-zero during system sleep
+@@ -131,6 +131,8 @@ struct uart_8250_port {
+ 	void			(*dl_write)(struct uart_8250_port *, int);
+ 
+ 	struct uart_8250_em485 *em485;
++	void			(*rs485_start_tx)(struct uart_8250_port *);
++	void			(*rs485_stop_tx)(struct uart_8250_port *);
+ 
+ 	/* Serial port overrun backoff */
+ 	struct delayed_work overrun_backoff;
+@@ -142,7 +144,7 @@ static inline struct uart_8250_port *up_
+ 	return container_of(up, struct uart_8250_port, port);
+ }
+ 
+-int serial8250_register_8250_port(struct uart_8250_port *);
++int serial8250_register_8250_port(const struct uart_8250_port *);
+ void serial8250_unregister_port(int line);
+ void serial8250_suspend_port(int line);
+ void serial8250_resume_port(int line);
+@@ -151,6 +153,8 @@ extern int early_serial_setup(struct uar
+ 
+ extern int early_serial8250_setup(struct earlycon_device *device,
+ 					 const char *options);
++extern void serial8250_update_uartclk(struct uart_port *port,
++				      unsigned int uartclk);
+ extern void serial8250_do_set_termios(struct uart_port *port,
+ 		struct ktermios *termios, struct ktermios *old);
+ extern void serial8250_do_set_ldisc(struct uart_port *port,
+@@ -175,9 +179,15 @@ void serial8250_set_defaults(struct uart
+ void serial8250_console_write(struct uart_8250_port *up, const char *s,
+ 			      unsigned int count);
+ int serial8250_console_setup(struct uart_port *port, char *options, bool probe);
++int serial8250_console_exit(struct uart_port *port);
+ 
+ extern void serial8250_set_isa_configurator(void (*v)
+ 					(int port, struct uart_port *up,
+ 						u32 *capabilities));
+ 
++#ifdef CONFIG_SERIAL_8250_RT288X
++unsigned int au_serial_in(struct uart_port *p, int offset);
++void au_serial_out(struct uart_port *p, int offset, int value);
++#endif
++
+ #endif
+--- a/drivers/tty/serial/serial_core.c
++++ b/drivers/tty/serial/serial_core.c
+@@ -40,6 +40,11 @@ static struct lock_class_key port_lock_k
+ 
+ #define HIGH_BITS_OFFSET	((sizeof(long)-sizeof(int))*8)
+ 
++/*
++ * Max time with active RTS before/after data is sent.
++ */
++#define RS485_MAX_RTS_DELAY	100 /* msecs */
++
+ static void uart_change_speed(struct tty_struct *tty, struct uart_state *state,
+ 					struct ktermios *old_termios);
+ static void uart_wait_until_sent(struct tty_struct *tty, int timeout);
+@@ -145,7 +150,7 @@ uart_update_mctrl(struct uart_port *port
+ 	spin_lock_irqsave(&port->lock, flags);
+ 	old = port->mctrl;
+ 	port->mctrl = (old & ~clear) | set;
+-	if (old != port->mctrl)
++	if (old != port->mctrl && !(port->rs485.flags & SER_RS485_ENABLED))
+ 		port->ops->set_mctrl(port, port->mctrl);
+ 	spin_unlock_irqrestore(&port->lock, flags);
+ }
+@@ -155,23 +160,10 @@ uart_update_mctrl(struct uart_port *port
+ 
+ static void uart_port_dtr_rts(struct uart_port *uport, int raise)
+ {
+-	int rs485_on = uport->rs485_config &&
+-		(uport->rs485.flags & SER_RS485_ENABLED);
+-	int RTS_after_send = !!(uport->rs485.flags & SER_RS485_RTS_AFTER_SEND);
+-
+-	if (raise) {
+-		if (rs485_on && RTS_after_send) {
+-			uart_set_mctrl(uport, TIOCM_DTR);
+-			uart_clear_mctrl(uport, TIOCM_RTS);
+-		} else {
+-			uart_set_mctrl(uport, TIOCM_DTR | TIOCM_RTS);
+-		}
+-	} else {
+-		unsigned int clear = TIOCM_DTR;
+-
+-		clear |= (!rs485_on || RTS_after_send) ? TIOCM_RTS : 0;
+-		uart_clear_mctrl(uport, clear);
+-	}
++	if (raise)
++		uart_set_mctrl(uport, TIOCM_DTR | TIOCM_RTS);
++	else
++		uart_clear_mctrl(uport, TIOCM_DTR | TIOCM_RTS);
+ }
+ 
+ /*
+@@ -1318,8 +1310,41 @@ static int uart_set_rs485_config(struct
+ 	if (copy_from_user(&rs485, rs485_user, sizeof(*rs485_user)))
+ 		return -EFAULT;
+ 
++	/* pick sane settings if the user hasn't */
++	if (!(rs485.flags & SER_RS485_RTS_ON_SEND) ==
++	    !(rs485.flags & SER_RS485_RTS_AFTER_SEND)) {
++		dev_warn_ratelimited(port->dev,
++			"%s (%d): invalid RTS setting, using RTS_ON_SEND instead\n",
++			port->name, port->line);
++		rs485.flags |= SER_RS485_RTS_ON_SEND;
++		rs485.flags &= ~SER_RS485_RTS_AFTER_SEND;
++	}
++
++	if (rs485.delay_rts_before_send > RS485_MAX_RTS_DELAY) {
++		rs485.delay_rts_before_send = RS485_MAX_RTS_DELAY;
++		dev_warn_ratelimited(port->dev,
++			"%s (%d): RTS delay before sending clamped to %u ms\n",
++			port->name, port->line, rs485.delay_rts_before_send);
++	}
++
++	if (rs485.delay_rts_after_send > RS485_MAX_RTS_DELAY) {
++		rs485.delay_rts_after_send = RS485_MAX_RTS_DELAY;
++		dev_warn_ratelimited(port->dev,
++			"%s (%d): RTS delay after sending clamped to %u ms\n",
++			port->name, port->line, rs485.delay_rts_after_send);
++	}
++	/* Return clean padding area to userspace */
++	memset(rs485.padding, 0, sizeof(rs485.padding));
++
+ 	spin_lock_irqsave(&port->lock, flags);
+ 	ret = port->rs485_config(port, &rs485);
++	if (!ret) {
++		port->rs485 = rs485;
++
++		/* Reset RTS and other mctrl lines when disabling RS485 */
++		if (!(rs485.flags & SER_RS485_ENABLED))
++			port->ops->set_mctrl(port, port->mctrl);
++	}
+ 	spin_unlock_irqrestore(&port->lock, flags);
+ 	if (ret)
+ 		return ret;
+@@ -2396,7 +2421,10 @@ uart_configure_port(struct uart_driver *
+ 		 */
+ 		spin_lock_irqsave(&port->lock, flags);
+ 		port->mctrl &= TIOCM_DTR;
+-		port->ops->set_mctrl(port, port->mctrl);
++		if (!(port->rs485.flags & SER_RS485_ENABLED))
++			port->ops->set_mctrl(port, port->mctrl);
++		else
++			port->rs485_config(port, &port->rs485);
+ 		spin_unlock_irqrestore(&port->lock, flags);
+ 
+ 		/*

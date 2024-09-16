@@ -24,12 +24,13 @@ endif
 tools-y += autoconf autoconf-archive automake bc bison cmake dosfstools
 tools-y += e2fsprogs fakeroot findutils firmware-utils flex gengetopt
 tools-y += libressl libtool lzma m4 make-ext4fs missing-macros mkimage
-tools-y += mklibs mm-macros mtd-utils mtools padjffs2 patch-image
+tools-y += mklibs mm-macros mtd-utils mtools padjffs2 patch-image usign
 tools-y += patchelf pkgconf quilt squashfskit4 sstrip zip zlib zstd
 tools-$(BUILD_B43_TOOLS) += b43-tools
 tools-$(BUILD_ISL) += isl
 tools-$(BUILD_TOOLCHAIN) += expat gmp libelf mpc mpfr
 tools-$(CONFIG_TARGET_apm821xx)$(CONFIG_TARGET_gemini) += genext2fs
+tools-$(CONFIG_TARGET_mdm9x07)$(CONFIG_TARGET_sdxprairie) += mkbootimg dtbtool
 tools-$(CONFIG_TARGET_ath79) += lzma-old squashfs
 tools-$(CONFIG_TARGET_mxs) += elftosb sdimage
 tools-$(CONFIG_TARGET_tegra) += cbootimage cbootimage-configs
@@ -73,6 +74,7 @@ $(curdir)/squashfs/compile := $(curdir)/lzma-old/compile
 $(curdir)/squashfskit4/compile := $(curdir)/xz/compile $(curdir)/zlib/compile
 $(curdir)/zlib/compile := $(curdir)/cmake/compile
 $(curdir)/zstd/compile := $(curdir)/cmake/compile
+$(curdir)/usign/compile := $(curdir)/cmake/compile
 
 ifneq ($(HOST_OS),Linux)
   $(curdir)/squashfskit4/compile += $(curdir)/coreutils/compile
@@ -150,6 +152,18 @@ $(curdir)//compile = $(STAGING_DIR)/.prepared $(STAGING_DIR_HOST)/.prepared
 $(curdir)/ := .config prereq
 
 $(curdir)/install: $(curdir)/compile
+
+GPL_TOOLS_DIR:=$(GPL_BUILD_DIR)/tools
+
+$(curdir)/gpl:
+	rm -rf "$(GPL_TOOLS_DIR)"
+	mkdir -p "$(GPL_TOOLS_DIR)"
+	find "tools" -maxdepth 1 -type f -exec cp "{}" "$(GPL_TOOLS_DIR)" \;
+	cp -rf "tools/include" "$(GPL_TOOLS_DIR)"
+	for tool in $(tools-y); do ( \
+		mkdir -p "$(GPL_TOOLS_DIR)/$${tool}"; \
+		$(MAKE) -C "tools/$${tool}" gpl 1="$(GPL_TOOLS_DIR)/$${tool}"; \
+	); done
 
 tools_enabled = $(foreach tool,$(sort $(tools-y) $(tools-)),$(if $(filter $(tool),$(tools-y)),y,n))
 $(eval $(call stampfile,$(curdir),tools,compile,,_$(subst $(space),,$(tools_enabled)),$(STAGING_DIR_HOST)))

@@ -1,0 +1,85 @@
+-- Port --
+
+portCount OBJECT-TYPE
+	SYNTAX		Integer32
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION	"Number of ports on the device"
+	::= { port 1 }
+
+-- Port table
+
+portTable OBJECT-TYPE
+	SYNTAX		SEQUENCE OF PortEntry
+	MAX-ACCESS	not-accessible
+	STATUS		current
+	DESCRIPTION	"A list of port entries. The number of entries is given by the value of portCount"
+	::= { port 2 }
+
+portEntry OBJECT-TYPE
+	SYNTAX		PortEntry
+	MAX-ACCESS	not-accessible
+	STATUS		current
+	DESCRIPTION	"An entry containing information of a particular port"
+	INDEX		{ pIndex }
+	::= { portTable 1 }
+
+PortEntry ::=
+	SEQUENCE {
+	pIndex	  INTEGER,
+	pName	  DisplayString,
+	pNumber	  INTEGER,
+	pPosition INTEGER,
+	pState	  DisplayString,
+	pSpeed	  INTEGER,
+	pDuplex	  DisplayString,
+	}
+
+pIndex OBJECT-TYPE
+	SYNTAX		Integer32 (1..2147483647)
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION	"A unique value, greater than zero, for each port"
+	::= { portEntry 1 }
+
+pName OBJECT-TYPE
+	SYNTAX		DisplayString (SIZE (0..255))
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION	"Port's name"
+	::= { portEntry 2 }
+
+pNumber OBJECT-TYPE
+	SYNTAX		INTEGER
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION	"Port's number"
+	::= { portEntry 3 }
+
+pPosition OBJECT-TYPE
+	SYNTAX		INTEGER
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION	"Port's physical position"
+	::= { portEntry 4 }
+
+pState OBJECT-TYPE
+	SYNTAX		DisplayString (SIZE (0..255))
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION	"Port's state"
+	::= { portEntry 5 }
+
+pSpeed OBJECT-TYPE
+	SYNTAX		INTEGER
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION	"Port's speed"
+	::= { portEntry 6 }
+
+pDuplex OBJECT-TYPE
+	SYNTAX		DisplayString (SIZE (0..255))
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION	"Boolean value whether port is duplex or not"
+	::= { portEntry 7 }

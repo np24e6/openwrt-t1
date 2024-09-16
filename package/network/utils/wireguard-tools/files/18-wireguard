@@ -1,0 +1,50 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+mtu_set() {
+	local wan_interface
+	[ "$ACTION" = "ifup" ] || [ "$ACTION" = "ifdown" ] || return
+	wan_interface="$(ip route show default | awk -F 'dev' '{print $2}' | awk 'NR==1 {print $1}')"
+	config_cb() {
+		local type="$1"
+		local name="$2"
+		local proto mtu external_mtu wireguard_mtu new_mtu
+		config_get proto "$name" proto ""
+		config_get mtu "$name" mtu ""
+		[ "$proto" = "wireguard" ] && [ -z "$mtu" ] && [ -n "$wan_interface" ] && [ -n "$name" ] || return
+		external_mtu=$(cat /sys/class/net/${wan_interface}/mtu)
+		wireguard_mtu=$(cat /sys/class/net/${name}/mtu)
+		new_mtu=$(( external_mtu - 80 ))
+		[ "$wireguard_mtu" != "$new_mtu" ] && {
+			logger -t "wireguard" "Interface $name mtu size changed from $wireguard_mtu to $new_mtu"
+			ifconfig "$name" mtu "$new_mtu" up
+		}
+	}
+	config_load network
+}
+
+
+config_load network
+mtu_set
+
+[ -f /tmp/wireguard/default-status ] || exit 0
+
+default="$(ip route show default | grep -w "$DEVICE" )"
+
+[ -n "$default" ] || exit 0
+
+config="$(cat /tmp/wireguard/default-status | sed '2q;d')"
+peer_config="$(cat /tmp/wireguard/default-status | sed '1q;d')"
+[ "${default##*via }" != "$default" ] && gw=$(echo "${default##*via }" | awk '{print $1}')
+iface="$(echo "$INTERFACE" | sed 's/_4//')"
+
+[ "$iface" = "$config" ] && exit 0
+
+config_get peer "$peer_config" endpoint_host
+config_get metric "$iface" metric
+
+[ "$ACTION" = "ifup" ] && {
+	[ -n "$gw" ] && ip route add "$peer" via "$gw" dev "$DEVICE" metric "$metric" || ip route add "$peer" dev "$DEVICE" metric "$metric"
+	echo "ip route del "$peer" dev "$DEVICE" metric $metric" >> "/tmp/wireguard/default-status"
+}

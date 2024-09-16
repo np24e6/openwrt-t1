@@ -2,30 +2,87 @@
 
 . /lib/functions.sh
 
-OVERLAY="$( grep ' /overlay ' /proc/mounts )"
+min=5
+max=100
+rst_file=/tmp/rst_btn
 
-case "$ACTION" in
-pressed)
-	[ -z "$OVERLAY" ] && return 0
+# ignore timeout actions
+[ "${ACTION}" = "timeout" ] && exit
 
-	return 5
-;;
-timeout)
-	. /etc/diag.sh
-	set_state failsafe
-;;
-released)
-	if [ "$SEEN" -lt 1 ]
-	then
-		echo "REBOOT" > /dev/console
-		sync
-		reboot
-	elif [ "$SEEN" -ge 5 -a -n "$OVERLAY" ]
-	then
-		echo "FACTORY RESET" > /dev/console
-		jffs2reset -y && reboot &
-	fi
-;;
-esac
+# ignore release actions if "pressed" action was never received
+[ "${ACTION}" = "released" ] && [ ! -f "${rst_file}" ] && exit
 
-return 0
+notify() {
+	echo "RESET BUTTON { $1 } ACTION" > /dev/console
+	/usr/bin/ledman --clean
+}
+
+clean() {
+	rm "${rst_file}"
+	exit
+}
+
+handler_reboot() {
+	notify "REBOOT"
+	sync && reboot -b
+	clean
+}
+
+handler_firstboot() {
+	notify "FACTORY RESET"
+	firstboot -y && reboot -b
+	clean
+}
+
+handler_default() {
+	local tar_file="/etc/default-config/config.tar.gz"
+
+	[ ! -f "${tar_file}" ] && handler_firstboot
+
+	notify "RESTORE TO DEFAULT CONFIG"
+	/sbin/user_defaults
+	reboot -c
+	clean
+}
+
+handle() {
+	local action handler min max enabled
+
+	config_get enabled "${1}" enabled 1
+	[ "$enabled" -ne 1 ] && return
+
+	config_get action "${1}" action
+	config_get handler "${1}" handler
+	config_get min "${1}" min
+	config_get max "${1}" max
+
+	logger "Action ${ACTION}, handler ${handler}, min ${min}, max ${max}, SEEN ${SEEN}"
+
+	[ "${ACTION}" = "${action}" ] && [ -n "${handler}" ] && {
+		[ -z "${min}" ] || [ -z "${max}" ] && eval handler_"${handler}"
+		[ -n "${min}" ] && [ -n "${max}" ] && {
+			[ "${min}" -le "${SEEN}" ] && [ "${max}" -ge "${SEEN}" ] && {
+				logger "eval handler_${handler}"
+				eval handler_"${handler}"
+			}
+		}
+	}
+}
+
+[ "${ACTION}" = "pressed" ] && {
+	logger "${BUTTON} was ${ACTION}"
+	/usr/bin/ledman --bar
+	touch "${rst_file}"
+	exit
+}
+
+[ "${ACTION}" = "released" ] && \
+	logger "${BUTTON} was ${ACTION} after ${SEEN} seconds"
+
+config_load buttons
+config_foreach handle button
+
+[ "${ACTION}" = "released" ] && {
+	/usr/bin/ledman --auto
+	clean
+}

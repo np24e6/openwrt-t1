@@ -1,3 +1,7 @@
+refuse-pap
+refuse-eap
+refuse-chap
+refuse-mschap
 noipdefault
 noauth
 nobsdcomp

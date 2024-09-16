@@ -1,0 +1,343 @@
+--- /dev/null
++++ b/log/logdb.h
+@@ -0,0 +1,37 @@
++#ifndef LOGDB_H
++#define LOGDB_H
++
++#include <sqlite3.h>
++
++#define DB "/log/log.db"
++#define DB_CORRUPTED "/tmp/log.db_corrupted"
++
++#define TABLE_E "EVENTS"
++#define TABLE_C "CONNECTIONS"
++#define TABLE_S "SMS_TABLE"
++#define TABLE_N "NETWORK"
++#define TABLE_SYS "SYSTEM"
++
++#define MAX_EVENT 4000
++#define MAX_NET 4000
++#define MAX_SYS 4000
++#define MAX_CON 3500
++#define MAX_SMS_TABLE 7000
++#define SQLITE_ERROR 1
++#define SQLITE_SUCCESS 0
++
++#define DB_CHECK_COLUMN "SELECT COUNT(*) FROM pragma_table_info('%s') WHERE name='%s';"
++#define DB_ADD_COL "ALTER TABLE %s ADD COLUMN %s;"
++
++int init_db();
++int db_action(int action, sqlite3_stmt *stmt);
++sqlite3_stmt *db_prepare(char *query);
++
++enum {
++	ACTION_EVENTS,
++	ACTION_NETWORK,
++	ACTION_CONNECTION,
++	ACTION_SYSTEM,
++	ACTION_SELECT
++};
++#endif
+--- /dev/null
++++ b/log/logdb.c
+@@ -0,0 +1,300 @@
++#define _GNU_SOURCE
++
++#include <stdio.h>
++#include <stdlib.h>
++#include <unistd.h>
++#include <string.h>
++#include <syslog.h>
++
++#include "logdb.h"
++
++#define DB_BUFF_128 128
++
++sqlite3 *conn = NULL;
++static int EVENT_size = 0;
++static int CON_size = 0;
++static int SMS_size = 0;
++static int SYS_size = 0;
++static int NET_size = 0;
++
++static int check_column_exists(sqlite3 *con, const char *table, const char *column)
++{
++	int count = 0;
++	sqlite3_stmt *res;
++	char *err_msg = NULL;
++	char query[DB_BUFF_128] = { 0 };
++
++	snprintf(query, DB_BUFF_128, DB_CHECK_COLUMN, table, column);
++	if (sqlite3_prepare_v2(con, query, -1, &res, NULL) != SQLITE_OK) {
++		fprintf(stderr, "%s(%d) %s\n", __func__, __LINE__, err_msg);
++		sqlite3_free(err_msg);
++
++		return SQLITE_ERROR;
++	}
++
++	if (sqlite3_step(res) == SQLITE_ROW) {
++		count = sqlite3_column_int(res, 0);
++	}
++
++	return count ? SQLITE_SUCCESS : SQLITE_ERROR;
++}
++
++static int add_column(sqlite3 *con, const char *table, const char *column)
++{
++	char *err_msg = NULL;
++	char query[DB_BUFF_128] = { 0 };
++
++	snprintf(query, DB_BUFF_128, DB_ADD_COL, table, column);
++	if (sqlite3_exec(con, query, NULL, NULL, &err_msg) != SQLITE_OK) {
++		fprintf(stderr, "%s(%d) %s\n", __func__, __LINE__, err_msg);
++		sqlite3_free(err_msg);
++
++		return SQLITE_ERROR;
++	}
++
++	return SQLITE_SUCCESS;
++}
++
++static void fix_table(sqlite3 *con, const char *tname)
++{
++	if (check_column_exists(con, tname, "TYPE") != 0) {
++		add_column(con, tname, "TYPE CHAR(15) default 'info'");
++	}
++
++	return;
++}
++
++static void fix_db(sqlite3 *con)
++{
++	fix_table(con, TABLE_E);
++	fix_table(con, TABLE_C);
++	fix_table(con, TABLE_N);
++	fix_table(con, TABLE_SYS);
++}
++
++static void execute_query(char *query)
++{
++	sqlite3_stmt *res;
++	int error = 0;
++	const char *tail;
++	int output;
++
++	error = sqlite3_prepare_v2(conn, query, -1, &res, &tail);
++	if (error != SQLITE_OK) {
++		syslog(LOG_CRIT, "sqlite3 query error: %s\n", sqlite3_errmsg(conn));
++		exit(EXIT_FAILURE);
++	}
++	output = sqlite3_step(res);
++
++	if (output != SQLITE_DONE && output != SQLITE_ROW)
++		syslog(LOG_CRIT, "Eventlog error, code: %d\n", output);
++
++	sqlite3_finalize(res);
++}
++
++static void create_table()
++{
++        execute_query("create table if not exists EVENTS (ID INTEGER PRIMARY KEY AUTOINCREMENT, TIME TIMESTAMP, NAME CHAR(15), TYPE CHAR(15), TEXT CHAR(100))");
++        execute_query("create table if not exists SYSTEM (ID INTEGER PRIMARY KEY AUTOINCREMENT, TIME TIMESTAMP, NAME CHAR(15), TYPE CHAR(15), TEXT CHAR(100))");
++        execute_query("create table if not exists NETWORK (ID INTEGER PRIMARY KEY AUTOINCREMENT, TIME TIMESTAMP, NAME CHAR(15), TYPE CHAR(15), TEXT CHAR(100))");
++        execute_query("create table if not exists CONNECTIONS (ID INTEGER PRIMARY KEY AUTOINCREMENT, TIME TIMESTAMP, NAME CHAR(15), TYPE CHAR(15), TEXT CHAR(100))");
++        execute_query("create table if not exists SMS_COUNT (ID INTEGER PRIMARY KEY AUTOINCREMENT, SLOT char(15), SEND INTEGER, RECIEVED INTEGER);insert into SMS_COUNT (SLOT,SEND,RECIEVED) values ('SLOT1',0,0);insert into SMS_COUNT (SLOT,SEND,RECIEVED) values ('SLOT2',0,0)");
++        execute_query("create table if not exists SMS_TABLE (ID INTEGER PRIMARY KEY AUTOINCREMENT, SIM char(15), SEND INTEGER, TIME INTEGER)");
++}
++
++static int check_db_size(char *db_name)
++{
++        char buffer[256];
++        sqlite3_stmt *res;
++        int error = 0;
++        const char *tail;
++        int size = 0;
++        int output;
++
++        sprintf(buffer, "SELECT Count(*) FROM %s", db_name);
++        error = sqlite3_prepare_v2(conn, buffer, -1, &res, &tail);
++        if (error != SQLITE_OK) {
++                syslog(LOG_ERR, "sqlite3 query error: %s\n", sqlite3_errmsg(conn));
++		return SQLITE_ERROR;
++        }
++
++        output = sqlite3_step(res);
++        if (output == SQLITE_ROW)
++                size = strtol((const char *) sqlite3_column_text(res, 0), NULL, 10);
++
++        else if (output == SQLITE_CORRUPT) {
++                syslog(LOG_CRIT, "Eventlog DB Corrupted\n");
++                rename(DB, DB_CORRUPTED);
++		return SQLITE_ERROR;
++        } else {
++                syslog(LOG_ERR, "Eventlog DB error, code: %d\n", output);
++                rename(DB, DB_CORRUPTED);
++		return SQLITE_ERROR;
++        }
++
++        sqlite3_finalize(res);
++        return size;
++}
++
++static int delete_from_db(char *db_name, int size)
++{
++	char buffer[256];
++	sqlite3_stmt *res;
++	const char *tail;
++	int error = 0;
++	int max_id = 0;
++	int output;
++
++	sprintf(buffer, "SELECT MAX(ID) FROM %s", db_name);
++	error = sqlite3_prepare_v2(conn, buffer, -1, &res, &tail);
++	if (error != SQLITE_OK) {
++		syslog(LOG_ERR, "sqlite3 query error: %s\n", sqlite3_errmsg(conn));
++		return SQLITE_ERROR;
++	}
++
++	output = sqlite3_step(res);
++	if (output == SQLITE_ROW) {
++		max_id = strtol((const char *) sqlite3_column_text(res, 0), NULL, 10);
++
++		sqlite3_finalize(res);
++		sprintf(buffer, "DELETE FROM %s WHERE ID <= %i", db_name, max_id - size + 50);
++		execute_query(buffer);
++	} else {
++		syslog(LOG_ERR, "Eventlog error, code: %d", output);
++		return SQLITE_ERROR;
++	}
++
++	return check_db_size(db_name);
++}
++
++static int execute_action(sqlite3 *conn, sqlite3_stmt *stmt, int action)
++{
++	int output = 0;
++
++	if (action < 0) {
++		syslog(LOG_ERR, "Failed to find correct action\n");
++		return SQLITE_ERROR;
++	}
++
++	output = sqlite3_step(stmt);
++	if (output == SQLITE_ROW) {
++		while (output == SQLITE_ROW) {
++			output = sqlite3_step(stmt);
++		}
++	} else if (output != SQLITE_DONE) {
++		syslog(LOG_ERR, "failed to step through query. Error '%s'\n",sqlite3_errmsg(conn));
++		return SQLITE_ERROR;
++	}
++
++	switch(action) {
++	case ACTION_EVENTS:
++		EVENT_size++;
++
++		if (EVENT_size >= MAX_EVENT) {
++			if ((EVENT_size = delete_from_db(TABLE_E, MAX_EVENT)) < 0) {
++				syslog(LOG_ERR, "Failed to delete MAX ID from EVENTS table\n");
++				return SQLITE_ERROR;
++			}
++		}
++		break;
++	case ACTION_NETWORK:
++		NET_size++;
++
++		if (NET_size >= MAX_NET) {
++			if ((NET_size = delete_from_db(TABLE_N, MAX_NET)) < 0) {
++				syslog(LOG_ERR, "Failed to delete MAX ID from NETWORK table\n");
++				return SQLITE_ERROR;
++			}
++		}
++		break;
++	case ACTION_CONNECTION:
++		CON_size++;
++
++		if (CON_size >= MAX_CON) {
++			if ((CON_size = delete_from_db(TABLE_C, MAX_CON)) < 0) {
++				syslog(LOG_ERR, "Failed to delete MAX ID from CONNECTION table\n");
++				return SQLITE_ERROR;
++			}
++		}
++		break;
++	case ACTION_SYSTEM:
++		SYS_size++;
++
++		if (SYS_size >= MAX_SYS) {
++			if ((SYS_size = delete_from_db(TABLE_SYS, MAX_SYS)) < 0) {
++				syslog(LOG_ERR, "Failed to delete MAX ID from SYSTEM table\n");
++				return SQLITE_ERROR;
++			}
++		}
++		break;
++	}
++
++	if (SMS_size >= MAX_SMS_TABLE) {
++		if ((SMS_size = delete_from_db(TABLE_S, MAX_SMS_TABLE)) < 0) {
++			syslog(LOG_ERR, "Failed to delete MAX ID from SMS table\n");
++			return SQLITE_ERROR;
++		}
++	}
++
++	return SQLITE_SUCCESS;
++}
++
++int db_action(int action, sqlite3_stmt *stmt)
++{
++	if (execute_action(conn, stmt, action) != 0) {
++		syslog(LOG_ERR, "Failed to execute query\n");
++		return SQLITE_ERROR;
++	}
++
++	return SQLITE_SUCCESS;
++}
++
++sqlite3_stmt *db_prepare(char *query){
++	sqlite3_stmt *stmt = NULL;
++	if (sqlite3_prepare_v2(conn, query, -1, &stmt, NULL) != SQLITE_OK) {
++		syslog(LOG_ERR, "sqlite3_prepare_v2 failure: %s\n", sqlite3_errmsg(conn));
++		return NULL;
++	}
++	return stmt;
++}
++
++int init_db()
++{
++	if (sqlite3_open(DB, &conn)) {
++		syslog(LOG_CRIT, "Can't open database\n");
++		return SQLITE_ERROR;
++	}
++
++	sqlite3_db_config(conn, SQLITE_CONFIG_SERIALIZED);
++	create_table();
++
++	//Migrate Old fashioned  DB
++	fix_db(conn);
++
++	if ((EVENT_size = check_db_size(TABLE_E)) < 0) {
++		syslog(LOG_ERR, "failed to check %s table size\n", TABLE_E);
++		return SQLITE_ERROR;
++	}
++
++	if ((CON_size = check_db_size(TABLE_C)) < 0) {
++		syslog(LOG_ERR, "failed to check %s table size\n", TABLE_C);
++		return SQLITE_ERROR;
++	}
++
++	if ((SMS_size = check_db_size(TABLE_S)) < 0) {
++		syslog(LOG_ERR, "failed to check %s table size\n", TABLE_S);
++		return SQLITE_ERROR;
++	}
++
++	if ((SYS_size = check_db_size(TABLE_SYS)) < 0) {
++		syslog(LOG_ERR, "failed to check %s table size\n", TABLE_SYS);
++		return SQLITE_ERROR;
++	}
++
++	if ((NET_size = check_db_size(TABLE_N)) < 0) {
++		syslog(LOG_ERR, "failed to check %s table size\n", TABLE_N);
++		return SQLITE_ERROR;
++	}
++
++	return SQLITE_SUCCESS;
++}

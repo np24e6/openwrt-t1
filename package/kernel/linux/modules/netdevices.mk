@@ -241,6 +241,20 @@ endef
 $(eval $(call KernelPackage,phy-realtek))
 
 
+define KernelPackage/motorcomm-phy
+   SUBMENU:=$(NETWORK_DEVICES_MENU)
+   TITLE:=Motorcomm YT8531 Ethernet PHY driver
+   KCONFIG:=CONFIG_MOTORCOMM_PHY
+   DEPENDS:=+kmod-libphy +kmod-swconfig
+   FILES:=$(LINUX_DIR)/drivers/net/phy/motorcomm.ko
+endef
+
+$(eval $(call KernelPackage,motorcomm-phy))
+
+define KernelPackage/motorcomm-phy/description
+   Supports the Motorcomn YT8531 PHY.
+endef
+
 define KernelPackage/swconfig
   SUBMENU:=$(NETWORK_DEVICES_MENU)
   TITLE:=switch configuration API
@@ -1178,7 +1192,7 @@ $(eval $(call KernelPackage,sfp))
 define KernelPackage/igc
   SUBMENU:=$(NETWORK_DEVICES_MENU)
   TITLE:=Intel(R) Ethernet Controller I225 Series support
-  DEPENDS:=@PCI_SUPPORT
+  DEPENDS:=@PCI_SUPPORT +kmod-ptp
   KCONFIG:=CONFIG_IGC
   FILES:=$(LINUX_DIR)/drivers/net/ethernet/intel/igc/igc.ko
   AUTOLOAD:=$(call AutoProbe,igc)

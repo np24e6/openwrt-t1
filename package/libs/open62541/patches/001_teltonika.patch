@@ -1,0 +1,144 @@
+diff --git a/include/open62541/types.h b/include/open62541/types.h
+index 3f673097..a0cfcc1c 100644
+--- a/include/open62541/types.h
++++ b/include/open62541/types.h
+@@ -1204,6 +1204,7 @@ typedef struct {
+     const UA_String *serverUris;
+     size_t serverUrisSize;
+     UA_Boolean useReversible;
++    UA_Boolean bareIrreversibleVariant;
+ } UA_EncodeJsonOptions;
+ 
+ /* Returns the number of bytes the value src takes in json encoding. Returns
+diff --git a/src/ua_types_encoding_json.c b/src/ua_types_encoding_json.c
+index eb77026c..759e8c75 100644
+--- a/src/ua_types_encoding_json.c
++++ b/src/ua_types_encoding_json.c
+@@ -233,7 +233,7 @@ writeJsonKey(CtxJson *ctx, const char* key) {
+ 
+ static bool
+ isNull(const void *p, const UA_DataType *type) {
+-    if(UA_DataType_isNumeric(type))
++    if(UA_DataType_isNumeric(type) || type->typeKind == UA_DATATYPEKIND_BOOLEAN)
+         return false;
+     UA_STACKARRAY(char, buf, type->memSize);
+     memset(buf, 0, type->memSize);
+@@ -1078,7 +1078,10 @@ ENCODE_JSON(Variant) {
+     const bool isArray = src->arrayLength > 0 || src->data <= UA_EMPTY_ARRAY_SENTINEL;
+     const bool hasDimensions = isArray && src->arrayDimensionsSize > 0;
+ 
+-    status ret = writeJsonObjStart(ctx);
++    status ret = UA_STATUSCODE_GOOD;
++    if (!ctx->bareIrreversibleVariant || ctx->useReversible) {
++        ret = writeJsonObjStart(ctx);
++    }
+ 
+     if(ctx->useReversible) {
+         /* Write the NodeId */
+@@ -1118,13 +1121,19 @@ ENCODE_JSON(Variant) {
+             /* Not builtin. Can it be encoded? Wrap in extension object. */
+             if(src->arrayDimensionsSize > 1)
+                 return UA_STATUSCODE_BADNOTIMPLEMENTED;
+-            ret |= writeJsonKey(ctx, UA_JSONKEY_BODY);
++            if (!ctx->bareIrreversibleVariant) {
++                ret |= writeJsonKey(ctx, UA_JSONKEY_BODY);
++            }
+             ret |= Variant_encodeJsonWrapExtensionObject(src, isArray, ctx);
+         } else if(!isArray) {
+-            ret |= writeJsonKey(ctx, UA_JSONKEY_BODY);
++            if (!ctx->bareIrreversibleVariant) {
++                ret |= writeJsonKey(ctx, UA_JSONKEY_BODY);
++            }
+             ret |= encodeJsonInternal(src->data, src->type, ctx);
+         } else {
+-            ret |= writeJsonKey(ctx, UA_JSONKEY_BODY);
++            if (!ctx->bareIrreversibleVariant) {
++                ret |= writeJsonKey(ctx, UA_JSONKEY_BODY);
++            }
+             if(src->arrayDimensionsSize > 1) {
+                 size_t index = 0;
+                 size_t dimensionIndex = 0;
+@@ -1137,7 +1146,10 @@ ENCODE_JSON(Variant) {
+         }
+     }
+ 
+-    ret |= writeJsonObjEnd(ctx);
++    if (!ctx->bareIrreversibleVariant || ctx->useReversible) {
++        ret |= writeJsonObjEnd(ctx);
++    }
++
+     return ret;
+ }
+ 
+@@ -1308,9 +1320,10 @@ encodeJsonInternal(const void *src, const UA_DataType *type, CtxJson *ctx) {
+ 
+ status UA_FUNC_ATTR_WARN_UNUSED_RESULT
+ UA_encodeJsonInternal(const void *src, const UA_DataType *type,
+-              u8 **bufPos, const u8 **bufEnd, const UA_String *namespaces,
+-              size_t namespaceSize, const UA_String *serverUris,
+-              size_t serverUriSize, UA_Boolean useReversible) {
++              u8 **bufPos, const u8 **bufEnd,
++              const UA_String *namespaces, size_t namespaceSize,
++              const UA_String *serverUris, size_t serverUriSize,
++              UA_Boolean useReversible, UA_Boolean bareIrreversibleVariant) {
+     if(!src || !type)
+         return UA_STATUSCODE_BADINTERNALERROR;
+ 
+@@ -1325,6 +1338,7 @@ UA_encodeJsonInternal(const void *src, const UA_DataType *type,
+     ctx.serverUris = serverUris;
+     ctx.serverUrisSize = serverUriSize;
+     ctx.useReversible = useReversible;
++    ctx.bareIrreversibleVariant = bareIrreversibleVariant;
+     ctx.calcOnly = false;
+ 
+     /* Encode */
+@@ -1353,11 +1367,13 @@ UA_encodeJson(const void *src, const UA_DataType *type, UA_ByteString *outBuf,
+     u8 *pos = outBuf->data;
+     const u8 *posEnd = &outBuf->data[outBuf->length];
+     if(options) {
+-        res = UA_encodeJsonInternal(src, type, &pos, &posEnd, options->namespaces,
+-                                    options->namespacesSize, options->serverUris,
+-                                    options->serverUrisSize, options->useReversible);
++        res = UA_encodeJsonInternal(src, type,
++                                    &pos, &posEnd,
++                                    options->namespaces, options->namespacesSize,
++                                    options->serverUris, options->serverUrisSize,
++                                    options->useReversible, options->bareIrreversibleVariant);
+     } else {
+-        res = UA_encodeJsonInternal(src, type, &pos, &posEnd, NULL, 0u, NULL, 0u, true);
++        res = UA_encodeJsonInternal(src, type, &pos, &posEnd, NULL, 0u, NULL, 0u, true, false);
+     }
+ 
+     /* Clean up */
+diff --git a/src/ua_types_encoding_json.h b/src/ua_types_encoding_json.h
+index 07c927c5..c47fedd2 100644
+--- a/src/ua_types_encoding_json.h
++++ b/src/ua_types_encoding_json.h
+@@ -42,13 +42,14 @@ UA_calcSizeJsonInternal(const void *src, const UA_DataType *type,
+  * @param serverUris An array of serverUris
+  * @param serverUriSize The size of the serverUris array
+  * @param useReversible preserve datatypes in json encoding
++ * @param bareIrreversibleVariant make bare irreversible variant encodings
+  * @return Returns a statuscode whether encoding succeeded. */
+ UA_StatusCode
+-UA_encodeJsonInternal(const void *src, const UA_DataType *type, uint8_t **bufPos,
+-                      const uint8_t **bufEnd, const UA_String *namespaces,
+-                      size_t namespaceSize, const UA_String *serverUris,
+-                      size_t serverUriSize,
+-                      UA_Boolean useReversible) UA_FUNC_ATTR_WARN_UNUSED_RESULT;
++UA_encodeJsonInternal(const void *src, const UA_DataType *type,
++                      uint8_t **bufPos, const uint8_t **bufEnd,
++                      const UA_String *namespaces, size_t namespaceSize,
++                      const UA_String *serverUris, size_t serverUriSize,
++                      UA_Boolean useReversible, UA_Boolean bareIrreversibleVariant) UA_FUNC_ATTR_WARN_UNUSED_RESULT;
+ 
+ /* Interal Definitions
+  *
+@@ -63,6 +64,7 @@ typedef struct {
+     UA_Boolean commaNeeded[UA_JSON_ENCODING_MAX_RECURSION];
+     UA_Boolean useReversible;
+     UA_Boolean calcOnly; /* Only compute the length of the decoding */
++    UA_Boolean bareIrreversibleVariant;
+ 
+     size_t namespacesSize;
+     const UA_String *namespaces;

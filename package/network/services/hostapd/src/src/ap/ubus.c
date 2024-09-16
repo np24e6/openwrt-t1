@@ -608,6 +608,48 @@ hostapd_bss_wps_cancel(struct ubus_context *ctx, struct ubus_object *obj,
 
 	return 0;
 }
+
+enum {
+	WPS_PIN,
+	WPS_PIN_TIMEOUT,
+	__WPS_PIN_MAX
+};
+
+static const struct blobmsg_policy wps_pin_policy[__WPS_PIN_MAX] = {
+	[WPS_PIN] = { "pin", BLOBMSG_TYPE_STRING },
+	[WPS_PIN_TIMEOUT] = { "timeout", BLOBMSG_TYPE_INT32 },
+};
+
+static int
+hostapd_bss_wps_pin(struct ubus_context *ctx, struct ubus_object *obj,
+		    struct ubus_request_data *req, const char *method,
+		    struct blob_attr *msg)
+{
+	int rc;
+	struct blob_attr *tb[__WPS_PIN_MAX];
+	char wps_pin[9] = {0};
+	int timeout = 300; // 0 would mean no expiration time, so better have a set value here
+
+	blobmsg_parse(wps_pin_policy, __WPS_PIN_MAX, tb, blob_data(msg), blob_len(msg));
+
+	if (tb[WPS_PIN])
+		strncpy(wps_pin, blobmsg_get_string(tb[WPS_PIN]), sizeof(wps_pin));
+	else
+		return UBUS_STATUS_INVALID_ARGUMENT;
+
+	if (tb[WPS_PIN_TIMEOUT])
+		timeout = blobmsg_get_u32(tb[WPS_PIN_TIMEOUT]);
+
+	struct hostapd_data *hapd = container_of(obj, struct hostapd_data, ubus.obj);
+
+	rc = hostapd_wps_add_pin(hapd, NULL, "any", wps_pin, timeout);
+
+	if (rc != 0)
+		return UBUS_STATUS_NOT_SUPPORTED;
+
+	return 0;
+}
+
 #endif /* CONFIG_WPS */
 
 static int
@@ -1292,6 +1334,7 @@ static const struct ubus_method bss_methods[] = {
 	UBUS_METHOD_NOARG("wps_start", hostapd_bss_wps_start),
 	UBUS_METHOD_NOARG("wps_status", hostapd_bss_wps_status),
 	UBUS_METHOD_NOARG("wps_cancel", hostapd_bss_wps_cancel),
+	UBUS_METHOD("wps_pin", hostapd_bss_wps_pin, wps_pin_policy),
 #endif
 	UBUS_METHOD_NOARG("update_beacon", hostapd_bss_update_beacon),
 	UBUS_METHOD_NOARG("get_features", hostapd_bss_get_features),
@@ -1350,6 +1393,11 @@ void hostapd_ubus_free_bss(struct hostapd_data *hapd)
 {
 	struct ubus_object *obj = &hapd->ubus.obj;
 	char *name = (char *) obj->name;
+
+#ifdef CONFIG_MESH
+	if (hapd->conf->mesh & MESH_ENABLED)
+		return;
+#endif
 
 	if (!ctx)
 		return;

@@ -1,0 +1,22 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+index="0"
+
+config_cb() {
+	index=$((index + 1))
+	[ "${2:0:3}" != "cfg" ] && return
+
+	#There are situations when names can be duplicated.
+	#Get a unique section name here
+	while uci_get "firewall" "$index" >/dev/null
+	do
+		index=$((index + 1))
+	done
+
+	uci_rename "firewall" "$2" "$index"
+}
+
+config_load "firewall"
+uci_commit "firewall"

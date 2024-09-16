@@ -16,6 +16,7 @@ PKG_SOURCE_VERSION:=5c201be7d72aff735da27e17c29852e0cefe3e52
 PKG_MIRROR_HASH:=a9b74b7b95acc84a5a5c33d6acf493faad8f161caca3180734d9bd383c9d823f
 
 include $(INCLUDE_DIR)/host-build.mk
+include $(INCLUDE_DIR)/gpl.mk
 
 define Host/Install
 	$(INSTALL_BIN) $(HOST_BUILD_DIR)/make_ext4fs $(STAGING_DIR_HOST)/bin/

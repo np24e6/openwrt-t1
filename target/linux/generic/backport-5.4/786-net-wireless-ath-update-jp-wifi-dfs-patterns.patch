@@ -1,0 +1,19 @@
+--- a/drivers/net/wireless/ath/dfs_pattern_detector.c
++++ b/drivers/net/wireless/ath/dfs_pattern_detector.c
+@@ -116,7 +116,15 @@ static const struct radar_detector_specs
+ 	JP_PATTERN(5, 6, 10, 200, 500, 1, 16, 50, false),
+ 	JP_PATTERN(6, 11, 20, 200, 500, 1, 12, 50, false),
+ 	JP_PATTERN(7, 50, 100, 1000, 2000, 1, 3, 50, true),
+-	JP_PATTERN(5, 0, 1, 333, 333, 1, 9, 50, false),
++	JP_PATTERN(8, 0, 1, 333, 333, 1, 9, 50, false),
++	JP_PATTERN(9, 0, 5, 1000, 5000, 1, 10, 50, false),
++	JP_PATTERN(10, 0, 15, 625, 5000, 1, 15, 50, false),
++	JP_PATTERN(11, 0, 5, 1000, 5000, 1, 22, 50, false),
++	JP_PATTERN(12, 0, 15, 625, 5000, 1, 22, 50, false),
++	JP_PATTERN(13, 0, 2, 894, 898, 1, 30, 50, false),
++	JP_PATTERN(14, 0, 2, 1072, 1077, 1, 25, 50, false),
++	JP_PATTERN(15, 0, 2, 1123, 1129, 1, 24, 50, false),
++	JP_PATTERN(16, 0, 2, 1347, 1355, 1, 20, 50, false),
+ };
+ 
+ static const struct radar_types jp_radar_types = {

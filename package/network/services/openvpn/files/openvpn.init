@@ -1,0 +1,494 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2008-2013 OpenWrt.org
+# Copyright (C) 2008 Jo-Philipp Wich
+# This is free software, licensed under the GNU General Public License v2.
+# See /LICENSE for more information.
+. /usr/share/libubox/jshn.sh
+
+START=90
+STOP=10
+
+USE_PROCD=1
+PROG=/usr/sbin/openvpn
+
+CCD_ARGS=""
+LIST_SEP="
+"
+
+UCI_STARTED=
+UCI_DISABLED=
+
+CUSTOM_PARAMS="auth_user_pass_verify userpass"
+
+# generates selective config file for specific
+# client and integrates client parameters into
+# global OpenVPN server logic (routes, pushs etc.)
+config_client() {
+	local section_id="$1"
+	local snip
+	local sip
+	local snm
+	local cn
+	local lip
+	local rip
+	local pip
+	local pnm
+	local cntw
+
+	# get client params from /etc/config/openvpn
+	config_get cn "$section_id" cn
+	config_get lip "$section_id" lip
+	config_get rip "$section_id" rip
+	config_get pip "$section_id" pip
+	config_get pnm "$section_id" pnm
+	config_get cntw "$section_id" cntw
+
+	# don't inlucde this in /etc/openvpn/ccd if any of these options are empty
+	[ -z "$cn" ] || [ -z "$lip" ] || [ -z "$rip" ] || [ -z "$pip" ] || [ -z "$pnm" ] && return
+
+	# generate selective config in /etc/openvpn/ccd
+	printf "ifconfig-push %s %s\n" "$lip" "$rip" >/etc/openvpn/ccd/"$cn"
+	printf "iroute %s %s\n" "$pip" "$pnm" >>/etc/openvpn/ccd/"$cn"
+
+	for iface in ${cntw}; do
+		local tmp
+
+		sip=$(/sbin/uci -q get network."$iface".ipaddr 2>/dev/null)
+		snm=$(/sbin/uci -q get network."$iface".netmask 2>/dev/null)
+		tmp=$(/bin/ipcalc.sh "$sip" "$snm" 2>/dev/null)
+		snip=$(printf "%s" "$tmp" | grep 'NETWORK' | cut -d'=' -f2 2>/dev/null)
+
+		if [ -n "$snip" ] && [ -n "$snm" ]; then
+			printf "push \"route %s %s\"\n" "$snip" "$snm" >>/etc/openvpn/ccd/"$cn"
+		fi
+	done
+
+	# store temporary data
+	printf "push \"route %s %s\"\n" "$pip" "$pnm" >>/etc/openvpn/ccd/plist.tmp
+	printf "--route %s %s " "$pip" "$pnm" >>/etc/openvpn/ccd/rlist.tmp
+}
+
+init_ccd() {
+	if [ ! -d /var/etc/openvpn-ccd ]; then
+		mkdir -p /var/etc/openvpn-ccd
+	fi
+
+	if [ -h /etc/openvpn/ccd ]; then
+		rm /etc/openvpn/ccd/* 2>/dev/null
+	else
+		ln -s /var/etc/openvpn-ccd /etc/openvpn/ccd
+	fi
+}
+
+server_info() {
+	local name ip time status_file auth
+
+	name="$1"
+	time="$(date "+%s")"
+	status_file="/tmp/state/openvpn-$name.info"
+	auth="$(uci get openvpn.$name._auth)"
+
+	if [ "$auth" = "skey" ]; then
+		 ip="$(uci get openvpn.$name.local_ip)"
+	else
+		raw_ip="$(uci get openvpn.$name.server_ip)"
+		ip="${raw_ip%.*}.1"
+	fi
+
+	[ "$(uci get openvpn.$name.dev)" = "tap" ] && ip="-"
+
+	# generating json data
+        json_init
+
+        json_add_string "name" "$name"
+        json_add_string "ip" "$ip"
+        json_add_string "time" "$time"
+
+        json_dump > "$status_file"
+}
+
+add_server_routes() {
+	CCD_ARGS=$(cat /etc/openvpn/ccd/rlist.tmp 2>/dev/null)
+	rm /etc/openvpn/ccd/rlist.tmp 2>/dev/null
+}
+
+add_interclient_routes() {
+	for f in /etc/openvpn/ccd/*; do
+		if [ "$f" != /etc/openvpn/ccd/plist.tmp ]; then
+			cat /etc/openvpn/ccd/plist.tmp 2>/dev/null >>"$f"
+		fi
+	done
+	rm /etc/openvpn/ccd/plist.tmp 2>/dev/null
+}
+
+prepare_clients() {
+	init_ccd
+	config_foreach config_client 'client'
+	add_server_routes
+	add_interclient_routes
+}
+
+append_param() {
+	local s="$1"
+	local v="$2"
+	case "$v" in
+	*_*_*_*)
+		v=${v%%_*}-${v#*_}
+		v=${v%%_*}-${v#*_}
+		v=${v%%_*}-${v#*_}
+		;;
+	*_*_*)
+		v=${v%%_*}-${v#*_}
+		v=${v%%_*}-${v#*_}
+		;;
+	*_*)
+		v=${v%%_*}-${v#*_}
+		;;
+	esac
+	echo -n "$v" >>"/var/etc/openvpn-$s.conf"
+	return 0
+}
+
+append_bools() {
+	local p
+	local v
+	local s="$1"
+	shift
+	for p in "$@"; do
+		config_get_bool v "$s" "$p"
+		[ "$v" = 1 ] && append_param "$s" "$p" && echo >>"/var/etc/openvpn-$s.conf"
+	done
+}
+
+append_params() {
+	local p
+	local v
+	local s="$1"
+	shift
+	for p in "$@"; do
+		config_get v "$s" "$p"
+		IFS="$LIST_SEP"
+		for v in $v; do
+			[ -n "$v" ] && [ "$p" != "push" ] && append_param "$s" "$p" && echo " $v" >>"/var/etc/openvpn-$s.conf"
+			[ -n "$v" ] && [ "$p" == "push" ] && append_param "$s" "$p" && echo " \"$v\"" >>"/var/etc/openvpn-$s.conf"
+		done
+		unset IFS
+	done
+}
+
+append_extended_params() {
+	local arg="$1"
+	[ -n "$arg" ] && echo "$arg" | sed -e 's/^[ \t]*//' >>"/var/etc/openvpn-$s.conf"
+}
+
+append_list() {
+	local p; local v; local s="$1"; shift
+
+	list_cb_append() {
+		v="${v}:$1"
+	}
+
+	for p in $*; do
+		unset v
+		config_list_foreach "$s" "$p" list_cb_append
+		[ -n "$v" ] && append_param "$s" "$p" && echo " ${v:1}" >> "/var/etc/openvpn-$s.conf"
+	done
+}
+
+append_custom_params() {
+	local p
+	local v
+	local s="$1"
+	shift
+	for p in "$@"; do
+		config_get v "$s" "$p"
+		[ -n "$v" ] && {
+			case "$p" in
+				auth_user_pass_verify)
+					append_param "$s" "$p" && echo " /etc/openvpn/auth-pam-fixed.sh via-file" >>"/var/etc/openvpn-$s.conf"
+				;;
+				userpass)
+					ln -sf "$v" "/etc/openvpn/auth_$s" &>/dev/null
+				;;
+			esac
+		}
+	done
+}
+
+section_enabled() {
+	config_get_bool enable "$1" 'enable' 0
+	config_get_bool enabled "$1" 'enabled' 0
+	[ "$enable" -gt 0 ] || [ "$enabled" -gt 0 ]
+}
+
+append_tracked_files() {
+	local p
+	local v
+	local s="$1"
+	shift
+	for p in "$@"; do
+		[ "$p" == "status" ] && continue
+		config_get v "$s" "$p"
+		IFS="$LIST_SEP"
+		[ -f "$v" ] && [ "$(dirname "$v")" != "." ] && procd_append_param file "$v"
+		unset IFS
+	done
+	# Additional custom options to track
+	config_get userpass "$s" 'userpass' ''
+	[ -f "$userpass" ] && procd_append_param file "$userpass"
+}
+
+openvpn_add_instance() {
+	local name="$1"
+	local dir="$2"
+	local conf="$3"
+	local type="$4"
+	local CCD=$CCD_ARGS
+	local auth
+
+	config_get auth "$name" '_auth'
+
+	if [ "$type" = "client" ]; then
+		{
+			echo "auth-nocache"
+			echo "script-security 2"
+			echo "down /etc/openvpn/updown.sh"
+			echo "up /etc/openvpn/updown.sh"
+		} >>/var/etc/openvpn-"$name".conf
+	fi
+
+	config_get local_ip "$name" 'local_ip'
+	config_get remote_ip "$name" 'remote_ip'
+	config_get network_ip "$name" 'network_ip'
+	config_get network_mask "$name" 'network_mask'
+	config_get server_ip "$name" 'server_ip'
+	config_get server_netmask "$name" 'server_netmask'
+
+	[ -n "$local_ip" ] && [ -n "$remote_ip" ] && echo "ifconfig $local_ip $remote_ip" >> /var/etc/openvpn-"$name".conf
+	[ -n "$network_ip" ] && [ -n "$network_mask" ] && echo "route $network_ip $network_mask" >> /var/etc/openvpn-"$name".conf
+	[ -n "$server_ip" ] && [ -n "$server_netmask" ] && echo "server $server_ip $server_netmask" >> /var/etc/openvpn-"$name".conf
+
+	procd_open_instance "$name"
+	procd_set_param command "$PROG" \
+		--syslog "openvpn($name)" \
+		--status "/var/run/openvpn.$name.status" \
+		--cd "$dir" \
+		--config "/var/etc/openvpn-$name.conf" \
+		$CCD
+	procd_set_param file "$dir/$conf"
+	append_tracked_files "$name" $OPENVPN_PARAMS
+	procd_set_param respawn
+	procd_append_param respawn 3600
+	procd_append_param respawn 5
+	procd_append_param respawn 5
+	procd_close_instance
+
+	[ "$type" = "server" ] && server_info "$s"
+}
+
+add_authentication_to_config() {
+	local section_id="$1"
+	local config_path="$2"
+	local credentials_path="/etc/openvpn/auth_$section_id"
+
+	config_load "openvpn"
+	config_get auth "$section_id" _auth ""
+	config_get role "$section_id" type ""
+	config_get passwords "$section_id" pass ""
+	config_get pkcs12_path "$section_id" pkcs12 ""
+	config_get pkcs12_pass "$section_id" askpass ""
+	config_get ca_path "$section_id" ca ""
+	config_get cert_path "$section_id" cert ""
+	config_get key_path "$section_id" key ""
+	config_get tls_auth_key_path "$section_id" tls_auth ""
+	config_get tls_crypt_key_path "$section_id" tls_crypt ""
+	config_get dh_path "$section_id" dh ""
+	config_get crl_path "$section_id" crl-verify ""
+	config_get secret_path "$section_id" secret ""
+	config_get server_list "$section_id" server_list ""
+
+	if [ "$role" == "client" ]; then
+		echo -e "status /tmp/openvpn-status_${section_id}.log 10" >>"$config_path"
+	fi
+
+	if [ "$auth" == "tls/pass" ] || [ "$auth" == "pass" ] || [ "$server_list" == "custom" ]; then
+		if [ -f "$credentials_path" ] && [ "$role" == "client" ]; then
+			echo -e "\n# Login credentials\nauth-user-pass $credentials_path" >>"$config_path"
+		elif [ -f "$credentials_path" ] && [ "$role" == "server" ]; then
+			{
+				echo -e "# Client credential authentication"
+				echo -e "auth-user-pass-verify /etc/openvpn/auth-pam-fixed.sh via-file"
+				echo -e "script-security 2"
+			} >>"$config_path"
+
+			[ "$auth" == "pass" ] && echo -e "verify-client-cert none" >>"$config_path"
+		fi
+	fi
+
+	if [ "$auth" == "tls" ] || [ "$auth" == "tls/pass" ] || [ "$auth" == "pass" ]; then
+		echo -e "# Authentication" >>"$config_path"
+		[ -f "$pkcs12_path" ] && echo -e "pkcs12 $pkcs12_path" >>"$config_path"
+		[ -f "$pkcs12_pass" ] && echo -e "askpass $pkcs12_pass" >>"$config_path"
+		[ -f "$ca_path" ] && echo -e "ca $ca_path" >>"$config_path"
+		[ -f "$cert_path" ] && echo -e "cert $cert_path" >>"$config_path"
+		[ -f "$key_path" ] && echo -e "key $key_path" >>"$config_path"
+		[ -f "$(echo "$tls_auth_key_path" | sed 's/[[:space:]][0-1]$//g')" ] && echo -e "tls-auth $tls_auth_key_path" >>"$config_path"
+		[ -f "$tls_crypt_key_path" ] && echo -e "tls-crypt $tls_crypt_key_path" >>"$config_path"
+		[ -f "$dh_path" ] && echo -e "dh $dh_path" >>"$config_path"
+		[ -f "$crl_path" ] && echo -e "crl-verify $crl_path" >>"$config_path"
+	elif [ "$auth" == "skey" ] && [ -n "$secret_path" ]; then
+		echo -e "\n# Authentication \nsecret $secret_path" >>"$config_path"
+	fi
+}
+
+add_vars_to_config() {
+	local section_id="$1"
+	local config_path="$2"
+
+	local proto=$(grep -w ^proto "$config_path" | tr -d '\r' | cut -d ' ' -f 2 | tr -d '\n')
+	local dev=$(grep -w ^dev "$config_path" | tr -d '\r' | cut -d ' ' -f 2 | tr -d '\n')
+	local port=$(grep -w ^port "$config_path" | tr -d '\r' | cut -d ' ' -f 2 | tr -d '\n')
+
+	if [ -z "$port" ]; then
+		port=$(grep -w ^remote "$config_path" | tr -d '\r' | cut -d ' ' -f 3 | grep '[[:digit:]]' | uniq | sed ':a;N;$!ba;s/\n/, /g')
+	fi
+
+	uci set openvpn."$section_id".proto="$proto"
+	uci set openvpn."$section_id".dev="$dev"
+	uci set openvpn."$section_id".port="$port"
+	uci commit openvpn
+}
+
+start_instance() {
+	local s="$1"
+	OPENVPN_CONFIG="/var/etc/openvpn-$s.conf"
+
+	config_get type "$s" type
+	config_get config "$s" config
+	config="${config:+$(readlink -f "$config")}"
+
+	section_enabled "$s" || {
+		append UCI_DISABLED "$config" "$LIST_SEP"
+		return 1
+	}
+
+	[ ! -d "/var/run" ] && mkdir -p "/var/run"
+
+	if [ -n "$config" ]; then
+		cp "$config" "$OPENVPN_CONFIG"
+		local dev="$(cat ${OPENVPN_CONFIG} | grep ^dev | cut -f2 -d' ')"
+		[ "$dev" != "${dev#tun}" ] && sed -i "s/dev .*/dev tun_${type:0:1}_${s}/" "$OPENVPN_CONFIG"
+		[ "$dev" != "${dev#tap}" ] && sed -i "s/dev .*/dev tap/" "$OPENVPN_CONFIG"
+
+		echo "" >> "$OPENVPN_CONFIG"
+		config_get_bool upload_files "$s" 'upload_files' 0
+		add_vars_to_config "$s" "$OPENVPN_CONFIG"
+		if [ "$upload_files" -eq 1 ]; then
+			add_authentication_to_config "$s" "$OPENVPN_CONFIG"
+		fi
+		append UCI_STARTED "$config" "$LIST_SEP"
+		echo -e "\nstatus /var/openvpn-status_$s.log 10" >>"$OPENVPN_CONFIG"
+		openvpn_add_instance "$s" "${OPENVPN_CONFIG%/*}" "${OPENVPN_CONFIG##*/}"
+		
+		if [ "$type" = "client" ]; then
+                {
+                        echo "auth-nocache"   
+                        echo "script-security 2"
+                        echo "down /etc/openvpn/updown.sh"
+                        echo "up /etc/openvpn/updown.sh"
+                } >> "$OPENVPN_CONFIG"           
+                fi
+		
+		return
+	fi
+
+	[ ! -d "/var/etc" ] && mkdir -p "/var/etc"
+	[ -f "/var/etc/openvpn-$s.conf" ] && rm "/var/etc/openvpn-$s.conf"
+
+	append_bools "$s" $OPENVPN_BOOLS
+	append_params "$s" $OPENVPN_PARAMS
+	append_list "$s" $OPENVPN_LIST
+	append_custom_params "$s" $CUSTOM_PARAMS
+	config_list_foreach "$s" "_extra" append_extended_params
+	add_authentication_to_config "$s" "$OPENVPN_CONFIG"
+	openvpn_add_instance "$s" "/var/etc" "openvpn-$s.conf" "$type"
+	
+}
+
+stop_service() {
+	rm /var/state/openvpn-*.info
+}
+
+start_service() {
+	local instance="$1"
+	local instance_found=0
+
+	config_cb() {
+		local type="$1"
+		local name="$2"
+		if [ "$type" = "openvpn" ]; then
+			if [ -n "$instance" ] && [ "$instance" = "$name" ]; then
+				instance_found=1
+			fi
+		fi
+	}
+
+	. /usr/share/openvpn/openvpn.options
+	config_load 'openvpn'
+
+	prepare_clients
+
+	if [ -n "$instance" ]; then
+		[ "$instance_found" -gt 0 ] || return
+		start_instance "$instance"
+	else
+		config_foreach start_instance 'openvpn'
+
+		local path name
+		for path in /etc/openvpn/*.conf; do
+			if [ -f "$path" ]; then
+				name="${path##*/}"
+				name="${name%.conf}"
+
+				# don't start configs again that are already started by uci
+				if echo "$UCI_STARTED" | grep -qxF "$path"; then
+					continue
+
+				# don't start configs which are set to disabled in uci
+				elif echo "$UCI_DISABLED" | grep -qxF "$path"; then
+					logger -t openvpn "$name.conf is disabled in /etc/config/openvpn"
+					continue
+				fi
+
+				openvpn_add_instance "$name" "${path%/*}" "$path"
+			fi
+		done
+	fi
+}
+
+add_interface_trigger() {
+	local s_name="$1"
+	local ifname proto
+
+	config_get ifname "$s_name" ifname
+	config_get proto "$s_name" proto
+
+	if [ "$proto" == "static" ]; then
+		case "$ifname" in
+		eth0*) procd_add_interface_trigger "interface.*.up" "$s_name" /etc/init.d/openvpn restart ;;
+		br-$s_name) procd_add_interface_trigger "interface.*.up" "$s_name" /etc/init.d/openvpn restart ;;
+		br-lan) procd_add_interface_trigger "interface.*.up" "$s_name" /etc/init.d/openvpn restart ;;
+		esac
+	fi
+	if [ "$proto" = "wwan" ] || [ "$proto" = "connm" ]; then
+		procd_add_interface_trigger "interface.*.up" "$s_name" /etc/init.d/openvpn restart
+	fi
+}
+
+service_triggers() {
+	procd_add_reload_trigger openvpn
+
+	config_load 'network'
+	config_foreach add_interface_trigger 'interface'
+	config_load 'openvpn'
+}

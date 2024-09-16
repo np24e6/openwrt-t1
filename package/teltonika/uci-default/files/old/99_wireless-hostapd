@@ -1,0 +1,130 @@
+#!/bin/sh
+
+. /lib/functions.sh
+. /lib/config/uci.sh
+
+handle_wifi_iface() {
+	local wifi_iface="$1"
+	local wifi_id
+	local len
+	local index="1"
+
+	#re-structure venues
+
+	config_get wifi_id "$wifi_iface" "wifi_id"
+	config_get len "$wifi_iface" "venue_url_LENGTH" "0"
+
+	config_get network "$wifi_iface" "network"
+	[ -z "$network" ] && uci_set "wireless" "$wifi_iface" "network" "_"
+
+	while [ "$index" -le "$len" ]; do
+		config_get vurl "$wifi_iface" "venue_url_ITEM${index}"
+		config_get vname "$wifi_iface" "venue_name_ITEM${index}"
+
+		uci_add "wireless" "venue"
+		uci_set "wireless" "$CONFIG_SECTION" "wifi_id" "$wifi_id"
+		uci_set "wireless" "$CONFIG_SECTION" "name" "$vname"
+		uci_set "wireless" "$CONFIG_SECTION" "url" "$vurl"
+	
+		uci_remove_list "wireless" "$wifi_iface" "venue_url" "$vurl"
+		uci_remove_list "wireless" "$wifi_iface" "venue_name" "$vname"
+		index="$((index + 1))"
+	done
+
+	# re-structure nai_realm
+
+	index="1"
+	config_get len "$wifi_iface" "nai_realm_LENGTH" "0"
+
+	while [ "$index" -le "$len" ]; do
+		config_get realm "$wifi_iface" "nai_realm_ITEM${index}"
+
+		num=$(echo "$realm" | cut -d ',' -f1 )
+		name=$(echo "$realm" | cut -d ',' -f2 )
+		auth=$(echo "$realm" | cut -d ',' -f3 )
+
+		auth_num=$(echo "$auth" | cut -d '[' -f1 )
+		param="[$(echo "$auth" | cut -d '[' -f2)"
+
+		uci_add "wireless" "nai-realm"
+		uci_set "wireless" "$CONFIG_SECTION" "wifi_id" "$wifi_id"
+		uci_set "wireless" "$CONFIG_SECTION" "number" "$num"
+		uci_set "wireless" "$CONFIG_SECTION" "hostname" "$name"
+		uci_set "wireless" "$CONFIG_SECTION" "auth_num" "$auth_num"
+		uci_set "wireless" "$CONFIG_SECTION" "param" "$param"
+
+		uci_remove_list "wireless" "${wifi_iface}" "nai_realm" "$realm"
+
+
+		index="$((index + 1))"
+	done
+
+	# re-structure hs20-oper-friendly-name
+
+	index="1"
+	config_get len "${wifi_iface}" "hs20_oper_friendly_name_LENGTH" "0"
+
+	while [ "$index" -le "$len" ]; do
+
+		config_get item "$wifi_iface" "hs20_oper_friendly_name_ITEM${index}"
+
+		country_code=$(echo "$item" | cut -d ':' -f1 )
+		name=$(echo "$item" | cut -d ':' -f2 )
+
+		uci_add "wireless" "hs20_oper_friendly_name"
+		uci_set "wireless" "$CONFIG_SECTION" "wifi_id" "$wifi_id"
+		uci_set "wireless" "$CONFIG_SECTION" "country_code" "$country_code"
+		uci_set "wireless" "$CONFIG_SECTION" "name" "$name"
+
+		uci_remove_list "wireless" "$wifi_iface" "hs20_oper_friendly_name" "$item"
+
+		index="$((index + 1))"
+	done
+
+	# re-structure hs20-conn-capab
+
+	index="1"
+	config_get len "$wifi_iface" "hs20_conn_capab_LENGTH" "0"
+
+	while [ "$index" -le "$len" ]; do
+		config_get item "${wifi_iface}" "hs20_conn_capab_ITEM${index}"
+
+		proto=$(echo "$item" | cut -d ':' -f1 )
+		port=$(echo "$item" | cut -d ':' -f2 )
+		state=$(echo "$item" | cut -d ':' -f3 )
+
+		uci_add "wireless" "hs20_conn_capab"
+		uci_set "wireless" "$CONFIG_SECTION" "wifi_id" "$wifi_id"
+		uci_set "wireless" "$CONFIG_SECTION" "proto" "$proto"
+		uci_set "wireless" "$CONFIG_SECTION" "port" "$port"
+		uci_set "wireless" "$CONFIG_SECTION" "state" "$state"
+
+		uci_remove_list "wireless" "$wifi_iface" "hs20_conn_capab" "$item"
+
+		index="$((index + 1))"
+	done
+
+	# restructure anqp_3gpp_cell_nets
+
+	index="1"
+	config_get len "${wifi_iface}" "anqp_3gpp_cell_net_LENGTH" "0"
+
+	while [ "$index" -le "$len" ]; do
+		config_get item "$wifi_iface" "anqp_3gpp_cell_net_ITEM${index}"
+
+		country_code=$(echo "$item" | cut -d ',' -f1 )
+		net_code=$(echo "$item" | cut -d ',' -f2 )
+
+		uci_add "wireless" "anqp_3gpp_cell_net"
+		uci_set "wireless" "$CONFIG_SECTION" "wifi_id" "$wifi_id"
+		uci_set "wireless" "$CONFIG_SECTION" "mobile_country_code" "$country_code"
+		uci_set "wireless" "$CONFIG_SECTION" "mobile_network_code" "$net_code"
+
+		uci_remove_list "wireless" "$wifi_iface" "anqp_3gpp_cell_net" "$item"
+		index="$((index + 1))"
+	done
+}
+
+config_load "wireless"
+config_foreach handle_wifi_iface "wifi-iface"
+uci_commit "wireless"

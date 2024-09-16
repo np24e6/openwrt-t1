@@ -1,0 +1,72 @@
+--- a/log/syslog.c
++++ b/log/syslog.c
+@@ -137,6 +137,58 @@ log_add(char *buf, int size, int source)
+ 	newest = next;
+ }
+ 
++int log_add_extended(char *buf, int size, const char *sender, int source, int prio, int db_flag)
++{
++	struct log_head *next;
++	char *c;
++
++	/* bounce out if we don't have init'ed yet (regmatch etc will blow) */
++	if (!log) {
++		fprintf(stderr, "%s", buf);
++		return -1;
++	}
++
++	for (c = buf; *c; c++) {
++		if (*c == '\n')
++			*c = ' ';
++	}
++
++	c = buf + size - 2;
++	while (isspace(*c)) {
++		size--;
++		c--;
++	}
++
++	buf[size - 1] = 0;
++
++	/* find new oldest entry */
++	next = log_next(newest, size);
++	if (next > newest) {
++		while ((oldest > newest) && (oldest <= next) && (oldest != log))
++			oldest = log_next(oldest, oldest->size);
++	} else {
++		newest->size = 0;
++		next = log_next(log, size);
++		for (oldest = log; oldest <= next; oldest = log_next(oldest, oldest->size))
++			;
++		newest = log;
++	}
++
++	/* add the log message */
++	newest->size = size;
++	newest->id = current_id++;
++	newest->priority = prio;
++	newest->source = source;
++	clock_gettime(CLOCK_REALTIME, &newest->ts);
++	strcpy(newest->data, buf);
++
++	ubus_notify_log_extended(newest, sender, db_flag);
++
++	newest = next;
++
++	return 0;
++}
++
+ static void
+ syslog_handle_fd(struct uloop_fd *fd, unsigned int events)
+ {
+--- a/log/syslog.h
++++ b/log/syslog.h
+@@ -39,6 +39,8 @@ typedef void (*log_list_cb)(struct log_h
+ struct log_head* log_list(int count, struct log_head *h);
+ int log_buffer_init(int size);
+ void log_add(char *buf, int size, int source);
++int log_add_extended(char *buf, int size, const char *sender, int source, int prio, int db_flag);
+ void ubus_notify_log(struct log_head *l);
++void ubus_notify_log_extended(struct log_head *l, const char *sender, int db_flag);
+ 
+ #endif

@@ -20,6 +20,7 @@ HOSTCC := $(HOSTCC_NOCACHE)
 HOSTCXX := $(HOSTCXX_NOCACHE)
 
 include $(INCLUDE_DIR)/host-build.mk
+include $(INCLUDE_DIR)/gpl.mk
 
 HOST_CONFIGURE_ARGS += \
 	--disable-acl \

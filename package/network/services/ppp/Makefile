@@ -63,6 +63,7 @@ define Package/ppp/conffiles
 /etc/ppp/ipv6-down
 /etc/ppp/ipv6-up
 /etc/ppp/options
+/etc/ppp/options.sstp
 endef
 
 define Package/ppp-mod-pppoa
@@ -222,6 +223,7 @@ define Package/ppp/install
 	$(INSTALL_DIR) $(1)/usr/sbin
 	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/sbin/pppd $(1)/usr/sbin/
 	$(INSTALL_DIR) $(1)/etc/ppp
+	$(INSTALL_DIR) $(1)/etc/ppp/ip-down.d/
 	$(INSTALL_CONF) ./files/etc/ppp/chap-secrets $(1)/etc/ppp/
 	$(INSTALL_DATA) ./files/etc/ppp/filter $(1)/etc/ppp/
 	$(INSTALL_DATA) ./files/etc/ppp/options $(1)/etc/ppp/
@@ -231,6 +233,7 @@ define Package/ppp/install
 	$(INSTALL_BIN) ./files/lib/netifd/ppp-up $(1)/lib/netifd/
 	$(INSTALL_BIN) ./files/lib/netifd/ppp6-up $(1)/lib/netifd/
 	$(INSTALL_BIN) ./files/lib/netifd/ppp-down $(1)/lib/netifd/
+	$(INSTALL_DATA) ./files/etc/ppp/options.sstp $(1)/etc/ppp/
 endef
 Package/ppp-multilink/install=$(Package/ppp/install)
 

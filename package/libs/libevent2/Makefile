@@ -23,8 +23,7 @@ PKG_CPE_ID:=cpe:/a:libevent_project:libevent
 
 PKG_CONFIG_DEPENDS:= \
 	CONFIG_PACKAGE_libevent2-openssl \
-	CONFIG_PACKAGE_libevent2-pthreads \
-	CONFIG_PACKAGE_libevent2-mbedtls
+	CONFIG_PACKAGE_libevent2-pthreads
 
 include $(INCLUDE_DIR)/package.mk
 include $(INCLUDE_DIR)/cmake.mk

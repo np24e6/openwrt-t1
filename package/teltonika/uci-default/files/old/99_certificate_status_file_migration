@@ -1,0 +1,71 @@
+#!/bin/sh
+# migrates /etc/certificates/status/info from custom (values separated by ' | ') to json format
+. /usr/share/libubox/jshn.sh
+
+CERT_FILE="/etc/certificates/status/info"
+
+if [ ! -f "$CERT_FILE" ]; then
+	mkdir -p "/etc/certificates/status"
+	touch "$CERT_FILE"
+	exit 0
+fi
+
+cert_info=$(cat "$CERT_FILE")
+cert_info="{ \"arr\":$cert_info }"
+
+if jshn -r "$cert_info" > /dev/null 2>&1; then
+	# already in json format - no migration needed
+	exit 0
+fi
+
+json_init
+json_add_array arr
+
+while read line; do
+	[ -z "$line" ] && continue
+	value="${line%% | *}"
+	line="${line#$value | }"
+	fullname="$value"
+
+	value="${line%% | *}"
+	line="${line#$value | }"
+	type="$value"
+
+	value="${line%% | *}"
+	line="${line#$value | }"
+	key_size="$value"
+
+	value="${line%% | *}"
+	line="${line#$value | }"
+	cert_type="$value"
+
+	value="${line%% | *}"
+	line="${line#$value | }"
+	timestamp="$value"
+
+	value="${line%% | *}"
+	line="${line#$value | }"
+	common_name="$value"
+
+	name="${fullname%%.*}"
+
+	json_add_object
+	[ ! "$type" = "-" ] && json_add_string type "$type"
+	[ ! "$key_size" = "-" ] && json_add_string key_size "$key_size"
+	[ ! "$cert_type" = "-" ] && json_add_string cert_type "$cert_type"
+	[ ! "$timestamp" = "-" ] && json_add_string timestamp "$timestamp"
+	[ ! "$common_name" = "-" ] && json_add_string common_name "$common_name"
+	[ ! "$fullname" = "-" ] && json_add_string fullname "$fullname"
+	[ ! "$name" = "-" ] && json_add_string name "$name"
+	json_close_object
+
+done < "$CERT_FILE"
+
+json_close_array
+json_string=$(json_dump)
+
+json_string="${json_string#*:}"
+json_string="${json_string%\}*}"
+
+echo "$json_string" > "$CERT_FILE"
+exit 0

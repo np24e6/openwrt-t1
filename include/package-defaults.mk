@@ -10,6 +10,8 @@ else
   PKG_FIXUP_DEPENDS = $(2)
 endif
 
+PKG_ORIGIN_URL ?= $(PKG_SOURCE_URL)
+
 define Package/Default
   CONFIGFILE:=
   SECTION:=opt
@@ -20,6 +22,9 @@ define Package/Default
   PROVIDES:=
   EXTRA_DEPENDS:=
   MAINTAINER:=$(PKG_MAINTAINER)
+  PKG_TLT_NAME:=
+  PKG_ROUTER:=
+  PKG_REBOOT:=
   SOURCE:=$(patsubst $(TOPDIR)/%,%,$(CURDIR))
   ifneq ($(PKG_VERSION),)
     ifneq ($(PKG_RELEASE),)
@@ -49,6 +54,7 @@ define Package/Default
   KCONFIG:=
   BUILDONLY:=
   HIDDEN:=
+  PKG_HIDDEN:=
   URL:=
   VARIANT:=
   DEFAULT_VARIANT:=
@@ -62,8 +68,13 @@ endef
 Build/Patch:=$(Build/Patch/Default)
 ifneq ($(strip $(PKG_UNPACK)),)
   define Build/Prepare/Default
-	$(PKG_UNPACK)
-	[ ! -d ./src/ ] || $(CP) ./src/. $(PKG_BUILD_DIR)
+	@if [ "$(PKG_SOURCE_PROTO)" == "git" ] && [ -d "$(CURDIR)/git" ]; then \
+		$(CP) -r $(CURDIR)/git/* $(PKG_BUILD_DIR); \
+	else \
+		$(PKG_UNPACK); \
+		[ ! -d ./src/ ] || $(CP) ./src/. $(PKG_BUILD_DIR); \
+	fi
+
 	$(Build/Patch)
   endef
 endif
@@ -140,10 +151,13 @@ MAKE_INSTALL_FLAGS = \
 MAKE_PATH ?= .
 
 define Build/Compile/Default
-	+$(MAKE_VARS) \
-	$(MAKE) $(PKG_JOBS) -C $(PKG_BUILD_DIR)/$(MAKE_PATH) \
-		$(MAKE_FLAGS) \
-		$(1);
+	$(if $(shell [ -d ./bin ] && echo "1"), \
+		$(CP) ./bin/. $(PKG_BUILD_DIR), \
+		$(MAKE_VARS) \
+		$(MAKE) $(PKG_JOBS) -C $(PKG_BUILD_DIR)/$(MAKE_PATH) \
+			$(MAKE_FLAGS) \
+			$(1); \
+	)
 endef
 
 define Build/Install/Default

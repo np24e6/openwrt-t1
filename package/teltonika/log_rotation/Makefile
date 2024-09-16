@@ -1,0 +1,35 @@
+#
+# Copyright (C) 2022 Teltonika
+#
+
+include $(TOPDIR)/rules.mk
+include $(INCLUDE_DIR)/download.mk
+
+PKG_NAME:=log_rotation
+PKG_VERSION:=2023-02-13
+PKG_RELEASE:=1
+
+PKG_SOURCE_VERSION:=527809f9d0e31eaa0d5f7a29cdd4937fc809025c
+
+include $(INCLUDE_DIR)/package.mk
+
+define Package/log_rotation
+	SECTION:=base
+	CATEGORY:=Base system
+	TITLE:=Log rotation manager
+endef
+
+define Package/log_rotation/description
+	Script that performs log (or any file) rotation
+endef
+
+
+
+define Package/log_rotation/install
+	$(INSTALL_DIR) $(1)/usr/sbin $(1)/etc/init.d
+
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/log_rotation.sh $(1)/usr/sbin
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/files/log_rotation.init $(1)/etc/init.d/log_rotation
+endef
+
+$(eval $(call BuildPackage,log_rotation))

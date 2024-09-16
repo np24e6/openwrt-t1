@@ -1,0 +1,82 @@
+Index: firewall-2021-03-23-61db17ed/options.h
+===================================================================
+--- firewall-2021-03-23-61db17ed.orig/options.h
++++ firewall-2021-03-23-61db17ed/options.h
+@@ -422,7 +422,7 @@ struct fw3_redirect
+ 
+ 	struct list_head ip_src;
+ 	struct list_head mac_src;
+-	struct fw3_port port_src;
++	struct list_head port_src;
+ 
+ 	struct fw3_address ip_dest;
+ 	struct fw3_port port_dest;
+Index: firewall-2021-03-23-61db17ed/redirects.c
+===================================================================
+--- firewall-2021-03-23-61db17ed.orig/redirects.c
++++ firewall-2021-03-23-61db17ed/redirects.c
+@@ -35,7 +35,7 @@ const struct fw3_option fw3_redirect_opt
+ 
+ 	FW3_LIST("src_ip",              network,   redirect,     ip_src),
+ 	FW3_LIST("src_mac",            mac,       redirect,     mac_src),
+-	FW3_OPT("src_port",            port,      redirect,     port_src),
++	FW3_LIST("src_port",            port,      redirect,     port_src),
+ 
+ 	FW3_OPT("src_dip",             network,   redirect,     ip_dest),
+ 	FW3_OPT("src_dport",           port,      redirect,     port_dest),
+@@ -376,6 +376,7 @@ fw3_alloc_redirect(struct fw3_state *sta
+ 	INIT_LIST_HEAD(&redir->proto);
+ 	INIT_LIST_HEAD(&redir->mac_src);
+ 	INIT_LIST_HEAD(&redir->ip_src);
++	INIT_LIST_HEAD(&redir->port_src);
+ 	INIT_LIST_HEAD(&redir->reflection_zones);
+ 
+ 	redir->enabled = true;
+@@ -561,17 +562,17 @@ set_comment(struct fw3_ipt_rule *r, cons
+ static void
+ print_redirect(struct fw3_ipt_handle *h, struct fw3_state *state,
+                struct fw3_redirect *redir, int num,
+-               struct fw3_protocol *proto, struct fw3_mac *mac, struct fw3_address *src)
++               struct fw3_protocol *proto, struct fw3_mac *mac, struct fw3_address *src,
++		struct fw3_port *spt)
+ {
+ 	struct fw3_ipt_rule *r;
+ 	struct fw3_address *dst;
+-	struct fw3_port *spt, *dpt;
++	struct fw3_port *dpt;
+ 
+ 	switch (h->table)
+ 	{
+ 	case FW3_TABLE_NAT:
+ 		dst = &redir->ip_dest;
+-		spt = &redir->port_src;
+ 		dpt = &redir->port_dest;
+ 
+ 		if (redir->target == FW3_FLAG_SNAT)
+@@ -609,7 +610,7 @@ print_redirect(struct fw3_ipt_handle *h,
+ 				     redir->helper.ptr->name);
+ 
+ 			r = fw3_ipt_rule_create(h, proto, NULL, NULL, src, &redir->ip_redir);
+-			fw3_ipt_rule_sport_dport(r, &redir->port_src, &redir->port_redir);
++			fw3_ipt_rule_sport_dport(r, spt, &redir->port_redir);
+ 			fw3_ipt_rule_mac(r, mac);
+ 			fw3_ipt_rule_ipset(r, &redir->ipset);
+ 			fw3_ipt_rule_limit(r, &redir->limit);
+@@ -671,6 +672,7 @@ expand_redirect(struct fw3_ipt_handle *h
+ 	struct fw3_protocol *proto;
+ 	struct fw3_mac *mac;
+ 	struct fw3_address *src;
++	struct fw3_port *port_src;
+ 	struct fw3_device *reflection_zone;
+ 	struct fw3_zone *zone;
+ 
+@@ -727,7 +729,8 @@ expand_redirect(struct fw3_ipt_handle *h
+ 	fw3_foreach(proto, &redir->proto)
+ 	fw3_foreach(mac, &redir->mac_src)
+ 	fw3_foreach(src, &redir->ip_src)
+-		print_redirect(handle, state, redir, num, proto, mac, src);
++	fw3_foreach(port_src, &redir->port_src)
++		print_redirect(handle, state, redir, num, proto, mac, src, port_src);
+ 
+ 	/* reflection rules */
+ 	if (redir->target != FW3_FLAG_DNAT || !redir->reflection || redir->local)

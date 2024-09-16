@@ -11,6 +11,8 @@ PKG_NAME:=6rd
 PKG_RELEASE:=10
 PKG_LICENSE:=GPL-2.0
 
+PKG_ORIGIN_URL:=https://github.com/openwrt/openwrt/tree/openwrt-21.02/package/network/ipv6/6rd
+
 include $(INCLUDE_DIR)/package.mk
 
 define Package/6rd

@@ -38,6 +38,7 @@ include $(INCLUDE_DIR)/hardening.mk
 include $(INCLUDE_DIR)/prereq.mk
 include $(INCLUDE_DIR)/unpack.mk
 include $(INCLUDE_DIR)/depends.mk
+include $(INCLUDE_DIR)/portable.mk
 
 ifneq ($(wildcard $(TOPDIR)/git-src/$(PKG_NAME)/.git),)
   USE_GIT_SRC_CHECKOUT:=1
@@ -111,7 +112,9 @@ include $(INCLUDE_DIR)/package-defaults.mk
 include $(INCLUDE_DIR)/package-dumpinfo.mk
 include $(INCLUDE_DIR)/package-ipkg.mk
 include $(INCLUDE_DIR)/package-bin.mk
+include $(INCLUDE_DIR)/package-gpl.mk
 include $(INCLUDE_DIR)/autotools.mk
+include $(INCLUDE_DIR)/package-test.mk
 
 _pkg_target:=$(if $(QUILT),,.)
 
@@ -271,9 +274,24 @@ define Build/DefaultTargets
   endef
 endef
 
+# at early stage .config might not be included thus no $(CONFIG..) options
+#  are available, grab them from current configuration file
+ifndef $(BOARD)
+  $(eval CONFIG_TARGET_BOARD=$(shell grep -Po 'CONFIG_TARGET_BOARD=\K[^ ]+' $(TOPDIR)/.config))
+  $(eval CONFIG_TARGET_SUBTARGET=$(shell grep -Po 'CONFIG_TARGET_SUBTARGET=\K[^ ]+' $(TOPDIR)/.config))
+  $(eval CONFIG_TARGET_PROFILE=$(shell grep -Po 'CONFIG_TARGET_PROFILE=\K[^ ]+' $(TOPDIR)/.config))
+endif
+
+BOARD_EX=$(call qstrip,$(CONFIG_TARGET_BOARD))
+SUBTARGET_EX=$(call qstrip,$(CONFIG_TARGET_SUBTARGET))
+PROFILE_EX=$(call qstrip,$(CONFIG_TARGET_PROFILE))
+
 define BuildPackage
   $(eval $(Package/Default))
   $(eval $(Package/$(1)))
+  $(eval $(Package/$(1)/$(BOARD_EX)))
+  $(eval $(Package/$(1)/$(BOARD_EX)/$(SUBTARGET_EX)))
+  $(eval $(Package/$(1)/$(subst DEVICE_,,$(PROFILE_EX))))
 
 ifdef DESCRIPTION
 $$(error DESCRIPTION:= is obsolete, use Package/PKG_NAME/description)
@@ -282,6 +300,18 @@ endif
 ifndef Package/$(1)/description
 define Package/$(1)/description
 	$(TITLE)
+endef
+endif
+
+ifndef Package/$(1)/geninfo
+define Package/$(1)/geninfo
+	printf "%s," \
+		"$(1)" \
+		"$(VERSION)" \
+		"$(LICENSE)" \
+		"$(call Download/ParseURL,$(firstword $(PKG_ORIGIN_URL)))" \
+		>> "$(BIN_DIR)/rutos-$(CONFIG_TARGET_BOARD)-package-geninfo.csv"; \
+	printf "\n" >> "$(BIN_DIR)/rutos-$(CONFIG_TARGET_BOARD)-package-geninfo.csv"
 endef
 endif
 
@@ -351,3 +381,59 @@ dist:
 
 distcheck:
 	$(Build/DistCheck)
+
+develop:
+	$(Develop/prepare)
+
+stage:
+	$(Develop/stage)
+
+unstage:
+	$(Develop/unstage)
+
+ucompile:
+	$(Build/Compile)
+
+uclean:
+	$(MAKE) -C $(PKG_BUILD_DIR) clean
+
+unit_test: compile unit_test_clean toolchain-dump
+	$(Test/unit_test)
+
+unit_test_clean: toolchain-dump
+	$(Test/unit_test_clean)
+
+toolchain-dump:
+	(\
+		echo "\
+TOOLCHAIN_DIR=$(TOOLCHAIN_DIR);\
+STAGING_DIR=$(STAGING_DIR);\
+CFLAGS=$(filter-out $(IREMAP_CFLAGS),$(TARGET_CFLAGS)) $(EXTRA_CFLAGS);\
+CXXFLAGS=$(filter-out $(IREMAP_CFLAGS),$(TARGET_CFLAGS)) $(EXTRA_CXXFLAGS);\
+CPPFLAGS=$(TARGET_CPPFLAGS);\
+LDFLAGS=$(TARGET_LDFLAGS) $(EXTRA_LDFLAGS);\
+AR=$(TARGET_AR);\
+AS=$(TARGET_CC) -c $(filter-out $(IREMAP_CFLAGS),$(TARGET_ASFLAGS));\
+LD=$(TARGET_CROSS)ld;\
+NM=$(TARGET_NM);\
+CC=$(TARGET_CC);\
+GCC=$(TARGET_CC);\
+CXX=$(TARGET_CXX);\
+RANLIB=$(TARGET_RANLIB);\
+STRIP=$(TARGET_CROSS)strip;\
+OBJCOPY=$(TARGET_CROSS)objcopy;\
+OBJDUMP=$(TARGET_CROSS)objdump;\
+SIZE=$(TARGET_CROSS)size;\
+CROSS=$(TARGET_CROSS);\
+ARCH=$(ARCH)" > "$(TMP_DIR)/.tc"; \
+	)
+
+define GenInfo
+	$(foreach m,$(BUILD_PACKAGES),$(if $(CONFIG_PACKAGE_$(m)),$(call Package/$(m)/geninfo);))
+endef
+
+geninfo:
+	$(if $(findstring package/teltonika,$(shell pwd)), \
+		$(if $(GPL_INCLUDE_SRC),$(call GenInfo)), \
+		$(if $(findstring feeds/vuci,$(shell pwd)),,$(call GenInfo)) \
+	)

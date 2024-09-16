@@ -15,6 +15,7 @@ CMAKE_SOURCE_SUBDIR:=build/cmake
 HOST_BUILD_PARALLEL:=1
 
 include $(INCLUDE_DIR)/host-build.mk
+include $(INCLUDE_DIR)/gpl.mk
 include $(INCLUDE_DIR)/cmake.mk
 
 CMAKE_HOST_OPTIONS += \

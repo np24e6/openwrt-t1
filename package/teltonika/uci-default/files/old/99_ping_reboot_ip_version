@@ -1,0 +1,33 @@
+#!/bin/sh
+
+#Script tests option host<n> ip family and sets ip_type<n> option accordingly.
+#If host<n> holds hostname, ip_type<n> is set to "ipv4".
+
+. /lib/functions.sh
+
+fix_ip_type() {
+    local host
+    local family="ipv4"
+    local sec="$1" num="$2"
+
+    config_get ip_type "$sec" ip_type"$num"
+    [ -n  "$ip_type" ] && return
+
+    config_get host "$sec" host"$num"
+    [ -z "$host" ] && return
+
+    echo "$host" | grep -qE "^([0-9a-fA-F]{0,4}:){1,7}[0-9a-fA-F]{0,4}$" && {
+        family="ipv6"
+    }
+
+    uci_set ping_reboot "$sec" ip_type"$num" "$family"
+}
+
+fix_ip_version() {
+    fix_ip_type "$1"
+    fix_ip_type "$1" 1
+    fix_ip_type "$1" 2
+}
+
+config_load ping_reboot
+config_foreach fix_ip_version ping_reboot

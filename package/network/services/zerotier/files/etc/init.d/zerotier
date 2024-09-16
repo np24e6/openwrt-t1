@@ -1,0 +1,105 @@
+#!/bin/sh /etc/rc.common
+
+START=90
+USE_PROCD=1
+
+PROG=/usr/bin/zerotier-one
+CONFIG_PATH=/var/lib/zerotier-one
+
+setup_network() {
+	local cfg="$1"
+	local secret="$2"
+	local node_id="$3"
+	local args=""
+	local network_id allow_global allow_managed allow_default
+
+	config_get enabled "$1" 'enabled' 0
+	config_get network_id $cfg 'network_id'
+	config_get port $cfg 'port' '9993'
+	config_get allow_global $cfg 'allow_global'
+	config_get allow_managed $cfg 'allow_managed' '1'
+	config_get allow_default $cfg 'allow_default'
+
+	[ "$enabled" -eq 0 ] && return 1
+
+
+	args="$args -p${port}"
+	path="${CONFIG_PATH}_${node_id}_${cfg}"
+	mkdir -p "$path/networks.d"
+
+	# link latest default config path to latest config path
+	rm -f "$CONFIG_PATH"
+	ln -s $path $CONFIG_PATH
+
+	if [ -n "$secret" ]; then
+		echo "$secret" > "$path/identity.secret"
+		rm -f "$path/identity.public"
+	fi
+
+	# an (empty) config file will cause ZT to join a network
+	touch "${path}/networks.d/${network_id}.conf"
+	touch "${path}/networks.d/${network_id}.local.conf"
+
+	[ "$allow_default" = "1" ] && {
+		sysctl -w "net.ipv4.conf.all.rp_filter=2" >/dev/null
+		echo allowDefault=1 >> "${path}/networks.d/${network_id}.local.conf"
+        }
+
+	[ "$allow_global" = "1" ] && echo "allowGlobal=1" >> "${path}/networks.d/${network_id}.local.conf"
+	[ "$allow_managed" = "1" ] && echo "allowManaged=1" >> "${path}/networks.d/${network_id}.local.conf"
+	[ "$allow_managed" = "0" ] && echo "allowManaged=0" >> "${path}/networks.d/${network_id}.local.conf"
+
+	procd_open_instance
+	procd_set_param command $PROG $args $path
+	procd_set_param stderr 1
+	procd_set_param respawn
+	procd_close_instance
+}
+
+setup_instance() {
+	local enabled port secret node_id
+
+	config_get enabled "$1" 'enabled' 0
+	[ "$enabled" -eq 0 ] && return 1
+
+	config_get secret "$1" 'secret'
+	config_get node_id "$1" 'node_id'
+
+	if [ -z "$secret" ]; then
+		echo "Generating a secret..."
+		local sf="/tmp/zt.globals.secret"
+
+		zerotier-idtool generate "$sf" > /dev/null || {
+			echo "Failed to generate a secret!"
+			return 1
+		}
+
+		secret=$(cat "$sf")
+		node_id=${secret:0:10}
+		uci_set zerotier "$1" "secret" "$secret"
+		uci_set zerotier "$1" "node_id" "$node_id"
+		rm "$sf"
+
+		uci_commit zerotier
+	fi
+
+	config_foreach setup_network "network_${1}" "$secret" "$node_id"
+}
+
+start_service() {
+	config_load "zerotier"
+	config_foreach setup_instance "instance"
+}
+
+stop_service() {
+	rm -rf ${CONFIG_PATH}*
+}
+
+reload_service() {
+	stop
+	start
+}
+
+service_triggers() {
+	procd_add_reload_trigger 'zerotier'
+}

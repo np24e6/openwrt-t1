@@ -1,0 +1,21 @@
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -56,14 +56,14 @@ INSTALL(TARGETS validate_data
+ 	RUNTIME DESTINATION sbin
+ )
+ 
+-ADD_EXECUTABLE(logd log/logd.c log/syslog.c)
+-TARGET_LINK_LIBRARIES(logd ubox ubus)
++ADD_EXECUTABLE(logd log/logd.c log/syslog.c log/logdb.c)
++TARGET_LINK_LIBRARIES(logd ubox ubus sqlite3)
+ INSTALL(TARGETS logd
+ 	RUNTIME DESTINATION sbin
+ )
+ 
+-ADD_EXECUTABLE(logread log/logread.c)
+-TARGET_LINK_LIBRARIES(logread ubox ubus ${json} blobmsg_json)
++ADD_EXECUTABLE(logread log/logread.c log/logdb.c)
++TARGET_LINK_LIBRARIES(logread ubox ubus ${json} blobmsg_json sqlite3)
+ INSTALL(TARGETS logread
+ 	RUNTIME DESTINATION sbin
+ )

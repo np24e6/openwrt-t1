@@ -17,6 +17,8 @@ STAMP_PREPARED := $(STAMP_PREPARED)_$(call confvar,CONFIG_MTD_REDBOOT_PARTS)
 PKG_LICENSE:=GPL-2.0+
 PKG_LICENSE_FILES:=
 
+PKG_ORIGIN_URL:=https://github.com/openwrt/openwrt/tree/openwrt-21.02/package/system/mtd
+
 PKG_FLAGS:=nonshared
 
 include $(INCLUDE_DIR)/package.mk

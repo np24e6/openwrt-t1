@@ -1,0 +1,74 @@
+Index: firewall-2021-03-23-61db17ed/options.c
+===================================================================
+--- firewall-2021-03-23-61db17ed.orig/options.c
++++ firewall-2021-03-23-61db17ed/options.c
+@@ -847,10 +847,31 @@ fw3_parse_reflection_source(void *ptr, c
+ }
+ 
+ bool
++fw3_check_hex(const char *s) {
++	int n = 0, k = 0;
++	if(s[0] == '0' && (s[1] == 'x' || s[1] == 'X')) {
++		n = 2; // Check whether it starts with 0x or 0X (HEX prefix)
++	}
++
++	for(int i = n; s[i] != '\0'; i++) {
++		if(++k > 7) { // Allow only 7 characters because FWMARK can't hold more
++			return false;
++		}
++
++		char ch = s[i];
++		if((ch < '0' || ch > '9') && (ch < 'A' || ch > 'F') && (ch < 'a' || ch > 'f')) {
++			return false;
++		}
++	}
++
++	return true;
++}
++
++bool
+ fw3_parse_mark(void *ptr, const char *val, bool is_list)
+ {
+ 	uint32_t n;
+-	char *s, *e;
++	char *s;
+ 	struct fw3_mark *m = ptr;
+ 
+ 	if (*val == '!')
+@@ -862,20 +883,18 @@ fw3_parse_mark(void *ptr, const char *va
+ 	if ((s = strchr(val, '/')) != NULL)
+ 		*s++ = 0;
+ 
+-	n = strtoul(val, &e, 0);
++	n = strtol(val, NULL, 16);
+ 
+-	if (e == val || *e)
+-		return false;
++	if(!fw3_check_hex(val)) return false;
+ 
+ 	m->mark = n;
+ 	m->mask = 0xFFFFFFFF;
+ 
+ 	if (s)
+ 	{
+-		n = strtoul(s, &e, 0);
++		n = strtol(s, NULL, 16);
+ 
+-		if (e == s || *e)
+-			return false;
++		if(!fw3_check_hex(s)) return false;
+ 
+ 		m->mask = n;
+ 	}
+Index: firewall-2021-03-23-61db17ed/options.h
+===================================================================
+--- firewall-2021-03-23-61db17ed.orig/options.h
++++ firewall-2021-03-23-61db17ed/options.h
+@@ -638,6 +638,7 @@ bool fw3_parse_options(void *s, const st
+                        struct uci_section *section);
+ bool fw3_parse_blob_options(void *s, const struct fw3_option *opts,
+                             struct blob_attr *a, const char *name);
++bool fw3_check_hex(const char *s);
+ 
+ const char * fw3_address_to_string(struct fw3_address *address,
+                                    bool allow_invert, bool as_cidr);

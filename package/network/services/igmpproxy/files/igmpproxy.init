@@ -124,6 +124,10 @@ start_service() {
 	logopts=
 	config_load igmpproxy
 
+    local enabled
+    config_get_bool enabled "igmpproxy" enabled 0
+    [ "$enabled" -eq 0 ] && return 1
+
 	config_foreach igmp_header igmpproxy
 	config_foreach igmp_add_phyint phyint
 	[ -n "$has_upstream" ] || return

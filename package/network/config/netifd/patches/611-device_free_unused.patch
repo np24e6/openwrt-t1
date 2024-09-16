@@ -1,0 +1,12 @@
+Index: netifd-2022-01-12-5ca5e0b4/config.c
+===================================================================
+--- netifd-2022-01-12-5ca5e0b4.orig/config.c
++++ netifd-2022-01-12-5ca5e0b4/config.c
+@@ -778,6 +778,7 @@ config_init_all(void)
+ 	device_reset_old();
+ 	device_init_pending();
+ 	vlist_flush(&interfaces);
++	device_free_unused();
+ 	interface_refresh_assignments(false);
+ 	interface_start_pending();
+ 	wireless_start_pending();

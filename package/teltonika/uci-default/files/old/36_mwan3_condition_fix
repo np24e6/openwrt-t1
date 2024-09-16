@@ -1,0 +1,21 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+fix_condition() {
+	local condition="$1"
+	local track_ip
+
+	config_get track_ip "$condition" "track_ip"
+
+	uci_remove "mwan3" "$condition" "track_ip"
+
+	for ip in $track_ip; do
+		uci_add_list "mwan3" "$condition" "track_ip" "$ip"
+	done
+}
+
+config_load "mwan3"
+config_foreach fix_condition "condition"
+uci_commit "mwan3"
+

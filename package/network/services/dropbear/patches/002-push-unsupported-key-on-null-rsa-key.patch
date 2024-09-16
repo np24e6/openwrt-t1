@@ -1,0 +1,34 @@
+--- a/rsa.c
++++ b/rsa.c
+@@ -163,6 +163,15 @@ void buf_put_rsa_pub_key(buffer* buf, co
+ 	TRACE(("enter buf_put_rsa_pub_key"))
+ 	dropbear_assert(key != NULL);
+ 
++	if (!key) {
++		// if asserts are disabled and RSA key is not generated
++		//  this will get evaluated
++		// we inform client by pushing unsupported key
++		buf_putstring(buf, "key-unsupported", 15);
++		TRACE(("leave buf_put_rsa_pub_key"))
++		return;
++	}
++
+ 	buf_putstring(buf, SSH_SIGNKEY_RSA, SSH_SIGNKEY_RSA_LEN);
+ 	buf_putmpint(buf, key->e);
+ 	buf_putmpint(buf, key->n);
+@@ -266,6 +275,15 @@ void buf_put_rsa_sign(buffer* buf, const
+ 	TRACE(("enter buf_put_rsa_sign"))
+ 	dropbear_assert(key != NULL);
+ 
++	if (!key) {
++		// if asserts are disabled and RSA key is not generated
++		//  this will get evaluated
++		// we inform client by pushing unsupported signature
++		buf_putstring(buf, "invalid-sign", 12);
++		TRACE(("leave buf_put_rsa_sign"))
++		return;
++	}
++
+ 	m_mp_init_multi(&rsa_s, &rsa_tmp1, &rsa_tmp2, &rsa_tmp3, NULL);
+ 
+ 	rsa_pad_em(key, data_buf, &rsa_tmp1, sigtype);

@@ -1,0 +1,86 @@
+Index: libmodbus-3.1.6/src/modbus.c
+===================================================================
+--- libmodbus-3.1.6.orig/src/modbus.c
++++ libmodbus-3.1.6/src/modbus.c
+@@ -1375,6 +1375,69 @@ int modbus_write_bits(modbus_t *ctx, int
+     return rc;
+ }
+ 
++/* Write the bits of the array in the remote device. Original function */
++int modbus_write_bits_2(modbus_t *ctx, int addr, int nb, const uint8_t *src)
++{
++    int rc;
++    int i;
++    int byte_count;
++    int req_length;
++    int bit_check = 0;
++    int pos = 0;
++    uint8_t req[MAX_MESSAGE_LENGTH];
++
++    if (ctx == NULL) {
++        errno = EINVAL;
++        return -1;
++    }
++
++    if (nb > MODBUS_MAX_WRITE_BITS) {
++        if (ctx->debug) {
++            fprintf(stderr, "ERROR Writing too many bits (%d > %d)\n",
++                    nb, MODBUS_MAX_WRITE_BITS);
++        }
++        errno = EMBMDATA;
++        return -1;
++    }
++
++    req_length = ctx->backend->build_request_basis(ctx,
++                                                   MODBUS_FC_WRITE_MULTIPLE_COILS,
++                                                   addr, nb, req);
++    byte_count = (nb / 8) + ((nb % 8) ? 1 : 0);
++    req[req_length++] = byte_count;
++
++    for (i = 0; i < byte_count; i++) {
++        int bit;
++
++        bit = 0x01;
++        req[req_length] = 0;
++
++        while ((bit & 0xFF) && (bit_check++ < nb)) {
++            if (src[pos++])
++                req[req_length] |= bit;
++            else
++                req[req_length] &=~ bit;
++
++            bit = bit << 1;
++        }
++        req_length++;
++    }
++
++    rc = send_msg(ctx, req, req_length);
++    if (rc > 0) {
++        uint8_t rsp[MAX_MESSAGE_LENGTH];
++
++        rc = _modbus_receive_msg(ctx, rsp, MSG_CONFIRMATION);
++        if (rc == -1)
++            return -1;
++
++        rc = check_confirmation(ctx, req, rsp, rc);
++    }
++
++
++    return rc;
++}
++
+ /* Write the values from the array to the registers of the remote device */
+ int modbus_write_registers(modbus_t *ctx, int addr, int nb, const uint16_t *src)
+ {
+Index: libmodbus-3.1.6/src/modbus.h
+===================================================================
+--- libmodbus-3.1.6.orig/src/modbus.h
++++ libmodbus-3.1.6/src/modbus.h
+@@ -210,6 +210,7 @@ MODBUS_API int modbus_read_input_registe
+ MODBUS_API int modbus_write_bit(modbus_t *ctx, int coil_addr, int status);
+ MODBUS_API int modbus_write_register(modbus_t *ctx, int reg_addr, const uint16_t value);
+ MODBUS_API int modbus_write_bits(modbus_t *ctx, int addr, int nb, const uint16_t *data);
++MODBUS_API int modbus_write_bits_2(modbus_t *ctx, int addr, int nb, const uint8_t *src);
+ MODBUS_API int modbus_write_registers(modbus_t *ctx, int addr, int nb, const uint16_t *data);
+ MODBUS_API int modbus_mask_write_register(modbus_t *ctx, int addr, uint16_t and_mask, uint16_t or_mask);
+ MODBUS_API int modbus_write_and_read_registers(modbus_t *ctx, int write_addr, int write_nb,

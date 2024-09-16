@@ -11,6 +11,7 @@ PKG_NAME:=padjffs2
 PKG_RELEASE:=1
 
 include $(INCLUDE_DIR)/host-build.mk
+include $(INCLUDE_DIR)/gpl.mk
 
 define Host/Prepare
 	mkdir -p $(HOST_BUILD_DIR)

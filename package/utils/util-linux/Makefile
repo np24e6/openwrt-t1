@@ -531,6 +531,7 @@ CONFIGURE_ARGS += \
 
 TARGET_CFLAGS += $(FPIC) -std=gnu99
 
+
 define Build/InstallDev
 	$(INSTALL_DIR) $(1)/usr/lib/pkgconfig
 	$(CP) $(PKG_INSTALL_DIR)/usr/lib/pkgconfig/blkid.pc $(1)/usr/lib/pkgconfig

@@ -64,22 +64,80 @@ ARCH_UPPER=$(echo "$ARCH" | tr '[:lower:]' '[:upper:]')
 
 # Conditionally create fdt information
 if [ -n "${DTB}" ]; then
-	FDT_NODE="
-		fdt@$FDTNUM {
-			description = \"${ARCH_UPPER} OpenWrt ${DEVICE} device tree blob\";
-			data = /incbin/(\"${DTB}\");
-			type = \"flat_dt\";
-			arch = \"${ARCH}\";
-			compression = \"none\";
-			hash@1 {
-				algo = \"crc32\";
+	if [ -f "$DTB" ]; then
+		FDT_NODE="
+			fdt@$FDTNUM {
+				description = \"${ARCH_UPPER} OpenWrt ${DEVICE} device tree blob\";
+				data = /incbin/(\"${DTB}\");
+				type = \"flat_dt\";
+				arch = \"${ARCH}\";
+				compression = \"none\";
+				hash@1 {
+					algo = \"crc32\";
+				};
+				hash@2 {
+					algo = \"sha1\";
+				};
 			};
-			hash@2 {
-				algo = \"sha1\";
-			};
+"
+
+		CONFIG_NODE="
+			${CONFIG} {
+			description = \"OpenWrt\";
+			kernel = \"kernel@1\";
+			fdt = \"fdt@$FDTNUM\";
 		};
 "
-	FDT_PROP="fdt = \"fdt@$FDTNUM\";"
+	else
+		FDTNUM=0
+		DEFAULT_CONFIG=$FDTNUM
+
+		# for f in $(eval echo $DTB); do <= doesn't work on dash, here comes a workaround:
+		DTB_DIR="${DTB%%{*}"
+		DTB="${DTB##*{}"
+		DTB_CSV="${DTB##*{}"
+		DTB_CSV="${DTB%\}*}"
+		IFS=,
+		for f in $DTB_CSV; do
+			FDTNUM=$((FDTNUM+1))
+
+			ff="${DTB_DIR}/${f}"
+			[ -f "${ff}" ] || {
+				echo "ERROR: no DTBs found" >&2
+				rm -f "${OUTPUT}"
+				exit 1
+			}
+
+			FDT_NODE="${FDT_NODE}
+
+				fdt@$FDTNUM {
+					description = \"${f}\";
+					data = /incbin/(\"${ff}\");
+					type = \"flat_dt\";
+					arch = \"${ARCH}\";
+					compression = \"none\";
+					hash@1 {
+						algo = \"crc32\";
+					};
+					hash@2 {
+						algo = \"sha1\";
+					};
+				};
+"
+			# extract XYZ from image-qcom-ipq4018-rutx-XYZ.dtb
+			f=${f##*-}
+			f=${f%.*}
+
+			CONFIG_NODE="${CONFIG_NODE}
+
+				conf_mdtb@${FDTNUM} {
+				description = \"${f}\";
+				kernel = \"kernel@1\";
+				fdt = \"fdt@$FDTNUM\";
+			};
+"
+		done
+	fi
 fi
 
 # Create a default, fully populated DTS file
@@ -110,12 +168,8 @@ ${FDT_NODE}
 	};
 
 	configurations {
-		default = \"${CONFIG}\";
-		${CONFIG} {
-			description = \"OpenWrt\";
-			kernel = \"kernel@1\";
-			${FDT_PROP}
-		};
+		default = \"${DEFAULT_CONFIG}\";
+${CONFIG_NODE}
 	};
 };"
 

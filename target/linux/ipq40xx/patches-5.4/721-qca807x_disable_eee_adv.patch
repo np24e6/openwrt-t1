@@ -1,0 +1,57 @@
+--- a/drivers/net/phy/qca807x.c
++++ b/drivers/net/phy/qca807x.c
+@@ -80,6 +80,10 @@
+ #define QCA807X_MMD7_1000BASE_T_POWER_SAVE_PER_CABLE_LENGTH	0x801a
+ #define QCA807X_CONTROL_DAC_MASK				GENMASK(2, 0)
+ 
++#define QCA807X_MMD7_EEE_ADV                           0x3c
++#define QCA807X_MMD7_EEE_1000BT_EN                     BIT(2)
++#define QCA807X_MMD7_EEE_100BT_EN                      BIT(1)
++
+ #define QCA807X_MMD7_LED_100N_1				0x8074
+ #define QCA807X_MMD7_LED_100N_2				0x8075
+ #define QCA807X_MMD7_LED_1000N_1			0x8076
+@@ -811,6 +815,34 @@ static int qca807x_led_config(struct phy
+ 		return 0;
+ }
+ 
++static int qca807x_eee_config(struct phy_device *phydev)
++{
++       struct device_node *node = phydev->mdio.dev.of_node;
++       bool eee_config = false;
++       int val, en_1000, en_100;
++
++       val = phy_read_mmd(phydev, MDIO_MMD_AN, QCA807X_MMD7_EEE_ADV);
++       if (val < 0)
++               return val;
++
++       en_1000 = FIELD_GET(QCA807X_MMD7_EEE_1000BT_EN, val);
++       en_100  = FIELD_GET(QCA807X_MMD7_EEE_100BT_EN, val);
++
++       if (en_1000) {
++               val &= ~QCA807X_MMD7_EEE_1000BT_EN;
++               eee_config = true;
++       }
++       if (en_100) {
++               val &= ~QCA807X_MMD7_EEE_100BT_EN;
++               eee_config = true;
++       }
++
++       if (eee_config)
++               return phy_write_mmd(phydev, MDIO_MMD_AN, QCA807X_MMD7_EEE_ADV, val);
++       else
++               return 0;
++}
++
+ static const struct sfp_upstream_ops qca807x_sfp_ops = {
+ 	.attach = phy_sfp_attach,
+ 	.detach = phy_sfp_detach,
+@@ -894,6 +926,8 @@ static int qca807x_probe(struct phy_devi
+ 			ret = phy_sfp_probe(phydev, &qca807x_sfp_ops);
+ 	}
+ 
++	ret = qca807x_eee_config(phydev);
++
+ 	return ret;
+ }
+ 

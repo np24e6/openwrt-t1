@@ -43,6 +43,7 @@ define Package/ethtool/config
 	config ETHTOOL_PRETTY_DUMP
 		depends on PACKAGE_ethtool
 		bool "Enable pretty printing"
+		default y
 endef
 
 CONFIGURE_ARGS += --disable-netlink

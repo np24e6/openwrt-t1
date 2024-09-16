@@ -1,0 +1,35 @@
+
+mdcollect_entry='mSent			INTEGER,
+	mReceived		INTEGER,'
+
+mdcollect_entry1='mSentToday		INTEGER,
+	mReceivedToday		INTEGER,'
+
+mdcollect_obj='mSent OBJECT-TYPE
+	SYNTAX		Counter64
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION	"Total bytes sent"
+	::= { modemEntry 22 }
+
+mReceived OBJECT-TYPE
+	SYNTAX		Counter64
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION	"Total bytes received"
+	::= { modemEntry 23 }'
+	
+mdcollect_obj1='mSentToday OBJECT-TYPE
+	SYNTAX		Counter64
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION	"Bytes sent today"
+	::= { modemEntry 25 }
+
+mReceivedToday OBJECT-TYPE
+	SYNTAX		Counter64
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION	"Bytes received today"
+	::= { modemEntry 26 }'
+	

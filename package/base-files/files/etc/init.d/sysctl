@@ -1,7 +1,7 @@
 #!/bin/sh /etc/rc.common
 # Copyright (C) 2006 OpenWrt.org
 
-START=11
+START=04
 
 apply_defaults() {
 	local mem="$(awk '/^MemTotal:/ {print $2}' /proc/meminfo)"
@@ -10,7 +10,9 @@ apply_defaults() {
 	if [ "$mem" -gt 65536 ]; then # 128M
 		min_free=16384
 	elif [ "$mem" -gt 32768 ]; then # 64M
-		min_free=8192
+		#Too high for RUT3 device, lets make 2048
+		#min_free=8192
+		min_free=2048
 	else
 		min_free=1024
 		frag_low_thresh=393216

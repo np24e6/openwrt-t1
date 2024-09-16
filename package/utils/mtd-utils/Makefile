@@ -74,6 +74,14 @@ define Package/ubi-utils/install
 		$(PKG_INSTALL_DIR)/usr/sbin/{ubinfo,ubinize,ubirename,ubirmvol,ubirsvol,ubiupdatevol} $(1)/usr/sbin/
 endef
 
+define Build/InstallDev
+	$(INSTALL_DIR) $(1)/usr/include/mtd $(1)/usr/lib
+
+	$(CP) $(PKG_BUILD_DIR)/include/{lib*,mtd_swab,crc32}.h $(1)/usr/include/
+	$(CP) $(PKG_BUILD_DIR)/include/mtd/*.h $(1)/usr/include/mtd/
+	$(CP) $(PKG_BUILD_DIR)/lib*.a $(1)/usr/lib/
+endef
+
 define Package/nand-utils/install
 	$(INSTALL_DIR) $(1)/usr/sbin
 	$(INSTALL_BIN) \

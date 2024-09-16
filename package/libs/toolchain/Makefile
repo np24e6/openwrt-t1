@@ -12,6 +12,14 @@ PKG_RELEASE:=3
 PKG_MAINTAINER:=Felix Fietkau <nbd@nbd.name>
 PKG_LICENSE:=GPL-3.0-with-GCC-exception
 
+ifeq ($(CONFIG_USE_MUSL),y)
+  PKG_ORIGIN_URL:=https://git.musl-libc.org/cgit/musl
+endif
+
+ifeq ($(CONFIG_USE_GLIBC),y)
+  PKG_ORIGIN_URL:=https://sourceware.org/git/glibc.git
+endif
+
 PKG_FLAGS:=hold essential nonshared
 
 include $(INCLUDE_DIR)/package.mk

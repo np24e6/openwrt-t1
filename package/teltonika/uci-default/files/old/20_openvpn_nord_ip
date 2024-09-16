@@ -1,0 +1,26 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+new_aus_ip="103.137.12.171"
+new_sa_ip="165.73.240.59"
+
+update_ip() {
+	file_name="/etc/openvpn/nord_${1}.ovpn"
+	if [ ! -f "${file_name}" ]; then
+		return
+	fi
+	country=$(uci_get openvpn ${1} server_list)
+	new_ip=""
+	if [ "${country}" = "aus" ]; then
+		new_ip="$new_aus_ip"
+	elif [ "${country}" = "sa" ]; then
+		new_ip="$new_sa_ip"
+	else
+		return
+	fi
+	sed -r -i -e "s/remote[[:space:]]+[^[:space:]]+/remote ${new_ip}/g" "${file_name}"
+}
+
+config_load openvpn
+config_foreach update_ip openvpn

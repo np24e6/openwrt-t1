@@ -1,0 +1,642 @@
+#!/bin/sh
+
+. /lib/functions.sh
+. /lib/functions/network.sh
+. /usr/share/libubox/jshn.sh
+
+# Status codes:
+# Need to skip 1-2, 126-165, and 255 because it's reserved status codes
+UPDATE_SUCCESS=0
+UPDATE_ERROR=3
+INSTANCE_RUNNING=4
+EXPORT_END=5
+MODEM_NOT_FOUND=6
+BAD_ARGUMENTS=7
+
+#Error codes for WebUI localization purposes
+EC_NO_MANUF="166"
+EC_NOT_QUECTEL="167"
+EC_NOT_READY="168"
+EC_CONN_ERROR="169"
+EC_NO_UPDATE="170"
+EC_NOT_ENOUGH_MEM="171"
+EC_EDL_FAILED="172"
+EC_DL_FAILED="173"
+EC_UPD_VERIFY_FAILED="174"
+EC_UPD_START_FAILED="175"
+
+#prepare ENV
+modem_ids=""
+forced="false"
+update="false"
+firmware_size=0
+export_info=0
+export_status=0
+a_modem_id="" # Modem ID from arguments
+status="$UPDATE_SUCCESS"
+json_file_updates="/tmp/dfota_updates.json"
+json_file_status="/tmp/dfota_status.json"
+LAST_ERROR=""
+LAST_ERROR_CODE=""
+UPDATE_FAILED="0"
+
+get_from_info() {
+	ubus call "$1" info | grep "$2" | cut -d'"' -f 4
+}
+
+get_firmware() {
+	local modem="$1"
+	ubus call "$modem" get_firmware | grep "firmware" | cut -d'"' -f 4
+}
+
+get_value_from_json() {
+	json_init
+	json_set_namespace parse_msg old_cb
+	json_load "$1"
+	json_get_var ret "$2"
+	echo "$ret"
+	json_set_namespace "$old_cb"
+}
+
+#~ #######################FUNCTIONS##############################
+print_help() {
+	cat <<EOF
+	Tool to update modem firmware using Quectel DFOTA
+	By default script check if update exist
+	Usage: $0 [option] [<modem_id>]
+	Options:
+	-h	Print help message
+	-u	Check if there is an update available and start the update
+	-e	Export JSON to $json_file_updates about available updates
+	-s	Export JSON to $json_file_status about update status
+	-w	Wait for default route and modem to appear
+EOF
+}
+
+# ****************parse options****************
+while [ -n "$1" ]; do
+	case "$1" in
+		-w) export WAIT_FOR_WAN=1;;
+		-d) debug=1;;
+		-u) update="true";;
+		-e) export_info=1;;
+		-s)
+			export_status=1
+			[ -f "$json_file_status" ] && rm "$json_file_status"
+		;;
+		-*)
+			print_help
+			exit 1
+		;;
+		*) break;;
+	esac
+	shift;
+done
+
+a_modem_id="$1"
+
+debug() {
+	[ "$debug" = "1" ] || return 0
+	echo "$@"
+}
+
+print_output() {
+	local message="$1"
+	echo "$message"
+}
+
+print_error() {
+	LAST_ERROR="$1"
+	LAST_ERROR_CODE="$2"
+	[ "$2" = "$EC_NO_UPDATE" ] && echo "$LAST_ERROR" || echo "$LAST_ERROR ErrorCode: $2"
+	UPDATE_FAILED="1"
+}
+
+strstr() {
+	[ "${1#*"$2"*}" = "$1" ] && return 1
+	return 0
+}
+
+control_services() {
+	#Temporary reboot services control
+	local command="$1"
+	local list="modem_trackd periodic_reboot ping_reboot"
+	local i
+	for i in $list; do
+		debug "Executing $command to $i"
+		"/etc/init.d/$i" enabled && "/etc/init.d/$i" "$command"
+	done
+}
+
+end() {
+	local option="$1"
+	local message="$2"
+	case "$option" in
+		"$UPDATE_SUCCESS" | "$UPDATE_ERROR")
+			notify_webui "stop"
+			control_services "start"
+			;;
+		"$INSTANCE_RUNNING" | "$MODEM_NOT_FOUND" | "$EXPORT_END" | "$BAD_ARGUMENTS")
+			;;
+	esac
+	[ -n "$message" ] && print_output "$message"
+
+	exit "$option"
+}
+
+wait_for_wan() {
+	local wan_iface
+	print_output "Searching for WAN..."
+
+	while true; do
+		network_flush_cache
+		network_find_wan wan_iface
+		debug "WAN iface: $wan_iface"
+		[ -n "$wan_iface" ] && {
+			print_output "WAN found on interface: $wan_iface"
+			break
+		}
+		sleep 10
+	done
+	return 0
+}
+
+notify_webui() {
+	local action="$1"
+	case "$action" in
+		start)
+			mkdir -p /tmp/vuci
+			touch /tmp/vuci/dfota_update
+			touch /tmp/dfota_update
+			;;
+		stop)
+			mkdir -p /tmp/vuci
+			touch /tmp/vuci/dfota_finish
+			rm -rf /tmp/dfota_update
+			;;
+	esac
+}
+
+add_json_object() {
+	local modem_id="$1"
+
+	json_add_object
+	json_add_string id "$modem_id"
+	modem_usb_id=$(get_from_info "$modem_id" "usb_id")
+	json_add_string usb_id "$modem_usb_id"
+	if check_manufacturer "$modem_id"; then
+		json_add_boolean manufacturer 1
+	else
+		json_add_boolean manufacturer 0
+		json_close_object
+		return;
+	fi
+	if check_update "$modem_id"; then
+		json_add_boolean update_exists 1
+		[ "$forced" = "true" ] && json_add_boolean forced 1 || json_add_boolean forced 0
+	else
+		json_add_boolean update_exists 0
+		json_close_object
+		return;
+	fi
+	json_close_object
+}
+
+print_json_object() {
+	local json="$1"
+	echo "$json" > "$2"
+}
+
+insert_json_on_failure() {
+	json_init
+	json_add_boolean response 0
+	print_json_object "$(json_dump -i)" "$json_file_updates"
+}
+
+########################MODEM#######################################
+search_for_modems() {
+	modem_ids=$(ubus list gsm.modem* | tr "\n" " ")
+	if [ "$modem_ids" = "" ]; then
+		json_update_dfota_status "failed" 0
+		end "$UPDATE_ERROR" "Modem doesn't exist!"
+	fi
+	debug "Found modem ids: $modem_ids"
+}
+
+check_if_modem_exists() {
+	local modem_id
+	for modem_id in $modem_ids; do
+		[ "$modem_id" = "$a_modem_id" ] && return 0
+	done
+	return 1
+}
+
+export_modem_info() {
+	local modem_id
+
+	json_init
+	json_add_boolean response 1
+	json_add_array modems
+	if [ -z "$a_modem_id" ]; then
+		for modem_id in $modem_ids; do
+			add_json_object "$modem_id"
+		done
+	else
+		add_json_object "$a_modem_id"
+	fi
+	json_close_array
+}
+
+check_manufacturer() {
+	#Check if modem is from Quectel
+	local modem_id="$1"
+	local counter=0
+
+	debug "Checking manufacturer of the $modem_id  modem..."
+
+	manufacturer=$(get_from_info "$modem_id" "manuf")
+	debug "Modem $modem_id manufacturer: $manufacturer"
+	while [ "$counter" -lt 5 ]; do
+		case "$manufacturer" in
+			Quectel) return 0;;
+			Meig) break;;
+		esac
+
+		counter=$((counter+1))
+		sleep 1
+		manufacturer=$(get_from_info "$modem_id" "manuf")
+
+	done;
+
+	if [ "$counter" -eq 5 ]; then
+		print_error "Unable to get manufacturer of modem $modem_id" "$EC_NO_MANUF"
+	else
+		print_error "DFOTA is available only for Quectel modems!" "$EC_NOT_QUECTEL"
+	fi
+
+	return 1
+}
+
+check_modem_status() {
+	#Check if modem is available and respond to requests
+	#If fait for WAN is set, wait for modem too
+	local modem_id="$1"
+	local ret
+	if [ "$WAIT_FOR_WAN" = 1 ]; then
+		for i in $(seq 18); do
+			ret=$(get_firmware "$modem_id")
+			[ "$ret" != "" ] && [ "$ret" != "Command failed: Not found" ] && return 0
+			sleep 10
+		done
+		print_error "modem $modem_id not ready." "$EC_NOT_READY"
+		return 1
+	else
+		ret=$(get_firmware "$modem_id")
+		if [ "$ret" = "" ] || [ "$ret" = "Command failed: Not found" ]; then
+			print_error "modem $modem_id not ready." "$EC_NOT_READY"
+			return 1
+		fi
+	fi
+	return 0
+}
+
+check_update() {
+	#Check if there is available update
+	local modem_id="$1"
+	forced="false"
+
+	print_output "Searching for updates..."
+
+	rut_fota -i > /dev/null 2>&1 || {
+		print_error "Connection error to FOTA server!" "$EC_CONN_ERROR"
+	}
+	modem_usb_id=$(get_from_info "$modem_id" "usb_id")
+	json_set_namespace parse_fw_info old_cb
+	json_load "$(ubus call rut_fota get_info)"
+	json_select "modems" > /dev/null 2>&1
+	json_select "$modem_usb_id" > /dev/null 2>&1
+	json_get_var download_link modem > /dev/null 2>&1
+	json_get_var firmware_size modem_size > /dev/null 2>&1
+	json_set_namespace "$old_cb"
+
+	if [ -z "$download_link" ] || [ "$download_link" = "N/A" ] || [ "$download_link" = "Modem_newest" ] ||\
+	[ "$firmware_size" = "-1" ]; then
+		print_error "No update found!" "$EC_NO_UPDATE"
+		return 1
+	fi
+
+	strstr "$download_link" "forced" && forced="true"
+
+	print_output "Update found! Update size: $firmware_size"
+	return 0
+}
+
+do_update() {
+	#Do modem firmware update
+
+	local free_size
+	local dl_file_size
+	local cmd_port
+	local modem_id="$1"
+	local ret
+
+	print_output "Preparing system for update!"
+
+	ubus call "$modem_id" delete_file "{\"path\":\"UFS:dfota.zip\"}" > /dev/null 2>&1
+	sleep 1
+
+	ret="$(ubus call "$modem_id" get_storage_space "{\"storage\":\"ufs\"}")"
+	free_size=$(get_value_from_json "$ret" "free")
+	if [ "$free_size" -eq "$free_size" ] && [ "$firmware_size" -lt "$free_size" ]; then
+		debug "modem memory check pass"
+	else
+		print_error "Not enough memory in modem filesystem!" "$EC_NOT_ENOUGH_MEM"
+		return 1
+	fi
+	cmd_port=$(get_from_info "$modem_id" "tty_port")
+	echo "Found cmd port: $cmd_port"
+
+	ubus call gcont update_modems "{\"array\":\"modems\",\"state\":0,\"id\":\"${modem_id}\"}"
+	notify_webui "start"
+	sleep 2
+
+	ret=$(ubus call "$modem_id" upload_file "{\"path\":\"UFS:dfota.zip\",\"size\":${firmware_size},\"timeout\":180}")
+	echo "$ret" | grep -q "OK" || {
+		print_error "Failed to enter download mode!" "$EC_EDL_FAILED"
+		return 1
+	}
+
+	sleep 1
+
+	print_output "Starting download!"
+	json_update_modem_status "$modem_id" "downloading"
+	# Add notification to rut_fota about start of downloading
+	rut_fota --notify_server
+	curl -s --ssl --connect-timeout 30 --max-time 900 -L "$download_link" -o "$cmd_port"
+	ret="$?"
+
+	sleep 2
+
+	[ "$ret" = "0" ] || {
+		print_error "Firmware update download was unsuccessful. Error: $ret" "$EC_DL_FAILED"
+		return 1
+	}
+	get_file_list_result=$(ubus call "$modem_id" get_file_list "{\"path\":\"UFS:dfota.zip\"}" )
+	dl_file_size=$( echo "$get_file_list_result" | grep "size" | cut -d'"' -f 3 | cut -c 3- )
+	[ -n "$dl_file_size" ] &&\
+	[ -n "$firmware_size" ] &&\
+	[ "$dl_file_size" -gt 0 ] &&\
+	[ "$dl_file_size" -eq "$firmware_size" ] && {
+		print_output "Firmware update was successfully downloaded!"
+		print_output "Sending update command!"
+
+		ret=$(ubus call "$modem_id" dfota_upgrade "{\"path\":\"/data/ufs/dfota.zip\"}")
+		ret=$(get_value_from_json "$ret" "status")
+		[ "$ret" == "OK" ] && return 0
+
+		ret=$(ubus call "$modem_id" dfota_upgrade "{\"path\":\"/usrdata/ufs/dfota.zip\"}")
+		ret=$(get_value_from_json "$ret" "status")
+		[ "$ret" == "OK" ] && return 0
+
+		ret=$(ubus call "$modem_id" dfota_upgrade "{\"path\":\"/cache/ufs/dfota.zip\"}")
+		ret=$(get_value_from_json "$ret" "status")
+		[ "$ret" == "OK" ] && return 0
+	
+		print_error "Unable to start firmware update process!" "$EC_UPD_START_FAILED"
+		return 1
+
+	}
+
+
+	debug "Download values dlsize: $dl_file_size fw: $firmware_size"
+
+	print_error "Firmware update verify was unsuccessful..." "$EC_UPD_VERIFY_FAILED"
+	return 1
+}
+
+track_update_status() {
+	local modem_id="$1"
+	local ret
+	print_output "Waiting for the update to start..."
+	json_update_modem_status "$modem_id" "waiting"
+	modem_usb_id=$(get_from_info "$modem_id" "usb_id")
+	while [ -e "/sys/bus/usb/devices/$modem_usb_id" ]; do
+		sleep 1
+	done
+
+	print_output "Update has been started! Modem will perform few restarts and will be available after few minutes."
+	print_output "*** DO NOT POWER OFF THE DEVICE! ***"
+
+	json_update_modem_status "$modem_id" "updating"
+	while true; do
+		ret=$(get_firmware "$modem_id") > /dev/null 2>&1
+
+		[ -z "$ret" ] || [ "$ret" = "Command failed: Not found" ] || break
+		debug "Update status result: $ret"
+		print_output "Update is in progress..."
+		sleep 10
+	done;
+	print_output "Update finished! Firmware version - \"$ret\""
+	json_update_modem_status "$modem_id" "finished"
+
+	return 0
+}
+
+reset_on_fail() {
+	#Hack if modem fails to leave data state :/
+	local st="$1"
+	[ "$st" = "$UPDATE_ERROR" ] || return
+	print_output "Reseting modems due error!"
+	mctl -r -m "modem" > /dev/null 2>&1
+	mctl -r -m "modem2" > /dev/null 2>&1
+}
+
+json_find_modem(){
+	#creates modems array if it doesn't exist.
+	#creates <modem_id> object if it doesnt exist.
+	if json_is_a modems array
+	then
+		json_select modems
+  		idx=1
+  		while json_is_a ${idx} object
+  		do
+		  	json_select $idx
+			json_get_var id id
+            if [ "$id" = "$modem_id" ]; then
+				#found
+				return 0
+			fi
+    		idx=$(( idx + 1 ))
+			json_close_object
+  		done
+	else
+		json_add_array modems
+		#create modems object
+	fi
+
+	#modem object doesnt so exist we need to create it.
+	json_add_object
+	json_add_string id "$modem_id"
+	[ -z "$modem_usb_id" ] && modem_usb_id=$(get_from_info "$modem_id" "usb_id")
+	json_add_string usb_id "$modem_usb_id"
+}
+
+json_find_modem_close(){
+	json_close_object
+	json_close_array
+}
+_json_update_modem_status(){
+	local modem_id="$1"
+	local status="$2"
+
+	json_init
+	[ -f "$json_file_status" ] && json_load_file "$json_file_status"
+	json_add_string status "$status"
+
+	json_find_modem "$modem_id"
+	#Inside <modem_id> object
+	json_add_string status "$status"
+	[ "$forced" = "true" ] && json_add_boolean forced 1 || json_add_boolean forced 0
+	json_find_modem_close
+
+	print_json_object "$(json_dump -i)" "$json_file_status"
+
+}
+
+json_update_modem_status(){
+	[ "$export_status" -eq 1 ] && {
+		_json_update_modem_status "$1" "$2"
+	}
+}
+
+_json_update_dfota_status(){
+	#if fail flag is 1 status will be set to failed
+	local status="$1"
+	local fail_flag="$2"
+
+	[ "$fail_flag" -eq 1 ] && status="failed"
+
+	json_init
+	[ -f "$json_file_status" ] && json_load_file "$json_file_status"
+	json_add_string status "$status"
+
+	json_close_object
+	print_json_object "$(json_dump -i)" "$json_file_status"
+
+}
+
+json_update_dfota_status(){
+	[ "$export_status" -eq 1 ] && {
+		_json_update_dfota_status "$1" "$2"
+	}
+}
+
+_json_update_modem_error(){
+	local modem_id="$1"
+	local error="$2"
+	local error_code="$3"
+
+	json_init
+	[ -f "$json_file_status" ] && json_load_file "$json_file_status"
+
+	json_find_modem "$modem_id"
+	#Inside <modem_id> object
+	json_add_string status "failed"
+	json_add_string error "$error"
+	json_add_string error_code "$error_code"
+	json_find_modem_close
+
+	json_close_object
+	print_json_object "$(json_dump -i)" "$json_file_status"
+
+}
+
+json_update_modem_error(){
+	[ "$export_status" -eq 1 ] && {
+		_json_update_modem_error "$1" "$2" "$3"
+	}
+}
+
+update_loop(){
+	#Iterate modem ids
+	for m_id in $modem_ids; do
+		print_output "Preparing for $m_id update!"
+
+		check_modem_status "$m_id" || {
+			json_update_modem_error "$m_id" "$LAST_ERROR" "$LAST_ERROR_CODE"
+			continue
+		}
+
+		check_manufacturer "$m_id" || {
+			json_update_modem_error "$m_id" "$LAST_ERROR" "$LAST_ERROR_CODE"
+			continue
+		}
+
+		check_update "$m_id" || {
+			json_update_modem_error "$m_id" "$LAST_ERROR" "$LAST_ERROR_CODE"
+			continue
+		}
+
+		if [ "$forced" = "true" ] || [ "$update" = "true" ]; then
+			debug "Update flag found!"
+			control_services "stop"
+			do_update "$m_id" || {
+				status="$UPDATE_ERROR"
+				json_update_modem_error "$m_id" "$LAST_ERROR" "$LAST_ERROR_CODE"
+				break
+			}
+			track_update_status "$m_id"
+			sleep 15
+		fi
+	done
+
+	reset_on_fail "$status"
+	json_update_dfota_status "finished" "$UPDATE_FAILED"
+	end "$status" "Update script done!"
+}
+
+#********************************
+# Main
+#*********************************
+
+if [ "$(pgrep -f "$0")" != "$$" ]; then
+	end "$INSTANCE_RUNNING" "Unable to start because another instance is running!"
+fi
+
+[ "$export_info" -eq 1 ] && [ "$update" = "true" ] && end "$BAD_ARGUMENTS" "Please define only -e or -u in arguments!"
+
+#Wait for full system boot
+while true; do
+	[ -e "/var/run/init-done" ] && break
+	sleep 1
+done
+
+#Wait for default route to check connection
+[ "$WAIT_FOR_WAN" = "1" ] && wait_for_wan
+
+[ "$export_info" -eq 1 ] && insert_json_on_failure  # If no modem will be found
+
+#Find if router have upgradable modems
+search_for_modems
+
+[ -n "$a_modem_id" ] && {
+	debug "Checking if defined modem exists in the system"
+	check_if_modem_exists "$a_modem_id" || end "$MODEM_NOT_FOUND" "Defined modem does not exist!"
+	modem_ids="$a_modem_id"	# Only one modem should be updated if -u passed
+}
+
+[ "$export_info" -eq 1 ] && {
+	export_modem_info
+	print_json_object "$(json_dump -i)" "$json_file_updates"
+	end "$EXPORT_END" "Information export is done!"
+}
+
+json_update_dfota_status "started" 0
+#if we are running a standalone script we don't need a separate instance if we are running for WEBUI we start a thread and exit.
+if [ "$export_status" -eq 1 ]; then
+	#start a thread in the bg
+	update_loop &
+else
+	update_loop
+fi
+exit 0

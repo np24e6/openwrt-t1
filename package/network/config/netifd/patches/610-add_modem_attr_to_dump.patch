@@ -1,0 +1,72 @@
+--- a/interface.c
++++ b/interface.c
+@@ -38,6 +38,7 @@ enum {
+ 	IFACE_ATTR_JAIL_DEVICE,
+ 	IFACE_ATTR_JAIL_IFNAME,
+ 	IFACE_ATTR_HOST_DEVICE,
++	IFACE_ATTR_MODEM,
+ 	IFACE_ATTR_DEFAULTROUTE,
+ 	IFACE_ATTR_PEERDNS,
+ 	IFACE_ATTR_DNS,
+@@ -66,6 +67,7 @@ static const struct blobmsg_policy iface
+ 	[IFACE_ATTR_JAIL_DEVICE] = { .name = "jail_device", .type = BLOBMSG_TYPE_STRING },
+ 	[IFACE_ATTR_JAIL_IFNAME] = { .name = "jail_ifname", .type = BLOBMSG_TYPE_STRING },
+ 	[IFACE_ATTR_HOST_DEVICE] = { .name = "host_device", .type = BLOBMSG_TYPE_STRING },
++	[IFACE_ATTR_MODEM] = { .name = "modem", .type = BLOBMSG_TYPE_STRING },
+ 	[IFACE_ATTR_DEFAULTROUTE] = { .name = "defaultroute", .type = BLOBMSG_TYPE_BOOL },
+ 	[IFACE_ATTR_PEERDNS] = { .name = "peerdns", .type = BLOBMSG_TYPE_BOOL },
+ 	[IFACE_ATTR_METRIC] = { .name = "metric", .type = BLOBMSG_TYPE_INT32 },
+@@ -706,6 +708,8 @@ interface_do_free(struct interface *ifac
+ 		free(iface->jail_device);
+ 	if (iface->host_device)
+ 		free(iface->host_device);
++	if (iface->modem)
++		free(iface->modem);
+ 
+ 	free(iface);
+ }
+@@ -935,6 +939,10 @@ interface_alloc(const char *name, struct
+ 	if ((cur = tb[IFACE_ATTR_HOST_DEVICE]))
+ 		iface->host_device = strdup(blobmsg_get_string(cur));
+ 
++	iface->modem = NULL;
++	if ((cur = tb[IFACE_ATTR_MODEM]))
++		iface->modem = strdup(blobmsg_get_string(cur));
++
+ 	return iface;
+ }
+ 
+@@ -1329,6 +1337,11 @@ interface_change_config(struct interface
+ 
+ 	if_old->host_device = if_new->host_device;
+ 
++	if (if_old->modem)
++		free(if_old->modem);
++
++	if_old->modem = if_new->modem;
++
+ 	if_old->device = if_new->device;
+ 	if_old->parent_ifname = if_new->parent_ifname;
+ 	if_old->dynamic = if_new->dynamic;
+--- a/interface.h
++++ b/interface.h
+@@ -111,6 +111,7 @@ struct interface {
+ 	char *jail;
+ 	char *jail_device;
+ 	char *host_device;
++	char *modem;
+ 	int netns_fd;
+ 
+ 	bool available;
+--- a/ubus.c
++++ b/ubus.c
+@@ -818,6 +818,9 @@ netifd_dump_status(struct interface *ifa
+ 	if (iface->proto_handler)
+ 		blobmsg_add_string(&b, "proto", iface->proto_handler->name);
+ 
++	if (iface->modem)
++		blobmsg_add_string(&b, "modem", iface->modem);
++
+ 	dev = iface->main_dev.dev;
+ 	if (dev && !dev->hidden && iface->proto_handler &&
+ 	    !(iface->proto_handler->flags & PROTO_FLAG_NODEV))

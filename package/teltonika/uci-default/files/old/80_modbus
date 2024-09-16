@@ -1,0 +1,389 @@
+#!/bin/sh
+
+. /lib/functions.sh
+. /usr/share/libubox/jshn.sh
+
+FILENAME=modbus_master
+
+RSCFG="modbus_serial_master"
+COUNT=2
+
+get_ioman_pin() {
+	pin=$1
+	msg=$(ubus list ioman.*)
+
+	for io in $msg; do
+		io_json=$(ubus call $io location)
+		json_load "$io_json"
+		json_get_var block_type block_type
+
+		if [ "$block_type" = "4pin" ]; then
+			if json_is_a block_pins array; then
+				json_select block_pins
+				idx=1
+				while json_is_a ${idx} int; do ## iterate over data inside "lan" object
+					json_get_var io_pin $idx
+
+					if [ "$pin" -eq "$io_pin" ]; then
+						pin_name=$(echo $io | cut -d'.' -f3)
+						echo "$pin_name"
+						return
+					fi
+
+					idx=$((idx + 1))
+				done
+			fi
+		fi
+
+	done
+}
+
+get_ioman_relay() {
+	msg=$(ubus list ioman.*)
+
+	for io in $msg; do
+		io_json=$(ubus call $io location)
+		json_load "$io_json"
+		json_get_var block_type block_type
+		json_get_var io_name io_name
+
+		if [ "$block_type" = "10pin" ] && [ "$io_name" = "Relay" ]; then
+			pin_name=$(echo $io | cut -d'.' -f3)
+			echo "$pin_name"
+			return
+		fi
+
+	done
+}
+
+get_ioman_output() {
+	msg=$(ubus list ioman.*)
+
+	for io in $msg; do
+		io_json=$(ubus call $io location)
+		json_load "$io_json"
+		json_get_var block_type block_type
+		json_get_var io_name io_name
+
+		if [ "$block_type" = "10pin" ] && [ -z "${io_name##*Output*}" ]; then
+			pin_name=$(echo $io | cut -d'.' -f3)
+			echo "$pin_name"
+			return
+		fi
+
+	done
+}
+
+handle_modbus_alarm() {
+	local section=$1
+
+	config_get modbus_data_type "$section" modbus_data_type 0
+	config_get modbus_reg_count "$section" modbus_reg_count
+	config_get modbus_function "$section" modbus_function
+
+	[ "$modbus_function" = "5" ] && modbus_data_type="bool"
+	[ "$modbus_function" = "5" ] && [ "$modbus_reg_count" = "65280" ] && modbus_reg_count=1
+	[ "$modbus_data_type" = "0" ] && modbus_data_type="16bit_uint_hi_first"
+
+	uci_set "modbus_master_alarms" "$section" "modbus_data_type" "$modbus_data_type"
+	uci_set "modbus_master_alarms" "$section" "modbus_reg_count" "$modbus_reg_count"
+}
+
+convert_alarm_options() {
+	local section=$1
+	local new_name=""
+	local sec_name=$(uci_get "modbus_master_alarms" "$section")
+
+	[ "${sec_name:0:12}" = "serial_alarm" ] && new_name="alarm${sec_name:12}"
+	[ -n "$new_name" ] && uci -q set "modbus_master_alarms"."$section"="$new_name"
+
+	config_get action "$section" action
+	config_get io_action "$section" io_action
+	config_get condition "$section" condition
+	config_get output "$section" output
+	config_get actionfrequency "$section" actionfrequency
+	config_get data_type "$section" data_type 0
+
+	[ "$action" = "sms" ] && action=0
+	[ "$action" = "io" ] && action=1
+	[ "$action" = "modbus_tcp" ] && action=2
+	[ "$io_action" = "off" ] && io_action=0
+	[ "$io_action" = "on" ] && io_action=1
+	[ "$io_action" = "invert" ] && io_action=2
+	[ "$condition" = "more" ] && condition=1
+	[ "$condition" = "less" ] && condition=2
+	[ "$condition" = "equal" ] && condition=4
+	[ "$condition" = "not" ] && condition=8
+	[ "$actionfrequency" = "firsttrigger" ] && actionfrequency=1
+	[ "$actionfrequency" = "everytrigger" ] && actionfrequency=0
+	[ "$data_type" = "0" ] && data_type="16bit_uint_hi_first"
+
+	uci -q set "modbus_master_alarms.$section.action=$action"
+	uci -q set "modbus_master_alarms.$section.io_action=$io_action"
+	uci -q set "modbus_master_alarms.$section.condition=$condition"
+	uci -q set "modbus_master_alarms.$section.actionfrequency=$actionfrequency"
+	uci -q set "modbus_master_alarms.$section.data_type=$data_type"
+
+	[ "$action" = "2" ] && handle_modbus_alarm $section
+
+	# Open collector output
+	[ "$output" = "dout1" ] || [ "$output" = "0" ] && pin_name=$(get_ioman_output)
+
+	# Relay output
+	[ "$output" = "dout2" ] || [ "$output" = "1" ] && pin_name=$(get_ioman_relay)
+
+	# PIN3 output (dio1)
+	[ "$output" = "pin3" ] || [ "$output" = "4" ] && pin_name=$(get_ioman_pin 3)
+
+	# PIN4 output (dout1/dio0)
+	[ "$output" = "pin4" ] || [ "$output" = "dout3" ] || [ "$output" = "3" ] && pin_name=$(get_ioman_pin 4)
+
+	[ -z "$pin_name" ] || uci -q set "modbus_master_alarms.$section.output=$pin_name"
+
+	COUNT=$(($COUNT + 1))
+	uci_rename "modbus_master_alarms" "$section" "$COUNT"
+}
+
+move_section_id_to_section_name() {
+	local section=$1
+	local config_name=$2
+	local section_name=$(uci_get "$config_name" "$section")
+
+	case "$section_name" in
+	"tcp_slave")
+		config_get section_id "$section" section_id
+		[ -z "$section_name" ] && return 1
+		uci_rename "$config_name" "$section" "$section_id"
+		uci_remove "$config_name" "$section" "section_id"
+		;;
+	"rs232_slave")
+		config_get section_id "$section" section_id
+		[ -z "$section_name" ] && return 1
+		uci_remove "$config_name" "$section" "section_id"
+		new_section=$(uci add "$config_name" "rtu_slave")
+		create_new_section "$section" "$new_section" "1" "rtu_device"
+		uci_rename "$config_name" "$new_section" "$section_id"
+		uci_remove "$config_name" "$section"
+		;;
+	"rs485_slave")
+		config_get section_id "$section" section_id
+		[ -z "$section_name" ] && return 1
+		uci_remove "$config_name" "$section" "section_id"
+		new_section=$(uci add "$config_name" "rtu_slave")
+		create_new_section "$section" "$new_section" "2" "rtu_device"
+		uci_rename "$config_name" "$new_section" "$section_id"
+		uci_remove "$config_name" "$section"
+		;;
+	*)
+		return 1
+		;;
+	esac
+}
+
+rename_request_section() {
+	local section=$1
+	local sec_name=$(uci_get "modbus_tcp_master" "$section")
+	local new_name=""
+	local f_code=""
+	local reg_count=""
+	local data_type=""
+
+	[ "${sec_name:0:8}" != "register" ] && return
+
+	config_get f_code "$section" "function"
+	config_get reg_count "$section" "reg_count"
+
+	[ "$f_code" = "5" ] && data_type="bool"
+	[ "$f_code" = "5" ] && [ "$reg_count" = "65280" ] && reg_count=1
+
+	[ -n "$data_type" ] && uci_set "modbus_tcp_master" "$section" "data_type" "$data_type"
+	uci_set "modbus_tcp_master" "$section" "reg_count" "$reg_count"
+
+	new_name="request${sec_name:8}"
+	uci -q set "modbus_tcp_master"."$section"="$new_name"
+	COUNT=$(($COUNT + 1))
+	uci_rename "modbus_tcp_master" "$section" "$COUNT"
+}
+
+migrate_master_settings() {
+	local section="$1"
+	local config_name="$2"
+
+	uci_set "$config_name" "$section" "reconnect" "1" # keep old modbus behavior
+	rename_request_section "$section"
+	move_section_id_to_section_name "$section" "$config_name"
+}
+
+create_new_section() {
+	local section=$1
+	local new_section=$2
+	local device=$3
+	local devopt=$4
+	local offset=$((${#section} + ${#RSCFG} + 2))
+
+	# Whitespace escaping shenanigans
+	local oldopts="$(uci -q show $RSCFG.$section | tr "*" "\\x2a" | sed $'s/\'//g' | tr " " "!")"
+
+	for line in $oldopts; do
+		new_line="$RSCFG.$new_section.${line:$offset}"
+		uci -q set "$(echo $new_line | tr '!' ' ')"
+	done
+
+	uci_set "$RSCFG" "$new_section" "$devopt" "$device"
+}
+
+migrate_rs_settings() {
+	local section=$1
+
+	move_section_id_to_section_name $section $RSCFG
+	migrate_rs_section $section
+}
+
+migrate_rs_section() {
+	local section=$1
+	local section_name=$(uci_get "$RSCFG" "$section")
+	local new_secton=""
+
+	if [ "${section_name:0:7}" = "request" ]; then
+		COUNT=$(($COUNT + 1))
+		uci_rename "$RSCFG" "$section" "$COUNT"
+		return 1
+	fi
+
+	case "$section_name" in
+	"rs232")
+		new_section="rtu_device"
+		new_name="1"
+		DEVICE="/dev/rs232"
+		;;
+	"rs485")
+		new_section="rtu_device"
+		new_name="2"
+		DEVICE="/dev/rs485"
+		;;
+	*)
+		return 1
+		;;
+	esac
+
+	local new_section_id=$(uci add "$RSCFG" "$new_section")
+	create_new_section "$section" "$new_section_id" "$DEVICE" "device"
+	uci_rename "$RSCFG" "$new_section_id" "$new_name"
+	uci_remove "$RSCFG" "$section"
+}
+
+delete_alarm_requests() {
+	local section=$1
+	local sec_name=$(uci_get "modbus_tcp_master" "$section")
+
+	config_get alarm_request "$section" alarm_request 0
+
+	[ "${sec_name:0:8}" = "register" ] && [ "$alarm_request" = "1" ] && uci_remove "modbus_tcp_master" "$section"
+}
+
+# "0 0 0" => "0:0:0"
+# "0 0 1,2,3" => "0:0:1 0:0:2 0:0:3"
+# "0 1,2 1,2" => "0:1:1 0:1:2 0:2:1 0:2:2"
+# "0 0 *" => "0:0:*"
+# "10,12,14 * 0,30" => "10:*:0 12:*:0 14:*:0 10:*:30 12:*:30 14:*:30"
+convert_schedules() {
+	local section=$1
+
+	config_get schedule "$section" schedule 0
+
+	[ -z $schedule ] && return
+
+	local hours=""
+	local minutes=""
+	local seconds=""
+	local i=0
+	# '*' escaping shenanigans
+	for part in $(echo "$schedule" | tr "*" "!");
+	do
+		if [ $i -eq 0 ]; then
+			hours=$(echo "$part" | tr "," " ")
+		elif [ $i -eq 1 ]; then
+			minutes=$(echo "$part" | tr "," " ")
+		elif [ $i -eq 2 ]; then
+			seconds=$(echo "$part" | tr "," " ")
+		fi
+
+		i=$(($i+1))
+	done
+
+	uci delete "$RSCFG.$section.schedule"
+
+	for hour in $hours;
+	do
+		hour=$(echo $hour | tr "!" "*")
+		if [ $hour != "!" ]; then
+			hour=$(printf "%02d" $hour)
+		fi
+
+		for minute in $minutes;
+		do
+			minute=$(echo $minute | tr "!" "*")
+			if [ $minute != "!" ]; then
+				minute=$(printf "%02d" $minute)
+			fi
+
+			for second in $seconds;
+			do
+				second=$(echo $second | tr "!" "*")
+				if [ $second != "!" ]; then
+					second=$(printf "%02d" $second)
+				fi
+
+				uci add_list "$RSCFG.$section.schedule=$hour:$minute:$second"
+			done
+		done
+	done
+}
+
+config_load "modbus_master_alarms"
+config_foreach convert_alarm_options
+uci_commit
+
+config_load "modbus_tcp_master"
+config_foreach delete_alarm_requests
+config_foreach migrate_master_settings "" "modbus_tcp_master"
+uci_commit
+
+[ -f /etc/config/modbus_tcp_master ] && [ -f /etc/config/modbus_master_alarms ] && {
+	cat /etc/config/modbus_tcp_master /etc/config/modbus_master_alarms > /etc/config/$FILENAME
+}
+
+config_load "$RSCFG"
+config_foreach migrate_rs_settings
+uci_commit
+
+config_load "$RSCFG"
+config_foreach convert_schedules rtu_slave
+uci_commit
+
+[ -f /etc/config/$RSCFG ] && {
+	cat /etc/config/$RSCFG >> /etc/config/$FILENAME
+}
+
+rm -f /etc/config/modbus_tcp_master /etc/config/$RSCFG /etc/config/modbus_master_alarms
+
+# Temporary hotfix for 7.3 only. Remove for 7.4 and newer.
+remove_scheduling() {
+	local section section_type frequency
+	section="$1"
+	config_get section_type "$section" TYPE
+	if [ "$section_type" = "tcp_slave" ] || [ "$section_type" = "rtu_slave" ]; then
+		config_get frequency "$section" "frequency" "period"
+		if [ "$frequency" != "period" ]; then
+			uci_set "modbus_master" "$section" "frequency"
+			uci_set "modbus_master" "$section" "period"
+			uci_set "modbus_master" "$section" "schedule"
+			uci_set "modbus_master" "$section" "enabled" "0"
+		fi
+	fi
+}
+config_load "modbus_master"
+config_foreach remove_scheduling
+uci_commit
+
+exit 0

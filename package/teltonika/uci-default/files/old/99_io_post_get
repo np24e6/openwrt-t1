@@ -1,0 +1,30 @@
+#!/bin/sh
+
+. /lib/functions/teltonika-functions.sh
+. /lib/functions.sh
+
+is_ios_enabled || exit 0
+uci_get ioman post_get >/dev/null || exit 0
+
+config_load ioman
+
+config_get enabled post_get enabled 0
+config_get username post_get username
+config_get password post_get password
+uci_remove ioman post_get 2>/dev/null
+
+uci_get post_get io >/dev/null || uci -q set post_get.io=post_get
+uci_set post_get io enabled "$enabled" 2>/dev/null
+uci_set post_get io username "$username" 2>/dev/null
+
+#Check and encrypt password
+[ -n "$password" ] && {
+	[ "${password:0:1}" != "\$" ] || [ "${password:2:1}" != "\$" ] && {
+		passwd="$(mkpasswd ${password})"
+		[ -n "$passwd" ] && password="$passwd"
+	}
+	
+	uci_set post_get io password "$password" 2>/dev/null
+}
+
+uci_commit

@@ -1,0 +1,352 @@
+Index: firewall-2021-03-23-61db17ed/main.c
+===================================================================
+--- firewall-2021-03-23-61db17ed.orig/main.c
++++ firewall-2021-03-23-61db17ed/main.c
+@@ -31,11 +31,116 @@
+ #include "ubus.h"
+ #include "iptables.h"
+ #include "helpers.h"
++#include <libmnl/libmnl.h>
++#include <libnetfilter_conntrack/libnetfilter_conntrack.h>
++
++#include <linux/netfilter/nf_conntrack_tcp.h>
++
++#include "object.h"
++
++static void add_ports(struct nf_conntrack *ct, struct fw3_port *port, struct fw3_rule *rule)
++{
++	list_for_each_entry (port, &rule->port_src, list) {
++		if (port->port_min == port->port_max)
++			nfct_set_attr_u16(ct, ATTR_PORT_SRC, htons(port->port_min));
++		else {
++			nfct_set_attr_u16(ct, ATTR_PORT_SRC, htons(port->port_min));
++			nfct_set_attr_u16(ct, ATTR_PORT_SRC, htons(port->port_max));
++		}
++	}
++	list_for_each_entry (port, &rule->port_dest, list) {
++		if (port->port_min == port->port_max)
++			nfct_set_attr_u16(ct, ATTR_PORT_DST, htons(port->port_min));
++		else {
++			nfct_set_attr_u16(ct, ATTR_PORT_DST, htons(port->port_min));
++			nfct_set_attr_u16(ct, ATTR_PORT_DST, htons(port->port_max));
++		}
++	}
++}
++
++static void find_ports(struct nf_conntrack *ct, struct fw3_protocol *proto, struct fw3_rule *rule)
++{
++	if (proto->protocol == IPPROTO_TCP || proto->protocol == IPPROTO_UDP) {
++		struct fw3_port *port;
++		add_ports(ct, port, rule);
++	}
++}
++
++static void delete_rule_conntrack_entry(struct fw3_rule *rule)
++{
++	info("deleting conntrack entries for rule %s\n", rule->name);
++	struct mnl_socket *nl;
++	struct nlmsghdr *nlh;
++	struct nfgenmsg *nfh;
++	char buf[MNL_SOCKET_BUFFER_SIZE];
++	memset(buf, 0, MNL_SOCKET_BUFFER_SIZE * sizeof(int));
++	unsigned int seq, portid;
++	struct nf_conntrack *ct;
++	int ret;
++
++	nl = mnl_socket_open(NETLINK_NETFILTER);
++	if (nl == NULL) {
++		perror("mnl_socket_open");
++		return;
++	}
++
++	if (mnl_socket_bind(nl, 0, MNL_SOCKET_AUTOPID) < 0) {
++		perror("mnl_socket_bind");
++		goto end;
++	}
++	portid = mnl_socket_get_portid(nl);
++
++	nlh		 = mnl_nlmsg_put_header(buf);
++	nlh->nlmsg_type	 = (NFNL_SUBSYS_CTNETLINK << 8) | IPCTNL_MSG_CT_DELETE;
++	nlh->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
++	nlh->nlmsg_seq = seq = time(NULL);
++
++	nfh		  = mnl_nlmsg_put_extra_header(nlh, sizeof(struct nfgenmsg));
++	nfh->nfgen_family = AF_INET;
++	nfh->version	  = NFNETLINK_V0;
++	nfh->res_id	  = 0;
++
++	ct = nfct_new();
++	if (ct == NULL) {
++		perror("nfct_new");
++		goto end;
++	}
++
++	struct fw3_protocol *proto;
++	list_for_each_entry (proto, &rule->proto, list) {
++		nfct_set_attr_u8(ct, ATTR_L4PROTO, proto->protocol);
++		find_ports(ct, proto, rule);
++	}
++
++	nfct_nlmsg_build(nlh, ct);
++
++	ret = mnl_socket_sendto(nl, nlh, nlh->nlmsg_len);
++	if (ret == -1) {
++		perror("mnl_socket_sendto failed");
++		goto end;
++	}
++
++	ret = mnl_socket_recvfrom(nl, buf, sizeof(buf));
++	while (ret > 0) {
++		ret = mnl_cb_run(buf, ret, seq, portid, NULL, NULL);
++		if (ret <= MNL_CB_STOP)
++			break;
++		ret = mnl_socket_recvfrom(nl, buf, sizeof(buf));
++	}
++	if (ret == -1) {
++		perror("mnl_socket_recvfrom returned -1");
++		goto end;
++	}
++
++end:
++	mnl_socket_close(nl);
++}
+ 
+ static enum fw3_family print_family = FW3_FAMILY_ANY;
+ 
+-static struct fw3_state *run_state = NULL;
+-static struct fw3_state *cfg_state = NULL;
++static struct fw3_state *run_state     = NULL;
++static struct fw3_state *cfg_state     = NULL;
++static struct fw3_state *cfg_old_state = NULL;
+ 
+ static bool build_state(bool runtime)
+ {
+@@ -103,6 +208,114 @@ static bool build_state(bool runtime)
+ 	return true;
+ }
+ 
++static void cp(const char *to, const char *from)
++{
++	info("copying config file to /tmp/firewall_old");
++	int fd_to, fd_from;
++	char buf[4096] = { 0 };
++	ssize_t nread;
++	int saved_errno;
++
++	fd_from = open(from, O_RDONLY);
++	if (fd_from < 0) {
++		return;
++	}
++
++	fd_to = open(to, O_WRONLY | O_CREAT | O_EXCL, 0666);
++	if (fd_to < 0) {
++		remove(to);
++		fd_to = open(to, O_WRONLY | O_CREAT | O_EXCL, 0666);
++		if (fd_to < 0) {
++			goto out_error;
++		}
++	}
++
++	while (nread = read(fd_from, buf, sizeof buf), nread > 0) {
++		char *out_ptr = buf;
++		ssize_t nwritten;
++
++		do {
++			nwritten = write(fd_to, out_ptr, nread);
++
++			if (nwritten >= 0) {
++				nread -= nwritten;
++				out_ptr += nwritten;
++			} else if (errno != EINTR) {
++				goto out_error;
++			}
++		} while (nread > 0);
++	}
++
++	if (nread == 0) {
++		if (close(fd_to) < 0) {
++			fd_to = -1;
++			goto out_error;
++		}
++		close(fd_from);
++
++		/* Success! */
++		return;
++	}
++
++out_error:
++	saved_errno = errno;
++
++	close(fd_from);
++	if (fd_to >= 0)
++		close(fd_to);
++
++	errno = saved_errno;
++	return -1;
++}
++
++static void build_old_state()
++{
++	struct fw3_state *state = NULL;
++	struct uci_package *p	= NULL;
++
++	state = calloc(1, sizeof(*state));
++	if (!state) {
++		error("Out of memory");
++		return;
++	}
++
++	state->uci = uci_alloc_context();
++
++	if (!state->uci) {
++		error("Out of memory");
++		return;
++	}
++
++	if (!fw3_ubus_connect()) {
++		warn("Failed to connect to ubus");
++		return;
++	}
++
++	if (uci_load(state->uci, "/tmp/firewall_old", &p)) {
++		uci_perror(state->uci, NULL);
++		error("Failed to load /etc/config/firewall_old");
++		return;
++	}
++	if (!fw3_find_command("ipset")) {
++		warn("Unable to locate ipset utility, disabling ipset support");
++		state->disable_ipsets = true;
++	}
++	cfg_old_state = state;
++
++	struct blob_buf b = { NULL, NULL, 0, NULL };
++	fw3_ubus_rules(&b);
++
++	fw3_load_defaults(state, p);
++	fw3_load_cthelpers(state, p);
++	fw3_load_ipsets(state, p, b.head);
++	fw3_load_zones(state, p);
++	fw3_load_rules(state, p, b.head);
++	fw3_load_redirects(state, p, b.head);
++	fw3_load_snats(state, p, b.head);
++	fw3_load_forwards(state, p, b.head);
++	fw3_load_includes(state, p, b.head);
++}
++
+ static void free_state(struct fw3_state *state)
+ {
+ 	struct list_head *cur, *tmp;
+@@ -281,6 +494,41 @@ static int start(void)
+ 	return rv;
+ }
+ 
++static void check_rule_changes()
++{
++	int found;
++	struct fw3_rule *rule_old;
++	struct fw3_rule *rule;
++	//check if all old rules are still enabled
++	list_for_each_entry (rule_old, &cfg_old_state->rules, list) {
++		found = 0;
++		list_for_each_entry (rule, &cfg_state->rules, list) {
++			if (strcmp(rule->name, rule_old->name) == 0) {
++				found = 1;
++				break;
++			}
++		}
++		if (!found) {
++			delete_rule_conntrack_entry(rule_old);
++		}
++	}
++	//check for new rules that were not here before
++	list_for_each_entry (rule, &cfg_state->rules, list) {
++		found = 0;
++		list_for_each_entry (rule_old, &cfg_old_state->rules, list) {
++			if (strcmp(rule->name, rule_old->name) == 0) {
++				found = 1;
++				break;
++			}
++		}
++		if (!found) {
++			delete_rule_conntrack_entry(rule);
++		}
++	}
++
++	return;
++}
++
+ static int reload(void)
+ {
+ 	int rv = 1;
+@@ -293,11 +541,16 @@ static int reload(void)
+ 
+ 	fw3_hotplug_zones(run_state, false);
+ 
++	if (cfg_old_state)
++		check_rule_changes();
++
+ 	for (family = FW3_FAMILY_V4; family <= FW3_FAMILY_V6; family++) {
++		printf("IPV %d \n", family);
+ 		if (!family_running(family))
+ 			goto start;
+ 
+ 		for (table = FW3_TABLE_FILTER; table <= FW3_TABLE_RAW; table++) {
++			printf("Table %d \n", table);
+ 			if (!fw3_has_table(family == FW3_FAMILY_V6, fw3_flag_names[table]))
+ 				continue;
+ 
+@@ -494,10 +747,14 @@ int main(int argc, char **argv)
+ 			goto out;
+ 		}
+ 	}
+-
+ 	build_state(false);
+ 	defs = &cfg_state->defaults;
+ 
++	if (access("/tmp/firewall_old", F_OK) == 0)
++		build_old_state();
++
++	cp("/tmp/firewall_old", "/etc/config/firewall");
++
+ 	if (optind >= argc) {
+ 		rv = usage();
+ 		goto out;
+@@ -555,6 +812,7 @@ int main(int argc, char **argv)
+ 	} else if (!strcmp(argv[optind], "reload")) {
+ 		if (fw3_lock()) {
+ 			build_state(true);
++
+ 			rv = reload();
+ 			fw3_unlock();
+ 		}
+@@ -574,11 +832,15 @@ int main(int argc, char **argv)
+ 	}
+ 
+ out:
++
+ 	if (cfg_state)
+ 		free_state(cfg_state);
+ 
+ 	if (run_state)
+ 		free_state(run_state);
+ 
++	if (cfg_old_state)
++		free_state(cfg_old_state);
++
+ 	return rv;
+ }
+Index: firewall-2021-03-23-61db17ed/rules.h
+===================================================================
+--- firewall-2021-03-23-61db17ed.orig/rules.h
++++ firewall-2021-03-23-61db17ed/rules.h
+@@ -30,6 +30,10 @@ extern const struct fw3_option fw3_rule_
+ 
+ void fw3_load_rules(struct fw3_state *state, struct uci_package *p, struct blob_attr *a);
+ void fw3_print_rules(struct fw3_ipt_handle *handle, struct fw3_state *state);
++int write_config(struct fw3_state *state);
++int write_config_entry(FILE *of, const char *entry);
++int read_config();
++int read_config_entry(FILE *inf, char entry, size_t length);
+ 
+ static inline void fw3_free_rule(struct fw3_rule *rule)
+ {

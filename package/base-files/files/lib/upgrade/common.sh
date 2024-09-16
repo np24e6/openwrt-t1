@@ -289,11 +289,6 @@ get_partitions() { # <device> <filename>
 	fi
 }
 
-indicate_upgrade() {
-	. /etc/diag.sh
-	set_state upgrade
-}
-
 # Flash firmware to MTD partition
 #
 # $(1): path to image

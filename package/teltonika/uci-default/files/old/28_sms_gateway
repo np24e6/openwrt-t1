@@ -1,0 +1,38 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+CONFIG="sms_gateway"
+
+migrate_simman() {
+	local section="$1"
+	local modem_id
+
+	config_get modem_id "$section" "info_modem_id"
+
+	modem_id=$(echo "${modem_id}" | sed 's/\./_dot_/g;s/-/_dash_/g')
+	[ -z "$(eval echo \$"previous_section_${modem_id}")" ] && {
+		move_simman_sec "$section"
+	}
+
+	uci_remove "$CONFIG" "$section"
+	eval "previous_section_${modem_id}=${section}"
+}
+
+move_simman_sec() {
+	local section="$1"
+	local free info_modem_id
+
+	config_get free "$section" free "5"
+	config_get info_modem_id "$section" info_modem_id
+
+	uci_add simcard simman
+	uci_set simcard "$CONFIG_SECTION" free "$free"
+	uci_set simcard "$CONFIG_SECTION" info_modem_id "$info_modem_id"
+	uci_commit simcard
+}
+
+#Moves simman sections to simcard config and removes duplications
+config_load "$CONFIG"
+config_foreach migrate_simman "simman"
+uci_commit "sms_gateway"

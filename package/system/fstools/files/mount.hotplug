@@ -1,1 +1,4 @@
+[ "${DEVNAME}" = "${DEVNAME#sd*}" ] && \
+	[ "${DEVNAME}" = "${DEVNAME#mmcblk*}" ] && exit 0
+[ -e '/tmp/.fmt-usb-msd_blockdev_hotplug_paused' ] && exit 0
 [ "$ACTION" = "add" -o "$ACTION" = "remove" ] && /sbin/block hotplug

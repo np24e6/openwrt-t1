@@ -152,21 +152,25 @@ $(eval $(call SetupHostCommand,perl,Please install Perl 5.x, \
 
 $(eval $(call CleanupPython2))
 
-$(eval $(call SetupHostCommand,python,Please install Python >= 3.5, \
-	python3.9 -V 2>&1 | grep 'Python 3', \
-	python3.8 -V 2>&1 | grep 'Python 3', \
-	python3.7 -V 2>&1 | grep 'Python 3', \
-	python3.6 -V 2>&1 | grep 'Python 3', \
-	python3.5 -V 2>&1 | grep 'Python 3', \
-	python3 -V 2>&1 | grep -E 'Python 3\.[5-9]\.?'))
+$(eval $(call SetupHostCommand,python2,Please install Python 2.x, \
+	python2.7 -V 2>&1 | grep Python, \
+	python2 -V 2>&1 | grep Python))
 
-$(eval $(call SetupHostCommand,python3,Please install Python >= 3.5, \
+$(eval $(call SetupHostCommand,python,Please install Python >= 3.6, \
+	python3.10 -V 2>&1 | grep 'Python 3', \
 	python3.9 -V 2>&1 | grep 'Python 3', \
 	python3.8 -V 2>&1 | grep 'Python 3', \
 	python3.7 -V 2>&1 | grep 'Python 3', \
 	python3.6 -V 2>&1 | grep 'Python 3', \
-	python3.5 -V 2>&1 | grep 'Python 3', \
-	python3 -V 2>&1 | grep -E 'Python 3\.[5-9]\.?'))
+	python3 -V 2>&1 | grep -E 'Python 3\.([6-9]|10)\.?'))
+
+$(eval $(call SetupHostCommand,python3,Please install Python >= 3.6, \
+	python3.10 -V 2>&1 | grep 'Python 3', \
+	python3.9 -V 2>&1 | grep 'Python 3', \
+	python3.8 -V 2>&1 | grep 'Python 3', \
+	python3.7 -V 2>&1 | grep 'Python 3', \
+	python3.6 -V 2>&1 | grep 'Python 3', \
+	python3 -V 2>&1 | grep -E 'Python 3\.([6-9]|10)\.?'))
 
 $(eval $(call TestHostCommand,python3-distutils, \
 	Please install the Python3 distutils module, \
@@ -194,3 +198,13 @@ prereq: $(STAGING_DIR_HOST)/bin/mkhash
 $(eval $(call TestHostCommand,ldconfig-stub,Failed to install stub, \
 	touch $(STAGING_DIR_HOST)/bin/ldconfig && \
 	chmod +x $(STAGING_DIR_HOST)/bin/ldconfig))
+
+$(eval $(call TestHostCommand,node,Please install NodeJS >= 12.0, \
+	node --version 2>&1 | awk -F. \
+		'{major=int(substr($$$$$$$$1,2,length($$$$$$$$1)-1)); if(major < 12) exit 1}'))
+
+$(eval $(call SetupHostCommand,npm,Please install the 'npm' package, \
+	npm --version))
+
+$(eval $(call SetupHostCommand,jq,Please install 'jq', \
+	jq --version 2>&1 ))

@@ -178,6 +178,10 @@ define KernelPackage/crypto-des
   $(call AddDepends/crypto)
 endef
 
+define KernelPackage/crypto-des/sdxprairie
+  FILES:=$(LINUX_DIR)/crypto/des_generic.ko
+endef
+
 $(eval $(call KernelPackage,crypto-des))
 
 
@@ -452,11 +456,6 @@ endef
 
 define KernelPackage/crypto-lib-blake2s/config
   imply PACKAGE_kmod-crypto-hash
-endef
-
-define KernelPackage/crypto-lib-blake2s/x86/64
-  KCONFIG+=CONFIG_CRYPTO_BLAKE2S_X86
-  FILES+=$(LINUX_DIR)/arch/x86/crypto/blake2s-x86_64.ko
 endef
 
 $(eval $(call KernelPackage,crypto-lib-blake2s))
@@ -893,6 +892,10 @@ define KernelPackage/crypto-sha256
 	$(LINUX_DIR)/lib/crypto/libsha256.ko
   AUTOLOAD:=$(call AutoLoad,09,sha256_generic)
   $(call AddDepends/crypto)
+endef
+
+define KernelPackage/crypto-sha256/sdxprairie
+  FILES:=$(LINUX_DIR)/crypto/sha256_generic.ko
 endef
 
 define KernelPackage/crypto-sha256/octeon

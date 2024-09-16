@@ -16,6 +16,7 @@ PKG_LICENSE_FILES:=COPYING
 PKG_FIXUP:=autoreconf
 
 include $(INCLUDE_DIR)/host-build.mk
+include $(INCLUDE_DIR)/gpl.mk
 
 HOST_CONFIGURE_VARS += \
 	ac_cv_header_sys_capability_h=no \

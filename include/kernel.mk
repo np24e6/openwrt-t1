@@ -101,7 +101,7 @@ endif
 KERNEL_MAKE = $(MAKE) $(KERNEL_MAKEOPTS)
 
 KERNEL_MAKE_FLAGS = \
-	KCFLAGS="$(call iremap,$(BUILD_DIR),$(notdir $(BUILD_DIR)))" \
+	KCFLAGS="$(call iremap,$(BUILD_DIR),$(notdir $(BUILD_DIR))) $(filter-out -fno-plt,$(call qstrip,$(CONFIG_EXTRA_OPTIMIZATION))) $(call qstrip,$(CONFIG_KERNEL_CFLAGS))" \
 	HOSTCFLAGS="$(HOST_CFLAGS) -Wall -Wmissing-prototypes -Wstrict-prototypes" \
 	CROSS_COMPILE="$(KERNEL_CROSS)" \
 	ARCH="$(LINUX_KARCH)" \
@@ -164,6 +164,7 @@ endef
 define KernelPackage/Defaults
   FILES:=
   AUTOLOAD:=
+  AUTOLOAD_LATE:=
   MODPARAMS:=
   PKGFLAGS+=nonshared
 endef
@@ -181,6 +182,17 @@ define ModuleAutoLoad
     $(if $(4), \
       mkdir -p $(2)/etc/modules-boot.d; \
       ln -sf ../modules.d/$(3)$(1) $(2)/etc/modules-boot.d/;))
+endef
+
+# 1: name
+# 2: install prefix
+# 3: module priority prefix
+# 4: module list
+define ModuleAutoLoadLate
+  $(if $(4), \
+    mkdir -p $(2)/etc/modules-late.d; \
+    ($(foreach mod,$(4), \
+      echo "$(mod)$(if $(MODPARAMS.$(mod)), $(MODPARAMS.$(mod)),$(if $(MODPARAMS), $(MODPARAMS)))"; )) > $(2)/etc/modules-late.d/$(3)$(1))
 endef
 
 ifeq ($(DUMP)$(TARGET_BUILD),)
@@ -249,6 +261,7 @@ $(call KernelPackage/$(1)/config)
 			fi; \
 		  done;
 		  $(call ModuleAutoLoad,$(1),$$(1),$(filter-out 0-,$(word 1,$(AUTOLOAD))-),$(filter-out 0,$(word 2,$(AUTOLOAD))),$(sort $(wordlist 3,99,$(AUTOLOAD))))
+		  $(call ModuleAutoLoadLate,$(1),$$(1),$(filter-out 0-,$(word 1,$(AUTOLOAD_LATE))-),$(sort $(wordlist 3,99,$(AUTOLOAD_LATE))))
 		  $(call KernelPackage/$(1)/install,$$(1))
     endef
   $(if $(CONFIG_PACKAGE_kmod-$(1)),

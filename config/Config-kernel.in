@@ -27,7 +27,7 @@ config KERNEL_PRINTK
 config KERNEL_CRASHLOG
 	bool "Crash logging"
 	depends on !(arm || powerpc || sparc || TARGET_uml || i386 || x86_64)
-	default y
+	default y if !SMALL_FLASH
 
 config KERNEL_SWAP
 	bool "Support for paging of anonymous memory (swap)"
@@ -350,6 +350,60 @@ config KERNEL_EARLY_PRINTK
 	  debugging purposes to send messages over the serial console in early boot.
 	  Enable this to debug early boot problems.
 
+config KERNEL_MTD_UBI
+	bool "Compile the kernel with UBI - Unsorted block images"
+	default n
+	help
+	  UBI is a software layer above MTD layer which admits use of LVM-like
+	  logical volumes on top of MTD devices, hides some complexities of
+	  flash chips like wear and bad blocks and provides some other useful
+	  capabilities. Please, consult the MTD web site for more details
+	  (www.linux-mtd.infradead.org).
+
+config KERNEL_MTD_UBI_WL_THRESHOLD
+	int
+	default 4096 if KERNEL_MTD_UBI
+
+config KERNEL_MTD_UBI_BEB_LIMIT
+	int
+	default 20 if KERNEL_MTD_UBI
+
+config KERNEL_MTD_UBI_FASTMAP
+	bool
+	default n
+
+config KERNEL_MTD_UBI_GLUEBI
+	bool
+	default n
+
+config KERNEL_MTD_UBI_BLOCK
+	bool
+	default n
+
+config KERNEL_UBIFS_FS
+	bool
+	default y if KERNEL_MTD_UBI
+
+config KERNEL_UBIFS_FS_ADVANCED_COMPR
+	bool
+	default y if KERNEL_UBIFS_FS
+
+config KERNEL_UBIFS_FS_LZO
+	bool
+	default y if KERNEL_UBIFS_FS
+
+config KERNEL_UBIFS_FS_ZLIB
+	bool
+	default y if KERNEL_UBIFS_FS
+
+config KERNEL_MTD_SPINAND_GIGADEVICE
+	bool
+	default y if KERNEL_MTD_SPINAND_MT29F
+
+config KERNEL_MTD_SPINAND_ONDIEECC
+	bool
+	default y if KERNEL_MTD_SPINAND_MT29F
+
 config KERNEL_KPROBES
 	bool "Compile the kernel with kprobes support"
 	default n
@@ -436,34 +490,22 @@ config KERNEL_PROVE_LOCKING
 	select KERNEL_DEBUG_KERNEL
 	default n
 
-config KERNEL_LOCKUP_DETECTOR
-	bool "Compile the kernel with detect Hard and Soft Lockups"
+config KERNEL_SOFTLOCKUP_DETECTOR
+	bool "Compile the kernel with detect Soft Lockups"
 	depends on KERNEL_DEBUG_KERNEL
 	help
 	  Say Y here to enable the kernel to act as a watchdog to detect
-	  hard and soft lockups.
+	  soft lockups.
 
 	  Softlockups are bugs that cause the kernel to loop in kernel
 	  mode for more than 20 seconds, without giving other tasks a
 	  chance to run.  The current stack trace is displayed upon
 	  detection and the system will stay locked up.
 
-	  Hardlockups are bugs that cause the CPU to loop in kernel mode
-	  for more than 10 seconds, without letting other interrupts have a
-	  chance to run.  The current stack trace is displayed upon detection
-	  and the system will stay locked up.
-
-	  The overhead should be minimal.  A periodic hrtimer runs to
-	  generate interrupts and kick the watchdog task every 4 seconds.
-	  An NMI is generated every 10 seconds or so to check for hardlockups.
-
-	  The frequency of hrtimer and NMI events and the soft and hard lockup
-	  thresholds can be controlled through the sysctl watchdog_thresh.
-
 config KERNEL_DETECT_HUNG_TASK
 	bool "Compile the kernel with detect Hung Tasks"
 	depends on KERNEL_DEBUG_KERNEL
-	default KERNEL_LOCKUP_DETECTOR
+	default KERNEL_SOFTLOCKUP_DETECTOR
 	help
 	  Say Y here to enable the kernel to detect "hung tasks",
 	  which are bugs that cause the task to be stuck in

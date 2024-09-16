@@ -15,6 +15,7 @@ PKG_SOURCE_URL:=@GNU/automake
 PKG_HASH:=af6ba39142220687c500f79b4aa2f181d9b24e4f8d8ec497cea4ba26c64bedaf
 
 include $(INCLUDE_DIR)/host-build.mk
+include $(INCLUDE_DIR)/gpl.mk
 
 HOST_CONFIGURE_ARGS += \
 	--datarootdir=$(STAGING_DIR_HOST)/share \

@@ -19,6 +19,7 @@ PKG_HASH:=e6b2aca70ccc3fe3687365009dd94a2e18e82b688ed4e260e04b7412471cc173
 HOST_FIXUP:=autoreconf
 
 include $(INCLUDE_DIR)/host-build.mk
+include $(INCLUDE_DIR)/gpl.mk
 
 ifeq ($(HOST_OS),Darwin)
 HOST_CFLAGS += -UHAVE_ENDIAN_H

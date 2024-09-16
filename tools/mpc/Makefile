@@ -16,6 +16,7 @@ PKG_HASH:=17503d2c395dfcf106b622dc142683c1199431d095367c6aacba6eec30340459
 HOST_BUILD_PARALLEL:=1
 
 include $(INCLUDE_DIR)/host-build.mk
+include $(INCLUDE_DIR)/gpl.mk
 
 unexport CFLAGS
 

@@ -199,6 +199,11 @@ default_prerm() {
 		fi
 	done
 
+	#Remove config files from all profiles
+	[ -f /usr/sbin/profile.sh ] && {
+		/usr/sbin/profile.sh -p "$root/usr/lib/opkg/info/${pkgname}.list"
+	}
+
 	return $ret
 }
 
@@ -272,7 +277,7 @@ default_postinst() {
 			uci commit
 		fi
 
-		rm -f /tmp/luci-indexcache
+		rm -fr /tmp/luci-indexcache
 	fi
 
 	local shell="$(command -v bash)"
@@ -286,6 +291,11 @@ default_postinst() {
 			"$i" start
 		fi
 	done
+
+	#Install config files to all profiles
+	[ -f /usr/sbin/profile.sh ]  && {
+		/usr/sbin/profile.sh -i "$root$filelist"
+	}
 
 	return $ret
 }
@@ -382,6 +392,78 @@ user_exists() {
 
 board_name() {
 	[ -e /tmp/sysinfo/board_name ] && cat /tmp/sysinfo/board_name || echo "generic"
+}
+
+check_compatibility() {
+	old_version="$1"
+	dir="$2"
+
+	old_major=$(echo "$old_version" | awk -F . '{ print $2 }')
+	old_minor=$(echo "$old_version" | awk -F . '{ print $3 }')
+
+	version=${dir##*/}
+	uci_major=$(echo "$version" | awk -F . '{ print $1 }')
+	uci_minor=$(echo "$version" | awk -F . '{ print $2 }')
+
+	[ "$uci_major" -eq "$uci_major" ] && [ "$uci_minor" -eq "$uci_minor" ] && {
+		[ "$uci_major" -lt "$old_major" ] && return 1
+		[ "$uci_major" -eq "$old_major" ] && [ "$uci_minor" -lt "$old_minor" ] && return 1
+	}
+
+	return 0
+}
+
+apply_defaults() {
+	dir="$1"
+
+	for file in ${dir}/* ; do
+		( . "./$file" ) && rm -f "$file"
+	done
+}
+
+move_files() {
+	from="$1"
+	to="$2"
+
+	for file in ${from}/* ; do
+		[ -f "$file" ] && mv "$file" "$to"
+	done
+}
+
+uci_apply_defaults() {
+	. /lib/functions/system.sh
+
+	config_load system
+	config_get old_version "system" device_fw_version
+	new_version=$(cat "/etc/version")
+	top_dir="/etc/uci-defaults"
+
+	[ -z "$old_version" ] && old_version="$new_version"
+	[ -n "$new_version" ] && uci_set system "system" device_fw_version "$new_version"
+	[ -z "$(ls -A /etc/uci-defaults/)" ] && return
+
+	old_major=$(echo "$old_version" | awk -F . '{ print $2 }')
+	old_minor=$(echo "$old_version" | awk -F . '{ print $3 }')
+
+	# do not execute legacy scripts when coming from 7.x
+	[ "$old_major" -ge 7 ] && rm -rf ${top_dir}/001_rut*
+
+	# do not execute old scripts when coming from 8.x
+	[ "$old_major" -gt 7 ] && rm -rf ${top_dir}/old
+
+	# do not execute old scripts when coming from 7.4.x
+	[ "$old_major" -eq 7 ] && [ "$old_minor" -ge 4 ] && rm -rf ${top_dir}/old
+
+	mkdir -p "/tmp/.uci"
+	for dir in $(ls -v $top_dir); do
+		check_compatibility "$old_version" "$dir" || continue
+		apply_defaults "${top_dir}/$dir"
+	done
+
+	# execute scripts that are from custom packages
+	apply_defaults "$top_dir"
+
+	uci commit
 }
 
 [ -z "$IPKG_INSTROOT" ] && [ -f /lib/config/uci.sh ] && . /lib/config/uci.sh

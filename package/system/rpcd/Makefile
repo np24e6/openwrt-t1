@@ -23,6 +23,8 @@ PKG_LICENSE_FILES:=
 PKG_BUILD_PARALLEL:=1
 PKG_ASLR_PIE_REGULAR:=1
 
+PKG_CONFIG_DEPENDS:= CONFIG_RPCD_PAM
+
 include $(INCLUDE_DIR)/package.mk
 include $(INCLUDE_DIR)/cmake.mk
 
@@ -35,12 +37,17 @@ define Package/rpcd/default
   SECTION:=utils
   CATEGORY:=Base system
   TITLE:=OpenWrt ubus RPC backend server
-  DEPENDS:=+libubus +libubox
+  DEPENDS:=+libubus +libubox +liblog
 endef
 
 define Package/rpcd
   $(Package/rpcd/default)
   DEPENDS+= +libuci +libblobmsg-json +libjson-c
+  MENU:=1
+endef
+
+define Package/rpcd/config
+  source "$(SOURCE)/Config.in"
 endef
 
 define Package/rpcd/description
@@ -61,10 +68,22 @@ define Package/rpcd/install
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/rpcd $(1)/sbin/rpcd
 	$(INSTALL_DIR) $(1)/usr/share/rpcd/acl.d
 	$(INSTALL_DATA) $(PKG_BUILD_DIR)/unauthenticated.json $(1)/usr/share/rpcd/acl.d/unauthenticated.json
+	$(INSTALL_BIN) ./files/superuser.json $(1)/usr/share/rpcd/acl.d/superuser.json
 	$(INSTALL_DIR) $(1)/etc/config
 	$(INSTALL_CONF) ./files/rpcd.config $(1)/etc/config/rpcd
-	$(INSTALL_DIR) $(1)/etc/uci-defaults
-	$(INSTALL_BIN) ./files/50-migrate-rpcd-ubus-sock.sh $(1)/etc/uci-defaults
+	if [ $(TLT_PLATFORM_RUTX) ]; then \
+		$(SED) "s@%%USER_SCRIPTS_HOTSPOT%%@list read 'services/hotspot/general/userscripts'@g" \
+			$(1)/etc/config/rpcd; \
+	else \
+		$(SED) "/%%USER_SCRIPTS_HOTSPOT%%/d" $(1)/etc/config/rpcd; \
+	fi
+
+	if [ ! $(TLT_PLATFORM_RUT30X) ]; then \
+		$(SED) "s@%%MOBILE_UTILS_SMS_SEND%%@list read 'services/mobile_utilities/sms/send'@g" \
+			$(1)/etc/config/rpcd; \
+	else \
+		$(SED) "/%%MOBILE_UTILS_SMS_SEND%%/d" $(1)/etc/config/rpcd; \
+	fi
 endef
 
 
@@ -93,6 +112,8 @@ define BuildPlugin
   $$(eval $$(call BuildPackage,rpcd-mod-$(1)))
 
 endef
+
+CMAKE_OPTIONS += -DPAM_SUPPORT=$(if $(CONFIG_RPCD_PAM),"ON","OFF")
 
 $(eval $(call BuildPackage,rpcd))
 $(eval $(call BuildPlugin,file,,Provides ubus calls for file and directory operations.))

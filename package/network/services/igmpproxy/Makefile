@@ -25,9 +25,11 @@ define Package/igmpproxy
   SECTION:=net
   CATEGORY:=Network
   SUBMENU:=Routing and Redirection
-  DEPENDS:=+USE_GLIBC:librt
+  DEPENDS:=+USE_GLIBC:librt +vuci-app-igmp-proxy-ui
   TITLE:=Multicast Routing Daemon
   URL:=http://sourceforge.net/projects/igmpproxy
+  PKG_TLT_NAME:=IGMP Proxy
+  PKG_ROUTER:=$(TLT_PLATFORM_NAME)
 endef
 
 define Package/igmpproxy/description
@@ -40,12 +42,6 @@ define Package/igmpproxy/conffiles
 endef
 
 TARGET_CFLAGS += -Dlog=igmpproxy_log
-
-define Build/Compile
-	$(MAKE) -C $(PKG_BUILD_DIR)/src \
-		CC="$(TARGET_CC)" \
-		CFLAGS="$(TARGET_CFLAGS) -std=gnu99"
-endef
 
 define Package/igmpproxy/install
 	$(INSTALL_DIR) $(1)/etc/config

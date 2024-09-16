@@ -155,7 +155,7 @@ define KernelPackage/nf-flow
   DEPENDS:=+kmod-nf-conntrack
   FILES:= \
 	$(LINUX_DIR)/net/netfilter/nf_flow_table.ko \
-	$(LINUX_DIR)/net/netfilter/nf_flow_table_hw.ko
+	$(if $(or $(CONFIG_LINUX_4_14),$(CONFIG_LINUX_5_4)),$(LINUX_DIR)/net/netfilter/nf_flow_table_hw.ko)
   AUTOLOAD:=$(call AutoProbe,nf_flow_table nf_flow_table_hw)
 endef
 
@@ -542,7 +542,7 @@ define KernelPackage/nf-nathelper-extra
   KCONFIG:=$(KCONFIG_NF_NATHELPER_EXTRA)
   FILES:=$(foreach mod,$(NF_NATHELPER_EXTRA-m),$(LINUX_DIR)/net/$(mod).ko)
   AUTOLOAD:=$(call AutoProbe,$(notdir $(NF_NATHELPER_EXTRA-m)))
-  DEPENDS:=+kmod-nf-nat +kmod-lib-textsearch +kmod-ipt-raw +kmod-asn1-decoder
+  DEPENDS:=+kmod-nf-nat +kmod-lib-textsearch +kmod-asn1-decoder
 endef
 
 define KernelPackage/nf-nathelper-extra/description
@@ -865,7 +865,11 @@ endef
 
 define KernelPackage/br-netfilter/install
 	$(INSTALL_DIR) $(1)/etc/sysctl.d
-	$(INSTALL_DATA) ./files/sysctl-br-netfilter.conf $(1)/etc/sysctl.d/11-br-netfilter.conf
+	if [ -e "./files/sysctl-br-netfilter.conf-$(call device_shortname)" ]; then \
+		$(INSTALL_DATA) ./files/sysctl-br-netfilter.conf-$(call device_shortname) $(1)/etc/sysctl.d/11-br-netfilter.conf; \
+	else \
+		$(INSTALL_DATA) ./files/sysctl-br-netfilter.conf $(1)/etc/sysctl.d/11-br-netfilter.conf; \
+	fi;
 endef
 
 $(eval $(call KernelPackage,br-netfilter))
@@ -1004,7 +1008,7 @@ define KernelPackage/nf-conntrack-netlink
   FILES:=$(LINUX_DIR)/net/netfilter/nf_conntrack_netlink.ko
   KCONFIG:=CONFIG_NF_CT_NETLINK CONFIG_NF_CONNTRACK_EVENTS=y CONFIG_NETFILTER_NETLINK_GLUE_CT=y
   AUTOLOAD:=$(call AutoProbe,nf_conntrack_netlink)
-  $(call AddDepends/nfnetlink,+kmod-ipt-conntrack)
+  $(call AddDepends/nfnetlink,+kmod-nf-conntrack)
 endef
 
 define KernelPackage/nf-conntrack-netlink/description
@@ -1052,7 +1056,7 @@ $(eval $(call KernelPackage,ipt-rpfilter))
 define KernelPackage/nft-core
   SUBMENU:=$(NF_MENU)
   TITLE:=Netfilter nf_tables support
-  DEPENDS:=+kmod-nfnetlink +kmod-nf-reject +IPV6:kmod-nf-reject6 +IPV6:kmod-nf-conntrack6 +kmod-nf-nat
+  DEPENDS:=+kmod-nfnetlink +kmod-nf-reject +IPV6:kmod-nf-reject6 +IPV6:kmod-nf-conntrack6 +kmod-nf-nat +kmod-lib-crc32c
   FILES:=$(foreach mod,$(NFT_CORE-m),$(LINUX_DIR)/net/$(mod).ko)
   AUTOLOAD:=$(call AutoProbe,$(notdir $(NFT_CORE-m)))
   KCONFIG:= \
@@ -1143,6 +1147,7 @@ define KernelPackage/nft-netdev
   DEPENDS:=+kmod-nft-core
   KCONFIG:= \
 	CONFIG_NETFILTER_INGRESS=y \
+	CONFIG_NETFILTER_EGRESS=y \
 	CONFIG_NF_TABLES_NETDEV \
 	CONFIG_NF_DUP_NETDEV \
 	CONFIG_NFT_DUP_NETDEV \

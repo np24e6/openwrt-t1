@@ -1,0 +1,17 @@
+#!/bin/sh
+. /lib/functions.sh
+
+CONF="ip_blockd"
+
+handle_option() {
+        local main_section="$1"
+        local enabled=""
+
+        config_get enabled "$main_section" "enabled"
+
+        [ -z "$enabled" ] && uci_set "$CONF" "$main_section" "enabled" "1"
+}
+
+config_load "$CONF"
+config_foreach handle_option "globals"
+uci_commit "$CONF"

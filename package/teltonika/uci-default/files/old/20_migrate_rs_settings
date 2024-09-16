@@ -1,0 +1,89 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+CONF="rs"
+COUNT=0
+NEW_CONFIGS_LIST=""
+
+config_cb() {
+	local service_type=$(uci_get "$CONF" "$2" "type")
+	create_new_section $2 $service_type
+	if [ $? -eq 1 ]; then
+		option_cb() { return 0; }
+		return 1
+	fi
+
+	uci_set "$CONF" "$2" "firewall_migration" "$COUNT"
+	option_cb() {
+		local option="$1"
+		local value="$2"
+		if [ "$option" != "tag" ]; then
+			uci_set "$NEW_CONFIG" "$COUNT" "$option" "$value"
+		fi
+	}
+}
+
+create_new_section() {
+	local section="$1"
+	local service_type="$2"
+	
+	case "$service_type" in
+	"dnp3_outstation")
+		NEW_CONFIG="$service_type"
+		NEW_SECTION="dnp3_serial_outstation"
+		;;
+	"console" | "modem" | "ntrip" | "modbus" | "overip")
+		NEW_CONFIG="rs_${service_type}"
+		NEW_SECTION="$service_type"
+		if [ "$NEW_CONFIG" == "rs_ntrip" ] && [ ! -f  "/etc/config/rs_ntrip" ]; then
+			touch /etc/config/rs_ntrip
+		fi
+		;;
+	*)
+		return 1
+		;;
+	esac
+
+	if [ "$section" = "rs232" ] || [ "$section" = "rs485" ]; then
+		DEVICE="/dev/${section}"
+	elif [ "$section" = "usb" ]; then
+		config_get USB_ID "${section}" "id"
+		if [ -z "$USB_ID" ]; then
+			return 1
+		fi
+		DEVICE="/dev/rs232_usb_${USB_ID}"
+	fi
+
+	COUNT=$(($COUNT + 1))
+	NEW_CONFIGS_LIST="$NEW_CONFIGS_LIST $NEW_CONFIG"
+
+	uci_set "$CONF" "$section" "tag" "$COUNT"
+	uci_add "$NEW_CONFIG" "$NEW_SECTION"
+	
+	uci_rename "$NEW_CONFIG" "$CONFIG_SECTION" "$COUNT"
+	uci_set "$NEW_CONFIG" "$COUNT" "device" "$DEVICE"
+
+	if [ "$service_type" = "ntrip" ]; then
+		local use_router_gps=$(uci_get "$CONF" "$1" "use_router_gps")
+		local user_nmea=$(uci_get "$CONF" "$1" "user_nmea")
+
+		if [ "$use_router_gps" = "1" ]; then
+			uci_set "$NEW_CONFIG" "$COUNT" "nmea_source" "3"
+		elif [ -n "$user_nmea" ]; then
+			uci_set "$NEW_CONFIG" "$COUNT" "nmea_source" "1"
+		else
+			uci_set "$NEW_CONFIG" "$COUNT" "nmea_source" "4"
+		fi
+	fi
+
+	return 0
+}
+
+config_load "$CONF"
+reset_cb
+
+uci_commit "$CONF"
+for config_name in $NEW_CONFIGS_LIST; do
+	uci_commit "$config_name"
+done

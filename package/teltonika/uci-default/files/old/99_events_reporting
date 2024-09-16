@@ -1,0 +1,29 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+fix_event_mark() {
+	local section=$1
+	local event eventMark
+
+	config_get event "$section" "event" ""
+	[ "$event" != "Mobile Data" ] && return
+
+	config_get eventMark "$section" "eventMark" ""
+	case "$eventMark" in
+	" connected")
+		eventMark="data connected"
+		;;
+	"disconnected")
+		eventMark="data disconnected"
+		;;
+	esac
+
+	uci_set "events_reporting" "$section" "eventMark" "$eventMark"
+}
+
+config_load "events_reporting" || exit 0
+config_foreach fix_event_mark "rule"
+uci_commit "events_reporting"
+
+exit 0

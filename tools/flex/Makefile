@@ -18,6 +18,7 @@ HOST_FIXUP:=autoreconf
 HOST_BUILD_PARALLEL:=1
 
 include $(INCLUDE_DIR)/host-build.mk
+include $(INCLUDE_DIR)/gpl.mk
 
 HOST_CONFIGURE_ARGS += --disable-shared
 

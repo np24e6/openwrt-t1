@@ -1,0 +1,37 @@
+#!/bin/sh
+. /lib/functions.sh
+
+STATUS=0   
+LEGACY_CONF="cot"
+LEGACY_SECT_NAME="cumulocity"
+CONF="iot"
+SECTION_TYPE="iot"
+SECTION_NAME="cloudofthings"
+
+config_cb() {
+
+        local name="$2"
+
+        [ "$name" = "$LEGACY_SECT_NAME" ] || return 0
+
+        STATUS=1
+
+        uci_add "$CONF" "$SECTION_TYPE" "$SECTION_NAME"
+
+        option_cb() {
+
+                local option="$1"
+                local value="$2"
+
+                uci_set "$CONF" "$SECTION_NAME" "$option" "$value"
+        }
+}
+
+[ -f "/etc/config/$CONF" ] || return 0
+[ -f "/etc/config/$LEGACY_CONF" ] && config_load "$LEGACY_CONF" && [ "$STATUS" = 1 ] || uci_add "$CONF" "$SECTION_TYPE" "$SECTION_NAME"
+
+uci_commit "$CONF"
+
+[ "$STATUS" = 1 ] && rm "/etc/config/$LEGACY_CONF"
+
+# config_cb() { return; }

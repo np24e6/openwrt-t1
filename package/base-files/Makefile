@@ -16,12 +16,15 @@ PKG_FLAGS:=nonshared
 PKG_RELEASE:=$(COMMITCOUNT)
 
 PKG_FILE_DEPENDS:=$(PLATFORM_DIR)/ $(GENERIC_PLATFORM_DIR)/base-files/
-PKG_BUILD_DEPENDS:=usign/host ucert/host
+PKG_BUILD_DEPENDS:=ucert/host
 PKG_LICENSE:=GPL-2.0
+
+PKG_ORIGIN_URL:=https://github.com/openwrt/openwrt/blob/openwrt-21.02/package/base-files
 
 # Extend depends from version.mk
 PKG_CONFIG_DEPENDS += \
-	CONFIG_SIGNED_PACKAGES CONFIG_TARGET_INIT_PATH CONFIG_TARGET_PREINIT_DISABLE_FAILSAFE \
+	CONFIG_SIGNED_PACKAGES \
+	CONFIG_TARGET_INIT_PATH \
 	CONFIG_NAND_SUPPORT \
 	CONFIG_CLEAN_IPKG \
 	CONFIG_PER_FEED_REPO \
@@ -30,14 +33,14 @@ PKG_CONFIG_DEPENDS += \
 include $(INCLUDE_DIR)/package.mk
 
 ifneq ($(DUMP),1)
-  STAMP_CONFIGURED:=$(strip $(STAMP_CONFIGURED))_$(shell echo $(CONFIG_TARGET_INIT_PATH) | mkhash md5)
+  STAMP_CONFIGURED:=$(strip $(STAMP_CONFIGURED))_$(shell echo $(CONFIG_TARGET_INIT_PATH) | $(MKHASH) md5)
   TARGET:=-$(BOARD)
 endif
 
 define Package/base-files
   SECTION:=base
   CATEGORY:=Base system
-  DEPENDS:=+netifd +libc +jsonfilter +SIGNED_PACKAGES:usign +SIGNED_PACKAGES:openwrt-keyring +NAND_SUPPORT:ubi-utils +fstools +fwtool
+  DEPENDS:=+netifd +libc +jsonfilter +SIGNATURE_CHECK:usign +SIGNATURE_CHECK:openwrt-keyring +NAND_SUPPORT:ubi-utils +fstools +fwtool
   TITLE:=Base filesystem for OpenWrt
   URL:=http://openwrt.org/
   VERSION:=$(PKG_RELEASE)-$(REVISION)
@@ -73,23 +76,6 @@ define Package/base-files/description
  This package contains a base filesystem and system scripts for OpenWrt.
 endef
 
-define ImageConfigOptions
-	mkdir -p $(1)/lib/preinit
-	echo 'pi_suppress_stderr="$(CONFIG_TARGET_PREINIT_SUPPRESS_STDERR)"' >$(1)/lib/preinit/00_preinit.conf
-	echo 'fs_failsafe_wait_timeout=$(if $(CONFIG_TARGET_PREINIT_TIMEOUT),$(CONFIG_TARGET_PREINIT_TIMEOUT),2)' >>$(1)/lib/preinit/00_preinit.conf
-	echo 'pi_init_path="$(TARGET_INIT_PATH)"' >>$(1)/lib/preinit/00_preinit.conf
-	echo 'pi_init_env=$(if $(CONFIG_TARGET_INIT_ENV),$(CONFIG_TARGET_INIT_ENV),"")' >>$(1)/lib/preinit/00_preinit.conf
-	echo 'pi_init_cmd=$(if $(CONFIG_TARGET_INIT_CMD),$(CONFIG_TARGET_INIT_CMD),"/sbin/init")' >>$(1)/lib/preinit/00_preinit.conf
-	echo 'pi_init_suppress_stderr="$(CONFIG_TARGET_INIT_SUPPRESS_STDERR)"' >>$(1)/lib/preinit/00_preinit.conf
-	echo 'pi_ifname=$(if $(CONFIG_TARGET_PREINIT_IFNAME),$(CONFIG_TARGET_PREINIT_IFNAME),"")' >>$(1)/lib/preinit/00_preinit.conf
-	echo 'pi_ip=$(if $(CONFIG_TARGET_PREINIT_IP),$(CONFIG_TARGET_PREINIT_IP),"192.168.1.1")' >>$(1)/lib/preinit/00_preinit.conf
-	echo 'pi_netmask=$(if $(CONFIG_TARGET_PREINIT_NETMASK),$(CONFIG_TARGET_PREINIT_NETMASK),"255.255.255.0")' >>$(1)/lib/preinit/00_preinit.conf
-	echo 'pi_broadcast=$(if $(CONFIG_TARGET_PREINIT_BROADCAST),$(CONFIG_TARGET_PREINIT_BROADCAST),"192.168.1.255")' >>$(1)/lib/preinit/00_preinit.conf
-	echo 'pi_preinit_net_messages="$(CONFIG_TARGET_PREINIT_SHOW_NETMSG)"' >>$(1)/lib/preinit/00_preinit.conf
-	echo 'pi_preinit_no_failsafe_netmsg="$(CONFIG_TARGET_PREINIT_SUPPRESS_FAILSAFE_NETMSG)"' >>$(1)/lib/preinit/00_preinit.conf
-	echo 'pi_preinit_no_failsafe="$(CONFIG_TARGET_PREINIT_DISABLE_FAILSAFE)"' >>$(1)/lib/preinit/00_preinit.conf
-endef
-
 define Build/Prepare
 	mkdir -p $(PKG_BUILD_DIR)
 endef
@@ -99,34 +85,23 @@ define Build/Compile/Default
 endef
 Build/Compile = $(Build/Compile/Default)
 
-ifdef CONFIG_SIGNED_PACKAGES
-  define Build/Configure
-	[ -s $(BUILD_KEY) -a -s $(BUILD_KEY).pub ] || \
-		$(STAGING_DIR_HOST)/bin/usign -G -s $(BUILD_KEY) -p $(BUILD_KEY).pub -c "Local build key"
-
-	[ -s $(BUILD_KEY).ucert ] || \
-		$(STAGING_DIR_HOST)/bin/ucert -I -c $(BUILD_KEY).ucert -p $(BUILD_KEY).pub -s $(BUILD_KEY)
-
-  endef
-
-ifndef CONFIG_BUILDBOT
-  define Package/base-files/install-key
-	mkdir -p $(1)/etc/opkg/keys
-	$(CP) $(BUILD_KEY).pub $(1)/etc/opkg/keys/`$(STAGING_DIR_HOST)/bin/usign -F -p $(BUILD_KEY).pub`
-
-  endef
-endif
-endif
-
 ifeq ($(CONFIG_NAND_SUPPORT),)
   define Package/base-files/nand-support
 	rm -f $(1)/lib/upgrade/nand.sh
   endef
 endif
 
+ifdef CONFIG_INSTALL_LOCAL_KEY
+  define Package/base-files/install-local-key
+	mkdir -p $(1)/etc/opkg/keys
+	$(CP) $(BUILD_KEY).pub $(1)/etc/opkg/keys/`$(STAGING_DIR_HOST)/bin/usign \
+		-F -p $(BUILD_KEY).pub`
+  endef
+endif
+
 define Package/base-files/install
 	$(CP) ./files/* $(1)/
-	$(Package/base-files/install-key)
+	$(Package/base-files/install-local-key)
 	$(Package/base-files/nand-support)
 	if [ -d $(GENERIC_PLATFORM_DIR)/base-files/. ]; then \
 		$(CP) $(GENERIC_PLATFORM_DIR)/base-files/* $(1)/; \
@@ -147,7 +122,6 @@ define Package/base-files/install
 
 	$(VERSION_SED_SCRIPT) \
 		$(1)/etc/openwrt_release \
-		$(1)/etc/device_info \
 		$(1)/usr/lib/os-release
 
 	$(SED) "s#%PATH%#$(TARGET_INIT_PATH)#g" \
@@ -181,7 +155,6 @@ define Package/base-files/install
 	chmod 0600 $(1)/etc/shadow
 	chmod 1777 $(1)/tmp
 
-	$(call ImageConfigOptions,$(1))
 	$(call Package/base-files/install-target,$(1))
 	for conffile in $(1)/etc/config/*; do \
 		if [ -f "$$$$conffile" ]; then \
@@ -203,8 +176,54 @@ define Package/base-files/install
 	$(if $(CONFIG_IPK_FILES_CHECKSUMS),, \
 		rm -f $(1)/sbin/pkg_check)
 
-	$(if $(CONFIG_TARGET_PREINIT_DISABLE_FAILSAFE), \
-		rm -f $(1)/etc/banner.failsafe,)
+	# set target name
+	$(SED) "s#%%NAME%%#$(TLT_PLATFORM_NAME)#g" \
+		$(1)/bin/config_generate \
+		$(1)/etc/banner \
+		$(1)/etc/init.d/system
+
+	# set year in banner
+	$(SED) "s#%%YEAR%%#$$$$(date +'%Y')#g" $(1)/etc/banner
+
+	# set lan ip
+	$(SED) "s#%%LAN_IP%%#$(CONFIG_DEVICE_DEFAULT_IP)#g" $(1)/bin/config_generate \
+		$(1)/etc/board.d/1-board_json
+
+	# add compile time timestamp
+	date +%s > $(1)/etc/firmware-date
+
+	# remove rfkill script if not supported
+	$(if $(CONFIG_RFKILL_SUPPORT),,\
+		$(RM) $(1)/etc/rc.button/rfkill)
+
+	if [ ! $(CONFIG_MOBILE_SUPPORT) ] || [ $(CONFIG_BASEBAND_SUPPORT) ]; then \
+		$(RM) $(1)/lib/preinit/82_modem_power; \
+		$(RM) $(1)/sbin/mctl $(1)/bin/board_modem; \
+	fi;
+
+	if [ ! $(CONFIG_MOBILE_SUPPORT) ] || [ ! $(CONFIG_SERIAL) ]; then \
+		$(RM) $(1)/etc/init.d/rs_modem $(1)/etc/config/rs_modem; \
+	fi;
+
+	if [ ! $(CONFIG_WIFI_SUPPORT) ]; then \
+		$(RM) $(1)/sbin/wifi; \
+	fi;
+
+	if [ ! $(CONFIG_SERIAL) ]; then \
+		$(RM) $(1)/etc/hotplug.d/tty/01-serial-symlink.sh; \
+		$(RM) $(1)/etc/init.d/rs_console $(1)/etc/config/rs_console; \
+		$(RM) $(1)/sbin/usb_serial_adapters.sh; \
+	fi;
+
+	if [ ! $(CONFIG_NAND_SUPPORT) ]; then \
+		$(RM) $(1)/etc/init.d/mount_nand; \
+	fi;
+
+	if [ ! $(CONFIG_BUSYBOX_CONFIG_NTPD) ]; then \
+		$(RM) $(1)/etc/init.d/ntpserver; \
+	fi;
+
+	$(RM) $(1)/etc/config/rutx_console;
 endef
 
 ifneq ($(DUMP),1)

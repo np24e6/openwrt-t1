@@ -1,0 +1,39 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+fix_event_mark() {
+	local section="$1"
+	local event eventMark
+
+	config_get event "$section" "event" ""
+
+	config_get eventMark "$section" "eventMark" ""
+	case "$eventMark" in
+	"profile")
+		eventMark="profiles"
+		;;
+	"ntp")
+		eventMark="ntpclient"
+		;;
+	"mwan")
+		eventMark="mwan3"
+		;;
+	"upnp")
+		eventMark="upnpd"
+		;;
+	"sms")
+		eventMark="sms_utils"
+		;;
+	*)
+		;;
+	esac
+
+	uci_set "events_reporting" "$section" "eventMark" "$eventMark"
+}
+
+config_load "events_reporting" || exit 0
+config_foreach fix_event_mark "rule"
+uci_commit "events_reporting"
+
+exit 0

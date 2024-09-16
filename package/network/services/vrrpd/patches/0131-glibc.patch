@@ -1,0 +1,11 @@
+--- a/Makefile
++++ b/Makefile
+@@ -23,7 +23,7 @@ CFLAGS= $(COMMON_CFLAGS) -Wall
+ all: $(ALL_EXE)
+ 
+ vrrpd : $(VRRPD_OBJS)
+-	$(CC) $(PROF_OPT) -o $@ $^ -lrt -llog -lubus -lubox $(LINKLIB)
++	$(CC) -Wl,--copy-dt-needed-entries $(PROF_OPT) -o $@ $^ -lrt -llog -lubus -lubox $(LINKLIB)
+ 
+ atropos:$(ATROPOS_OBJS)
+ 	$(CC) $(PROF_OPT) -o $@ $^ -lrt -leventslog

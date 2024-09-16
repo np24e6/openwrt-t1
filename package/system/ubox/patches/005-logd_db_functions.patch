@@ -1,0 +1,176 @@
+--- a/log/logd.c
++++ b/log/logd.c
+@@ -25,8 +25,15 @@
+ #include <libubox/list.h>
+ #include <libubox/ustream.h>
+ #include <libubus.h>
++#include <sqlite3.h>
+ 
+ #include "syslog.h"
++#include "logdb.h"
++
++#define DEFAULT_PRIORITY 6
++#define DEFAULT_TABLE 0
++
++#define QUERY_SIZE 512
+ 
+ int debug = 0;
+ static struct blob_buf b;
+@@ -40,12 +47,38 @@ enum {
+ 	__READ_MAX
+ };
+ 
++enum {
++	READ_DB_TABLE,
++	READ_DB_MAX
++};
++
++enum {
++	WRITE_EVENT,
++	WRITE_SENDER,
++	WRITE_TABLE,
++	WRITE_PRIORITY,
++	WRITE_DB,
++	WRITE_MAX
++};
++
+ static const struct blobmsg_policy read_policy[__READ_MAX] = {
+ 	[READ_LINES] = { .name = "lines", .type = BLOBMSG_TYPE_INT32 },
+ 	[READ_STREAM] = { .name = "stream", .type = BLOBMSG_TYPE_BOOL },
+ 	[READ_ONESHOT] = { .name = "oneshot", .type = BLOBMSG_TYPE_BOOL },
+ };
+ 
++static const struct blobmsg_policy read_db_policy[READ_DB_MAX] = {
++	[READ_DB_TABLE] = { .name = "table", .type = BLOBMSG_TYPE_STRING },
++};
++
++static const struct blobmsg_policy write_ext_policy[WRITE_MAX] = {
++	[WRITE_EVENT] = { .name = "event", .type = BLOBMSG_TYPE_STRING },
++	[WRITE_SENDER] = { .name = "sender", .type = BLOBMSG_TYPE_STRING },
++	[WRITE_TABLE] = { .name = "table", .type = BLOBMSG_TYPE_INT32 },
++	[WRITE_PRIORITY] = { .name = "priority", .type = BLOBMSG_TYPE_INT32},
++	[WRITE_DB] = { .name = "write_db", .type = BLOBMSG_TYPE_INT32},
++};
++
+ static const struct blobmsg_policy write_policy =
+ 	{ .name = "event", .type = BLOBMSG_TYPE_STRING };
+ 
+@@ -160,6 +193,118 @@ read_log(struct ubus_context *ctx, struc
+ 	return 0;
+ }
+ 
++static void db_fill_msg(struct blob_buf *b, const char *tbl, sqlite3_stmt *res)
++{
++        blobmsg_add_string(b, "id", (const char *) sqlite3_column_text(res, 0));
++
++        if (!strcmp(tbl, "SMS_TABLE")) {
++                blobmsg_add_string(b, "sim", (const char *) sqlite3_column_text(res, 1));
++                blobmsg_add_string(b, "send", (const char *) sqlite3_column_text(res, 2));
++                blobmsg_add_string(b, "time", (const char *) sqlite3_column_text(res, 3));
++        } else {
++                blobmsg_add_string(b, "time", (const char *) sqlite3_column_text(res, 1));
++                blobmsg_add_string(b, "source", (const char *) sqlite3_column_text(res, 2));
++                blobmsg_add_string(b, "priority", (const char *) sqlite3_column_text(res, 3));
++                blobmsg_add_string(b, "text", (const char *) sqlite3_column_text(res, 4));
++        }
++}
++
++static int parse_query(char *query, char *tbl, struct ubus_context *ctx, struct ubus_request_data *req)
++{
++	sqlite3 *con = NULL;
++	sqlite3_stmt *res;
++	const char *tail;
++	int error = 0;
++	int output;
++	void *c, *e;
++
++	if (sqlite3_open(DB, &con)) {
++		fprintf(stderr, "Can not open database\n");
++		return -1;
++	}
++	sqlite3_db_config(con, SQLITE_CONFIG_SERIALIZED);
++
++	error = sqlite3_prepare_v2(con, query, -1, &res, &tail);
++	if (error != SQLITE_OK) {
++		fprintf(stderr, "sqlite3 query error: %s\n", sqlite3_errmsg(con));
++		sqlite3_close(con);
++		return -1;
++	}
++
++	output = sqlite3_step(res);
++	if (output != SQLITE_ROW) {
++		fprintf(stderr, "Failed to get find rows\n");
++		sqlite3_finalize(res);
++		sqlite3_close(con);
++		return 1;
++	}
++
++	blob_buf_init(&b, 0);
++
++	c = blobmsg_open_array(&b, "log");
++	while (output == SQLITE_ROW) {
++		e = blobmsg_open_table(&b, NULL);
++		db_fill_msg(&b, tbl, res);
++		blobmsg_close_table(&b, e);
++		output = sqlite3_step(res);
++	}
++	sqlite3_finalize(res);
++	blobmsg_close_array(&b, c);
++
++	ubus_send_reply(ctx, req, b.head);
++
++	blob_buf_free(&b);
++	sqlite3_close(con);
++
++	return 0;
++}
++
++static int read_db(struct ubus_context *ctx, struct ubus_object *obj,
++		   struct ubus_request_data *req, const char *method,
++		   struct blob_attr *msg)
++{
++	struct blob_attr *tb[READ_DB_MAX] = {0};
++	char *table_name;
++	char *tmp_var;
++	char full_query[QUERY_SIZE];
++	size_t len;
++	int ret = 0;
++	int c_idx = 0;
++
++	blobmsg_parse(read_db_policy, ARRAY_SIZE(read_db_policy), tb, blob_data(msg), blob_len(msg));
++
++	if (!tb[READ_DB_TABLE])
++		return UBUS_STATUS_INVALID_ARGUMENT;
++
++	table_name = blobmsg_data(tb[READ_DB_TABLE]);
++
++	sprintf(full_query, "select * from %s", table_name);
++
++	len = strlen(table_name);
++
++	while (table_name[c_idx] != ' ' && c_idx < len) {
++		c_idx++;
++	}
++
++	if (c_idx > sizeof(tmp_var)) {
++		return UBUS_STATUS_UNKNOWN_ERROR;
++	}
++	tmp_var = strdup(table_name);
++
++	if ((ret = parse_query(full_query, tmp_var, ctx, req)) < 0) {
++		fprintf(stderr, "Failed to parse given query\n");
++		free(tmp_var);
++		return UBUS_STATUS_UNKNOWN_ERROR;
++	}
++
++	if (ret > 0){
++		free(tmp_var);
++		return UBUS_STATUS_NO_DATA;
++	}
++	free(tmp_var);
++	return UBUS_STATUS_OK;
++}
++
+ static int
+ write_log(struct ubus_context *ctx, struct ubus_object *obj,
+ 		struct ubus_request_data *req, const char *method,

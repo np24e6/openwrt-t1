@@ -1,0 +1,12 @@
+--- a/src/ap/acs.c
++++ b/src/ap/acs.c
+@@ -412,7 +412,7 @@
+ {
+ 	if (!(survey->filled & SURVEY_HAS_NF)) {
+ 		survey->nf = -95;
+-		wpa_printf(MSG_INFO, "ACS: Survey is missing noise floor");
++		wpa_printf(MSG_DEBUG, "ACS: Survey is missing noise floor");
+ 	}
+ 
+ 	if (!(survey->filled & SURVEY_HAS_CHAN_TIME)) {
+

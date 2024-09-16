@@ -17,6 +17,7 @@ export SAVE_INSTALLED_PKGS=0
 export SKIP_UNCHANGED=0
 export CONF_IMAGE=
 export CONF_BACKUP_LIST=0
+export CONF_BACKUP_VALIDATE=0
 export CONF_BACKUP=
 export CONF_RESTORE=
 export NEED_IMAGE=
@@ -40,6 +41,7 @@ while [ -n "$1" ]; do
 		-b|--create-backup) export CONF_BACKUP="$2" NEED_IMAGE=1; shift;;
 		-r|--restore-backup) export CONF_RESTORE="$2" NEED_IMAGE=1; shift;;
 		-l|--list-backup) export CONF_BACKUP_LIST=1;;
+		-V|--validate) export CONF_BACKUP_VALIDATE=1;;
 		-f) export CONF_IMAGE="$2"; shift;;
 		-F|--force) export FORCE=1;;
 		-T|--test) export TEST=1;;
@@ -79,7 +81,7 @@ upgrade-option:
 	-T | --test
 	             Verify image and config .tar.gz but do not actually flash.
 	-F | --force
-	             Flash image even if image checks fail, this is dangerous!
+	             Flash image/restore backup even if image checks fail, this is dangerous!
 	-q           less verbose
 	-v           more verbose
 	-h | --help  display this help
@@ -96,6 +98,8 @@ backup-command:
 	-l | --list-backup
 	             list the files that would be backed up when calling
 	             sysupgrade -b. Does not create a backup file.
+	-V | --validate
+				 validate backup file set with -r option and exit.
 
 EOF
 	exit 1
@@ -228,7 +232,50 @@ do_save_conffiles() {
 		return 0
 	}
 	run_hooks "$CONFFILES" $sysupgrade_init_conffiles
+
+	# Request mdcolect to save the most recent version of its database.
+	# Try for at most 5 times, because call fails if there are other SQL queries being executed
+	ubus list mdcollect >/dev/null 2>/dev/null && {
+		for i in $(seq 1 5); do
+			ubus call mdcollect backup_db && break
+		done
+	}
+
+	{
+		[ -z "$CONF_BACKUP" ] && [ -d "/etc/api" ] && echo "/etc/api"
+		[ -z "$CONF_BACKUP" ] && [ -e "/etc/ssl/certs/tlt-pairing.crt" ] && echo "/etc/ssl/certs/tlt-pairing.crt"
+		[ -z "$CONF_BACKUP" ] && [ -e "/etc/umdns/tlt_pair.json" ] && echo "/etc/umdns/tlt_pair.json"
+		[ -d /etc/profiles ] && echo "/etc/profiles"
+		[ -d /etc/certificates ] && echo "/etc/certificates"
+		[ -e /etc/cacert.pem ] && echo "/etc/cacert.pem"
+		[ -e /etc/privoxy/user_action_luci ] && echo "/etc/privoxy/user_action_luci"
+		[ -d /etc/openvpn ] && {
+			find "/etc/openvpn/" -name "auth_*"							# OpenVPN username and password files
+			find "/etc/openvpn/" -name "*.ovpn" | grep -v "template"	# OpenVPN configurations created from templates, excluding templates themselves
+		}
+		[ -d /greengrass/certs ] && {
+			find /greengrass/certs/ -name "*.cert.pem"					# AWS Greengrass certificate
+			find /greengrass/certs/ -name "*.key"						# AWS Greengrass private and public keys
+		}
+		[ -d /etc/hostapd ] && find "/etc/hostapd/" -name "*.psk"		# hostapd psk files
+	} >>"$CONFFILES"
+
 	ask_bool 0 "Edit config file list" && vi "$CONFFILES"
+
+	opkg_packets=$(grep -l "Router:" /usr/lib/opkg/info/*.control)
+	[ -f /etc/package_restore.txt ] && cp /etc/package_restore.txt /etc/package_restore.tmp
+
+	for i in $opkg_packets; do
+		tlt_name=$(grep "tlt_name:" "$i" | awk -F ": " '{print $2}')
+		pkg_name=$(grep "Package:" "$i" | awk -F ": " '{print $2}')
+		echo "$pkg_name - $tlt_name" >> /etc/package_restore.txt
+	done
+
+	[ -f /etc/package_restore.txt ] && {
+		sorted="$(sort -u /etc/package_restore.txt)"
+		echo "$sorted" > /etc/package_restore.txt
+		echo "/etc/package_restore.txt" >> "$CONFFILES"
+	}
 
 	if [ "$SAVE_INSTALLED_PKGS" -eq 1 ]; then
 		echo "${INSTALLED_PACKAGES}" >> "$CONFFILES"
@@ -264,6 +311,13 @@ do_save_conffiles() {
 		umount "$ETCBACKUP_DIR"
 		rm -rf "$RAMFS"
 	}
+
+	if [ -f /etc/package_restore.tmp ]; then
+		mv /etc/package_restore.tmp /etc/package_restore.txt
+	else
+	    rm -rf /etc/package_restore.txt
+	fi
+
 	rm -f "$CONFFILES"
 }
 
@@ -275,8 +329,105 @@ if [ $CONF_BACKUP_LIST -eq 1 ]; then
 	exit 0
 fi
 
+remove_section() {
+	local section="$1"
+	local config="$2"
+	local option="$3"
+	local value
+
+	config_get value "$section" "$option" ""
+	[ -n "$value" ] && uci_remove "$config" "$section"
+}
+
+remove_section_containing_option() {
+	CONFIG_PATH="${UCI_CONFIG_DIR:-"/etc/config"}"
+	TMP_CONFIG_PATH="/tmp/original_config"
+
+	local config="$1"
+	local section="$2"
+	local option="$3"
+
+	mkdir -p "$TMP_CONFIG_PATH"
+	cp "${CONFIG_PATH}/${config}" "${TMP_CONFIG_PATH}/"
+
+	config_load "$config"
+	config_foreach remove_section "$section" "$config" "$option"
+	uci_commit
+}
+
+restore_config() {
+	local config="$1"
+
+	mv -f "${TMP_CONFIG_PATH}/${config}" "${CONFIG_PATH}/"
+}
+
+missing_lines() {
+	local file1 file2 line
+	file1="$1"
+	file2="$2"
+	oIFS="$IFS"
+	IFS=":"
+	while read line; do
+		set -- $line
+		grep -q "^$1:" "$file2" || echo "$line"
+	done < "$file1"
+	IFS="$oIFS"
+}
+
+
+apply_backup() {
+	/etc/init.d/mdcollectd stop
+	/etc/init.d/simcard reload >/dev/null 2>/dev/null
+	rm -f /tmp/new_config_dir/etc/config/hwinfo /tmp/new_config_dir/etc/inittab 2>/dev/null
+	cp -rf /tmp/new_config_dir/etc/ / 2>/dev/null
+	cp -rf /tmp/new_config_dir/usr/ / 2>/dev/null
+	cp -rf /tmp/new_config_dir/hotspotlogin/ / 2>/dev/null
+	cp -r /rom/etc/uci-defaults/* /etc/uci-defaults/ 2>/dev/null
+	rm -rf /tmp/new_config_dir
+	cp /rom/etc/shadow /rom/etc/passwd /rom/etc/group /tmp/
+	missing_lines /tmp/passwd /etc/passwd >> /etc/passwd
+	missing_lines /tmp/group /etc/group >> /etc/group
+	missing_lines /tmp/shadow /etc/shadow >> /etc/shadow
+	rm /tmp/passwd /tmp/shadow /tmp/group
+}
+
+backup_size_validation() {
+	local free_fmem=$(df -k | grep /overlay | awk '{print $4; exit}')
+
+	# Add aditional 40 KB for reserve
+	local file_size=$(zcat "$1" | wc -c | awk '{print ($1 / 1024) + 40 }')
+
+	local validation=$(echo "$file_size $free_fmem" | awk '{if ($1 < $2) print 0; else print 1}')
+	[ "$validation" -eq 0 ] || return 1
+
+	return 0
+}
+
+clean_tmp_dir() {
+	for file in /tmp/*.bin; do
+		if [ "$file" != "$IMAGE" ]; then
+			rm -f "$file"
+		fi
+	done
+	
+	rm -f /tmp/sysupgrade.meta
+	rm -f /tmp/sysupgrade.ucert
+}
+
 if [ -n "$CONF_BACKUP" ]; then
+	curr_profile=$(uci_get profiles general profile)
+	tarfile=$(uci_get profiles "$curr_profile" archive)
+	md5file=$(uci_get profiles "$curr_profile" md5file)
+	[ -z "$curr_profile" ] || [ -z "$tarfile" ] || [ -z "$md5file" ] || {
+		echo "Updating profile $curr_profile"
+		/usr/sbin/profile.sh -b "$tarfile"
+		/usr/sbin/profile.sh -m "$md5file"
+		uci_set profiles "$curr_profile" updated $(date +%s)
+		uci_commit profiles
+	}
+	remove_section_containing_option "network" "device" "macaddr"
 	do_save_conffiles "$CONF_BACKUP"
+	restore_config "network"
 	exit $?
 fi
 
@@ -286,10 +437,44 @@ if [ -n "$CONF_RESTORE" ]; then
 		exit 1
 	fi
 
+	backup_size_validation $CONF_RESTORE || exit 1
+
 	[ "$VERBOSE" -gt 1 ] && TAR_V="v" || TAR_V=""
+
+	mkdir -p /tmp/new_config_dir
+	echo 'etc/rc.d/*' >/tmp/exclusions
+	tar -C /tmp/new_config_dir -x${TAR_V}zf "$CONF_RESTORE" -X '/tmp/exclusions'
+	rm /tmp/exclusions
+	ret=$?
+	[ "$ret" -ne 0 ] && {
+		v "Error restoring backup"
+		exit "$ret"
+	}
+	
+	fwtool_check_backup /tmp/new_config_dir
+	backup_valid=$?
+	#Just validate and exit
+	[ "$CONF_BACKUP_VALIDATE" -eq 1 ] && {
+		echo "$backup_valid"
+			
+		exit $backup_valid
+	}
+	[ "$backup_valid" -gt 0 ] && {
+		if [ $FORCE -eq 1 ]; then
+			v "Backup check failed but --force given - will restore anyway!" >&2
+		else
+			rm -rf /tmp/new_config_dir
+			v "Backup archive is not valid."
+			echo "$backup_valid"
+			
+			exit $backup_valid
+		fi
+	}
+
 	v "Restoring config files..."
-	tar -C / -x${TAR_V}zf "$CONF_RESTORE"
-	exit $?
+	apply_backup
+
+	exit "$ret"
 fi
 
 type platform_check_image >/dev/null 2>/dev/null || {
@@ -322,16 +507,36 @@ esac
 
 json_load "$(/usr/libexec/validate_firmware_image "$IMAGE")" || {
 	echo "Failed to check image"
+	clean_tmp_dir
 	exit 1
 }
+
+json_get_var hw_support "hw_support"
+[ "$hw_support" -eq 0 ] && {
+	if [ $FORCE -eq 1 ]; then
+		echo "This firmware is unsupported by hardware but --force given - will update anyway!" >&2
+	else
+		echo "This firmware is unsupported by hardware" >&2
+		echo "Image check failed." >&2
+		clean_tmp_dir
+		exit 2
+	fi
+}
+
 json_get_var valid "valid"
 [ "$valid" -eq 0 ] && {
 	if [ $FORCE -eq 1 ]; then
 		echo "Image check failed but --force given - will update anyway!" >&2
 	else
 		echo "Image check failed." >&2
+		clean_tmp_dir
 		exit 1
 	fi
+}
+
+json_get_var is_downgrade "is_downgrade"
+[ "$is_downgrade" -eq 1 ] && {
+	SAVE_CONFIG=0
 }
 
 if [ -n "$CONF_IMAGE" ]; then
@@ -340,6 +545,7 @@ if [ -n "$CONF_IMAGE" ]; then
 		1f8b) ;;
 		*)
 			echo "Invalid config file. Please use only .tar.gz files" >&2
+			clean_tmp_dir
 			exit 1
 		;;
 	esac
@@ -354,7 +560,18 @@ else
 fi
 
 if [ $TEST -eq 1 ]; then
+	clean_tmp_dir
 	exit 0
+fi
+
+run_hooks "" $fwtool_pre_upgrade
+
+# If ledman daemon is dead, this should not have any effect
+/usr/bin/ledman --clean >/dev/null 2>&1 &
+
+# reset SMS limit database
+if [ $SAVE_CONFIG -eq 0 ]; then
+	rm /log/sms.db &>/dev/null
 fi
 
 install_bin /sbin/upgraded
@@ -366,6 +583,13 @@ if [ -n "$FAILSAFE" ]; then
 	printf '%s\x00%s\x00%s' "$RAM_ROOT" "$IMAGE" "$COMMAND" >/tmp/sysupgrade
 	lock -u /tmp/.failsafe
 else
+	ubus call log write_ext "{
+		\"event\": \"Request after FW upgrade\",
+		\"sender\": \"Reboot\",
+		\"table\": 1,
+		\"write_db\": 1,
+	}"
+
 	json_init
 	json_add_string prefix "$RAM_ROOT"
 	json_add_string path "$IMAGE"

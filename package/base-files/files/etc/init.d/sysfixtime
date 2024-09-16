@@ -8,7 +8,7 @@ RTC_DEV=/dev/rtc0
 HWCLOCK=/sbin/hwclock
 
 boot() {
-	start && exit 0
+#	start && exit 0
 
 	local maxtime="$(maxtime)"
 	local curtime="$(date +%s)"
@@ -16,7 +16,7 @@ boot() {
 }
 
 start() {
-	[ -e "$RTC_DEV" ] && [ -e "$HWCLOCK" ] && $HWCLOCK -s -u -f $RTC_DEV
+	boot
 }
 
 stop() {

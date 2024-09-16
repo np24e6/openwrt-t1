@@ -1,0 +1,8 @@
+{
+        "desc": "MeigLink SLM770",
+        "type": "rndis",
+        "control": 3,
+        "boudrate": 115200,
+        "stop_bits": 8,
+        "gps": 5,
+}

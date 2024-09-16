@@ -1243,6 +1243,19 @@ endef
 
 $(eval $(call KernelPackage,macsec))
 
+define KernelPackage/tcpmd5sig
+  SUBMENU:=$(NETWORK_SUPPORT_MENU)
+  TITLE:=TCP MD5 Signature Option support (RFC2385)
+  KCONFIG:=CONFIG_TCP_MD5SIG=y
+endef
+
+define KernelPackage/tcpmd5sig/description
+ RFC2385 specifies a method of giving MD5 protection to TCP sessions.
+ Its main (only?) use is to protect BGP sessions between core routers
+ on the Internet.
+endef
+
+$(eval $(call KernelPackage,tcpmd5sig))
 
 define KernelPackage/netlink-diag
   SUBMENU:=$(NETWORK_SUPPORT_MENU)

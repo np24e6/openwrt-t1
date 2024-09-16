@@ -1,0 +1,36 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+CONFIG="/etc/config/user_groups"
+
+migrate_tel_list() {
+	local tel="$1"
+	local new_section="$2"
+
+	uci_add_list "user_groups" "$new_section" "tel" "$tel"
+}
+
+migrate_group() {
+	local group="$1"
+	local name new_section
+
+	config_get name "$group" "name" ""
+	new_section=$(uci_add user_groups phone)
+	uci_set "user_groups" "$new_section" "name" "$name"
+	config_list_foreach "$group" tel migrate_tel_list "$new_section"
+
+	uci_remove "sms_utils" "$group"
+}
+
+if [ ! -e "$CONFIG" ]; then
+	touch "$CONFIG"
+fi
+
+config_load "sms_utils"
+config_foreach migrate_group "group"
+
+uci_commit "user_groups"
+uci_commit "sms_utils"
+
+exit 0

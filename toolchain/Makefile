@@ -90,6 +90,23 @@ endif
 
 $(curdir)/install: $(curdir)/compile
 
+GPL_TOOLCHAIN_DIR:=$(GPL_BUILD_DIR)/toolchain
+
+$(curdir)/gpl:
+	$(RM) -rf "$(GPL_TOOLCHAIN_DIR)"
+	mkdir -p "$(GPL_TOOLCHAIN_DIR)"
+	find "toolchain" -maxdepth 1 -type f -exec cp "{}" "$(GPL_TOOLCHAIN_DIR)" \;
+	(\
+		dirs=$$(find "toolchain" -maxdepth 1 -type d -printf "%P\n"); \
+		for dir in $${dirs}; do \
+			mkdir -p "$(GPL_TOOLCHAIN_DIR)/$${dir}"; \
+			case "$${dir}" in \
+				gcc*) cp -rf "toolchain/gcc" "$(GPL_TOOLCHAIN_DIR)";; \
+				*) $(MAKE) -C "toolchain/$${dir}" gpl 1="$(GPL_TOOLCHAIN_DIR)/$${dir}";; \
+			esac \
+		done \
+	)
+
 $(eval $(call stampfile,$(curdir),toolchain,compile,$(TOOLCHAIN_DIR)/stamp/.gcc-initial_installed,,$(TOOLCHAIN_DIR)))
 $(eval $(call stampfile,$(curdir),toolchain,check,$(TMP_DIR)/.build))
 $(eval $(call subdir,$(curdir)))

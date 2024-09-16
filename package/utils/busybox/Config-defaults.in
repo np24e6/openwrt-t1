@@ -678,6 +678,7 @@ config BUSYBOX_DEFAULT_SHA256SUM
 	default y
 config BUSYBOX_DEFAULT_SHA512SUM
 	bool
+	default y if TARGET_mdm9x07
 	default n
 config BUSYBOX_DEFAULT_SHA3SUM
 	bool
@@ -783,7 +784,8 @@ config BUSYBOX_DEFAULT_FEATURE_STAT_FILESYSTEM
 	default n
 config BUSYBOX_DEFAULT_STTY
 	bool
-	default n
+	default n if TARGET_ath79_generic_DEVICE_teltonika_rut36x
+	default y
 config BUSYBOX_DEFAULT_SUM
 	bool
 	default n
@@ -871,7 +873,7 @@ config BUSYBOX_DEFAULT_UNLINK
 	default n
 config BUSYBOX_DEFAULT_USLEEP
 	bool
-	default n
+	default y
 config BUSYBOX_DEFAULT_UUDECODE
 	bool
 	default n
@@ -1096,7 +1098,7 @@ config BUSYBOX_DEFAULT_FEATURE_VI_UNDO_QUEUE
 	default n
 config BUSYBOX_DEFAULT_FEATURE_VI_UNDO_QUEUE_MAX
 	int
-	default 0
+	default 128
 config BUSYBOX_DEFAULT_FEATURE_ALLOW_EXEC
 	bool
 	default y
@@ -1282,15 +1284,19 @@ config BUSYBOX_DEFAULT_FEATURE_SHADOWPASSWDS
 	default y
 config BUSYBOX_DEFAULT_USE_BB_PWD_GRP
 	bool
+	default y if TARGET_mdm9x07
 	default n
 config BUSYBOX_DEFAULT_USE_BB_SHADOW
 	bool
+	default y if TARGET_mdm9x07
 	default n
 config BUSYBOX_DEFAULT_USE_BB_CRYPT
 	bool
+	default y if TARGET_mdm9x07
 	default n
 config BUSYBOX_DEFAULT_USE_BB_CRYPT_SHA
 	bool
+	default y if TARGET_mdm9x07
 	default n
 config BUSYBOX_DEFAULT_ADD_SHELL
 	bool
@@ -1306,7 +1312,7 @@ config BUSYBOX_DEFAULT_FEATURE_ADDUSER_TO_GROUP
 	default n
 config BUSYBOX_DEFAULT_ADDUSER
 	bool
-	default n
+	default y
 config BUSYBOX_DEFAULT_FEATURE_CHECK_NAMES
 	bool
 	default n
@@ -1324,16 +1330,16 @@ config BUSYBOX_DEFAULT_CHPASSWD
 	default n
 config BUSYBOX_DEFAULT_FEATURE_DEFAULT_PASSWD_ALGO
 	string
-	default "md5"
+	default "sha512"
 config BUSYBOX_DEFAULT_CRYPTPW
 	bool
 	default n
 config BUSYBOX_DEFAULT_MKPASSWD
 	bool
-	default n
+	default y
 config BUSYBOX_DEFAULT_DELUSER
 	bool
-	default n
+	default y
 config BUSYBOX_DEFAULT_DELGROUP
 	bool
 	default n
@@ -1342,7 +1348,7 @@ config BUSYBOX_DEFAULT_FEATURE_DEL_USER_FROM_GROUP
 	default n
 config BUSYBOX_DEFAULT_GETTY
 	bool
-	default n
+	default y
 config BUSYBOX_DEFAULT_LOGIN
 	bool
 	default y
@@ -1609,7 +1615,7 @@ config BUSYBOX_DEFAULT_LSPCI
 	default n
 config BUSYBOX_DEFAULT_LSUSB
 	bool
-	default n
+	default y
 config BUSYBOX_DEFAULT_MDEV
 	bool
 	default n
@@ -2107,7 +2113,7 @@ config BUSYBOX_DEFAULT_MAN
 	default n
 config BUSYBOX_DEFAULT_MICROCOM
 	bool
-	default n
+	default y
 config BUSYBOX_DEFAULT_MIM
 	bool
 	default n
@@ -2237,7 +2243,7 @@ config BUSYBOX_DEFAULT_FTPGET
 	default n
 config BUSYBOX_DEFAULT_FTPPUT
 	bool
-	default n
+	default y
 config BUSYBOX_DEFAULT_FEATURE_FTPGETPUT_LONG_OPTIONS
 	bool
 	default n
@@ -2474,10 +2480,10 @@ config BUSYBOX_DEFAULT_FEATURE_NSLOOKUP_OPENWRT_LONG_OPTIONS
 	default n
 config BUSYBOX_DEFAULT_NTPD
 	bool
-	default y
+	default y if !TARGET_ramips_mt76x8_DEVICE_teltonika_tap100
 config BUSYBOX_DEFAULT_FEATURE_NTPD_SERVER
 	bool
-	default y
+	default y if !TARGET_ramips_mt76x8_DEVICE_teltonika_tap100
 config BUSYBOX_DEFAULT_FEATURE_NTPD_CONF
 	bool
 	default n
@@ -2588,19 +2594,19 @@ config BUSYBOX_DEFAULT_VCONFIG
 	default n
 config BUSYBOX_DEFAULT_WGET
 	bool
-	default n
+	default y
 config BUSYBOX_DEFAULT_FEATURE_WGET_LONG_OPTIONS
 	bool
-	default n
+	default y
 config BUSYBOX_DEFAULT_FEATURE_WGET_STATUSBAR
 	bool
-	default n
+	default y
 config BUSYBOX_DEFAULT_FEATURE_WGET_AUTHENTICATION
 	bool
-	default n
+	default y
 config BUSYBOX_DEFAULT_FEATURE_WGET_TIMEOUT
 	bool
-	default n
+	default y
 config BUSYBOX_DEFAULT_FEATURE_WGET_HTTPS
 	bool
 	default n
@@ -2702,7 +2708,7 @@ config BUSYBOX_DEFAULT_FEATURE_REFORMIME_COMPAT
 	default n
 config BUSYBOX_DEFAULT_SENDMAIL
 	bool
-	default n
+	default y
 config BUSYBOX_DEFAULT_FEATURE_MIME_CHARSET
 	string
 	default ""

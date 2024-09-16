@@ -14,10 +14,11 @@ DEFAULT_PACKAGES:=\
 	base-files \
 	ca-bundle \
 	dropbear \
+	openssh-sftp-server \
 	fstools \
 	libc \
 	libgcc \
-	libustream-wolfssl \
+	libustream-openssl \
 	logd \
 	mtd \
 	netifd \
@@ -25,7 +26,9 @@ DEFAULT_PACKAGES:=\
 	uci \
 	uclient-fetch \
 	urandom-seed \
-	urngd
+	urngd \
+	libbrand-versioning \
+	mnfinfo
 
 ifneq ($(CONFIG_SELINUX),)
 DEFAULT_PACKAGES+=busybox-selinux procd-selinux
@@ -43,15 +46,11 @@ DEFAULT_PACKAGES.nas:=\
 	mdadm
 # For router targets
 DEFAULT_PACKAGES.router:=\
-	dnsmasq \
 	firewall \
 	ip6tables \
 	iptables \
 	kmod-ipt-offload \
-	odhcp6c \
-	odhcpd-ipv6only \
-	ppp \
-	ppp-mod-pppoe
+	odhcp6c
 
 ifneq ($(DUMP),)
   all: dumpinfo
@@ -143,7 +142,7 @@ GENERIC_PATCH_DIR := $(GENERIC_PLATFORM_DIR)/pending$(if $(wildcard $(GENERIC_PL
 GENERIC_HACK_DIR := $(GENERIC_PLATFORM_DIR)/hack$(if $(wildcard $(GENERIC_PLATFORM_DIR)/hack-$(KERNEL_PATCHVER)),-$(KERNEL_PATCHVER))
 GENERIC_FILES_DIR := $(foreach dir,$(wildcard $(GENERIC_PLATFORM_DIR)/files $(GENERIC_PLATFORM_DIR)/files-$(KERNEL_PATCHVER)),"$(dir)")
 
-__config_name_list = $(1)/config-$(KERNEL_PATCHVER) $(1)/config-default
+__config_name_list = $(1)/config-$(KERNEL_PATCHVER) $(1)/config-default $(1)/config-$(subst DEVICE_,,$(PROFILE))
 __config_list = $(firstword $(wildcard $(call __config_name_list,$(1))))
 find_kernel_config=$(if $(__config_list),$(__config_list),$(lastword $(__config_name_list)))
 
@@ -152,29 +151,35 @@ LINUX_TARGET_CONFIG = $(call find_kernel_config,$(PLATFORM_DIR))
 ifneq ($(PLATFORM_DIR),$(PLATFORM_SUBDIR))
   LINUX_SUBTARGET_CONFIG = $(call find_kernel_config,$(PLATFORM_SUBDIR))
 endif
+LINUX_TARGET_DEVICE_CONFIG = $(call find_kernel_config,$(PLATFORM_DIR)/kconfig)
 
 # config file list used for compiling
-LINUX_KCONFIG_LIST = $(wildcard $(GENERIC_LINUX_CONFIG) $(LINUX_TARGET_CONFIG) $(LINUX_SUBTARGET_CONFIG) $(TOPDIR)/env/kernel-config)
+LINUX_KCONFIG_LIST = $(wildcard $(GENERIC_LINUX_CONFIG) $(LINUX_TARGET_CONFIG) $(LINUX_SUBTARGET_CONFIG) $(LINUX_TARGET_DEVICE_CONFIG) $(TOPDIR)/env/kernel-config)
 
 # default config list for reconfiguring
 # defaults to subtarget if subtarget exists and target does not
 # defaults to target otherwise
 USE_SUBTARGET_CONFIG = $(if $(wildcard $(LINUX_TARGET_CONFIG)),,$(if $(LINUX_SUBTARGET_CONFIG),1))
 
-LINUX_RECONFIG_LIST = $(wildcard $(GENERIC_LINUX_CONFIG) $(LINUX_TARGET_CONFIG) $(if $(USE_SUBTARGET_CONFIG),$(LINUX_SUBTARGET_CONFIG)))
-LINUX_RECONFIG_TARGET = $(if $(USE_SUBTARGET_CONFIG),$(LINUX_SUBTARGET_CONFIG),$(LINUX_TARGET_CONFIG))
+# if exists, use device kernel config list for reconfiguring
+ifneq ("$(wildcard $(LINUX_TARGET_DEVICE_CONFIG))","")
+  USE_TARGET_DEVICE_CONFIG = 1
+endif
+
+LINUX_RECONFIG_LIST = $(wildcard $(GENERIC_LINUX_CONFIG) $(LINUX_TARGET_CONFIG) $(if $(USE_SUBTARGET_CONFIG),$(LINUX_SUBTARGET_CONFIG)) $(if $(USE_TARGET_DEVICE_CONFIG),$(LINUX_TARGET_DEVICE_CONFIG)))
+LINUX_RECONFIG_TARGET = $(if $(USE_TARGET_DEVICE_CONFIG),$(LINUX_TARGET_DEVICE_CONFIG),$(if $(USE_SUBTARGET_CONFIG),$(LINUX_SUBTARGET_CONFIG),$(LINUX_TARGET_CONFIG)))
 
 # select the config file to be changed by kernel_menuconfig/kernel_oldconfig
 ifeq ($(CONFIG_TARGET),platform)
-  LINUX_RECONFIG_LIST = $(wildcard $(GENERIC_LINUX_CONFIG) $(LINUX_TARGET_CONFIG))
+  LINUX_RECONFIG_LIST = $(wildcard $(GENERIC_LINUX_CONFIG) $(LINUX_TARGET_CONFIG) $(LINUX_TARGET_DEVICE_CONFIG))
   LINUX_RECONFIG_TARGET = $(LINUX_TARGET_CONFIG)
 endif
 ifeq ($(CONFIG_TARGET),subtarget)
-  LINUX_RECONFIG_LIST = $(wildcard $(GENERIC_LINUX_CONFIG) $(LINUX_TARGET_CONFIG) $(LINUX_SUBTARGET_CONFIG))
+  LINUX_RECONFIG_LIST = $(wildcard $(GENERIC_LINUX_CONFIG) $(LINUX_TARGET_CONFIG) $(LINUX_SUBTARGET_CONFIG) $(LINUX_TARGET_DEVICE_CONFIG))
   LINUX_RECONFIG_TARGET = $(LINUX_SUBTARGET_CONFIG)
 endif
 ifeq ($(CONFIG_TARGET),subtarget_platform)
-  LINUX_RECONFIG_LIST = $(wildcard $(GENERIC_LINUX_CONFIG) $(LINUX_SUBTARGET_CONFIG) $(LINUX_TARGET_CONFIG))
+  LINUX_RECONFIG_LIST = $(wildcard $(GENERIC_LINUX_CONFIG) $(LINUX_SUBTARGET_CONFIG) $(LINUX_TARGET_CONFIG) $(LINUX_TARGET_DEVICE_CONFIG))
   LINUX_RECONFIG_TARGET = $(LINUX_TARGET_CONFIG)
 endif
 ifeq ($(CONFIG_TARGET),env)

@@ -9,3 +9,8 @@ export TARGET_BUILD=1
 
 prereq clean download prepare compile install oldconfig menuconfig nconfig xconfig update refresh: FORCE
 	@+$(NO_TRACE_MAKE) -C $(BOARD) $@
+
+gpl: FORCE
+	$(MAKE) -C $(BOARD) $(BOARD)/gpl 1="$(1)/$(BOARD)"
+	$(MAKE) -C generic gpl 1="$(1)/generic" KERNEL_PATCHVER="$(KERNEL_PATCHVER)"
+	find "." -maxdepth 1 -type f -exec cp "{}" "$(1)" \;

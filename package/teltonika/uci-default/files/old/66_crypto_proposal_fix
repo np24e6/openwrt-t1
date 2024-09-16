@@ -1,0 +1,24 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+fix_crypto_proposal_remote(){
+        local sec="$1" 
+	local crypto_proposal
+
+        config_get crypto_proposal "$sec" crypto_proposal
+        [ -n "$crypto_proposal" ] && [ "${crypto_proposal##*_}" = "ph2" ] && uci_set ipsec "$1" crypto_proposal "${crypto_proposal%_ph2}_ph1"
+}
+
+fix_crypto_proposal_connection(){
+        local sec="$1" 
+	local crypto_proposal
+
+        config_get crypto_proposal "$sec" crypto_proposal
+        [ -n "$crypto_proposal" ] && [ "${crypto_proposal##*_}" = "ph1" ] && uci_set ipsec "$1" crypto_proposal "${crypto_proposal%_ph1}_ph2"
+}
+
+config_load ipsec
+config_foreach fix_crypto_proposal_remote remote
+config_foreach fix_crypto_proposal_connection connection
+uci_commit ipsec

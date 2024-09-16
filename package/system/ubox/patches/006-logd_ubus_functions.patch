@@ -1,0 +1,104 @@
+--- a/log/logd.c
++++ b/log/logd.c
+@@ -332,8 +332,72 @@ write_log(struct ubus_context *ctx, stru
+ 	return 0;
+ }
+ 
++static int send_ubus_event(struct ubus_context *ubus, int table, char *event, const char *sender)
++{
++    struct blob_buf b;
++
++    memset(&b, 0, sizeof(b));
++    blob_buf_init(&b, 0);
++
++    blobmsg_add_string(&b, "event", event);
++    blobmsg_add_string(&b, "sender", sender);
++    blobmsg_add_u32(&b, "table", table);
++
++    if (ubus_send_event(ubus, "logd.db_write", b.head)) {
++        blob_buf_free(&b);
++        return 1;
++    }
++
++    blob_buf_free(&b);
++
++    return 0;
++}
++
++static int write_ext_log(struct ubus_context *ctx, struct ubus_object *obj,
++			 struct ubus_request_data *req, const char *method,
++			 struct blob_attr *msg)
++{
++	struct blob_attr *tb[WRITE_MAX];
++	const char *sender;
++	char *event;
++	int table;
++	int priority;
++	int write_db = 0;
++
++	blobmsg_parse(write_ext_policy, ARRAY_SIZE(write_ext_policy), tb, blob_data(msg), blob_len(msg));
++
++	if (!tb[WRITE_EVENT] || !tb[WRITE_SENDER])
++		return UBUS_STATUS_INVALID_ARGUMENT;
++
++	sender = blobmsg_data(tb[WRITE_SENDER]);
++	event = blobmsg_data(tb[WRITE_EVENT]);
++
++	if (tb[WRITE_TABLE])
++		table = blobmsg_get_u32(tb[WRITE_TABLE]);
++	else
++		table = DEFAULT_TABLE;
++
++	if (tb[WRITE_PRIORITY])
++		priority = blobmsg_get_u32(tb[WRITE_PRIORITY]);
++	else
++		priority = DEFAULT_PRIORITY;
++
++	if (tb[WRITE_DB])
++		write_db = blobmsg_get_u32(tb[WRITE_DB]);
++
++	if (write_db == 1)
++	    send_ubus_event(ctx, table, event, sender);
++
++	if (log_add_extended(event, strlen(event) + 1, sender, table, priority, write_db) != 0)
++		return UBUS_STATUS_UNKNOWN_ERROR;
++
++	return UBUS_STATUS_OK;
++}
++
+ static const struct ubus_method log_methods[] = {
+ 	UBUS_METHOD("read", read_log, read_policy),
++	UBUS_METHOD("read_db", read_db, read_db_policy),
++	UBUS_METHOD("write_ext", write_ext_log, write_ext_policy),
+ 	{ .name = "write", .handler = write_log, .policy = &write_policy, .n_policy = 1 },
+ };
+ 
+@@ -360,6 +424,28 @@ ubus_notify_log(struct log_head *l)
+ 	blobmsg_add_u32(&b, "id", l->id);
+ 	blobmsg_add_u32(&b, "priority", l->priority);
+ 	blobmsg_add_u32(&b, "source", l->source);
++	blobmsg_add_u64(&b, "time", (((__u64) l->ts.tv_sec) * 1000) + (l->ts.tv_nsec / 1000000));
++
++	list_for_each_entry(c, &clients, list)
++		ustream_write(&c->s.stream, (void *) b.head, blob_len(b.head) + sizeof(struct blob_attr), false);
++
++	blob_buf_free(&b);
++}
++
++void ubus_notify_log_extended(struct log_head *l, const char *sender, int db_flag)
++{
++	struct client *c;
++
++	if (list_empty(&clients))
++		return;
++
++	blob_buf_init(&b, 0);
++	blobmsg_add_string(&b, "msg", l->data);
++	blobmsg_add_string(&b, "sender", sender);
++	blobmsg_add_u32(&b, "db", db_flag);
++	blobmsg_add_u32(&b, "id", l->id);
++	blobmsg_add_u32(&b, "priority", l->priority);
++	blobmsg_add_u32(&b, "source", l->source);
+ 	blobmsg_add_u64(&b, "time", (((__u64) l->ts.tv_sec) * 1000) + (l->ts.tv_nsec / 1000000));
+ 
+ 	list_for_each_entry(c, &clients, list)

@@ -18,6 +18,7 @@ PKG_CPE_ID:=cpe:/a:tukaani:xz
 HOST_BUILD_PARALLEL:=1
 
 include $(INCLUDE_DIR)/host-build.mk
+include $(INCLUDE_DIR)/gpl.mk
 
 HOSTCC := $(HOSTCC_NOCACHE)
 HOSTCXX := $(HOSTCXX_NOCACHE)

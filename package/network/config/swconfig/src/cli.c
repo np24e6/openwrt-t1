@@ -39,6 +39,7 @@ enum {
 	CMD_GET,
 	CMD_SET,
 	CMD_LOAD,
+	CMD_RESET_AND_LOAD,
 	CMD_HELP,
 	CMD_SHOW,
 	CMD_PORTMAP,
@@ -232,6 +233,47 @@ out:
 	exit(ret);
 }
 
+static void
+swconfig_reset_and_load_uci(struct switch_dev *dev, const char *name)
+{
+	struct switch_attr *attr;
+
+	struct uci_context *ctx;
+	struct uci_package *p = NULL;
+	int ret = -1;
+
+	attr = swlib_lookup_attr(dev, SWLIB_ATTR_GROUP_GLOBAL, "soft_reset");
+	if (!attr) {
+		fprintf(stderr, "soft_reset is unavailable, just loading config\n");
+	} else {
+		ret = swlib_set_attr_string(dev, attr, -1, "0");
+		if (ret < 0) {
+			nl_perror(-ret, "Failed to set attribute.");
+			exit(ret);
+		}
+	}
+
+	ctx = uci_alloc_context();
+	if (!ctx) {
+		fprintf(stderr, "Couldn't allocate UCI context.\n");
+		return;
+	}
+
+	uci_load(ctx, name, &p);
+	if (!p) {
+		uci_perror(ctx, "Failed to load config file: ");
+		goto out;
+	}
+
+	ret = swlib_apply_from_uci(dev, p);
+	if (ret < 0)
+		fprintf(stderr, "Failed to apply configuration for switch '%s'\n", dev->dev_name);
+
+	out:
+	uci_free_context(ctx);
+	exit(ret);
+}
+
 int main(int argc, char **argv)
 {
 	int retval = 0;
@@ -284,6 +326,11 @@ int main(int argc, char **argv)
 			if ((cport >= 0) || (cvlan >= 0))
 				print_usage();
 			cmd = CMD_LOAD;
+			ckey = argv[++i];
+		} else if (!strcmp(arg, "reset_and_load") && i+1 < argc) {
+			if ((cport >= 0) || (cvlan >= 0))
+				print_usage();
+			cmd = CMD_RESET_AND_LOAD;
 			ckey = argv[++i];
 		} else if (!strcmp(arg, "portmap")) {
 			if (i + 1 < argc)
@@ -358,6 +405,9 @@ int main(int argc, char **argv)
 		break;
 	case CMD_LOAD:
 		swconfig_load_uci(dev, ckey);
+		break;
+	case CMD_RESET_AND_LOAD:
+		swconfig_reset_and_load_uci(dev, ckey);
 		break;
 	case CMD_HELP:
 		list_attributes(dev);

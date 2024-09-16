@@ -5,6 +5,7 @@
 board=""
 kernel=""
 rootfs=""
+boot=""
 outfile=""
 err=""
 
@@ -28,6 +29,12 @@ while [ "$1" ]; do
 		shift
 		continue
 		;;
+	"--boot")
+		boot="$2"
+		shift
+		shift
+		continue
+		;;
 	*)
 		if [ ! "$outfile" ]; then
 			outfile=$1
@@ -38,8 +45,8 @@ while [ "$1" ]; do
 	esac
 done
 
-if [ ! -n "$board" -o ! -r "$kernel" -a  ! -r "$rootfs" -o ! "$outfile" ]; then
-	echo "syntax: $0 [--board boardname] [--kernel kernelimage] [--rootfs rootfs] out"
+if [ ! -n "$board" -o ! -r "$kernel" -a  ! -r "$rootfs" -a  ! -r "$boot" -o ! "$outfile" ]; then
+	echo "syntax: $0 [--board boardname] [--kernel kernelimage] [--rootfs rootfs] [--boot bootimage] out"
 	exit 1
 fi
 
@@ -66,6 +73,7 @@ if [ -n "${rootfs}" ]; then
 	esac
 fi
 [ -z "${kernel}" ] || cp "${kernel}" "${tmpdir}/sysupgrade-${board}/kernel"
+[ -z "${boot}" ] || cp "${boot}" "${tmpdir}/sysupgrade-${board}/boot"
 
 mtime=""
 if [ -n "$SOURCE_DATE_EPOCH" ]; then

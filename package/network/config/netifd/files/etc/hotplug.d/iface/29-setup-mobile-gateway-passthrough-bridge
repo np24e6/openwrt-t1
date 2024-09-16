@@ -1,0 +1,23 @@
+#!/bin/sh
+
+NEXT_HOP=""
+
+resolve_nexthop() {
+	. /usr/share/libubox/jshn.sh
+
+	# parsing json data
+	json_load "$(ubus call network.interface.${INTERFACE%%_*} status)"
+	json_select data
+	json_get_var bridge_gateway bridge_gateway
+
+	NEXT_HOP="$bridge_gateway"
+}
+
+method="$(uci get network.${INTERFACE%%_*}.method)"
+
+[ "$ACTION" = "ifup" ] || exit
+[ "$method" = "bridge" ] || [ "$method" = "passthrough" ] || exit
+
+resolve_nexthop
+
+[ "$NEXT_HOP" = "" ] || ip neigh add proxy "$NEXT_HOP" dev br-lan

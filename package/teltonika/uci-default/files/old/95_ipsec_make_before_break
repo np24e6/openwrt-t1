@@ -1,0 +1,20 @@
+#!/bin/sh
+. /lib/functions.sh
+
+is_set="0"
+
+check_make_before_break() {
+	local make_before_break
+	section="$1"
+
+	config_get make_before_break "$section" "make_before_break"
+
+	[ -z "$make_before_break" ] || is_set="1"
+}
+
+config_load ipsec
+config_foreach check_make_before_break ipsec
+
+[ "$is_set" = "0" ] && uci set ipsec.@ipsec[0].make_before_break='0'
+
+uci commit ipsec

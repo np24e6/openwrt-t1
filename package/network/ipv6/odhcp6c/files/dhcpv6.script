@@ -123,6 +123,8 @@ setup_interface () {
 		entry="${entry#*,}"
 		local metric="${entry%%,*}"
 
+		[ "$IGNORE_VALID" = 1 ] && valid=
+
 		for xentry in $RA_ROUTES; do
 			local xprefix="${xentry%%,*}"
 			xentry="${xentry#*,}"

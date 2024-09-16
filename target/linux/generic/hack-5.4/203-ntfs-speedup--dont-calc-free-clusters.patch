@@ -1,0 +1,10 @@
+--- a/fs/ntfs/super.c
++++ b/fs/ntfs/super.c
+@@ -2445,6 +2445,7 @@ static void ntfs_put_super(struct super_
+  */
+ static s64 get_nr_free_clusters(ntfs_volume *vol)
+ {
++	return 0;
+ 	s64 nr_free = vol->nr_clusters;
+ 	struct address_space *mapping = vol->lcnbmp_ino->i_mapping;
+ 	struct page *page;

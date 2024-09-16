@@ -2,6 +2,7 @@
 # Copyright (C) 2008 OpenWrt.org
 
 START=96
+USE_PROCD=1
 
 load_led() {
 	local name
@@ -30,6 +31,11 @@ load_led() {
 	config_get message $1 message ""
 	config_get gpio $1 gpio "0"
 	config_get inverted $1 inverted "0"
+	
+	if [ $2 -ne 1 ]; then
+		trigger="none"
+	fi
+
 
 	if [ "$trigger" = "rssi" ]; then
 		# handled by rssileds userspace process
@@ -120,21 +126,38 @@ load_led() {
 	}
 }
 
-start() {
+start_service() {
+	
+	config_load system
+	config_get led_enabl "ledman" enabled 1
 	[ -e /sys/class/leds/ ] && {
 		[ -s /var/run/led.state ] && {
+			procd_open_instance
+			procd_set_param file /etc/config/system
 			local led trigger brightness
 			while read led trigger brightness; do
-				[ -e "/sys/class/leds/$led/trigger" ] && \
-					echo "$trigger" > "/sys/class/leds/$led/trigger"
+				if [ $led_enabl -eq 1 ]; then
+					[ -e "/sys/class/leds/$led/trigger" ] && \
+						echo "$trigger" > "/sys/class/leds/$led/trigger"
 
-				[ -e "/sys/class/leds/$led/brightness" ] && \
-					echo "$brightness" > "/sys/class/leds/$led/brightness"
+					[ -e "/sys/class/leds/$led/brightness" ] && \
+						echo "$brightness" > "/sys/class/leds/$led/brightness"
+				else
+					[ -e "/sys/class/leds/$led/trigger" ] && \
+						echo "none" > "/sys/class/leds/$led/trigger"
+
+					[ -e "/sys/class/leds/$led/brightness" ] && \
+						echo "0" > "/sys/class/leds/$led/brightness"
+				fi
 			done < /var/run/led.state
 			rm /var/run/led.state
+			procd_close_instance
 		}
-
-		config_load system
-		config_foreach load_led led
+		/etc/init.d/ledman restart
+		config_foreach load_led led $led_enabl
 	}
 }
+
+service_triggers() {                                                           
+        procd_add_reload_trigger "system"                                      
+} 

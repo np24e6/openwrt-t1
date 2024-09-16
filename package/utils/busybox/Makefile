@@ -5,14 +5,14 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=busybox
-PKG_VERSION:=1.33.1
+PKG_VERSION:=1.34.1
 PKG_RELEASE:=$(AUTORELEASE)
 PKG_FLAGS:=essential
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.bz2
 PKG_SOURCE_URL:=https://www.busybox.net/downloads \
 		http://sources.buildroot.net
-PKG_HASH:=12cec6bd2b16d8a9446dd16130f2b92982f1819f6e1c5f5887b6db03f5660d28
+PKG_HASH:=415fbd89e5344c96acf449d94a6f956dbed62e18e835fc83e064db33a34bd549
 
 PKG_BUILD_DEPENDS:=BUSYBOX_CONFIG_PAM:libpam
 PKG_BUILD_PARALLEL:=1
@@ -35,7 +35,7 @@ endif
 include $(INCLUDE_DIR)/package.mk
 
 ifeq ($(DUMP),)
-  STAMP_CONFIGURED:=$(strip $(STAMP_CONFIGURED))_$(shell grep '^CONFIG_BUSYBOX_' $(TOPDIR)/.config | mkhash md5)
+  STAMP_CONFIGURED:=$(strip $(STAMP_CONFIGURED))_$(shell grep '^CONFIG_BUSYBOX_' $(TOPDIR)/.config | $(MKHASH) md5)
 endif
 
 # All files provided by busybox will serve as fallback alternatives by opkg.
@@ -46,22 +46,13 @@ define Package/busybox/Default
   MAINTAINER:=Felix Fietkau <nbd@nbd.name>
   TITLE:=Core utilities for embedded Linux
   URL:=http://busybox.net/
-  DEPENDS:=+BUSYBOX_CONFIG_PAM:libpam +BUSYBOX_CONFIG_NTPD:jsonfilter
+  DEPENDS:=+BUSYBOX_CONFIG_PAM:libpam +BUSYBOX_CONFIG_NTPD:jsonfilter +libubus +libubox +libuci +liblog
   USERID:=ntp=123:ntp=123
 endef
 
 define Package/busybox
   $(call Package/busybox/Default)
-  CONFLICTS:=busybox-selinux
   VARIANT:=default
-endef
-
-define Package/busybox-selinux
-  $(call Package/busybox/Default)
-  TITLE += with SELinux support
-  DEPENDS += +libselinux
-  VARIANT:=selinux
-  PROVIDES:=busybox
 endef
 
 define Package/busybox/description
@@ -73,13 +64,12 @@ define Package/busybox/config
 	source "$(SOURCE)/Config.in"
 endef
 
-ifdef CONFIG_BUSYBOX_CONFIG_FEATURE_SYSLOG
 define Package/busybox/conffiles
+/etc/config/telnetd
+ifdef CONFIG_BUSYBOX_CONFIG_FEATURE_SYSLOG
 /etc/syslog.conf
-endef
-
-Package/busybox-selinux/conffiles = $(Package/busybox/conffiles)
 endif
+endef
 
 ifndef CONFIG_USE_MUSL
 LDLIBS:=m crypt
@@ -90,12 +80,8 @@ ifeq ($(CONFIG_USE_GLIBC),y)
   LDLIBS += $(call BUSYBOX_IF_ENABLED,NSLOOKUP_OPENWRT,resolv)
 endif
 
-ifeq ($(BUILD_VARIANT),selinux)
-  LDLIBS += selinux sepol
-endif
-
 TARGET_CFLAGS += -flto
-TARGET_LDFLAGS += -flto=jobserver -fuse-linker-plugin
+TARGET_LDFLAGS += -flto=jobserver -fuse-linker-plugin 
 
 MAKE_VARS :=
 MAKE_FLAGS += \
@@ -114,9 +100,6 @@ define Build/Configure
 ifeq ($(DEVICE_TYPE),nas)
 	echo "CONFIG_HDPARM=y" >> $(PKG_BUILD_DIR)/.config
 endif
-ifeq ($(BUILD_VARIANT),selinux)
-	cat $(TOPDIR)/$(SOURCE)/selinux.config >> $(PKG_BUILD_DIR)/.config
-endif
 	grep 'CONFIG_BUSYBOX_$(BUSYBOX_SYM)' $(TOPDIR)/.config | sed -e "s,\\(# \)\\?CONFIG_BUSYBOX_$(BUSYBOX_SYM)_\\(.*\\),\\1CONFIG_\\2,g" >> $(PKG_BUILD_DIR)/.config
 	yes 'n' | $(MAKE) -C $(PKG_BUILD_DIR) $(MAKE_FLAGS) oldconfig
 endef
@@ -130,8 +113,12 @@ endef
 
 define Package/busybox/install
 	$(INSTALL_DIR) $(1)/etc/init.d
+	$(INSTALL_DIR) $(1)/etc/config
 	$(INSTALL_DIR) $(1)/usr/sbin
 	$(CP) $(PKG_INSTALL_DIR)/* $(1)/
+	$(if $(CONFIG_TELNET_SUPPORT),\
+		$(INSTALL_BIN) ./files/telnetd $(1)/etc/init.d/telnetd; \
+		$(INSTALL_CONF) ./files/telnetd.conf $(1)/etc/config/telnetd)
 ifneq ($(CONFIG_BUSYBOX_$(BUSYBOX_SYM)_CROND),)
 	$(INSTALL_BIN) ./files/cron $(1)/etc/init.d/cron
 endif
@@ -142,10 +129,10 @@ ifneq ($(CONFIG_BUSYBOX_$(BUSYBOX_SYM)_NTPD),)
 	$(INSTALL_DATA) ./files/ntpd.capabilities $(1)/etc/capabilities/ntpd.json
 	$(INSTALL_DATA) ./files/ntpd_acl.json $(1)/usr/share/acl.d/ntpd.json
 endif
+	$(if $(CONFIG_BUSYBOX_CONFIG_NTPD),\
+		$(INSTALL_BIN) ./files/ntpserver.init $(1)/etc/init.d/ntpserver; \
+		$(INSTALL_BIN) ./files/ntpserver.conf $(1)/etc/config/ntpserver)
 	-rm -rf $(1)/lib64
 endef
 
-Package/busybox-selinux/install = $(Package/busybox/install)
-
 $(eval $(call BuildPackage,busybox))
-$(eval $(call BuildPackage,busybox-selinux))

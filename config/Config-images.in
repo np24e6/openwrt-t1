@@ -4,6 +4,17 @@
 
 menu "Target Images"
 
+	config BUILD_MINIMAL_IMAGE
+		bool "Build Minimal Image"
+
+	config BUILD_FACTORY_IMAGE
+		bool "Build Factory Image"
+		select BUILD_BOOTLOADER
+
+	config BUILD_VERIFIED_BOOT_IMAGE
+		bool "Build Factory image with verified boot bootloader"
+		depends on VERIFIED_BOOT_SUPPORT
+
 	menuconfig TARGET_ROOTFS_INITRAMFS
 		bool "ramdisk"
 		default y if USES_INITRAMFS
@@ -140,9 +151,7 @@ menu "Target Images"
 		config TARGET_SQUASHFS_BLOCK_SIZE
 			int "Block size (in KiB)"
 			depends on TARGET_ROOTFS_SQUASHFS
-			default 64 if LOW_MEMORY_FOOTPRINT
-			default 1024 if (SMALL_FLASH && !LOW_MEMORY_FOOTPRINT)
-			default 256
+			default 64
 
 	menuconfig TARGET_ROOTFS_UBIFS
 		bool "ubifs"
@@ -184,7 +193,6 @@ menu "Target Images"
 		depends on TARGET_x86
 		depends on TARGET_ROOTFS_EXT4FS || TARGET_ROOTFS_JFFS2 || TARGET_ROOTFS_SQUASHFS
 		select PACKAGE_grub2
-		default y
 
 	config GRUB_EFI_IMAGES
 		bool "Build GRUB EFI images (Linux x86 or x86_64 host only)"
@@ -208,7 +216,6 @@ menu "Target Images"
 	config GRUB_BAUDRATE
 		int "Serial port baud rate"
 		depends on GRUB_IMAGES || GRUB_EFI_IMAGES
-		default 38400 if TARGET_x86_generic
 		default 115200
 
 	config GRUB_FLOWCONTROL

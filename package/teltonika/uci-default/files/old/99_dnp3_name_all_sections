@@ -1,0 +1,23 @@
+!#/bin/sh
+
+. /lib/functions.sh
+
+CONFIG="dnp3_master"
+COUNT=0
+
+set_max_count() {
+	local section=$1
+	[ $((section)) -gt $COUNT ] && COUNT=$((section))
+}
+
+set_id_to_name() {
+	local section=$1
+	COUNT=$((COUNT + 1))
+	
+	uci_rename "$CONFIG" "$section" "$COUNT"
+}
+
+config_load "$CONFIG"
+config_foreach set_max_count
+config_foreach set_id_to_name "instance"
+uci_commit "$CONFIG"

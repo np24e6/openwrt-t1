@@ -11,6 +11,7 @@ PKG_VERSION := 2.18
 PKG_RELEASE := 1
 
 include $(INCLUDE_DIR)/host-build.mk
+include $(INCLUDE_DIR)/gpl.mk
 
 HOSTCC := $(HOSTCC_NOCACHE)
 HOSTCXX := $(HOSTCXX_NOCACHE)

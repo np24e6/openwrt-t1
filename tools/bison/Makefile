@@ -16,6 +16,7 @@ PKG_HASH:=a3b5813f48a11e540ef26f46e4d288c0c25c7907d9879ae50e430ec49f63c010
 HOST_BUILD_PARALLEL:=1
 
 include $(INCLUDE_DIR)/host-build.mk
+include $(INCLUDE_DIR)/gpl.mk
 
 HOST_CONFIGURE_ARGS += --enable-threads=posix --disable-nls
 

@@ -1,0 +1,23 @@
+#!/bin/sh
+# Copyright (C) 2006-2014 OpenWrt.org
+
+#ntpclient won't start without active interface, so doing reload here.
+
+exclude_ifaces()
+{
+	case "$DEVICE" in
+		lo|br-*|gre4-*)
+			return 1
+		;;
+	esac
+
+	return 0
+}
+
+case "${ACTION:-ifup}" in
+	ifup)
+		exclude_ifaces && {
+			/etc/init.d/ntpclient restart
+		}
+	;;
+esac

@@ -233,25 +233,27 @@ network_get_dnssearch() {
 		__network_ifstatus "$1" "$2" ".inactive['dns-search'][*]"
 }
 
-
 # 1: destination variable
 # 2: addr
 # 3: inactive
+# 4: limit
 __network_wan()
 {
+	limit=1
+	[ -n "$4" ] && limit="$4"
 	__network_ifstatus "$1" "" \
-		"[@.route[@.target='$2' && !@.table]].interface" "" 1 && \
+		"[@.route[@.target='$2' && !@.table]].interface" "" $limit && \
 			return 0
 
 	[ "$3" = 1 -o "$3" = "true" ] && \
 		__network_ifstatus "$1" "" \
-			"[@.inactive.route[@.target='$2' && !@.table]].interface" "" 1
+			"[@.inactive.route[@.target='$2' && !@.table]].interface" "" $limit
 }
 
 # find the logical interface which holds the current IPv4 default route
 # 1: destination variable
 # 2: consider inactive default routes if "true" (optional)
-network_find_wan() { __network_wan "$1" "0.0.0.0" "$2"; }
+network_find_wan() { __network_wan "$1" "0.0.0.0" "$2" "$3"; }
 
 # find the logical interface which holds the current IPv6 default route
 # 1: destination variable

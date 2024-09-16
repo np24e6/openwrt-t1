@@ -13,7 +13,7 @@ find_wwan_iface() {
 	config_get proto "$cfg" proto
 	config_get device "$cfg" device
 
-	[ "$proto" = wwan ] || [ "$proto" = mbim ] || [ "$proto" = qmi ] || [ "$proto" = ncm ] || return 0
+	[ "$proto" = wwan ] || return 0
 	[ -z "$device" -a "$proto" = wwan ] || [ "$device" = "/dev/$DEVNAME" ] || return 0
 	if [ "$ACTION" = add ]; then
 		proto_set_available "$cfg" 1

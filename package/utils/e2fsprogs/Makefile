@@ -8,24 +8,23 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=e2fsprogs
-PKG_VERSION:=1.45.6
-PKG_RELEASE:=2
+PKG_VERSION:=1.46.5
+PKG_RELEASE:=1
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.xz
 PKG_SOURCE_URL:=@KERNEL/linux/kernel/people/tytso/e2fsprogs/v$(PKG_VERSION)/
-PKG_HASH:=ffa7ae6954395abdc50d0f8605d8be84736465afc53b8938ef473fcf7ff44256
+PKG_HASH:=2f16c9176704cf645dc69d5b15ff704ae722d665df38b2ed3cfc249757d8d81e
 
 PKG_LICENSE:=GPL-2.0
 PKG_LICENSE_FILES:=NOTICE
 PKG_CPE_ID:=cpe:/a:e2fsprogs_project:e2fsprogs
 
-PKG_BUILD_DEPENDS:=util-linux e2fsprogs/host
+PKG_BUILD_DEPENDS:=util-linux
 PKG_INSTALL:=1
 
 PKG_BUILD_PARALLEL:=1
 
 include $(INCLUDE_DIR)/package.mk
-include $(INCLUDE_DIR)/host-build.mk
 
 define Package/e2fsprogs
   SECTION:=utils
@@ -204,43 +203,14 @@ define Build/InstallDev
 		$(1)/usr/include/ss/
 endef
 
-define Host/Compile
-	$(MAKE) $(PKG_JOBS) -C $(HOST_BUILD_DIR)/lib/ss mk_cmds
-	$(MAKE) $(PKG_JOBS) -C $(HOST_BUILD_DIR)/lib/et compile_et
-endef
-
-define Host/Install
-	$(INSTALL_DIR) $(1)/share/et
-	$(CP) $(HOST_BUILD_DIR)/lib/et/et_[ch].awk $(1)/share/et/
-	$(INSTALL_DIR) $(1)/share/ss
-	$(CP) $(HOST_BUILD_DIR)/lib/ss/ct_c.{sed,awk} $(1)/share/ss/
-	$(INSTALL_DIR) $(1)/bin
-	$(CP) \
-		$(HOST_BUILD_DIR)/lib/et/compile_et \
-		$(HOST_BUILD_DIR)/lib/ss/mk_cmds \
-		$(1)/bin/
-endef
-
-define Package/e2fsprogs/conffiles
-/etc/e2fsck.conf
-endef
-
 define Package/e2fsprogs/install
 	$(INSTALL_DIR) $(1)/usr/sbin
-	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/e2fsck $(1)/usr/sbin/
 	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/mke2fs $(1)/usr/sbin/
 	$(LN) mke2fs $(1)/usr/sbin/mkfs.ext2
 	$(LN) mke2fs $(1)/usr/sbin/mkfs.ext3
 	$(LN) mke2fs $(1)/usr/sbin/mkfs.ext4
-	$(LN) e2fsck $(1)/usr/sbin/fsck.ext2
-	$(LN) e2fsck $(1)/usr/sbin/fsck.ext3
-	$(LN) e2fsck $(1)/usr/sbin/fsck.ext4
 	$(INSTALL_DIR) $(1)/usr/lib
 	$(CP) $(PKG_INSTALL_DIR)/usr/lib/libe2p.so.* $(1)/usr/lib/
-	$(INSTALL_DIR) $(1)/etc/init.d
-	$(INSTALL_DIR) $(1)/lib/functions/fsck
-	$(INSTALL_DATA) ./files/e2fsck.sh $(1)/lib/functions/fsck/
-	$(INSTALL_DATA) ./files/e2fsck.conf $(1)/etc/e2fsck.conf
 endef
 
 define Package/libcomerr/install
@@ -329,4 +299,3 @@ $(eval $(call BuildPackage,filefrag))
 $(eval $(call BuildPackage,debugfs))
 $(eval $(call BuildPackage,chattr))
 $(eval $(call BuildPackage,lsattr))
-$(eval $(call HostBuild))

@@ -1,6 +1,6 @@
 #!/bin/sh /etc/rc.common
 
-START=00
+START=01
 
 USE_PROCD=1
 NAME=urngd

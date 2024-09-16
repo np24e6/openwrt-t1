@@ -6,11 +6,11 @@
 #
 
 include $(TOPDIR)/rules.mk
+include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=relayd
-PKG_RELEASE:=1
-
-PKG_SOURCE_URL=$(PROJECT_GIT)/project/relayd.git
+PKG_VERSION:=2020-04-25
+PKG_SOURCE_URL:=$(PROJECT_GIT)/project/relayd.git
 PKG_SOURCE_PROTO:=git
 PKG_SOURCE_DATE:=2020-04-25
 PKG_SOURCE_VERSION:=f4d759be54ceb37714e9a6ca320d5b50c95e9ce9
@@ -27,7 +27,11 @@ define Package/relayd
   CATEGORY:=Network
   SUBMENU:=Routing and Redirection
   TITLE:=Transparent routing / relay daemon
-  DEPENDS:=+libubox
+  DEPENDS:=+libubox +vuci-app-relayd-ui
+  ifeq (m, $(CONFIG_PACKAGE_relayd))
+    PKG_TLT_NAME:=Relay configuration
+    PKG_ROUTER:=$(TLT_PLATFORM_NAME)
+  endif
 endef
 
 TARGET_CFLAGS += -I$(STAGING_DIR)/usr/include
@@ -37,6 +41,18 @@ define Package/relayd/install
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/relayd $(1)/usr/sbin/relayd
 	$(INSTALL_DIR) $(1)/etc/init.d
 	$(INSTALL_BIN) ./files/relay.init $(1)/etc/init.d/relayd
+endef
+
+define Package/relayd/prerm
+	#!/bin/sh
+	. /lib/functions.sh
+	clean_config() {
+		config_get proto "$$1" proto ""
+		[ "$$proto" = "relay" ] && uci_remove network "$$1"
+	}
+	config_load 'network'
+	config_foreach clean_config "interface"
+	uci_commit network
 endef
 
 $(eval $(call BuildPackage,relayd))

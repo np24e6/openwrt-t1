@@ -1,0 +1,28 @@
+From a79dbbdd120eeed571beabdcb627d6b95caee7dc Mon Sep 17 00:00:00 2001
+From: Wolfgang Frisch <wolfgang.frisch@suse.com>
+Date: Mon, 29 Jun 2020 16:28:51 +0200
+Subject: [PATCH] ext4: catch integer overflow in ext4_cache_extents
+
+When extent tree is corrupted we can hit BUG_ON in
+ext4_es_cache_extent(). Check for this and abort caching instead of
+crashing the machine.
+
+Signed-off-by: Wolfgang Frisch <wolfgang.frisch@suse.com>
+Signed-off-by: Jan Kara <jack@suse.cz>
+---
+ fs/ext4/extents.c | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+--- a/fs/ext4/extents.c
++++ b/fs/ext4/extents.c
+@@ -552,6 +552,10 @@ static void ext4_cache_extents(struct in
+ 		ext4_lblk_t lblk = le32_to_cpu(ex->ee_block);
+ 		int len = ext4_ext_get_actual_len(ex);
+ 
++		/* Corrupted extent tree? Stop caching... */
++		if (lblk + len < lblk || lblk + len > EXT4_MAX_LOGICAL_BLOCK)
++			return;
++
+ 		if (prev && (prev != lblk))
+ 			ext4_es_cache_extent(inode, prev, lblk - prev, ~0,
+ 					     EXTENT_STATUS_HOLE);

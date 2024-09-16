@@ -1,0 +1,90 @@
+--- a/src/ap/wps_hostapd.c
++++ b/src/ap/wps_hostapd.c
+@@ -1075,19 +1075,76 @@ static void hostapd_free_wps(struct wps_
+ 	os_free(wps);
+ }
+ 
++static void hostapd_remove_psk_wps(struct hostapd_ssid *ssid)
++{
++	FILE *fp;
++	struct hostapd_wpa_psk *curr, *prev;
++
++	if (ssid->wpa_psk_file)
++	{
++		fp = fopen(ssid->wpa_psk_file, "w");
++		if (fp)
++			fclose(fp);
++	}
++	// remove records with active wps
++	curr = ssid->wpa_psk;
++	prev = NULL;
++	while (curr)
++	{
++		if (curr->wps)
++		{
++			if (prev == NULL)
++			{
++				ssid->wpa_psk = curr->next;
++				os_free(curr);
++				curr = ssid->wpa_psk->next;
++			}
++			else
++			{
++				prev->next = curr->next;
++				os_free(curr);
++				curr = prev->next;
++			}
++		}
++		else
++		{
++			prev = curr;
++			curr = curr->next;
++		}
++	}
++}
+ 
+ int hostapd_init_wps(struct hostapd_data *hapd,
+-		     struct hostapd_bss_config *conf)
++					 struct hostapd_bss_config *conf)
+ {
+ 	struct wps_context *wps;
+ 	struct wps_registrar_config cfg;
+ 	u8 *multi_ap_netw_key = NULL;
+-
+-	if (conf->wps_state == 0) {
++	static char *last_wpa_passphrase;
++	struct hostapd_ssid *ssid = &hapd->conf->ssid;
++	
++	if (conf->wps_state == 0)
++	{
+ 		hostapd_wps_clear_ies(hapd, 0);
++		hostapd_remove_psk_wps(ssid);
+ 		return 0;
+ 	}
+ 
++	if (ssid->wpa_passphrase)
++	{
++		if (last_wpa_passphrase)
++		{
++			if (strcmp(ssid->wpa_passphrase, last_wpa_passphrase) != 0)
++			{
++				hostapd_wps_clear_ies(hapd, 0);
++				hostapd_remove_psk_wps(ssid);
++			}
++			os_free(last_wpa_passphrase);
++			last_wpa_passphrase = NULL;
++		}
++		last_wpa_passphrase = os_strdup(ssid->wpa_passphrase);
++	}
++
+ 	wps = os_zalloc(sizeof(*wps));
+ 	if (wps == NULL)
+ 		return -1;
+@@ -1337,7 +1394,6 @@ fail:
+ 	return -1;
+ }
+ 
+-
+ int hostapd_init_wps_complete(struct hostapd_data *hapd)
+ {
+ 	struct wps_context *wps = hapd->wps;

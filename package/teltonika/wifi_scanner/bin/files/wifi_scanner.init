@@ -1,0 +1,63 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2020 Teltonika
+. /usr/share/libubox/jshn.sh
+
+USE_PROCD=1
+START=99
+STOP=99
+
+BIN="/usr/sbin/wifi_scanner"
+
+start_tracker() {
+	local disabled interface device _device
+	interface=$1
+	device=$2
+	config_get _device "$interface" device ""
+	[ "$device" = "$_device" ] && {
+		config_get_bool disabled "$interface" disabled "0"
+		[ "$disabled" != "1" ] && ENABLED=1
+	}
+}
+
+start_service() {
+	local keys
+	config_load wifi_scanner
+	config_get two_g_enabled wifi_scan two_g_enabled 0
+	config_get five_g_enabled wifi_scan five_g_enabled 0
+
+	[ "$two_g_enabled" != "0" -o "$five_g_enabled" != "0" ] || return
+
+	config_load wireless
+	json_load "$(ubus call network.wireless status)"
+	json_get_keys keys
+	for key in $keys; do
+		if [ "$(ubus call network.wireless status | jsonfilter -e @.${key}.config.hwmode)" = "11b" ] || [ "$(ubus call network.wireless status | jsonfilter -e @.${key}.config.hwmode)" = "11g" ]; then
+			ENABLED=0
+			config_foreach start_tracker wifi-iface "$key"
+			[ "$ENABLED" = "0" ] && two_g_enabled=0
+		elif [ "$(ubus call network.wireless status | jsonfilter -e @.${key}.config.hwmode)" = "11a" ]; then
+			ENABLED=0
+			config_foreach start_tracker wifi-iface "$key"
+			[ "$ENABLED" = "0" ] && five_g_enabled=0
+		fi
+	done
+
+	[ "$two_g_enabled" != "0" -o "$five_g_enabled" != "0" ] || return
+
+	procd_open_instance
+	procd_set_param respawn
+	procd_set_param command "$BIN" -t "$two_g_enabled" -f "$five_g_enabled"
+	procd_close_instance
+}
+
+stop_service() {
+        killall wifi_scanner 2>/dev/null >/dev/null
+}
+
+reload_service() {
+	restart
+}
+
+service_triggers() {
+	procd_add_reload_trigger "wifi_scanner" "wireless"
+}

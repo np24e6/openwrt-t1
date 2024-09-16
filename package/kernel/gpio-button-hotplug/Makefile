@@ -12,6 +12,8 @@ PKG_NAME:=gpio-button-hotplug
 PKG_RELEASE:=3
 PKG_LICENSE:=GPL-2.0
 
+PKG_ORIGIN_URL:=https://github.com/openwrt/openwrt/tree/openwrt-21.02/package/kernel/gpio-button-hotplug
+
 include $(INCLUDE_DIR)/package.mk
 
 define KernelPackage/gpio-button-hotplug

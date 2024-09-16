@@ -1,0 +1,109 @@
+traps_mib_gsm='
+signalChangeNotification NOTIFICATION-TYPE
+	STATUS		current
+	DESCRIPTION	"Signal strength trap"
+	::= { mobileNotifications 1 }
+
+networkTypeNotification NOTIFICATION-TYPE
+	STATUS		current
+	DESCRIPTION	"Network type trap"
+	::= { mobileNotifications 2 }
+'
+
+traps_mib_din1='
+digitalInputNotification NOTIFICATION-TYPE
+	STATUS		current
+	DESCRIPTION	"Digital input trap"
+	::= { ioNotifications 1 }
+'
+
+traps_mib_dout1='
+digitalOutputNotification NOTIFICATION-TYPE
+	STATUS		current
+	DESCRIPTION	"Digital output trap"
+	::= { ioNotifications 2 }
+'
+
+traps_mib_dio0='
+digitalio0Notification NOTIFICATION-TYPE
+	STATUS		current
+	DESCRIPTION	"Digital I/O 0 trap"
+	::= { ioNotifications 3 }
+'
+
+traps_mib_dio1='
+digitalio1Notification NOTIFICATION-TYPE
+	STATUS		current
+	DESCRIPTION	"Digital I/O 1 trap"
+	::= { ioNotifications 4 }
+'
+
+traps_mib_dio2='
+digitalio2Notification NOTIFICATION-TYPE
+	STATUS		current
+	DESCRIPTION	"Digital I/O 2 trap"
+	::= { ioNotifications 5 }
+'
+
+traps_mib_dwi0='
+drywetio0Notification NOTIFICATION-TYPE
+	STATUS		current
+	DESCRIPTION	"Dry/Wet I/O 0 trap"
+	::= { ioNotifications 6 }
+'
+
+traps_mib_dwi1='
+drywetio1Notification NOTIFICATION-TYPE
+	STATUS		current
+	DESCRIPTION	"Dry/Wet I/O 1 trap"
+	::= { ioNotifications 7 }
+'
+
+traps_mib_relay0='
+relay0Notification NOTIFICATION-TYPE
+	STATUS		current
+	DESCRIPTION	"Relay 0 trap"
+	::= { ioNotifications 8 }
+'
+
+traps_mib_relay1='
+relay1Notification NOTIFICATION-TYPE
+	STATUS		current
+	DESCRIPTION	"Relay 1 trap"
+	::= { ioNotifications 9 }
+'
+
+traps_mib_acl0='
+acl0Notification NOTIFICATION-TYPE
+	STATUS		current
+	DESCRIPTION	"ACL trap"
+	::= { ioNotifications 10 }
+'
+
+traps_mib_adc0='
+adc0Notification NOTIFICATION-TYPE
+	STATUS		current
+	DESCRIPTION	"ADC trap"
+	::= { ioNotifications 11 }
+'
+
+traps_mib_din2='
+digitalInput2Notification NOTIFICATION-TYPE
+	STATUS		current
+	DESCRIPTION	"Digital input2 trap"
+	::= { ioNotifications 12 }
+'
+
+traps_mib_iio='
+digitalIioNotification NOTIFICATION-TYPE
+	STATUS		current
+	DESCRIPTION	"Isolated Input trap"
+	::= { ioNotifications 13 }
+'
+
+traps_mib_dout2='
+digitalOutput2Notification NOTIFICATION-TYPE
+	STATUS		current
+	DESCRIPTION	"Digital output2 trap"
+	::= { ioNotifications 14 }
+'

@@ -1,0 +1,8 @@
+usepeerdns
+nodefaultroute
+ip-up-script /lib/netifd/l2tp-up
+ipv6-up-script /lib/netifd/l2tp-up
+ip-down-script /lib/netifd/l2tp-down
+ipv6-down-script /lib/netifd/l2tp-down
+# Don't wait for LCP term responses; exit immediately when killed.
+lcp-max-terminate 0

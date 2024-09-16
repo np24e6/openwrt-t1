@@ -1,0 +1,52 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+add_missing_option() {
+	local config="$1"
+	local section="$2"
+	local option="$3"
+	local value="$4"
+
+	# don't set if value already exists
+	[ -n "$(uci_get "${config}" "${section}" "${option}")" ] && return
+
+	uci_set "$config" "$section" "$option" "$value"
+}
+
+set_option_from_firewall() {
+	local section="$1"
+	local enabled
+
+	config_get enabled "$section" "enabled" "1"
+
+	case "$(config_get "$section" "name")" in
+	"Enable_CLI_WAN")
+		add_missing_option "cli" "status" "_cliWanAccess" "$enabled"
+		;;
+	"Enable_SSH_WAN")
+		add_missing_option "dropbear" "@dropbear[0]" "_sshWanAccess" "$enabled"
+		;;
+	"Enable_HTTP_WAN")
+		add_missing_option "uhttpd" "main" "_httpWanAccess" "$enabled"
+		;;
+	"Enable_HTTPS_WAN")
+		add_missing_option "uhttpd" "main" "_httpsWanAccess" "$enabled"
+		;;
+	"Enable_TELNET_WAN")
+		add_missing_option "telnetd" "@telnetd[0]" "_telnetWanAccess" "$enabled"
+		;;
+	esac
+}
+
+config_load "firewall"
+config_foreach set_option_from_firewall "rule"
+
+# fallbacks in case corresponding firewall rules don't exist
+add_missing_option "cli" "status" "_cliWanAccess" "0"
+add_missing_option "dropbear" "@dropbear[0]" "_sshWanAccess" "0"
+add_missing_option "uhttpd" "main" "_httpWanAccess" "0"
+add_missing_option "uhttpd" "main" "_httpsWanAccess" "0"
+add_missing_option "telnetd" "@telnetd[0]" "_telnetWanAccess" "0"
+
+uci_commit

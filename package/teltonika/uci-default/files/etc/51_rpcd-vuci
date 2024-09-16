@@ -1,0 +1,139 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+update_rules() {
+  group_name="$1"
+  config_list_foreach "$group_name" "read" update_user_rule "read" "$group_name"
+  config_list_foreach "$group_name" "write" update_user_rule "write" "$group_name"
+}
+
+update_user_rule() {
+  temp_string="${1#"admin/"}" #current rule
+  uci_remove_list "rpcd" "$3" "$2" "$1"
+  uci_add_list "rpcd" "$3" "$2" "${temp_string#"admin/"}"
+}
+
+migrate_paths() {
+  from="$1"
+  to="$2"
+  config_list_foreach "admin" "read" migrate_path "admin" "read" "$from" "$to"
+  config_list_foreach "admin" "write" migrate_path "admin" "write" "$from" "$to"
+  config_list_foreach "user" "read" migrate_path "user" "read" "$from" "$to"
+  config_list_foreach "user" "write" migrate_path "user" "write" "$from" "$to"
+}
+
+migrate_path() {
+  rule="$1"
+  group_name="$2"
+  type="$3"
+  from="$4"
+  to="$5"
+  case "$rule" in
+    "$from")
+      uci_remove_list "rpcd" "$group_name" "$type" "$rule"
+      new_rule="${rule/$from/$to}"
+      uci_add_list "rpcd" "$group_name" "$type" "$new_rule"
+      ;;
+  esac
+}
+
+add_not_superuser() {
+  local section="$1"
+  local option="$2"
+  add_value() {
+    uci_add_list "rpcd" "$section" "$option" "$1"
+  }
+  uci_remove "rpcd" "$section" "$option"
+  uci_add_list "rpcd" "$section" "$option" "!superuser"
+  config_list_foreach "$section" "$option" add_value
+}
+
+update_admin() {
+  local username=""
+  local group=""
+  config_get username "$1" "username"
+  config_get group "$1" "group"
+  if [ "$username" = "admin" ] && [ "$group" = "root" ]; then
+    uci_remove "rpcd" "$1" "read"
+    uci_remove "rpcd" "$1" "write"
+    uci_add_list "rpcd" "$1" "read" "superuser"
+    uci_add_list "rpcd" "$1" "write" "superuser"
+    uci_add_list "rpcd" "$1" "read" "*"
+    uci_add_list "rpcd" "$1" "write" "*"
+  fi
+}
+
+update_admin_group() {
+  group_name="$1"
+  read_access=$(config_get ${1} target_read)
+  write_access=$(config_get ${1} target_write)
+  read_rules=$(config_get ${1} read | tr \* +)
+  write_rules=$(config_get ${1} write | tr \* +)
+  write_rules_length=${#write_rules}
+  acls="system/flashops system/uscripts system/wizard system/multiusers/users_configuration system/profiles system/admin/access_control/general system/backup"
+  if [ "$write_access" = "allow" ] && [ "$write_rules" = "+" ]; then
+    uci_set "rpcd" "$1" "target_write" "deny"
+    uci_remove "rpcd" "$1" "write"
+  for rule in $acls; do
+      uci_add_list "rpcd" "$1" "write" "$rule"
+  done
+  elif [ "$write_access" = "deny" ] && [ "$write_rules_length" != 1 ]; then
+    for rule in $acls; do
+      echo "$write_rules" | grep -q "$rule" || { uci_add_list "rpcd" "$1" "write" "$rule"; }
+    done
+  fi
+  if [ "$read_access" = "deny" ]; then
+    profiles=false
+    for rule in $read_rules; do
+      if [ "$rule" = "system/profiles" ]; then
+        profiles=true
+      fi
+    done
+    if [ "$profiles" = false ]; then
+      uci_add_list "rpcd" "$1" "read" "system/profiles"
+    fi
+  fi
+}
+
+config_load "rpcd"
+
+# Call migrate_paths for every route that changes between versions
+migrate_paths "services/cli" "system/cli"
+migrate_paths "services/vpn/openvpn-tlt" "services/vpn/openvpn"
+migrate_paths "system/admin/access_control/root_ca" "system/admin/certificates/root_ca"
+migrate_paths "services/mobile_utilities/sms" "services/mobile_utilities/sms_messages"
+migrate_paths "services/mobile_utilities/sms/send" "services/mobile_utilities/sms_messages/send"
+migrate_paths "services/mobile_utilities/sms/read" "services/mobile_utilities/sms_messages/read"
+migrate_paths "services/mobile_utilities/sms/storage" "services/mobile_utilities/sms_messages/storage"
+migrate_paths "services/auto-reboot" "services/auto_reboot"
+migrate_paths "services/auto-reboot/ping-reboot" "services/auto_reboot/ping_reboot"
+migrate_paths "services/auto-reboot/reboot-scheduler" "services/auto_reboot/reboot_scheduler"
+migrate_paths "services/modbus/modbus-slave" "services/modbus/modbus_slave"
+migrate_paths "services/modbus/modbus-master" "services/modbus/modbus_master"
+migrate_paths "services/modbus/modbus-gateway" "services/modbus/modbus_gateway"
+migrate_paths "services/usb_tools/memory-expansion" "services/usb_tools/memory_expansion"
+migrate_paths "services/snmp/snmp-settings" "services/snmp/snmp_settings"
+migrate_paths "system/wizard/step-pwd" "system/wizard/step_pwd"
+migrate_paths "system/wizard/step-lan" "system/wizard/step_lan"
+migrate_paths "system/wizard/step-wan" "system/wizard/step_wan"
+migrate_paths "system/wizard/step-wifi" "system/wizard/step_wifi"
+migrate_paths "system/wizard/step-rms" "system/wizard/step_rms"
+
+
+
+uci_commit "rpcd"
+config_load "rpcd"
+
+update_rules "admin"
+update_rules "user"
+update_admin_group "admin"
+
+config_foreach update_admin "login"
+
+uci_commit "rpcd"
+
+/sbin/generate_user_acls "user"
+/sbin/generate_user_acls "admin"
+
+exit 0

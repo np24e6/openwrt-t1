@@ -1,0 +1,109 @@
+-- I/O --
+
+ioCount OBJECT-TYPE
+	SYNTAX		INTEGER
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION	"Count of I/O"
+	::= { io 1 }
+
+-- I/O table
+
+ioTable OBJECT-TYPE
+	SYNTAX		SEQUENCE OF IOEntry
+	MAX-ACCESS	not-accessible
+	STATUS		current
+	DESCRIPTION	"A list of I/O. The number of entries is given by the value of ioCount."
+	::= { io 2 }
+
+ioEntry OBJECT-TYPE
+	SYNTAX		IOEntry
+	MAX-ACCESS	not-accessible
+	STATUS		current
+	DESCRIPTION	"An entry containing information of a particular I/O."
+	INDEX		{ ioIndex }
+	::= { ioTable 1 }
+
+IOEntry ::=
+	SEQUENCE {
+	ioIndex		INTEGER,
+	ioSystemName	DisplayString,
+	ioName		DisplayString,
+	ioType		DisplayString,
+	ioBidirectional	INTEGER,
+	ioState		DisplayString,
+	ioInput		INTEGER,
+	ioInverted	INTEGER,
+	ioCurrent	DisplayString,
+	ioPercentage	DisplayString
+	}
+
+ioIndex OBJECT-TYPE
+	SYNTAX		INTEGER
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION	"A unique value, greater than zero, for each session."
+	::= { ioEntry 1 }
+
+ioSystemName OBJECT-TYPE
+	SYNTAX		DisplayString
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION	"The name of the I/O."
+	::= { ioEntry 2 }
+
+ioName OBJECT-TYPE
+	SYNTAX		DisplayString
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION	"The name of the I/O, as displayed in WebUI."
+	::= { ioEntry 3 }
+
+ioType OBJECT-TYPE
+	SYNTAX		DisplayString
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION	"A description of I/O type."
+	::= { ioEntry 4 }
+
+ioBidirectional OBJECT-TYPE
+	SYNTAX		INTEGER
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION	"Is I/O bidirectional?"
+	::= { ioEntry 5 }
+
+ioState OBJECT-TYPE
+	SYNTAX		DisplayString
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION	"State of I/O."
+	::= { ioEntry 6 }
+
+ioInput OBJECT-TYPE
+	SYNTAX		INTEGER
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION	"Is I/O an input?"
+	::= { ioEntry 7 }
+
+ioInverted OBJECT-TYPE
+	SYNTAX		INTEGER
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION	"Is value of I/O inverted?"
+	::= { ioEntry 8 }
+
+ioCurrent OBJECT-TYPE
+	SYNTAX		DisplayString
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION	"Current amount flowing though ACL."
+	::= { ioEntry 9 }
+
+ioPercentage OBJECT-TYPE
+	SYNTAX		DisplayString
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION	"Percentage of ACL."
+	::= { ioEntry 10 }

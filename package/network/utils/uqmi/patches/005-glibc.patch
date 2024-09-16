@@ -1,0 +1,20 @@
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -4,7 +4,7 @@ PROJECT(uqmi C)
+ 
+ OPTION(BUILD_STATIC OFF)
+ 
+-ADD_DEFINITIONS(-Os -ggdb -Wall -Werror --std=gnu99 -Wmissing-declarations -Wno-enum-conversion)
++ADD_DEFINITIONS(-Os -Wall -Werror --std=gnu99 -Wmissing-declarations)
+ 
+ SET(CMAKE_SHARED_LIBRARY_LINK_C_FLAGS "")
+ 
+@@ -32,7 +32,7 @@ IF(DEBUG_PACKET)
+ ENDIF()
+ 
+ IF(DEBUG)
+-  ADD_DEFINITIONS(-DDEBUG -g3)
++  ADD_DEFINITIONS(-DDEBUG -ggdb -g3)
+ ENDIF()
+ 
+ SET(service_headers)

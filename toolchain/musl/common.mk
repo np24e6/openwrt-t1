@@ -24,6 +24,7 @@ HOST_BUILD_DIR:=$(BUILD_DIR_TOOLCHAIN)/$(PKG_NAME)-$(PKG_VERSION)
 
 include $(INCLUDE_DIR)/host-build.mk
 include $(INCLUDE_DIR)/hardening.mk
+include $(INCLUDE_DIR)/gpl.mk
 
 TARGET_CFLAGS:= $(filter-out -O%,$(TARGET_CFLAGS))
 TARGET_CFLAGS+= $(if $(CONFIG_MUSL_DISABLE_CRYPT_SIZE_HACK),,-DCRYPT_SIZE_HACK)

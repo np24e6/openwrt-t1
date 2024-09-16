@@ -1,0 +1,40 @@
+#!/bin/sh
+#
+# Copyright (C), 2023 Teltonika
+#
+
+. /lib/functions.sh
+
+CONF="rs_console"
+EXIST=0
+COUNT=0
+
+check_if_rs232_section_exist() {
+	local section=$1
+
+	config_get enabled "$section" "enabled" "0"
+	config_get device "$section" "device" "0"
+	[ "$enabled" = "1" ] && [ "$device" = "/dev/rs232" ] && EXIST=1
+	COUNT=$(($COUNT + 1))
+}
+
+case "$(mnf_info --name)" in
+RUTXR1*)
+	config_load "$CONF" || exit 0
+	config_foreach check_if_rs232_section_exist
+	[ "$EXIST" = "1" ] && exit 0
+
+	new_sec=$(uci add "$CONF" "console")
+	uci_set "$CONF" "$new_sec" "enabled" "1"
+	uci_set "$CONF" "$new_sec" "device" "/dev/rs232"
+	uci_set "$CONF" "$new_sec" "baudrate" "115200"
+	uci_set "$CONF" "$new_sec" "databits" "8"
+	uci_set "$CONF" "$new_sec" "parity" "none"
+	uci_set "$CONF" "$new_sec" "stopbits" "1"
+	uci_set "$CONF" "$new_sec" "flowcontrol" "none"
+	uci_rename "$CONF" "$new_sec" "$COUNT"
+
+	uci commit
+	exit 0
+	;;
+esac

@@ -1,0 +1,33 @@
+#!/bin/sh /etc/rc.common
+
+START=94
+STOP=80
+USE_PROCD=1
+
+PROGRAM="/usr/sbin/gpsd"
+
+. /lib/functions.sh
+. /usr/share/libubox/jshn.sh
+
+start_service() {
+	config_load gps
+
+	config_get enabled gpsd enabled "0"
+	[ "$enabled" = "1" ] || return
+
+	procd_open_instance gpsd
+	procd_set_param command "$PROGRAM"
+	procd_set_param respawn ${respawn_threshold:-3600} ${respawn_timeout:-5} ${respawn_retry:-0}
+	procd_close_instance
+}
+
+service_triggers()
+{
+	procd_add_reload_trigger "gps"
+}
+
+reload_service()
+{
+	stop
+	start
+}

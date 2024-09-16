@@ -1,0 +1,21 @@
+--- a/defaults.c
++++ b/defaults.c
+@@ -256,6 +256,18 @@ fw3_print_default_head_rules(struct fw3_
+ 		if (defs->flow_offloading)
+ 		{
+ 			r = fw3_ipt_rule_new(handle);
++			fw3_ipt_rule_comment(r, "IPsec bypass for offloading");
++			fw3_ipt_rule_extra(r, "-m conntrack --ctstate RELATED,ESTABLISHED -m policy --dir in --pol ipsec");
++			fw3_ipt_rule_target(r, "ACCEPT");
++			fw3_ipt_rule_append(r, "FORWARD");
++
++			r = fw3_ipt_rule_new(handle);
++			fw3_ipt_rule_comment(r, "IPsec bypass for offloading");
++			fw3_ipt_rule_extra(r, "-m conntrack --ctstate RELATED,ESTABLISHED -m policy --dir out --pol ipsec");
++			fw3_ipt_rule_target(r, "ACCEPT");
++			fw3_ipt_rule_append(r, "FORWARD");
++
++			r = fw3_ipt_rule_new(handle);
+ 			fw3_ipt_rule_comment(r, "Traffic offloading");
+ 			fw3_ipt_rule_extra(r, "-m conntrack --ctstate RELATED,ESTABLISHED");
+ 			fw3_ipt_rule_target(r, "FLOWOFFLOAD");

@@ -114,13 +114,19 @@ uci_add() {
 	local PACKAGE="$1"
 	local TYPE="$2"
 	local CONFIG="$3"
+	local CMD
 
 	if [ -z "$CONFIG" ]; then
-		export ${NO_EXPORT:+-n} CONFIG_SECTION="$(/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} add "$PACKAGE" "$TYPE")"
+		CMD="$(/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} -q add "$PACKAGE" "$TYPE")"
+		RET="$?"
+		export ${NO_EXPORT:+-n} CONFIG_SECTION="$CMD"
 	else
-		/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set "$PACKAGE.$CONFIG=$TYPE"
+		/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} -q set "$PACKAGE.$CONFIG=$TYPE"
+		RET="$?"
 		export ${NO_EXPORT:+-n} CONFIG_SECTION="$CONFIG"
 	fi
+
+	return "$RET"
 }
 
 uci_rename() {
@@ -147,6 +153,14 @@ uci_remove_list() {
 	local VALUE="$4"
 
 	/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} del_list "$PACKAGE.$CONFIG.$OPTION=$VALUE"
+}
+
+uci_reorder() {
+        local PACKAGE="$1"
+        local CONFIG="$2"
+        local OPTION="$3"
+
+        /sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} reorder "$PACKAGE.$CONFIG=$OPTION"
 }
 
 uci_commit() {

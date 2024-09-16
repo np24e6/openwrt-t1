@@ -2,6 +2,8 @@
 # Copyright 2016-2017 Dan Luedtke <mail@danrl.com>
 # Licensed to the public under the Apache License 2.0.
 
+DEFAULT_ROUTE=0
+
 WG=/usr/bin/wg
 if [ ! -x $WG ]; then
 	logger -t "wireguard" "error: missing wireguard-tools (${WG})"
@@ -10,6 +12,7 @@ fi
 
 [ -n "$INCLUDE_ONLY" ] || {
 	. /lib/functions.sh
+	. /lib/functions/network.sh
 	. ../netifd-proto.sh
 	init_proto "$@"
 }
@@ -33,6 +36,7 @@ proto_wireguard_setup_peer() {
 	local endpoint_host
 	local endpoint_port
 	local persistent_keepalive
+	local table
 
 	config_get public_key "${peer_config}" "public_key"
 	config_get preshared_key "${peer_config}" "preshared_key"
@@ -41,6 +45,7 @@ proto_wireguard_setup_peer() {
 	config_get endpoint_host "${peer_config}" "endpoint_host"
 	config_get endpoint_port "${peer_config}" "endpoint_port"
 	config_get persistent_keepalive "${peer_config}" "persistent_keepalive"
+	config_get table "${peer_config}" "table"
 
 	if [ -z "$public_key" ]; then
 		echo "Skipping peer config $peer_config because public key is not defined."
@@ -54,6 +59,11 @@ proto_wireguard_setup_peer() {
 	fi
 	for allowed_ip in $allowed_ips; do
 		echo "AllowedIPs=${allowed_ip}" >> "${wg_cfg}"
+		if [ "${route_allowed_ips}" -ne 0 ]
+		then
+			DEFAULT_ROUTE=1
+			echo "$peer_config" >> "/tmp/wireguard/default-status"
+		fi
 	done
 	if [ "${endpoint_host}" ]; then
 		case "${endpoint_host}" in
@@ -77,20 +87,37 @@ proto_wireguard_setup_peer() {
 
 	if [ ${route_allowed_ips} -ne 0 ]; then
 		for allowed_ip in ${allowed_ips}; do
-			case "${allowed_ip}" in
-				*:*/*)
-					proto_add_ipv6_route "${allowed_ip%%/*}" "${allowed_ip##*/}"
-					;;
-				*.*/*)
-					proto_add_ipv4_route "${allowed_ip%%/*}" "${allowed_ip##*/}"
-					;;
-				*:*)
-					proto_add_ipv6_route "${allowed_ip%%/*}" "128"
-					;;
-				*.*)
-					proto_add_ipv4_route "${allowed_ip%%/*}" "32"
-					;;
-			esac
+			if [ -n "$table" ];then
+				case "${allowed_ip}" in
+					*:*/*)
+						proto_add_ipv6_route "${allowed_ip%%/*}" "${allowed_ip##*/}" "" "" "" "" "$table"
+						;;
+					*.*/*)
+						proto_add_ipv4_route "${allowed_ip%%/*}" "${allowed_ip##*/}" "" "" "" "$table"
+						;;
+					*:*)
+						proto_add_ipv6_route "${allowed_ip%%/*}" "128" "" "" "" "" "$table"
+						;;
+					*.*)
+						proto_add_ipv4_route "${allowed_ip%%/*}" "32" "" "" "" "$table"
+						;;
+				esac
+			else
+				case "${allowed_ip}" in
+					*:*/*)  
+						proto_add_ipv6_route "${allowed_ip%%/*}" "${allowed_ip##*/}"
+						;;
+					*.*/*)
+						proto_add_ipv4_route "${allowed_ip%%/*}" "${allowed_ip##*/}"
+						;;
+					*:*)
+						proto_add_ipv6_route "${allowed_ip%%/*}" "128"
+						;;
+					*.*)
+						proto_add_ipv4_route "${allowed_ip%%/*}" "32"
+						;;
+				esac
+			fi
 		done
 	fi
 }
@@ -102,7 +129,7 @@ proto_wireguard_setup() {
 
 	local private_key
 	local listen_port
-	local mtu
+	local mtu wan_interface external_mtu
 
 	config_load network
 	config_get private_key "${config}" "private_key"
@@ -117,7 +144,17 @@ proto_wireguard_setup() {
 	ip link del dev "${config}" 2>/dev/null
 	ip link add dev "${config}" type wireguard
 
-	if [ "${mtu}" ]; then
+	if [ -z "${mtu}" ]; then
+		wan_interface="$(ip route show default | awk -F 'dev' '{print $2}' | awk 'NR==1 {print $1}')"
+		if [ -n "$wan_interface" ];then
+			external_mtu=$(cat /sys/class/net/${wan_interface}/mtu)
+			mtu=$(( external_mtu - 80 ))
+		else
+			mtu=1420
+		fi
+	fi
+
+	if [ -n "${mtu}" ]; then
 		ip link set mtu "${mtu}" dev "${config}"
 	fi
 
@@ -169,12 +206,24 @@ proto_wireguard_setup() {
 	done
 
 	# endpoint dependency
-	if [ "${nohostroute}" != "1" ]; then
+	if [ "${nohostroute}" != "1" ] && [ "$DEFAULT_ROUTE" -eq 1 ]; then
 		wg show "${config}" endpoints | \
 		sed -E 's/\[?([0-9.:a-f]+)\]?:([0-9]+)/\1 \2/' | \
 		while IFS=$'\t ' read -r key address port; do
 			[ -n "${port}" ] || continue
-			proto_add_host_dependency "${config}" "${address}" "${tunlink}"
+			echo "$config" >> "/tmp/wireguard/default-status"
+	
+			peer_config="$(cat /tmp/wireguard/default-status | sed '1q;d')"
+			config_get peer "$peer_config" endpoint_host
+			defaults="$(ip route show default | grep -v tata | awk -F"dev " '{print $2}' | sed 's/\s.*$//')"
+
+			for dev in ${defaults}; do
+				metric="$(ip route show default dev $dev | awk -F"metric " '{print $2}' | sed 's/\s.*$//')"
+				gw="$(ip route show default dev $dev | awk -F"via " '{print $2}' | sed 's/\s.*$//')"
+
+				[ -n "$gw" ] && ip route add "$peer" via "$gw" dev "$dev" metric "$metric" || ip route add "$peer" dev "$dev" metric "$metric"
+				echo "ip route del "$peer" dev "$dev" metric $metric" >> "/tmp/wireguard/default-status"
+			done
 		done
 	fi
 
@@ -184,6 +233,9 @@ proto_wireguard_setup() {
 proto_wireguard_teardown() {
 	local config="$1"
 	ip link del dev "${config}" >/dev/null 2>&1
+	[ -n "$(grep -w "$config" /tmp/wireguard/default-status)" ] || return 0
+	eval "$(tail -n +3 "/tmp/wireguard/default-status")"
+	rm "/tmp/wireguard/default-status" >/dev/null 2>&1
 }
 
 [ -n "$INCLUDE_ONLY" ] || {

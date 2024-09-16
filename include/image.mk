@@ -7,6 +7,7 @@ include $(INCLUDE_DIR)/prereq.mk
 include $(INCLUDE_DIR)/kernel.mk
 include $(INCLUDE_DIR)/version.mk
 include $(INCLUDE_DIR)/image-commands.mk
+include $(INCLUDE_DIR)/portable.mk
 
 ifndef IB
   ifdef CONFIG_TARGET_PER_DEVICE_ROOTFS
@@ -26,7 +27,7 @@ param_get_default = $(firstword $(call param_get,$(1),$(2)) $(3))
 param_mangle = $(subst $(space),_,$(strip $(1)))
 param_unmangle = $(subst _,$(space),$(1))
 
-mkfs_packages_id = $(shell echo $(sort $(1)) | mkhash md5 | cut -b1-8)
+mkfs_packages_id = $(shell echo $(sort $(1)) | $(MKHASH) md5 | cut -b1-8)
 mkfs_target_dir = $(if $(call param_get,pkg,$(1)),$(KDIR)/target-dir-$(call param_get,pkg,$(1)),$(TARGET_DIR))
 
 KDIR=$(KERNEL_BUILD_DIR)
@@ -40,8 +41,8 @@ IMG_PREFIX_VERCODE:=$(if $(CONFIG_VERSION_CODE_FILENAMES),$(call sanitize,$(VERS
 IMG_PREFIX:=$(VERSION_DIST_SANITIZED)-$(IMG_PREFIX_VERNUM)$(IMG_PREFIX_VERCODE)$(IMG_PREFIX_EXTRA)$(BOARD)$(if $(SUBTARGET),-$(SUBTARGET))
 IMG_ROOTFS:=$(IMG_PREFIX)-rootfs
 IMG_COMBINED:=$(IMG_PREFIX)-combined
-IMG_PART_SIGNATURE:=$(shell echo $(SOURCE_DATE_EPOCH)$(LINUX_VERMAGIC) | mkhash md5 | cut -b1-8)
-IMG_PART_DISKGUID:=$(shell echo $(SOURCE_DATE_EPOCH)$(LINUX_VERMAGIC) | mkhash md5 | sed -E 's/(.{8})(.{4})(.{4})(.{4})(.{10})../\1-\2-\3-\4-\500/')
+IMG_PART_SIGNATURE:=$(shell echo $(SOURCE_DATE_EPOCH)$(LINUX_VERMAGIC) | $(MKHASH) md5 | cut -b1-8)
+IMG_PART_DISKGUID:=$(shell echo $(SOURCE_DATE_EPOCH)$(LINUX_VERMAGIC) | $(MKHASH) md5 | sed -E 's/(.{8})(.{4})(.{4})(.{4})(.{10})../\1-\2-\3-\4-\500/')
 
 MKFS_DEVTABLE_OPT := -D $(INCLUDE_DIR)/device_table.txt
 
@@ -152,19 +153,21 @@ ifdef CONFIG_TARGET_IMAGES_GZIP
 endif
 
 
-# Disable noisy checks by default as in upstream
-DTC_FLAGS += \
-  -Wno-unit_address_vs_reg \
-  -Wno-simple_bus_reg \
-  -Wno-unit_address_format \
-  -Wno-pci_bridge \
-  -Wno-pci_device_bus_num \
-  -Wno-pci_device_reg \
-  -Wno-avoid_unnecessary_addr_size \
-  -Wno-alias_paths \
-  -Wno-graph_child_address \
-  -Wno-graph_port \
-  -Wno-unique_unit_address
+# Disable noisy checks by default as in upstream for kernels newer than 4.14
+ifeq ($(call CompareKernelPatchVer,$(KERNEL_PATCHVER),gt,4.14),1)
+	DTC_FLAGS += \
+	  -Wno-unit_address_vs_reg \
+	  -Wno-simple_bus_reg \
+	  -Wno-unit_address_format \
+	  -Wno-pci_bridge \
+	  -Wno-pci_device_bus_num \
+	  -Wno-pci_device_reg \
+	  -Wno-avoid_unnecessary_addr_size \
+	  -Wno-alias_paths \
+	  -Wno-graph_child_address \
+	  -Wno-graph_port \
+	  -Wno-unique_unit_address
+endif
 
 define Image/pad-to
 	dd if=$(1) of=$(1).new bs=$(2) conv=sync
@@ -182,6 +185,7 @@ endef
 # $(3) extra CPP flags
 # $(4) extra DTC flags
 define Image/BuildDTB
+	echo "/ { platform = \"$(TLT_PLATFORM_NAME)\"; };  " > $(DTS_DIR)/platform_name.dtsi
 	$(TARGET_CROSS)cpp -nostdinc -x assembler-with-cpp \
 		-I$(DTS_DIR) \
 		-I$(DTS_DIR)/include \
@@ -352,7 +356,11 @@ define Device/InitProfile
   DEVICE_ALT2_MODEL :=
   DEVICE_ALT2_VARIANT :=
   DEVICE_PACKAGES :=
+  DEVICE_FEATURES :=
   DEVICE_DESCRIPTION = Build firmware images for $$(DEVICE_TITLE)
+  DEVICE_INITIAL_FIRMWARE_SUPPORT :=
+  DEVICE_MULTI_PROFILE_NAME :=
+  DEVICE_COMPAT_CODE := ".*"
 endef
 
 define Device/Init
@@ -424,7 +432,9 @@ DEFAULT_DEVICE_VARS := \
   DEVICE_VENDOR DEVICE_MODEL DEVICE_VARIANT \
   DEVICE_ALT0_VENDOR DEVICE_ALT0_MODEL DEVICE_ALT0_VARIANT \
   DEVICE_ALT1_VENDOR DEVICE_ALT1_MODEL DEVICE_ALT1_VARIANT \
-  DEVICE_ALT2_VENDOR DEVICE_ALT2_MODEL DEVICE_ALT2_VARIANT
+  DEVICE_ALT2_VENDOR DEVICE_ALT2_MODEL DEVICE_ALT2_VARIANT \
+  DEVICE_INITIAL_FIRMWARE_SUPPORT DEVICE_MULTI_PROFILE_NAME \
+  DEVICE_COMPAT_CODE
 
 define Device/ExportVar
   $(1) : $(2):=$$($(2))
@@ -512,6 +522,8 @@ define Device/Build/initramfs
 	SUBTARGET="$(if $(SUBTARGET),$(SUBTARGET),generic)" \
 	VERSION_NUMBER="$(VERSION_NUMBER)" \
 	VERSION_CODE="$(VERSION_CODE)" \
+	DEVICE_INITIAL_FIRMWARE_SUPPORT="$$(DEVICE_INITIAL_FIRMWARE_SUPPORT)" \
+	DEVICE_MULTI_PROFILE_NAME="$$(DEVICE_MULTI_PROFILE_NAME)" \
 	SUPPORTED_DEVICES="$$(SUPPORTED_DEVICES)" \
 	$(TOPDIR)/scripts/json_add_image_info.py $$@
 endef
@@ -527,6 +539,7 @@ endef
 
 ifndef IB
 define Device/Build/dtb
+  .NOTPARALLEL:
   ifndef BUILD_DTS_$(1)
   BUILD_DTS_$(1) := 1
   $(KDIR)/image-$(1).dtb: FORCE
@@ -579,17 +592,23 @@ define Device/Build/image
     $$(ROOTFS/$(1)/$(3)): $(if $(TARGET_PER_DEVICE_ROOTFS),target-dir-$$(ROOTFS_ID/$(3)))
   endif
   $(KDIR)/tmp/$(call IMAGE_NAME,$(1),$(2)): $$(KDIR_KERNEL_IMAGE) $$(ROOTFS/$(1)/$(3))
+	echo "EXECUTING $(IMAGE/$(2)) for $(IMAGE_NAME) and adding $$^ "
 	@rm -f $$@
 	[ -f $$(word 1,$$^) -a -f $$(word 2,$$^) ]
 	$$(call concat_cmd,$(if $(IMAGE/$(2)/$(1)),$(IMAGE/$(2)/$(1)),$(IMAGE/$(2))))
 
   .IGNORE: $(BIN_DIR)/$(call IMAGE_NAME,$(1),$(2))
 
+   ifeq ($(CONFIG_TARGET_ath79),y)
+     .NOTPARALLEL:
+   endif
+
   $(BIN_DIR)/$(call IMAGE_NAME,$(1),$(2)).gz: $(KDIR)/tmp/$(call IMAGE_NAME,$(1),$(2))
 	gzip -c -9n $$^ > $$@
 
   $(BIN_DIR)/$(call IMAGE_NAME,$(1),$(2)): $(KDIR)/tmp/$(call IMAGE_NAME,$(1),$(2))
 	cp $$^ $$@
+	echo "CP $$^ $$@"
 
   $(BUILD_DIR)/json_info_files/$(call IMAGE_NAME,$(1),$(2)).json: $(BIN_DIR)/$(call IMAGE_NAME,$(1),$(2))$$(GZ_SUFFIX)
 	@mkdir -p $$(shell dirname $$@)
@@ -614,10 +633,13 @@ define Device/Build/image
 	DEVICE_ALT2_VARIANT="$(DEVICE_ALT2_VARIANT)" \
 	DEVICE_TITLE="$(DEVICE_TITLE)" \
 	DEVICE_PACKAGES="$(DEVICE_PACKAGES)" \
+	DEVICE_FEATURES="$(DEVICE_FEATURES)" \
 	TARGET="$(BOARD)" \
 	SUBTARGET="$(if $(SUBTARGET),$(SUBTARGET),generic)" \
 	VERSION_NUMBER="$(VERSION_NUMBER)" \
 	VERSION_CODE="$(VERSION_CODE)" \
+	DEVICE_INITIAL_FIRMWARE_SUPPORT="$(DEVICE_INITIAL_FIRMWARE_SUPPORT)" \
+	DEVICE_MULTI_PROFILE_NAME="$(DEVICE_MULTI_PROFILE_NAME)" \
 	SUPPORTED_DEVICES="$(SUPPORTED_DEVICES)" \
 	$(TOPDIR)/scripts/json_add_image_info.py $$@
 
@@ -657,6 +679,9 @@ define Device/DumpInfo
 Target-Profile: DEVICE_$(1)
 Target-Profile-Name: $(DEVICE_DISPLAY)
 Target-Profile-Packages: $(DEVICE_PACKAGES)
+Target-Profile-Features: $(DEVICE_FEATURES)
+Target-Profile-InitialSupportVersion: $(DEVICE_INITIAL_FIRMWARE_SUPPORT)
+Target-Profile-MultiProfileName: $(DEVICE_MULTI_PROFILE_NAME)
 Target-Profile-hasImageMetadata: $(if $(foreach image,$(IMAGES),$(findstring append-metadata,$(IMAGE/$(image)))),1,0)
 Target-Profile-SupportedDevices: $(SUPPORTED_DEVICES)
 $(if $(BROKEN),Target-Profile-Broken: $(BROKEN))

@@ -1,0 +1,120 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+NETWORK_CFG="network"
+SIMCARD_CFG="simcard"
+
+find_lowest_metrics() {
+	local section="$1"
+	local modem="$2"
+	local position="$3"
+	local iface_modem iface_sim disabled metric
+
+	config_get iface_modem "$section" "modem" ""
+	config_get iface_sim "$section" "sim" ""
+	config_get disabled "$section" "disabled" "0"
+
+	[ "$iface_modem" = "" ] || [ "$iface_modem" != "$modem" ] ||\
+	[ "$iface_sim" = "" ] || [ "$iface_sim" != "$position" ] ||\
+	[ "$disabled" -eq "1" ] && return
+
+	config_get metric "$section" "metric" "10000" #Validation from webUI to MAX value
+
+	[ "$metric" -le "$lowest_metrics" ] && {
+		lowest_metrics="$metric"
+		lowest_metrics_iface="$section"
+	}
+}
+
+apply_values() {
+	local section="$1"
+	local new_auto_apn="$2"
+	local new_force_apn="$3"
+
+	uci_set "$NETWORK_CFG" "$section" "auto_apn" "$new_auto_apn"
+	uci_set "$NETWORK_CFG" "$section" "force_apn" "$new_force_apn"
+}
+
+check_interfaces() {
+	local section="$1"
+	local modem="$2"
+	local position="$3"
+	local iface_modem iface_sim disabled
+
+	config_get iface_modem "$section" "modem" ""
+	config_get iface_sim "$section" "sim" ""
+	config_get disabled "$section" "disabled" "0"
+	config_get auto_apn_network "$section" "auto_apn"
+
+	[ -n "$auto_apn_network" ] && return
+
+	[ "$iface_modem" = "" ] || [ "$iface_modem" != "$modem" ] ||\
+	[ "$iface_sim" = "" ] || [ "$iface_sim" != "$position" ] && return
+
+	[ "$disabled" -eq "1" ] || [ "$auto_apn" -eq "0" ] && {
+		#Interface is disabled or auto_apn disabled so we can apply what was read from SIM config
+		apply_values "$section" "$auto_apn" "$force_apn"
+		return
+	}
+
+	[ "$section" = "$lowest_metrics_iface" ] && {
+		#Interface have lowest metrics (it's most important) for present SIM
+		apply_values "$section" "$auto_apn" "$force_apn"
+	} || {
+		#Auto APN for other interfaces should be disabled
+		apply_values "$section" "0" "$force_apn"
+	}
+}
+
+move_options() {
+	local section="$1"
+	local def_auto_apn="0"
+	local def_force_apn="-1"
+	local modem position
+
+	lowest_metrics_iface=""
+	lowest_metrics="10000" #Validation from webUI to MAX value
+
+	config_get modem "$section" "modem" ""
+	config_get position "$section" "position" ""
+
+	auto_apn="$(uci_get "$SIMCARD_CFG" "$section" auto_apn "$def_auto_apn")"
+	force_apn="$(uci_get "$SIMCARD_CFG" "$section" force_apn "$def_force_apn")"
+
+	config_load "$NETWORK_CFG"
+	[ "$auto_apn" -eq "1" ] && config_foreach find_lowest_metrics "interface" "$modem" "$position"
+	config_foreach check_interfaces "interface" "$modem" "$position"
+
+	uci_remove "$SIMCARD_CFG" "$section" "auto_apn"
+	uci_remove "$SIMCARD_CFG" "$section" "force_apn"
+	uci_remove "$SIMCARD_CFG" "$section" "pref_apn"
+}
+
+add_5G_prefix() {
+	local band="$1"
+	local section="$2"
+	local type="$3"
+	local length="$4"
+
+	[ "${band:0:length}" = "${type}_5g_n" ] && return
+
+	uci_remove_list "$SIMCARD_CFG" "$section" "${type}_nr5g" "$band"
+	uci_add_list "$SIMCARD_CFG" "$section" "${type}_nr5g" "${type}_5g_n${band}"
+}
+
+migrate_5G_bands() {
+	local section="$1"
+
+	config_list_foreach "$section" "nsa_nr5g" add_5G_prefix "$section" "nsa" "8"
+	config_list_foreach "$section" "sa_nr5g" add_5G_prefix "$section" "sa" "7"
+}
+
+config_load "$SIMCARD_CFG"
+config_foreach migrate_5G_bands "sim"
+config_foreach move_options "sim"
+
+uci_commit "$NETWORK_CFG"
+uci_commit "$SIMCARD_CFG"
+
+exit 0

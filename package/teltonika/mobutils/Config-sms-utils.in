@@ -1,0 +1,82 @@
+# sms-utilities advanced configuration
+
+menu "Advanced options"
+	depends on PACKAGE_mobutils-sms_utilities
+
+	config SMS_UTILS_TEST_MODE
+		bool "Test mode"
+		default n
+		help
+			Enable test mode
+
+endmenu
+
+menu "SMS rules"
+	depends on PACKAGE_mobutils-sms_utilities
+
+config SMS_UTILS_HANDLER_IO
+	bool "I/O handler"
+	default n
+    help
+        Compile with I/O support
+
+config SMS_UTILS_HANDLER_GPS
+	bool "GPS handler"
+	default n
+    help
+        Compile with GPS support
+
+config SMS_UTILS_HANDLER_WIFI
+	bool "WIFI handler"
+	default n
+    help
+        Compile with WIFI support
+
+config SMS_UTILS_HANDLER_VPN
+	bool "VPN handler"
+	default y
+    help
+        Compile with VPN support
+
+config SMS_UTILS_HANDLER_RMS
+	bool "RMS handler"
+	default y
+    help
+        Compile with RMS support
+
+config SMS_UTILS_HANDLER_EXEC
+	bool "Exec handler"
+	default y
+    help
+        Compile with script exec support
+
+endmenu
+
+menu "SMS forward"
+	depends on PACKAGE_mobutils-sms_utilities
+
+config SMS_FWD_HANDLER_HTTP
+	bool "HTTP handler"
+	default y
+    help
+        Compile with HTTP support
+
+config SMS_FWD_HANDLER_REPLY
+	bool "SMS reply handler"
+	default y
+    help
+        Compile with SMS reply support
+
+config SMS_FWD_HANDLER_SMS
+	bool "SMS TO SMS handler"
+	default y
+    help
+        Compile with SMS to SMS support
+
+config SMS_FWD_HANDLER_SMTP
+	bool "SMTP handler"
+	default y
+    help
+        Compile with SMTP support
+
+endmenu

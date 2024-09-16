@@ -16,6 +16,7 @@ SCAN_DEPS=modules/*.mk $(TOPDIR)/target/linux/*/modules.mk $(TOPDIR)/include/net
 
 PKG_LICENSE:=GPL-2.0
 PKG_LICENSE_FILES:=
+PKG_ORIGIN_URL:=https://cdn.kernel.org/pub
 
 export SHELL:=/bin/sh
 .ONESHELL:
@@ -24,7 +25,7 @@ export SHELL:=/bin/sh
 include $(INCLUDE_DIR)/package.mk
 
 ifeq ($(DUMP),)
-  STAMP_BUILT:=$(STAMP_BUILT)_$(shell $(SCRIPT_DIR)/kconfig.pl $(LINUX_DIR)/.config | mkhash md5)
+  STAMP_BUILT:=$(STAMP_BUILT)_$(shell $(SCRIPT_DIR)/kconfig.pl $(LINUX_DIR)/.config | $(MKHASH) md5)
   -include $(LINUX_DIR)/.config
 endif
 

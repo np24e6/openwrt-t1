@@ -1,0 +1,66 @@
+Index: busybox-1.34.1/networking/udhcp/dhcpc.c
+===================================================================
+--- busybox-1.34.1.orig/networking/udhcp/dhcpc.c
++++ busybox-1.34.1/networking/udhcp/dhcpc.c
+@@ -74,6 +74,7 @@ static const char udhcpc_longopts[] ALIG
+ 	USE_FOR_MMU(
+ 	"background\0"     No_argument       "b"
+ 	)
++	"Mobile-DHCP\0"	   No_argument	     "M"
+ 	"broadcast\0"      No_argument       "B"
+ 	IF_FEATURE_UDHCPC_ARPING("arping\0"	Optional_argument "a")
+ 	IF_FEATURE_UDHCP_PORT("client-port\0"	Required_argument "P")
+@@ -99,9 +100,10 @@ enum {
+ 	OPT_o = 1 << 15,
+ 	OPT_x = 1 << 16,
+ 	OPT_f = 1 << 17,
+-	OPT_B = 1 << 18,
++	OPT_M = 1 << 18,
++	OPT_B = 1 << 19,
+ /* The rest has variable bit positions, need to be clever */
+-	OPTBIT_B = 18,
++	OPTBIT_B = 19,
+ 	USE_FOR_MMU(             OPTBIT_b,)
+ 	IF_FEATURE_UDHCPC_ARPING(OPTBIT_a,)
+ 	IF_FEATURE_UDHCP_PORT(   OPTBIT_P,)
+@@ -1200,6 +1202,7 @@ static void client_background(void)
+ //usage:     "\n	-F NAME		Ask server to update DNS mapping for NAME"
+ //usage:     "\n	-V VENDOR	Vendor identifier (default 'udhcp VERSION')"
+ //usage:     "\n	-C		Don't send MAC as client identifier"
++//usage:     "\n	-M		Broadcast DHCP renew requests"
+ //usage:	IF_UDHCP_VERBOSE(
+ //usage:     "\n	-v		Verbose"
+ //usage:	)
+@@ -1246,7 +1249,7 @@ int udhcpc_main(int argc UNUSED_PARAM, c
+ 	/* Parse command line */
+ 	opt = getopt32long(argv, "^"
+ 		/* O,x: list; -T,-t,-A take numeric param */
+-		"CV:F:i:np:qRr:s:T:+t:+SA:+O:*ox:*fB"
++		"CV:F:i:np:qRr:s:T:+t:+SA:+O:*ox:*fMB"
+ 		USE_FOR_MMU("b")
+ 		IF_FEATURE_UDHCPC_ARPING("a::")
+ 		IF_FEATURE_UDHCP_PORT("P:")
+@@ -1521,11 +1524,19 @@ int udhcpc_main(int argc UNUSED_PARAM, c
+ 			 * Anyway, it does recover by eventually failing through
+ 			 * into INIT_SELECTING state.
+ 			 */
+-					if (send_renew(server_id, requested_ip) >= 0) {
+-						timeout = discover_timeout;
+-						packet_num++;
+-						continue;
++					if (opt & OPT_M) {
++						send_renew(0 /*INADDR_ANY*/, requested_ip);
++                                        	timeout = discover_timeout;
++                                        	packet_num++;
++                                      		continue;
+ 					}
++					else {
++						if (send_renew(server_id, requested_ip) >= 0) {
++							timeout = discover_timeout;
++							packet_num++;
++							continue;
++						}
++			 		}
+ 					/* else: error sending.
+ 					 * example: ENETUNREACH seen with server
+ 					 * which gave us bogus server ID 1.1.1.1
