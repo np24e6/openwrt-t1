@@ -57,15 +57,6 @@ fwtool_check_signature() {
 
 	fwtool -q -T -s /dev/null "$1" | \
 		fwcert -m - -x "/tmp/sysupgrade.ucert" -P /etc/proprietary_keys &>/dev/null
-	ret="$?"
-
-	[ "$ret" -eq 0 ] && return 0
-
-	fwtool_get_vcert_state >&2
-	[ "$?" -eq 1 ] && {
-		fwtool_msg "Only authorized firmware is allowed" "17"
-		return 1
-	}
 
 	return $ret
 }
@@ -358,36 +349,7 @@ fwtool_check_upgrade_type() {
 	# current minor is newer - downgrade
 	[ "$current_minor" -gt "$minor" ] && return 1
 
-	# current minor is older - upgrade
-	[ "$minor" -gt "$current_minor" ] && return 0
-
-	# if we have vcert enabled, then patch version downgrade is prohibited
-	fwtool_get_vcert_state >&2
-	[ "$?" -eq 1 ] || return 0
-
-	local current_patch="$(echo "$current_ver" | awk -F . '{ print $4 }')"
-	local patch="$(echo "$ver" | awk -F . '{print $4 }')"
-
-	# current patch is newer - downgrade
-	[ "${current_patch:-0}" -gt "${patch:-0}" ] && return 1
-
 	return 0
-}
-
-fwtool_get_vcert_state() {
-	[ "$(jsonfilter -q -i /etc/board.json \
-		-e '@.hwinfo.vcert')" = "true" ] && return 1 || return 0
-}
-
-fwtool_check_downgrade_ability() {
-	fwtool_get_vcert_state >&2
-	local ret="$?"
-
-	[ "$ret" = "1" ] && {
-		fwtool_msg "Downgrade is not allowed" "16"
-	}
-
-	return $ret
 }
 
 fwtool_check_passwd_warning() {

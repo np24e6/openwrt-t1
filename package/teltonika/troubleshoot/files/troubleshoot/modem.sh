@@ -7,6 +7,8 @@ get_pdp_ctx_list get_active_pdp_ctx_list get_pdp_addr_list get_ims_state get_vol
 
 methods_with_args="get_time{\"mode\":\"gmt\"} get_time{\"mode\":\"local\"} get_pdp_call{\"cid\":1}"
 
+info_output=""
+
 ALLOWED_TIMEOUTS=2
 
 check_output()
@@ -23,24 +25,24 @@ check_output()
 	fi
 }
 
-# Executes method and tracks how long the call took 
+# Executes method and tracks how long the call took
 invoke_and_print_cmd() {
 	local modem="$1"
 	local method="$2"
 	local log_file="$3"
-	local cmd_and_time cmd_output cmd_time
+	local cmd_and_time cmd_time
 
 	if [ $TIMEOUT_COUNTER -ge $ALLOWED_TIMEOUTS ]; then
 		printf "Skipping: %s\n" "$method" >> "$log_file"
 		return
 	fi
-	
+
 	cmd_and_time=$(time -f '%e' ubus call "$modem" "$method" 2>&1) || return
-	cmd_output=$(echo "$cmd_and_time" | head -n -1)
+	info_output=$(echo "$cmd_and_time" | head -n -1)
 	cmd_time=$(echo "$cmd_and_time" | tail -n1)
 
-	printf "%s(%ss):\n%s\n" "$method" "$cmd_time" "$cmd_output" >> "$log_file"
-	check_output "$cmd_output" "$log_file"
+	printf "%s(%ss):\n%s\n" "$method" "$cmd_time" "$info_output" >> "$log_file"
+	check_output "$info_output" "$log_file"
 }
 
 invoke_ubus_with_args() {
@@ -90,7 +92,7 @@ get_gsm_info() {
 		if [ -z "${at_ans##*\\r\\nOK\\r\\n*}" ]; then
 			TIMEOUT_COUNTER=0
 			invoke_and_print_cmd "$mdm" "info" "$log_file"
-			
+
 			#foreach top_priority_methods
 			for method in $top_priority_methods; do
 				invoke_and_print_cmd "$mdm" "$method" "$log_file"

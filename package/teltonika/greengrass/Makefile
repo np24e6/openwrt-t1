@@ -6,21 +6,12 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=greengrass
 PKG_VERSION:=1.11.4
-PKG_RELEASE:=1
+PKG_RELEASE:=2
 
-PKG_SOURCE:=$(PKG_NAME)-openwrt-armv7l-$(PKG_VERSION).tar.gz
-PKG_HASH:=fce721a94d8d5607bf0fecad693eea604034ebfc35e948fea79bfb2b9d6d75bb
 
-PKG_UPSTREAM_VERSION:=1.11.4
-PKG_UPSTREAM_URL:=https://d1onfpft10uf5o.cloudfront.net/greengrass-core/downloads/$(PKG_UPSTREAM_VERSION)
-PKG_UPSTREAM_URL_FILE:=greengrass-openwrt-armv7l-$(PKG_UPSTREAM_VERSION).tar.gz
 
 PKG_LICENSE:=Teltonika-3p-closed
-PKG_LICENSE_FILES:=ggc/core/LICENSE ggc/packages/LICENSE
-PKG_LICENSE_FILES:=ota/ota_agent/LICENSE/LICENSE ota/ota_agent_v.1.3.0/LICENSE/LICENSE
 
-PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
-PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_SOURCE_SUBDIR)
 
 include $(INCLUDE_DIR)/target.mk
 include $(INCLUDE_DIR)/kernel-version.mk

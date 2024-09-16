@@ -213,8 +213,24 @@ systemlog_hook() {
 	config_get log_flash_file system "log_file" ""
 
 	troubleshoot_init_log "Logread" "$log_file"
-	[ -n "$log_flash_file" ] && [ -f "$log_flash_file" ] &&
-		troubleshoot_add_file_log "$log_flash_file" "$log_file" || troubleshoot_add_log "$(logread)" "$log_file"
+	if [ -n "$log_flash_file" ] && [ -f "$log_flash_file" ] ; then 
+		local rotated_logs file
+		# shellcheck disable=SC2010
+		rotated_logs=$(ls -v "$(dirname "$log_flash_file")" | grep -i -E "$(basename "$log_flash_file").[0-9]+($|.gz)")
+		for log in $rotated_logs ; do
+			troubleshoot_init_log "Logfile $log" "$log_file"
+			file="$(dirname "$log_flash_file")/$log"
+			if [ "${file: -3}" != ".gz" ] ; then
+				cat "$file" >> "$log_file"
+			else
+				zcat "$file" >> "$log_file"
+			fi
+		done
+		troubleshoot_init_log "Logfile $(basename "$log_flash_file")" "$log_file"
+		troubleshoot_add_file_log "$log_flash_file" "$log_file"
+	else
+		troubleshoot_add_log "$(logread)" "$log_file"
+	fi
 }
 
 cloud_solutions_hook() {
@@ -283,6 +299,28 @@ package_manager_hook() {
 	done
 }
 
+serial_hook() {
+	local log_file="${PACK_DIR}serial.log"
+
+	file_list="/dev/rs232 /dev/rs485 /dev/mbus /dev/rsconsole"
+	for file in $file_list; do
+		if [ ! -e "$file" ]; then
+			continue
+		fi
+
+		output=$(stty -F "$file" -a 2>/dev/null)
+		info="Output for $file:\n$output"
+		troubleshoot_add_log "$info" "$log_file"
+	done
+
+	file_list=$(ls /dev/usb_serial* 2>/dev/null)
+	for file in $file_list; do
+		output=$(stty -F "$file" -a 2>/dev/null)
+		info="Output for $file:\n$output"
+		troubleshoot_add_log "$info" "$log_file"
+	done
+}
+
 generate_root_hook() {
 	mkdir "$ROOT_DIR"
 	mkdir "${ROOT_DIR}/etc"
@@ -340,6 +378,7 @@ troubleshoot_hook_init services_hook "$1"
 troubleshoot_hook_init systemlog_hook
 troubleshoot_hook_init cloud_solutions_hook
 troubleshoot_hook_init package_manager_hook
+troubleshoot_hook_init serial_hook
 
 #init external hooks
 [ -d "/lib/troubleshoot" ] && {

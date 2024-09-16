@@ -1,0 +1,39 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+fix_pam() {
+    local enabled module require_message_auth
+    config_get enabled "$1" "enabled"
+    config_get module "$1" "module"
+    config_get require_message_auth "$1" "require_message_auth"
+
+    [ "$module" == "radius_auth" ] || return
+    [ -n "$require_message_auth" ] && return
+
+    [ "$enabled" -eq 1 ] && require_message_auth=0 || require_message_auth=1
+    uci_set "pam" "$1" "require_message_auth" "$require_message_auth"
+}
+
+fix_chilli() {
+    local enabled _mode require_message_auth
+    config_get enabled "$1" "enabled"
+    config_get _mode "$1" "_mode"
+    config_get radiusrequiremessageauth "$1" "radiusrequiremessageauth"
+
+    [ "$_mode" == "radius" ] || return
+    [ -n "$radiusrequiremessageauth" ] && return
+
+    [ "$enabled" -eq 1 ] && radiusrequiremessageauth=0 || radiusrequiremessageauth=1
+    uci_set "chilli" "$1" "radiusrequiremessageauth" "$radiusrequiremessageauth"
+}
+
+config_load "pam"
+config_foreach fix_pam "pam"
+uci_commit pam
+
+config_load "chilli"
+config_foreach fix_chilli "chilli"
+uci_commit chilli
+
+exit 0

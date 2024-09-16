@@ -51,6 +51,10 @@ config COOVACHILLI_CURL
     bool "Enable CURL support"
     default y
 
+config COOVACHILLI_KMOD
+    bool "Enable KMOD support"
+    default y
+
 choice
 	prompt "SSL library"
 	default COOVACHILLI_OPENSSL

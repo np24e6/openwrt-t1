@@ -308,3 +308,4 @@ Index: net-snmp-5.9.1/snmplib/snmp_api.c
          if (!pss->s_snmp_errno) {
              pss->s_snmp_errno = SNMPERR_BAD_PARSE;
          }
+

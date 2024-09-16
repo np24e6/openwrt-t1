@@ -1,7 +1,7 @@
 [
   {
     "name": "TAP",
-    "devices": ["TAP100", "TAP200"]
+    "devices": ["TAP100", "TAP200", "TAP400"]
   },
   {
     "name": "ATRM",

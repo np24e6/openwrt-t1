@@ -60,9 +60,6 @@ reload_service() {
 	ubus call network reload || rv=1
 	[ -x /sbin/wifi ] && /sbin/wifi kick_clients
 
-	# close '1000' file descriptor for child, because procd holds a lock on it and blocks subsequent calls until previous exits
-	[ -x /bin/trigger_vuci_routes_reload ] && /bin/trigger_vuci_routes_reload -d 3 -t "network / wireless config change" 1000>&- &
-
 	return $rv
 }
 

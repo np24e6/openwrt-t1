@@ -7,6 +7,10 @@
 
 curdir:=package
 
+install_log_file := $(BUILD_LOG_DIR)/$(curdir)/install.txt
+stdout_to_logs := 2>&1 | tee -a $(install_log_file)
+stderr_to_logs := 
+
 include $(INCLUDE_DIR)/feeds.mk
 include $(INCLUDE_DIR)/rootfs.mk
 
@@ -56,7 +60,7 @@ $(curdir)/merge:
 	-$(foreach pdir,$(PACKAGE_SUBDIRS),$(if $(wildcard $(pdir)/*.ipk),ln -s $(pdir)/*.ipk $(PACKAGE_DIR_ALL);))
 
 $(curdir)/merge-index: $(curdir)/merge
-	(cd $(PACKAGE_DIR_ALL) && $(SCRIPT_DIR)/ipkg-make-index.sh . 2>&1 > Packages; )
+	(cd $(PACKAGE_DIR_ALL) && $(SCRIPT_DIR)/ipkg-make-index.sh . 2>&1 > Packages; ) $(stdout_to_logs)
 
 ifndef SDK
   $(curdir)/compile: $(if $(INSIDE_DOCKER),,$(curdir)/system/opkg/host/compile)
@@ -64,23 +68,24 @@ endif
 
 $(curdir)/install: $(TMP_DIR)/.build $(curdir)/merge $(if $(CONFIG_TARGET_PER_DEVICE_ROOTFS),$(curdir)/merge-index)
 	- find $(STAGING_DIR_ROOT) -type d | $(XARGS) chmod 0755
-	rm -rf $(TARGET_DIR) $(TARGET_DIR_ORIG)
+	rm -rf $(TARGET_DIR) $(TARGET_DIR_ORIG) $(install_log_file)
 	mkdir -p $(TARGET_DIR)/tmp
 	$(call opkg,$(TARGET_DIR)) install \
-		$(call opkg_package_files,$(foreach pkg,$(shell cat $(PACKAGE_INSTALL_FILES) 2>/dev/null),$(pkg)$(call GetABISuffix,$(pkg))))
-	@for file in $(PACKAGE_INSTALL_FILES); do \
+		$(call opkg_package_files,$(foreach pkg,$(shell cat $(PACKAGE_INSTALL_FILES) 2>/dev/null),$(pkg)$(call GetABISuffix,$(pkg)))) \
+		$(stdout_to_logs)
+	for file in $(PACKAGE_INSTALL_FILES); do \
 		[ -s $$file.flags ] || continue; \
 		for flag in `cat $$file.flags`; do \
 			$(call opkg,$(TARGET_DIR)) flag $$flag `cat $$file`; \
 		done; \
-	done || true
+	done $(stdout_to_logs) || true
 
 	$(CP) $(TARGET_DIR) $(TARGET_DIR_ORIG)
 
-	$(call prepare_rootfs,$(TARGET_DIR),$(TOPDIR)/files)
+	$(call prepare_rootfs,$(TARGET_DIR),$(TOPDIR)/files) $(stdout_to_logs)
 
 $(curdir)/index: FORCE
-	@echo Generating package index...
+	@echo Generating package index... $(stdout_to_logs)
 	@for d in $(PACKAGE_SUBDIRS); do ( \
 		mkdir -p $$d; \
 		cd $$d || continue; \
@@ -91,14 +96,14 @@ $(curdir)/index: FORCE
 			{ echo ""; echo ""; } >> Packages;; \
 		esac; \
 		gzip -9nc Packages > Packages.gz; \
-	); done
+	); done $(stdout_to_logs)
 ifdef CONFIG_SIGNED_PACKAGES
-	@echo Signing package index...
+	@echo Signing package index... $(stdout_to_logs)
 	@for d in $(PACKAGE_SUBDIRS); do ( \
 		[ -d $$d ] && \
 			cd $$d || continue; \
 		$(STAGING_DIR_HOST)/bin/usign -S -m Packages -s $(BUILD_KEY); \
-	); done
+	); done $(stdout_to_logs)
 endif
 
 $(curdir)/flags-install:= -j1

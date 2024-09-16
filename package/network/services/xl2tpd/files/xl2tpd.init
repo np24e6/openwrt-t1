@@ -43,6 +43,10 @@ check_bind()
 		fi
 }
 
+add_pppd_opts() {
+	[ -n "$1" ] && echo "$1" >> $OPTIONS
+}
+
 setup_config() {
 	local section="$1"
 	local enabled localip start limit type auth_chap auth_pap auth_mschap2 chap
@@ -106,6 +110,8 @@ setup_config() {
 
 	config_get auth "$section" auth
 	[ -n "$auth" ] && echo "* * $auth" >> $SECRETS
+
+	config_list_foreach "$section" "pppd_options" add_pppd_opts
 }
 
 setup_login() {

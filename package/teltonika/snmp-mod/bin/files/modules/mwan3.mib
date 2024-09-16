@@ -1,0 +1,89 @@
+-- MWAN3 --
+
+mwan3Group OBJECT-GROUP
+	OBJECTS { mwan3Count,
+		  mwan3Index,
+		  mwan3Name,
+		  mwan3Enabled,
+		  mwan3Uptime,
+		  mwan3Status,
+		  mwan3Ip }
+	STATUS current
+	DESCRIPTION "MWAN3 SNMP group defined according to RFC 2580"
+	::= { teltonikaSnmpGroups 12 }
+
+mwan3Count OBJECT-TYPE
+	SYNTAX		INTEGER
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION	"Count of Multiwan interfaces"
+	::= { mwan3 1 }
+
+-- MWAN3 table
+
+mwan3Table OBJECT-TYPE
+	SYNTAX		SEQUENCE OF MWAN3Entry
+	MAX-ACCESS	not-accessible
+	STATUS		current
+	DESCRIPTION	"A list of Multiwan interfaces. The number of entries is given by the value of mwan3Count."
+	::= { mwan3 2 }
+
+mwan3Entry OBJECT-TYPE
+	SYNTAX		MWAN3Entry
+	MAX-ACCESS	not-accessible
+	STATUS		current
+	DESCRIPTION	"An entry containing information of a particular Multiwan interface."
+	INDEX		{ mwan3Index }
+	::= { mwan3Table 1 }
+
+MWAN3Entry ::=
+	SEQUENCE {
+	mwan3Index	INTEGER,
+	mwan3Name	DisplayString,
+	mwan3Enabled	INTEGER,
+	mwan3Uptime	INTEGER,
+	mwan3Status	DisplayString,
+	mwan3Ip		DisplayString
+	}
+
+mwan3Index OBJECT-TYPE
+	SYNTAX		INTEGER (0..65535)
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION	"Unique value, greater than zero, for each session."
+	::= { mwan3Entry 1 }
+
+mwan3Name OBJECT-TYPE
+	SYNTAX		DisplayString
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION	"Name of Multiwan interface."
+	::= { mwan3Entry 2 }
+
+mwan3Enabled OBJECT-TYPE
+	SYNTAX		INTEGER
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION	"Numeric value indicating if interface is enabled or not."
+	::= { mwan3Entry 3 }
+
+mwan3Uptime OBJECT-TYPE
+	SYNTAX		INTEGER
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION	"Multiwan interface uptime."
+	::= { mwan3Entry 4 }
+
+mwan3Status OBJECT-TYPE
+	SYNTAX		DisplayString
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION	"Status of Multiwan interface."
+	::= { mwan3Entry 5 }
+
+mwan3Ip OBJECT-TYPE
+	SYNTAX		DisplayString
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION	"IP addresses that Multiwan interface tracks."
+	::= { mwan3Entry 6 }

@@ -81,6 +81,7 @@ struct lioman_io {
 		struct {
 			struct lioman_adcc adcc;
 			float value;
+			bool cached : 1;
 		} adc;
 
 		struct {
@@ -93,6 +94,7 @@ struct lioman_io {
 			float current;
 			float percentage;
 			bool active : 1; // active or inactive
+			bool cached : 1;
 		} acl;
 
 		struct {

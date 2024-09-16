@@ -65,8 +65,10 @@ typedef enum {
 	LGSM_INFO_FEATURE_LOW_SIGNAL_RECONNECT,
 	LGSM_INFO_FEATURE_AUTO_5G_MODE,
 	LGSM_INFO_FEATURE_REDUCED_CAPABILITY,
+	LGSM_INFO_FEATURE_NO_USSD,
 	LGSM_INFO_DEFAULT_IMS,
 	LGSM_INFO_BUILTIN,
+	LGSM_INFO_GPS_SATELLITE,
 	LGSM_INFO_MAX,
 } lgsm_info_t;
 
@@ -95,6 +97,23 @@ typedef enum {
 	LGSM_CACHE_RSSI,
 	LGSM_CACHE_MAX,
 } lgsm_cache_t;
+
+typedef enum {
+	LGSM_GPS,
+	LGSM_GLONASS,
+	LGSM_GALILEO,
+	LGSM_BEIDOU,
+	LGSM_QZSS,
+	LGSM_GN,
+	LGSM_REBOOT,
+	LGSM_GPS_MAX,
+} lgsm_gps_t;
+
+typedef enum {
+	LGSM_SENTENCES,
+	LGSM_PREFIX,
+	LGSM_GPS_DATA_MAX,
+} lgsm_gps_data_t;
 
 typedef enum {
 	LGSM_EXEC_REQUEST,
@@ -1075,6 +1094,34 @@ typedef struct {
 } lgsm_modem_func_t;
 
 typedef struct {
+	char **gps;
+	char **glonass;
+	char **galileo;
+	char **beidou;
+	char **qzss;
+	char **gn;
+	char **gps_prefix;
+	char **glonass_prefix;
+	char **galileo_prefix;
+	char **beidou_prefix;
+	char **qzss_prefix;
+	char **gn_prefix;
+	int gps_cnt;
+	int glonass_cnt;
+	int galileo_cnt;
+	int beidou_cnt;
+	int qzss_cnt;
+	int gn_cnt;
+	int gps_prefix_cnt;
+	int glonass_prefix_cnt;
+	int galileo_prefix_cnt;
+	int beidou_prefix_cnt;
+	int qzss_prefix_cnt;
+	int gn_prefix_cnt;
+	bool reboot_needed;
+} lgsm_gps_info_t;
+
+typedef struct {
 	lgsm_band_t band_list;
 	lgsm_service_mode_t service_mode_list;
 
@@ -1116,6 +1163,7 @@ typedef struct {
 	bool csd_support;
 	bool auto_5g_mode;
 	bool red_cap;
+	bool no_ussd;
 	uint32_t default_ims;
 	lgsm_net_info_t net_info;
 	lgsm_op_slc_mode_t op_slc;
@@ -1123,6 +1171,7 @@ typedef struct {
 	lgsm_pin_count_t pin_cnt;
 	lgsm_modem_func_t mfunc;
 	uint32_t state_id;
+	lgsm_gps_info_t gps_info;
 
 } lgsm_t;
 
@@ -1692,9 +1741,10 @@ struct blob_buf prepare_sms_mode(enum sms_format_id id);
  * Convert given arguments to prepared blob for gsmd ubus send sms method.
  * @param[char]   number     Phone number to which we need to send SMS.
  * @param[char]   text       Text that is sent via SMS.
+ * @param[char]   async      Flag to specify if he request is async.
  * @return blob_buf. Allocated blob that's used for communication. (Need to be freed via blob_buf_free).
  */
-struct blob_buf prepare_sms(const char *number, const char *text);
+struct blob_buf prepare_sms(const char *number, const char *text, bool async);
 
 /**
  * Convert given arguments to prepared blob for gsmd ubus method that needs index as single parameter.
@@ -1731,13 +1781,6 @@ struct blob_buf prepare_read_sms(int32_t index, bool single, bool strip);
  */
 struct blob_buf prepare_sms_strg(enum msg_storage_id mem1, enum msg_storage_id mem2,
 				 enum msg_storage_id mem3);
-
-/**
- * Convert given arguments to prepared blob for gsmd ubus get sms storage method.
- * @param[in]   bool    Do you want to query, both sms storage locations
- * @return blob_buf. Allocated blob that's used for communication. (Need to be freed via blob_buf_free).
- */
-struct blob_buf prepare_get_msg_strg(bool full);
 
 /**
  * Convert given arguments to prepared blob for gsmd ubus set sms event reporting configuration method.
@@ -2304,6 +2347,19 @@ lgsm_err_t lgsm_send_voice_call(struct ubus_context *ctx, const char *number, fu
  */
 lgsm_err_t lgsm_send_sms(struct ubus_context *ctx, const char *number, const char *text,
 			 lgsm_structed_info_t *data, uint32_t modem_num);
+/**
+ * Send sms async
+ * @param[ptr]  ctx   	    Ubus ctx.
+ * @param[char] number 	    Nubmer to which the SMS has to be sent.
+ * @param[char] text   	    SMS text.
+ * @param[ptr]  data	    Structed amount of SMS sent.
+ * @param[in]   modem_num   Modem identification number.
+ * @param[in]   timeout     Time to wait for the response from the modem.
+ * @param[in]   async       Flag to show if the call should be async.
+ * @return lgsm_err_t. Return function status code.
+ */
+lgsm_err_t lgsm_send_sms_async(struct ubus_context *ctx, const char *number, const char *text,
+			       lgsm_structed_info_t *data, uint32_t modem_num, bool async);
 
 /**
  * Read SMS
@@ -3092,7 +3148,7 @@ lgsm_err_t lgsm_set_5g_extended_params(struct ubus_context *ctx, bool enabled, f
  * @param[in]   modem_num   Modem identification number.
  */
 lgsm_err_t lgsm_set_5g_cap_feature_general_params(struct ubus_context *ctx, bool enabled, func_t *resp,
-						  uint32_t modem_num);
+				       uint32_t modem_num);
 
 /**
  * Set DPO operation mode

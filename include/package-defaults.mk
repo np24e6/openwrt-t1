@@ -24,6 +24,7 @@ define Package/Default
   MAINTAINER:=$(PKG_MAINTAINER)
   PKG_TLT_NAME:=
   PKG_APP_NAME:=
+  PKG_HW_INFO:=
   PKG_ROUTER:=
   PKG_REBOOT:=
   SOURCE:=$(patsubst $(TOPDIR)/%,%,$(CURDIR))

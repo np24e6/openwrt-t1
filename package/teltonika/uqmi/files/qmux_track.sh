@@ -14,7 +14,7 @@ gsm_modem=$(find_mdm_ubus_obj "$modem")
 [ -z "$gsm_modem" ] && echo "gsm.modem \"$gsm_modem\" object not found. Downing connection." && ifdown $ifname
 
 gsm_info=$(ubus call $gsm_modem info)
-red_cap=$(jsonfilter -s "$gsm_info" -e '@.red_cap')
+red_cap=$(jsonfilter -q -s "$gsm_info" -e '@.red_cap')
 
 check_state() {
 	local serv_status="$1"

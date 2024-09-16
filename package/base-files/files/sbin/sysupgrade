@@ -648,6 +648,7 @@ json_load "$(/usr/libexec/validate_firmware_image "$IMAGE")" || {
 	exit 1
 }
 
+json_get_var fw_version "fw_version"
 json_get_var hw_support "hw_support"
 [ "$hw_support" -eq 0 ] && {
 	if [ $FORCE -eq 1 ]; then
@@ -729,9 +730,14 @@ if [ -n "$FAILSAFE" ]; then
 	printf '%s\x00%s\x00%s' "$RAM_ROOT" "$IMAGE" "$COMMAND" >/tmp/sysupgrade
 	lock -u /tmp/.failsafe
 else
+	current_fw_version="$(cat /etc/version)"
+	log_msg="Firmware successfully upgraded"
+	[ -n "$fw_version" ] && [ -n "$current_fw_version" ] && \
+		log_msg="Firmware $current_fw_version successfully upgraded to $fw_version"
+
 	ubus call log write_ext "{
-		\"event\": \"Request after FW upgrade\",
-		\"sender\": \"Reboot\",
+		\"event\": \"$log_msg\",
+		\"sender\": \"sysupgrade\",
 		\"table\": 1,
 		\"write_db\": 1,
 	}"

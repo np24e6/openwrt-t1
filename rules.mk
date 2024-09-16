@@ -111,7 +111,7 @@ $(foreach t,$(DEFAULT_SUBDIR_TARGETS) $(1),
 )
 endef
 
-DL_DIR:=$(if $(call qstrip,$(CONFIG_DOWNLOAD_FOLDER)),$(call qstrip,$(CONFIG_DOWNLOAD_FOLDER)),$(TOPDIR)/dl)
+DL_DIR:=$(if $(call qstrip,$(CONFIG_DOWNLOAD_FOLDER)),$(call qstrip,$(CONFIG_DOWNLOAD_FOLDER)),$(TOPDIR)/dl$(if $(UPSTREAM_FETCH),/upstream))
 OUTPUT_DIR:=$(if $(call qstrip,$(CONFIG_BINARY_FOLDER)),$(call qstrip,$(CONFIG_BINARY_FOLDER)),$(TOPDIR)/bin)
 BIN_DIR:=$(OUTPUT_DIR)/targets/$(BOARD)/$(SUBTARGET)
 INCLUDE_DIR:=$(TOPDIR)/include
@@ -139,11 +139,7 @@ else
 endif
 
 ifeq ($(or $(CONFIG_EXTERNAL_TOOLCHAIN),$(CONFIG_TARGET_uml)),)
-  ifeq ($(CONFIG_GCC_USE_IREMAP),y)
-    iremap = -iremap$(1):$(2)
-  else
-    iremap = -f$(if $(CONFIG_REPRODUCIBLE_DEBUG_INFO),file,macro)-prefix-map=$(1)=$(2)
-  endif
+  iremap = -f$(if $(CONFIG_REPRODUCIBLE_DEBUG_INFO),file,macro)-prefix-map=$(1)=$(2)
 endif
 
 PACKAGE_DIR:=$(BIN_DIR)/packages
@@ -183,6 +179,12 @@ else
 LIBGCC_A=$(lastword $(wildcard $(TOOLCHAIN_DIR)/lib/gcc/*/*/libgcc.a))
 LIBGCC_S=$(if $(wildcard $(TOOLCHAIN_DIR)/lib/libgcc_s.so),-L$(TOOLCHAIN_DIR)/lib -lgcc_s,$(LIBGCC_A))
 endif
+
+REBUILT_PKG_FILE:=$(TMP_DIR)/.pkg-rebuilt
+
+define pkg_rebuilt_info
+  [ -w "$(REBUILT_PKG_FILE)" ] && echo "$(1)" >> "$(REBUILT_PKG_FILE)"|| true
+endef
 
 ifeq ($(CONFIG_ARCH_64BIT),y)
   LIB_SUFFIX:=64

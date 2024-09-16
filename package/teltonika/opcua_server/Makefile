@@ -2,10 +2,10 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=opcua_server
-PKG_VERSION:=2024-06-27
+PKG_VERSION:=2024-08-01
 PKG_RELEASE:=1
 PKG_LICENSE:=Teltonika-closed
-PKG_SOURCE_VERSION:=7.8
+PKG_SOURCE_VERSION:=7.9
 
 include $(INCLUDE_DIR)/package.mk
 
@@ -17,11 +17,11 @@ define Package/opcua_server
 		+GPS_SUPPORT:libgps +MOBILE_SUPPORT:libgsm +IO_SUPPORT:iomand
 endef
 
-define Package/opcua_master/description
+define Package/opcua_server/description
 	OPC UA server designed for OPC UA clients to read device data.
 endef
 
-define Package/opcua_master/conffiles
+define Package/opcua_server/conffiles
 /etc/config/opcua_server
 endef
 

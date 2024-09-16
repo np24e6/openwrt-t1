@@ -40,7 +40,7 @@ add_ending_rule() {
 
 migrate_group() {
 	local section="$1"
-	local privilege_lvl=""
+	local read write read_access write_access privilege_lvl
 
 	config_get privilege_lvl "$section" "privilege_lvl"
 	[ -n "$privilege_lvl" ] && return 0
@@ -120,11 +120,14 @@ migrate_group() {
 
 migrate_user() {
 	local section="$1"
+	local read write group
 
-	uci_remove "$CONFIG" "$section" "read"
-	uci_remove "$CONFIG" "$section" "write"
-
+	config_get read "$section" "read"
+	config_get write "$section" "write"
 	config_get group "$section" "group"
+
+	[ -n "$read" ] && uci_remove "$CONFIG" "$section" "read"
+	[ -n "$write" ] && uci_remove "$CONFIG" "$section" "write"
 	[ -z "$group" ] && uci_set "$CONFIG" "$section" group "root"
 }
 

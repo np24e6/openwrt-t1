@@ -1,6 +1,6 @@
 --- a/ubus.c
 +++ b/ubus.c
-@@ -21,12 +21,15 @@
+@@ -21,11 +21,15 @@
  #include <libubox/blobmsg_json.h>
  #include <libubox/avl.h>
  #include <libubox/avl-cmp.h>
@@ -10,81 +10,49 @@
  
  #include "uhttpd.h"
  #include "plugin.h"
- 
-+#define PORT_SIZE 8
++#include "ip_block.h"
 +
++#define PORT_SIZE 8
+ 
  static const struct uhttpd_ops *ops;
  static struct config *_conf;
- #define conf (*_conf)
-@@ -265,6 +268,52 @@ static void uh_ubus_ubus_error(struct cl
- 	uh_ubus_error(cl, err, ubus_strerror(err));
- }
+@@ -460,8 +464,34 @@ uh_ubus_request_cb(struct ubus_request *
  
-+static int ip_block(struct client *cl, int res)
-+{
-+	struct blob_buf b = { 0 };
-+	uint32_t id;
-+	int ret = 0;
-+	char str_port[PORT_SIZE] = { 0 };
-+
-+	if (ubus_lookup_id(ctx, "ip_block", &id)) {
-+		return 1;
-+	}
-+
-+	if (blob_buf_init(&b, 0)) {
-+		return 1;
-+	}
-+
-+	if (cl->peer_addr.family == AF_INET) {
-+		blobmsg_add_string(&b, "ip", inet_ntoa(cl->peer_addr.in));
-+		blobmsg_add_string(&b, "destination_ip", inet_ntoa(cl->srv_addr.in));
-+	} else {
-+		char addr[INET6_ADDRSTRLEN] = { 0 };
-+		char dst_addr[INET6_ADDRSTRLEN] = { 0 };
-+
-+		if (!inet_ntop(AF_INET6, &cl->peer_addr.in6, addr, INET6_ADDRSTRLEN) ||
-+				!inet_ntop(AF_INET6, &cl->srv_addr.in6, dst_addr, INET6_ADDRSTRLEN)) {
-+			ret = 1;
-+			goto error;
-+		}
-+
-+		blobmsg_add_string(&b, "ip", addr);
-+		blobmsg_add_string(&b, "destination_ip", dst_addr);
-+	}
-+
-+	snprintf(str_port, PORT_SIZE, "%d", cl->srv_addr.port);
-+	blobmsg_add_string(&b, "port", str_port);
-+
-+	if (ubus_invoke(ctx, id, res ? "push" : "unblock", b.head, NULL, NULL, 3000)) {
-+		ret = 1;
-+		goto error;
-+	}
-+
-+error:
-+	blob_buf_free(&b);
-+
-+	return ret;
-+}
-+
- static void uh_ubus_allowed_cb(struct ubus_request *req, int type, struct blob_attr *msg)
- {
- 	struct blob_attr *tb[__SES_MAX];
-@@ -457,10 +506,13 @@ uh_ubus_request_cb(struct ubus_request *
- 	void *r;
- 	int rem;
- 
-+	if (du->filter) {
-+		ip_block(cl, ret);
-+	}
-+
  	blob_buf_init(&buf, 0);
  
- 	uloop_timeout_cancel(&du->timeout);
--
+-	uloop_timeout_cancel(&du->timeout);
++	if (du->filter) {
++		char addr[INET6_ADDRSTRLEN] = { 0 };
++		char dst_addr[INET6_ADDRSTRLEN] = { 0 };
++		char str_port[PORT_SIZE] = { 0 };
++		if (cl->peer_addr.family == AF_INET) {
++			if (!inet_ntop(AF_INET, &cl->peer_addr.in, addr, INET_ADDRSTRLEN) ||
++				!inet_ntop(AF_INET, &cl->srv_addr.in, dst_addr, INET_ADDRSTRLEN)) {
++				goto response;
++			}
++		} else {
++			if (!inet_ntop(AF_INET6, &cl->peer_addr.in6, addr, INET6_ADDRSTRLEN) ||
++				!inet_ntop(AF_INET6, &cl->srv_addr.in6, dst_addr, INET6_ADDRSTRLEN)) {
++				goto response;
++			}
++		}
++		snprintf(str_port, PORT_SIZE, "%d", cl->srv_addr.port);
++		if (signal_ip_block(ret ? "push" : "unblock", addr, dst_addr, str_port)) {
++			uh_ubus_init_json_rpc_response(cl, &buf);
++			r = blobmsg_open_array(&buf, "result");
++			blobmsg_add_u32(&buf, "", 6);
++			blobmsg_close_array(&buf, r);
++			uh_ubus_send_response(cl, &buf);
++			return;
++		}
++	}
+ 
++response:
++	uloop_timeout_cancel(&du->timeout);
  	/* Legacy format always uses "result" array - even for errors and empty
  	 * results. */
  	if (du->legacy) {
-@@ -737,7 +789,13 @@ static void uh_ubus_handle_request_objec
+@@ -738,7 +768,13 @@ static void uh_ubus_handle_request_objec
  		if (!data.sid || !data.object || !data.function || !data.data)
  			goto error;
  
@@ -98,7 +66,7 @@
  		if (ubus_lookup_id(ctx, data.object, &du->obj)) {
  			err = ERROR_OBJECT;
  			goto error;
-@@ -820,6 +878,11 @@ static void uh_ubus_call(struct client *
+@@ -821,6 +857,11 @@ static void uh_ubus_call(struct client *
  		goto error;
  
  	du->func = data.method;
@@ -121,3 +89,191 @@
  
  	struct blob_buf buf;
  	bool req_pending;
+--- /dev/null
++++ b/ip_block.c
+@@ -0,0 +1,163 @@
++#include "ip_block.h"
++
++#include <libubus.h>
++#include <libubox/blobmsg.h>
++
++enum { IP_BLOCK_BLOCKED, _IP_BLOCK_MAX };
++
++static const struct blobmsg_policy ip_block_policy[_IP_BLOCK_MAX] = {
++	[IP_BLOCK_BLOCKED] = { .name = "blocked", .type = BLOBMSG_TYPE_BOOL },
++};
++
++enum { IP_BLOCK_SHOW_GLOBALS, IP_BLOCK_SHOW_IPS, _IP_BLOCK_SHOW_MAX };
++
++static const struct blobmsg_policy ip_block_show_policy[_IP_BLOCK_SHOW_MAX] = {
++	[IP_BLOCK_SHOW_GLOBALS] = { .name = "globals", .type = BLOBMSG_TYPE_TABLE },
++	[IP_BLOCK_SHOW_IPS]	= { .name = "ips", .type = BLOBMSG_TYPE_ARRAY },
++};
++
++enum { IP_BLOCK_SHOW_NUM_IP, IP_BLOCK_SHOW_NUM_DEST_IP, IP_BLOCK_SHOW_NUM_PORT, _IP_BLOCK_SHOW_NUM_MAX };
++
++static const struct blobmsg_policy ip_block_show_num_policy[_IP_BLOCK_SHOW_NUM_MAX] = {
++	[IP_BLOCK_SHOW_NUM_IP]	    = { .name = "ip", .type = BLOBMSG_TYPE_STRING },
++	[IP_BLOCK_SHOW_NUM_DEST_IP] = { .name = "destination_ip", .type = BLOBMSG_TYPE_STRING },
++	[IP_BLOCK_SHOW_NUM_PORT]    = { .name = "port", .type = BLOBMSG_TYPE_STRING },
++};
++
++struct callback_data {
++	char *ip;
++	char *dest_ip;
++	char *port;
++	bool found;
++};
++
++static void blocked_ip_block_cb(struct ubus_request *req, int type, struct blob_attr *msg)
++{
++	size_t rem;
++	struct blob_attr *num_attr;
++	struct blob_attr *tb[_IP_BLOCK_SHOW_MAX];
++	struct callback_data *result = (struct callback_data *)req->priv;
++
++	if (!msg) {
++		result->found = false;
++		return;
++	}
++
++	blobmsg_parse(ip_block_show_policy, _IP_BLOCK_SHOW_MAX, tb, blobmsg_data(msg), blobmsg_len(msg));
++
++	struct blob_attr *ips = tb[IP_BLOCK_SHOW_IPS];
++	if (!ips) {
++		result->found = false;
++		return;
++	}
++
++	blobmsg_for_each_attr (num_attr, ips, rem) {
++		struct blob_attr *num_tb[_IP_BLOCK_SHOW_NUM_MAX];
++		blobmsg_parse(ip_block_show_num_policy, _IP_BLOCK_SHOW_NUM_MAX, num_tb,
++			      blobmsg_data(num_attr), blobmsg_len(num_attr));
++		if (!num_tb[IP_BLOCK_SHOW_NUM_IP] ||
++		    (result->dest_ip && !num_tb[IP_BLOCK_SHOW_NUM_DEST_IP]) ||
++		    (!result->dest_ip && num_tb[IP_BLOCK_SHOW_NUM_DEST_IP]) ||
++		    !num_tb[IP_BLOCK_SHOW_NUM_PORT]) {
++			continue;
++		}
++
++		const char *ip	    = blobmsg_get_string(num_tb[IP_BLOCK_SHOW_NUM_IP]);
++		const char *dest_ip = blobmsg_get_string(num_tb[IP_BLOCK_SHOW_NUM_DEST_IP]);
++		const char *port    = blobmsg_get_string(num_tb[IP_BLOCK_SHOW_NUM_PORT]);
++
++		int dest_ip_match =
++			result->dest_ip != NULL ?
++				(dest_ip && !strncmp(dest_ip, result->dest_ip, strlen(result->dest_ip))) :
++				1;
++		if (ip && !strncmp(ip, result->ip, strlen(result->ip)) && port &&
++		    !strncmp(port, result->port, strlen(result->port)) && dest_ip_match) {
++			result->found = true;
++			return;
++		}
++	}
++
++	result->found = false;
++}
++
++static int blocked_ip_block(char *ip, char *dest_ip, char *port)
++{
++	struct callback_data result  = { .found = false, .ip = ip, .dest_ip = dest_ip, .port = port };
++	struct ubus_context ubus_ctx = { 0 };
++	if (ubus_connect_ctx(&ubus_ctx, NULL)) {
++		return result.found;
++	}
++
++	uint32_t ip_block_obj = 0;
++	if (ubus_lookup_id(&ubus_ctx, "ip_block", &ip_block_obj)) {
++		goto clean;
++	}
++
++	struct blob_buf buffer = { 0 };
++	blob_buf_init(&buffer, 0);
++	blobmsg_add_string(&buffer, "type", "ip");
++	blobmsg_add_u8(&buffer, "blocked", true);
++
++	ubus_invoke(&ubus_ctx, ip_block_obj, "show", buffer.head, blocked_ip_block_cb, &result, 1000);
++
++	blob_buf_free(&buffer);
++clean:
++	ubus_shutdown(&ubus_ctx);
++
++	return result.found;
++}
++
++static void signal_ip_block_cb(struct ubus_request *req, int type, struct blob_attr *msg)
++{
++	struct blob_attr *tb[_IP_BLOCK_MAX];
++	int *blocked = (int *)req->priv;
++
++	if (!msg) {
++		*blocked = 0;
++		return;
++	}
++
++	blobmsg_parse(ip_block_policy, _IP_BLOCK_MAX, tb, blobmsg_data(msg), blobmsg_len(msg));
++	if (!tb[IP_BLOCK_BLOCKED]) {
++		*blocked = 0;
++		return;
++	}
++
++	*blocked = blobmsg_get_u8(tb[IP_BLOCK_BLOCKED]);
++}
++
++int signal_ip_block(char *op, char *ip, char *dest_ip, char *port)
++{
++	int ret = 0;
++	if (blocked_ip_block(ip, dest_ip, port)) {
++		ret = 1;
++		goto ret;
++	}
++	struct ubus_context ubus_ctx = { 0 };
++	if (ubus_connect_ctx(&ubus_ctx, NULL)) {
++		goto ret;
++	}
++
++	uint32_t ip_block_obj = 0;
++	if (ubus_lookup_id(&ubus_ctx, "ip_block", &ip_block_obj)) {
++		goto clean;
++	}
++
++	struct blob_buf buffer = { 0 };
++	blob_buf_init(&buffer, 0);
++	blobmsg_add_string(&buffer, "ip", ip);
++
++	if (dest_ip) {
++		blobmsg_add_string(&buffer, "destination_ip", dest_ip);
++	}
++
++	blobmsg_add_string(&buffer, "port", port);
++
++	ubus_invoke(&ubus_ctx, ip_block_obj, op, buffer.head, signal_ip_block_cb, &ret, 1000);
++
++	blob_buf_free(&buffer);
++clean:
++	ubus_shutdown(&ubus_ctx);
++ret:
++	return ret;
++}
+\ No newline at end of file
+--- /dev/null
++++ b/ip_block.h
+@@ -0,0 +1,6 @@
++#ifndef __IP_BLOCK_H
++#define __IP_BLOCK_H
++
++int signal_ip_block(char *op, char *ip, char *dest_ip, char *port);
++
++#endif
+\ No newline at end of file
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -72,7 +72,7 @@ ENDIF()
+ IF(UBUS_SUPPORT)
+ 	SET(PLUGINS ${PLUGINS} uhttpd_ubus)
+ 	ADD_DEFINITIONS(-DHAVE_UBUS)
+-	ADD_LIBRARY(uhttpd_ubus MODULE ubus.c)
++	ADD_LIBRARY(uhttpd_ubus MODULE ubus.c ip_block.c)
+ 	TARGET_LINK_LIBRARIES(uhttpd_ubus ubus ubox blobmsg_json ${libjson})
+ ENDIF()
+ 

@@ -6,11 +6,11 @@ update_dhcpv6()  {
 	local section="$1"
 	local dhcpv6 ndp ra
 
-	config_get dhcpv6 "$dhcp" dhcpv6 ""
-	config_get ra "$dhcp" ra ""
-	config_get ndp "$dhcp" ndp ""
+	config_get dhcpv6 "$section" dhcpv6 ""
+	config_get ra "$section" ra ""
+	config_get ndp "$section" ndp ""
 
-	if [ -n "$dhcpv6" ] || [ -n "$ra" ] || [ -n "$ndp" ]; then
+	if [ -z "$dhcpv6" ] && [ -z "$ra" ] && [ -z "$ndp" ]; then
 		uci_set "dhcp" "$section" "ignore_ipv6" "1"
 	fi
 }

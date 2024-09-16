@@ -1,0 +1,13 @@
+#!/bin/sh
+
+migrate_name() {
+	sed -i "s/${1}\*'/${2}\*'/g" /etc/config/rpcd
+}
+
+migrate_name "l2tp" "l2tp_classic"
+migrate_name "ntp" "ntp_general"
+migrate_name "realtime\/mobile" "realtime\/mobile_signal"
+migrate_name "network\/dns" "network\/dns\/general"
+migrate_name "network\/https_dns_proxy" "network\/dns\/https_dns_proxy"
+
+exit 0

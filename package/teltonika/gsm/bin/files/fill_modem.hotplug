@@ -22,6 +22,7 @@ b_low_signal_reconnect=""
 b_auto_5g_mode=""
 b_revision=""
 b_modem_func_id=""
+modem_cnt=0
 
 compare_changes() {
 	local info="$1"
@@ -117,10 +118,20 @@ for modem in $modems; do
 
 		compare_changes "$info" "$modem_func"
 
+		touch "/tmp/mobile/filled_modem$modem"
+
 		break
 	}
 
 	json_select ..
 done
 
-rm "$PROG"
+# Check if all available modems have their info filled
+for modem in $modems; do
+	modem_cnt=$((modem_cnt+1))
+done
+modem_fill_cnt=$(ls -l /tmp/mobile/filled_modem* | wc -l)
+[ "$modem_fill_cnt" = "$modem_cnt" ] && {
+	rm /tmp/mobile/filled_modem*
+	rm "$PROG"
+}

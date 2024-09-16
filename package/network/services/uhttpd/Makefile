@@ -103,9 +103,6 @@ define Package/uhttpd/install
 	$(INSTALL_DIR) $(1)/usr/sbin
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/uhttpd $(1)/usr/sbin/uhttpd
 
-	$(INSTALL_DIR) $(1)/usr/share/uhttpd
-	$(INSTALL_BIN) ./files/91-trigger-vuci-routes-reload.hotplug $(1)/usr/share/uhttpd/91-trigger-vuci-routes-reload.hotplug
-
 	$(if $(CONFIG_USE_OPENRC), \
 		$(OPENRC_INSTALL) boot uhttpd ./files/uhttpd.openrc $(1))
 endef

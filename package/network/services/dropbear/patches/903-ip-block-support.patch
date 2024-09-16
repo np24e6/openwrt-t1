@@ -1,85 +1,183 @@
 --- /dev/null
 +++ b/ip_block.c
-@@ -0,0 +1,70 @@
+@@ -0,0 +1,166 @@
 +#include "ip_block.h"
++#include "lock_manager.h"
 +
 +#include <libubus.h>
 +#include <libubox/blobmsg.h>
-+#include <uci.h>
-+#include <syslog.h>
 +
-+void
-+signal_ip_block(char *op, char *ip, char *local_ip)
++enum { IP_BLOCK_BLOCKED, _IP_BLOCK_MAX };
++
++static const struct blobmsg_policy ip_block_policy[_IP_BLOCK_MAX] = {
++	[IP_BLOCK_BLOCKED] = { .name = "blocked", .type = BLOBMSG_TYPE_BOOL },
++};
++
++enum { IP_BLOCK_SHOW_GLOBALS, IP_BLOCK_SHOW_IPS, _IP_BLOCK_SHOW_MAX };
++
++static const struct blobmsg_policy ip_block_show_policy[_IP_BLOCK_SHOW_MAX] = {
++	[IP_BLOCK_SHOW_GLOBALS] = { .name = "globals", .type = BLOBMSG_TYPE_TABLE },
++	[IP_BLOCK_SHOW_IPS]	= { .name = "ips", .type = BLOBMSG_TYPE_ARRAY },
++};
++
++enum { IP_BLOCK_SHOW_NUM_IP, IP_BLOCK_SHOW_NUM_DEST_IP, IP_BLOCK_SHOW_NUM_PORT, _IP_BLOCK_SHOW_NUM_MAX };
++
++static const struct blobmsg_policy ip_block_show_num_policy[_IP_BLOCK_SHOW_NUM_MAX] = {
++	[IP_BLOCK_SHOW_NUM_IP]	    = { .name = "ip", .type = BLOBMSG_TYPE_STRING },
++	[IP_BLOCK_SHOW_NUM_DEST_IP] = { .name = "destination_ip", .type = BLOBMSG_TYPE_STRING },
++	[IP_BLOCK_SHOW_NUM_PORT]    = { .name = "port", .type = BLOBMSG_TYPE_STRING },
++};
++
++struct callback_data {
++	char *ip;
++	char *dest_ip;
++	char *port;
++	bool found;
++};
++
++static void blocked_ip_block_cb(struct ubus_request *req, int type, struct blob_attr *msg)
 +{
-+	struct uci_context *ctx;
-+	struct uci_package *pkg;
-+	struct uci_element *el;
-+	struct uci_element *o;
-+	int found = 0;
-+	char port[6];
++	size_t rem;
++	struct blob_attr *num_attr;
++	struct blob_attr *tb[_IP_BLOCK_SHOW_MAX];
++	struct callback_data *result = (struct callback_data *)req->priv;
 +
-+	struct ubus_context ubus_ctx = {0};
-+	if (ubus_connect_ctx(&ubus_ctx, NULL)) {
++	if (!msg) {
++		result->found = false;
 +		return;
 +	}
 +
-+	ctx = uci_alloc_context();
-+	if (!ctx) {
-+		syslog(LOG_ERR, "Failed to allocate uci context\n");
-+		goto clean;
++	blobmsg_parse(ip_block_show_policy, _IP_BLOCK_SHOW_MAX, tb, blobmsg_data(msg), blobmsg_len(msg));
++
++	struct blob_attr *ips = tb[IP_BLOCK_SHOW_IPS];
++	if (!ips) {
++		result->found = false;
++		return;
 +	}
-+	if (uci_load(ctx, "dropbear", &pkg)) {
-+		syslog(LOG_ERR, "Failed to load '%s' package\n", "dropbear");
-+		goto clean;
-+	}
-+	
-+	uci_foreach_element (&pkg->sections, el) {
-+		struct uci_section *sec = uci_to_section(el);
-+		uci_foreach_element (&sec->options, el) {
-+			struct uci_option *o = uci_to_option(el);
-+			if (!strcmp(el->name, "Port")) {
-+				strlcpy(port, o->v.string, strlen(o->v.string) + 1);
-+				found = 1;
-+				break;
-+			}
++
++	blobmsg_for_each_attr (num_attr, ips, rem) {
++		struct blob_attr *num_tb[_IP_BLOCK_SHOW_NUM_MAX];
++		blobmsg_parse(ip_block_show_num_policy, _IP_BLOCK_SHOW_NUM_MAX, num_tb,
++			      blobmsg_data(num_attr), blobmsg_len(num_attr));
++		if (!num_tb[IP_BLOCK_SHOW_NUM_IP] ||
++		    (result->dest_ip && !num_tb[IP_BLOCK_SHOW_NUM_DEST_IP]) ||
++		    (!result->dest_ip && num_tb[IP_BLOCK_SHOW_NUM_DEST_IP]) ||
++		    !num_tb[IP_BLOCK_SHOW_NUM_PORT]) {
++			continue;
 +		}
-+		if (found) {
-+			break;
++
++		const char *ip	    = blobmsg_get_string(num_tb[IP_BLOCK_SHOW_NUM_IP]);
++		const char *dest_ip = blobmsg_get_string(num_tb[IP_BLOCK_SHOW_NUM_DEST_IP]);
++		const char *port    = blobmsg_get_string(num_tb[IP_BLOCK_SHOW_NUM_PORT]);
++
++		int dest_ip_match =
++			result->dest_ip != NULL ?
++				(dest_ip && !strncmp(dest_ip, result->dest_ip, strlen(result->dest_ip))) :
++				1;
++		if (ip && !strncmp(ip, result->ip, strlen(result->ip)) && port &&
++		    !strncmp(port, result->port, strlen(result->port)) && dest_ip_match) {
++			result->found = true;
++			return;
 +		}
 +	}
-+	
++
++	result->found = false;
++}
++
++static int blocked_ip_block(char *ip, char *dest_ip, char *port)
++{
++	struct callback_data result  = { .found = false, .ip = ip, .dest_ip = dest_ip, .port = port };
++	struct ubus_context ubus_ctx = { 0 };
++	if (ubus_connect_ctx(&ubus_ctx, NULL)) {
++		return result.found;
++	}
++
 +	uint32_t ip_block_obj = 0;
 +	if (ubus_lookup_id(&ubus_ctx, "ip_block", &ip_block_obj)) {
 +		goto clean;
 +	}
 +
-+	struct blob_buf buffer = {0};
++	struct blob_buf buffer = { 0 };
 +	blob_buf_init(&buffer, 0);
-+	blobmsg_add_string(&buffer, "ip", ip);
++	blobmsg_add_string(&buffer, "type", "ip");
++	blobmsg_add_u8(&buffer, "blocked", true);
 +
-+	if (!local_ip) {
-+		local_ip = "0";
-+	}
-+
-+	blobmsg_add_string(&buffer, "destination_ip", local_ip);
-+	blobmsg_add_string(&buffer, "port", port);
-+
-+	ubus_invoke(&ubus_ctx, ip_block_obj, op, buffer.head, NULL, NULL, 1000);
++	ubus_invoke(&ubus_ctx, ip_block_obj, "show", buffer.head, blocked_ip_block_cb, &result, 1000);
 +
 +	blob_buf_free(&buffer);
 +clean:
 +	ubus_shutdown(&ubus_ctx);
-+	uci_free_context(ctx);
++
++	return result.found;
 +}
++
++static void signal_ip_block_cb(struct ubus_request *req, int type, struct blob_attr *msg)
++{
++	struct blob_attr *tb[_IP_BLOCK_MAX];
++	int *blocked = (int *)req->priv;
++
++	if (!msg) {
++		*blocked = 0;
++		return;
++	}
++
++	blobmsg_parse(ip_block_policy, _IP_BLOCK_MAX, tb, blobmsg_data(msg), blobmsg_len(msg));
++	if (!tb[IP_BLOCK_BLOCKED]) {
++		*blocked = 0;
++		return;
++	}
++
++	*blocked = blobmsg_get_u8(tb[IP_BLOCK_BLOCKED]);
++}
++
++int signal_ip_block(char *op, char *ip, char *dest_ip, char *port)
++{
++	acquire_lock();
++	int ret = 0;
++	if (blocked_ip_block(ip, dest_ip, port)) {
++		ret = 1;
++		goto ret;
++	}
++	struct ubus_context ubus_ctx = { 0 };
++	if (ubus_connect_ctx(&ubus_ctx, NULL)) {
++		goto ret;
++	}
++
++	uint32_t ip_block_obj = 0;
++	if (ubus_lookup_id(&ubus_ctx, "ip_block", &ip_block_obj)) {
++		goto clean;
++	}
++
++	struct blob_buf buffer = { 0 };
++	blob_buf_init(&buffer, 0);
++	blobmsg_add_string(&buffer, "ip", ip);
++
++	if (dest_ip) {
++		blobmsg_add_string(&buffer, "destination_ip", dest_ip);
++	}
++
++	blobmsg_add_string(&buffer, "port", port);
++
++	ubus_invoke(&ubus_ctx, ip_block_obj, op, buffer.head, signal_ip_block_cb, &ret, 1000);
++
++	blob_buf_free(&buffer);
++clean:
++	ubus_shutdown(&ubus_ctx);
++ret:
++	release_lock();
++	return ret;
++}
+\ No newline at end of file
 --- /dev/null
 +++ b/ip_block.h
 @@ -0,0 +1,6 @@
 +#ifndef __IP_BLOCK_H
 +#define __IP_BLOCK_H
 +
-+void signal_ip_block(char *op, char *ip, char *local_ip);
++int signal_ip_block(char *op, char *ip, char *dest_ip, char *port);
 +
 +#endif
+\ No newline at end of file
 --- a/Makefile.in
 +++ b/Makefile.in
 @@ -40,7 +40,7 @@ COMMONOBJS=dbutil.o buffer.o dbhelpers.o
@@ -87,7 +185,7 @@
  		gensignkey.o gendss.o genrsa.o gened25519.o
  
 -SVROBJS=svr-kex.o svr-auth.o sshpty.o \
-+SVROBJS=ip_block.o svr-kex.o svr-auth.o sshpty.o \
++SVROBJS=lock_manager.o ip_block.o svr-kex.o svr-auth.o sshpty.o \
  		svr-authpasswd.o svr-authpubkey.o svr-authpubkeyoptions.o svr-session.o svr-service.o \
  		svr-chansession.o svr-runopts.o svr-agentfwd.o svr-main.o svr-x11fwd.o\
  		svr-tcpfwd.o svr-authpam.o
@@ -96,46 +194,193 @@
  CPPFLAGS=@CPPFLAGS@
  CFLAGS+=-I. -I$(srcdir) $(CPPFLAGS) @CFLAGS@
 -LIBS+=@LIBS@
-+LIBS+=@LIBS@ -lubus -lubox -luci
++LIBS+=@LIBS@ -lubus -lubox
  LDFLAGS=@LDFLAGS@
  
  EXEEXT=@EXEEXT@
 --- a/svr-auth.c
 +++ b/svr-auth.c
-@@ -36,6 +36,7 @@
+@@ -36,6 +36,8 @@
  #include "auth.h"
  #include "runopts.h"
  #include "dbrandom.h"
 +#include "ip_block.h"
++#include "lock_manager.h"
  
  static int checkusername(const char *username, unsigned int userlen);
  
-@@ -351,6 +352,14 @@ goodshell:
+@@ -351,6 +353,18 @@ goodshell:
   * failures */
  void send_msg_userauth_failure(int partial, int incrfail) {
  
-+	char *local_ip = NULL;
-+
 +	if (!partial && incrfail) {
-+		get_socket_address(ses.sock_in, &local_ip, NULL, NULL, NULL, 0);
-+		signal_ip_block("push", svr_ses.remotehost, local_ip);
++		char *local_ip, *local_port = NULL;
++		get_socket_address(ses.sock_in, &local_ip, &local_port, NULL, NULL, 0);
++		if (signal_ip_block("push", svr_ses.remotehost, local_ip, local_port)) {
++			m_free(local_ip);
++			m_free(local_port);
++			dropbear_exit("IP address blocked");
++		}
 +		m_free(local_ip);
++		m_free(local_port);
 +	}
 +
  	buffer *typebuf = NULL;
  
  	TRACE(("enter send_msg_userauth_failure"))
-@@ -449,6 +458,13 @@ void send_msg_userauth_failure(int parti
+@@ -449,6 +463,16 @@ void send_msg_userauth_failure(int parti
  /* Send a success message to the user, and set the "authdone" flag */
  void send_msg_userauth_success() {
  
-+	char *local_ip = NULL;
-+	get_socket_address(ses.sock_in, &local_ip, NULL, NULL, NULL, 0);
-+
-+	signal_ip_block("unblock", svr_ses.remotehost, local_ip);
-+
++	char *local_ip, *local_port = NULL;
++	get_socket_address(ses.sock_in, &local_ip, &local_port, NULL, NULL, 0);
++	if (signal_ip_block("unblock", svr_ses.remotehost, local_ip, local_port)) {
++		m_free(local_ip);
++		m_free(local_port);
++		dropbear_exit("IP address blocked");
++	}
 +	m_free(local_ip);
++	m_free(local_port);
 +
  	TRACE(("enter send_msg_userauth_success"))
  
  	CHECKCLEARTOWRITE();
+--- a/svr-main.c
++++ b/svr-main.c
+@@ -30,6 +30,7 @@
+ #include "runopts.h"
+ #include "dbrandom.h"
+ #include "crypto_desc.h"
++#include "lock_manager.h"
+ 
+ static size_t listensockets(int *sock, size_t sockcount, int *maxfd);
+ static void sigchld_handler(int dummy);
+@@ -176,6 +177,7 @@ static void main_noinetd() {
+ 		fprintf(pidfile, "%d\n", getpid());
+ 		fclose(pidfile);
+ 	}
++	initialize_lock();
+ 
+ 	/* incoming connection select loop */
+ 	for(;;) {
+@@ -199,6 +201,7 @@ static void main_noinetd() {
+ 
+ 		if (ses.exitflag) {
+ 			unlink(svr_opts.pidfile);
++			destroy_lock();
+ 			dropbear_exit("Terminated by signal");
+ 		}
+ 		
+--- /dev/null
++++ b/lock_manager.h
+@@ -0,0 +1,9 @@
++#ifndef LOCK_MANAGER_H
++#define LOCK_MANAGER_H
++
++int initialize_lock();
++int destroy_lock();
++int acquire_lock();
++int release_lock();
++
++#endif
+\ No newline at end of file
+--- /dev/null
++++ b/lock_manager.c
+@@ -0,0 +1,96 @@
++#include "lock_manager.h"
++#include <semaphore.h>
++#include <sys/mman.h>
++#include <stdio.h>
++#include <stdlib.h>
++#include <fcntl.h>
++#include <unistd.h>
++#include <time.h>
++
++#define SHM_NAME "/ip_block_dropbear"
++
++static int initialized = 0;
++static sem_t *lock;
++
++int initialize_lock()
++{
++	if (initialized) {
++		return 0;
++	}
++
++	int shm_fd = shm_open(SHM_NAME, O_CREAT | O_RDWR, 0666);
++	if (shm_fd == -1) {
++		return -1;
++	}
++
++	if (ftruncate(shm_fd, sizeof(sem_t)) == -1) {
++		close(shm_fd);
++		return -1;
++	}
++
++	lock = mmap(NULL, sizeof(sem_t), PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0);
++	if (lock == MAP_FAILED) {
++		close(shm_fd);
++		return -1;
++	}
++
++	if (sem_init(lock, 1, 1) == -1) {
++		close(shm_fd);
++		munmap(lock, sizeof(sem_t));
++		return -1;
++	}
++	close(shm_fd);
++
++	initialized = 1;
++	return 0;
++}
++
++int destroy_lock()
++{
++	if (!initialized) {
++		return -1;
++	}
++
++	if (sem_destroy(lock) == -1) {
++		return -1;
++	}
++
++	if (munmap(lock, sizeof(sem_t)) == -1) {
++		return -1;
++	}
++
++	if (shm_unlink(SHM_NAME) == -1) {
++		return -1;
++	}
++
++	initialized = 0;
++	return 0;
++}
++
++int acquire_lock()
++{
++	if (!initialized) {
++		return -1;
++	}
++
++	// Timeout to avoid deadlocks
++	struct timespec timeout;
++	clock_gettime(CLOCK_REALTIME, &timeout);
++	timeout.tv_sec += 30;
++
++	int ret = sem_timedwait(lock, &timeout);
++	if (ret != 0) {
++		release_lock();
++	}
++
++	return 0;
++}
++
++int release_lock()
++{
++	if (!initialized) {
++		return -1;
++	}
++
++	return sem_post(lock);
++}
+\ No newline at end of file

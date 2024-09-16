@@ -1,35 +1,146 @@
-# 2024-08-07 00.07.08.2
-
-### Fix
-
-* Update Firmware: fixed inconsistent firmware download from FOTA (ID: 19826)
-# 2024-08-02 00.07.08.1
+# 2024-08-27 00.07.09
 
 ### New
 
-* Mobile: added firmware downgrade validation for SLM750 and SLM770A modules (ID: 19153)
-* Mobile: added RG255C modem support (ID: 17499)
+* Curl: added unix socket support (ID: 19071)
+* Devices: added VXLAN device support for ATRM family, RUTM family, RUTC family, RUTX family, TRB1 family, TRB5 family (ID: 11898)
+* Docker: added Docker package for RUTC family (ID: 19071)
+* Events Reporting: added new firmware version notification event (ID: 8725)
+* Firewall: added ability to configure nat rule action (ID: 11163)
+* Firewall: added additional TTL target for firewall rules (ID: 16812)
+* Mobile: added "inetd.vodafone.iot" APN for a Vodafone operator (ID: 18587)
+* Mobile: added "wbdata" APN for a Webbing operator (ID: 18313)
+* Mobile: added Airinternet APN (ID: 18267)
+* Mobile: added ASM APN to APN database (ID: 19313)
+* Mobile: added Datamobile.ag APN (ID: 18267)
+* Mobile: added EG915Q modem support (ID: 16393)
+* Mobile: disabled GEA1/GEA2 and enabled GEA3/GEA4 ciphering algorithms for EC200, EC25 and SLM750 modules (ID: 14220)
+* Realtime Traffic: added historical traffic charts (ID: 17197)
+* Realtime Traffic: added overall quality measurement to wireless signal charts (ID: 19147)
+* SNMP: added Multiwan data module (ID: 17430)
+* WebUI: added notifications menu (ID: 17100)
+* Wireless: added option to enable 802.11w Management frame protection when using non-WPA3 encryption (ID: 19201)
 
 ### Improvements
 
-* Mobile: improved firmware downgrade validation for Quectel modules (ID: 19305)
+* Access Control: added option to disable password auth for the root user (ID: 16723)
+* Access Control: improved system user's access control granularity (ID: 13613)
+* Administration: improved displayed route paths in route access drop down for Router family (ID: 18539)
+* Backup: improved backup page by splitting it into backup and reset settings page (ID: 16428)
+* Boot: added NAND image verification after firmware flash for RUTM family, RUTC family (ID: 14384)
+* Call Utilities: added checking if the number is blocked before doing action (ID: 17934)
+* Call Utilities: added service for TRB160 (ID: 19223)
+* Data to Server: added warning messages about insecure certificates for http_certfile and mqtt_certfile options in API and WebUI (ID: 17389)
+* DLMS: added SHA256 authentication (ID: 16522)
+* DLMS: improved COSEM group enable validation (ID: 17076)
+* GRE: reduced GRE keepalive packet buffer size (ID: 18713)
+* Hotspot: added walled garden allowlist and blocklist (ID: 19355)
+* Hotspot: increased maximum length of 'Local users' username to 255 characters (ID: 18664)
+* Hotspot: increased throughput (ID: 18271)
+* Input/Output: the 'ubus call ioman.{adc.adc0|acl.acl0} status' call will additionally return boolean type "cached_value" field, indicating that retrieved IO value was read from cache for TRB2 family, TRB2M family (ID: 19016)
+* Input/Output: timeout for ADC value retrieval decreased from 20s to 500ms. Also, now, when such timeout occurs, last cached valid value will be returned for TRB2 family, TRB2M family (ID: 19016)
+* IPsec: added support for route based tunnel (ID: 18446)
+* L2TP: added field for custom options (ID: 18548)
+* Mobile: improved network bring up after operator scan (ID: 14761)
+* Mobile: improved SIM card notifications to get removed when SIM card state or active SIM changes (ID: 17456)
+* Mobile: removed the USSD feature from the data-only modems (ID: 19468)
+* Mobile: updated bands selection to include band number and frequency (ID: 16766)
+* Mobile: updated modem update notifications to show modem name (ID: 19349)
+* Ports Settings: added more PoE state symbols, colored disabled port differently and improved port status hint (ID: 11834)
+* Python3: fixed CVE 2024-0397 (ID: 19737)
+* Realtime Traffic: improved chart styles (ID: 17197)
+* RelayD: added hints for overview and fields (ID: 13645)
+* Side Widget: added port status widget (ID: 11834)
+* SMPP: added timeout option (ID: 18684)
+* Update Firmware: changed firmware update log to include firmware versions (ID: 18065)
+* Update Firmware: removed firmware flash restrictions for certain regions (ID: 19442)
+* Web Filter: added hostname number for successful file upload message (ID: 8431)
+* WebUI: added confirmation prompt for disabling service in side widget (ID: 17991)
+* WebUI: changed overview page design for TAP family (ID: 18104)
+* WebUI: improved global alerts display (ID: 17100)
+* WebUI: updated firmware and backup verification pages to be shown in modals with improved design (ID: 13005)
+* Wireless: added insecure configuration warnings when configuring SSIDs (ID: 16731)
+* Wireless: added various validations for network that is being used by wireless interface for Router family (ID: 13645)
+* Wireless: increased EAP authentication logging (ID: 12583)
+* Wireless: reduced time required for Fast Transition in STA mode (ID: 18928)
+* Wireless: updated wireless cards to display each radio device's signal quality and band data (ID: 18914)
 
 ### Fix
 
-* Ledman: fixed SIM LEDs indication for RUTXR1 (ID: 19081)
-* MBus Client: fixed FCB toggle button not working (ID: 19609)
-* Mobile: fixed an issue where in some cases mobile network interfaces would not be brought down properly (ID: 19246)
-* Mobile: fixed illegal instruction fault on modem control services (ID: 19510)
-* Mobile: fixed memory fault while allowlist and denied data roaming enabled (ID: 19498)
-* Mobile: fixed wrong bandwidth parsing on 5G devices (ID: 19205)
-* Modbus TCP over Serial Gateway: fixed serial connection not working after reboot (ID: 19585)
-* Network: fixed default route not being added for PPPoE connections (ID: 19601)
-* OPC UA Client: fixed connections not being closed after using testing functionality (ID: 19243)
-* WebUI: fixed SDK WebUI package compilation (ID: 19547)
+* API Core: fixed file deletion (ID: 20070)
+* Azure IoT Hub: fixed the Azure IoT Hub deprecated endpoint so that it does not create sections in GET request (ID: 19541)
+* Azure IoT Hub: fixed the Azure IoT Hub deprecated endpoint to create Data to Server sections (ID: 19458)
+* Azure IoT Hub: fixed the deletion of Data to Server sections when an Azure IoT Hub section is deleted through the deprecated endpoint (ID: 19541)
+* Boot: fixed Teltonika logo in httpd recovery page when using Firefox for OTD140, RUT14X family, RUT2M family, RUT30X family, RUT36X family, RUT9M family, TAP100, TCR1 family, TRB2 family, TRB2M family (ID: 18529)
+* Certificates: fixed root ca file upload size validation to a maximum of 10KB (ID: 18916)
+* Data to Server: fixed the missing certificate upload options for HTTP output for TAP100, TAP200 (ID: 19527)
+* Devices: fixed configured VLAN 0 device cannot be selected in interface physical settings configuration (ID: 19578)
+* DLMS: fixed OBIS code validation (ID: 17799)
+* GPS: fixed an issue where a firmware update with keep settings would remove existing hosts (ID: 19761)
+* GPS: fixed NMEA forwarding when RMC/GGA were not synchronized when using same interval (ID: 19853)
+* Hotspot: fixed 'Hotspot network' input validation to only allow network mask from 16 to 30 (ID: 19733)
+* Input/Output: added I/O juggler reload when I/O pin direction is changed (ID: 19267)
+* MBus Client: fixed issue where M-Bus client was not reading meters correctly after a router reboot (ID: 19397)
+* MBus Client: fixed requests API endpoints POST method (ID: 20050)
+* Mobile: fixed an issue where some 2FF SIM cards were recognized as eSIMs (ID: 18414)
+* Mobile: fixed an issue where the interface could hang if the modem was busy (ID: 19906)
+* Mobile: fixed Bridge/Passthrough modes for routed networks (ID: 18633)
+* Mobile: fixed data limit widget to show used data for inactive interface (ID: 14522)
+* Mobile: fixed incorrect date values when setting SMS limit (ID: 18714)
+* Mobile: fixed missing data_port from mobile info (ID: 19435)
+* Mobile: fixed mobile data limit to calculate used limits from correct starting point after network restart and usage counters when using ipv4 and ipv6 simultaneously with specific modems (ID: 19672)
+* Mobile: fixed modem info not being filled on devices with more than one modem (ID: 19655)
+* Mobile: fixed SINR display for EG060K module devices (ID: 19065)
+* Mobile: fixed SMS used data header counter (ID: 19108)
+* Mobile: fixed the issue where the PUK event was not displayed when the SIM PIN was blocked (ID: 19218)
+* Mobile: fixed uqmi start-network authentication issue (ID: 19579)
+* Mobile: fixed USSD over IMS error handling (ID: 19778)
+* MQTT Publisher: fixed 'digital1' and 'digital2' values' display for RUT976 (ID: 19787)
+* Network: fixed bridge mode being represented incorrectly on guest interface for TCR1 family (ID: 19286)
+* Network: fixed error when trying to edit guest interface for TCR100 (ID: 19353)
+* Network: fixed Ethernet switch port state change tracking logic for RUT9M family, RUT2M family, RUT14X family, RUT361, TRB2M family, TAP100, OTD140, RUT301 (ID: 18593)
+* Network: fixed incorrect date values when setting data limit (ID: 18714)
+* Network: fixed switch hardware MTU being set incorrectly when changing MTU on any network interface for RUTX family (ID: 19840)
+* OPC UA Client: fixed TCL file upload (ID: 19620)
+* OPC UA Server: fixed configuration migration (ID: 19744)
+* OPC UA Server: fixed TCL file upload (ID: 19620)
+* OpenVPN: fixed default firewall zone for tap interfaces (ID: 19132)
+* Package Restore: fixed automatic package re-installation after firmware upgrade (ID: 19918)
+* Ports Settings: fixed port having different name than what it has physically written near it for RUT241 (ID: 11834)
+* RelayD: fixed relayd assigning wrong interface to zone (ID: 19052)
+* SMS Utilities: fixed eSIM change rule handling (ID: 17339)
+* SNMP: fixed default hssDwLimit, hssUpLimit, hssDwBandwidth and hssUpBandwidth values (ID: 19801)
+* SNMP: fixed mobile network state display (ID: 19790)
+* SNMP: fixed negative GPS latitude display (ID: 18831)
+* SNMP: fixed TELTONIKA-MIB wireless module crash (ID: 19500)
+* Troubleshoot: fixed troubleshoot not including all the log files when log to flash is enabled (ID: 18915)
+* UI Core: fixed modal styling, when action buttons would overflow it's container (ID: 18859)
+* Update Firmware: fixed FOTA network check to not use hard-coded address (ID: 19167)
+* USB: fixed RNDIS driver detection on Windows systems (ID: 19714)
+* User Settings: fixed page to show groups and users if the user has been granted access (ID: 19758)
+* WebUI: fixed overview page to display active wireless (WLAN) clients (ID: 19665)
+* Wireless: fixed excessive log spam during 5 Ghz ACS for RUTX family, TCR1 family (ID: 18930)
+* Wireless: fixed station mode connection issues for 2.4GHz radio in STA+AP mode for Router family (ID: 18606)
+* Wireless: fixed wireless status API response to contain separate interface information for multiple radio configurations (ID: 18914)
+
+### CVE Patches
+
+* patched CVE-2021-32292 (ID: 19523)
+* patched CVE-2022-40617 (ID: 19525)
+* patched CVE-2023-49441 (ID: 18640)
+* patched CVE-2024-3596 (ID: 19668)
+* patched CVE-2024-5535 (ID: 19763)
+* patched CVE-2024-8088 (ID: 20069)
+* patched CVE-2024-26669 for ATRM family, OTD family, RUT14X family, RUT2M family, RUT30X family, RUT36X family, RUT9M family, RUTC family, RUTM family, RUTX family, TAP family, TCR1 family, TRB1 family, TRB2 family, TRB2M family (ID: 17608)
+* patched CVE-2024-26739 for ATRM family, OTD family, RUT14X family, RUT2M family, RUT30X family, RUT36X family, RUT9M family, RUTC family, RUTM family, RUTX family, TAP family, TCR1 family, TRB1 family, TRB2 family, TRB2M family (ID: 17608)
+* patched CVE-2024-26740 for ATRM family, OTD family, RUT14X family, RUT2M family, RUT301, RUT361, RUT9M family, RUTC family, RUTM family, RUTX family, TAP family, TRB160, TRB2M family (ID: 17608)
+* patched CVE-2024-36901 for ATRM family, OTD family, RUT14X family, RUT2M family, RUT30X family, RUT36X family, RUT9M family, RUTC family, RUTM family, RUTX family, TAP family, TCR1 family, TRB1 family, TRB2 family, TRB2M family (ID: 17608)
 
 ### Updates
 
-* Zerotier: updated version to  1.14.0 (ID: 18932)
+* Kernel: updated version to  5.4.279 for TRB2 family, TRB1 family, RUT300, RUT360, TCR1 family (ID: 7140)
+* Kernel: updated version to  5.10.221 for RUTX family, RUTM family, ATRM family, OTD500, TAP200 (ID: 7140)
+* Kernel: updated version to  5.15.162 for RUTC family, TRB2M family, RUT14X family, OTD140, RUT2M family, RUT301, RUT361, RUT9M family, TAP100 (ID: 7140)
 
 # 2024-07-12 00.07.08
 
@@ -323,6 +434,90 @@
 * stunnel: updated version to  5.72 (ID: 16295)
 * Tailscale: updated version to  1.68.1 (ID: 18830)
 * vue: updated version to  3.4 (ID: 16445)
+
+# 2024-07-03 00.07.06.13
+
+### New
+
+* Multiwan: added additional connection flush options (ID: 19039)
+* RMS API/WebUI: added 'auth_code' option (ID: 19031)
+
+### Improvements
+
+* Mobile: added corrupted mobile statistics database restoration functionallity (ID: 18735)
+* Mobile: updated modem updater for better SLM750 compatibility (ID: 18905)
+* Mobile: optimized mobile data gathering on new modem event (ID: 18837)
+
+### Fix
+
+* OpenVPN: added fixes for the insecure tls-cert-profile option usage (ID: 18594)
+* IPsec: fixed the instance status when the local firewall option is disabled (ID: 18490)
+
+# 2024-06-18 00.07.07.3
+
+### New
+
+* API: added TRB160 documentation (ID: 18564)
+* RUTOS: added support for RUT260 hardware version 3 (ID: 18186)
+
+### Fix
+
+* FOTA: fixed config when upgrading from older firmware with keep settings (ID: 18653)
+* WebUI: fixed port advertisement change (ID: 18840)
+* FRR: patched CVE-2024-31950 and CVE-2024-31951 vulnerabilities (ID: 17644)
+* USB: fixed windows usb to ethernet detection for TRB1601 device (ID: 18407)
+* USB: fixed USB ethernet VID PID declaration for TRB16X (ID: 18711)
+
+# 2024-06-10 00.07.06.12
+
+### Improvements
+
+* OpenVPN: improved instance status state (ID: 18359)
+
+### Fix
+
+* Dropbear: added CVE-2023-48795 patch (ID: 18662)
+* FRR: patched CVE-2023-46752 and CVE-2023-46753 vulnerabilities for RUT2XX devices (ID: 18374)
+* OpenVPN: fixed the private key decryption for cases when a password is used (ID: 18488)
+
+# 2024-06-10 00.07.07.2
+
+### Improvements
+
+* Zerotier: added backup WAN interface blacklisting if WAN failover is enabled (ID: 17069)
+* Network: improved software routing performance when under stateless bidirectional RFC2544 tests for all routers (ID: 17501)
+* SSH: removed weak SSH algorithms (ID: 17682)
+* Mobile: improved parsing of multiple 5G bands on the RG520N modem (ID: 17700)
+* Telnet: changed telnet to an installable package (ID: 18282)
+* Upgrade: improved procd-watchdog handling during firmware upgrade process (ID: 18302)
+* Mobile: improved communication stability with eSIM (ID: 17293)
+* SNMP: added bruteforce attack prevention when using SNMP v3 user (ID: 18187)
+* L2TP: improved l2tp reconnect attempt logic (ID: 18302)
+* Wireless: removed unnecessary information from system logs (ID: 18470)
+* System: improved failsafe boot protection during firmware upgrades on RUTM devices (ID: 18323)
+
+### Fix
+
+* Uboot: fixed firmware recovery update via uboot on Windows for rut3x, trb2x, tap100, rut14x, tcr1x, rut9m, rut2m, rut206 devices (ID: 18461)
+* IP Block: fixed blocking of UDP traffic (ID: 18187)
+* Mobile: fixed forced apn configuration (ID: 18350)
+* Serial: improved recovery from serial connection loss after modem reboot on TRB1 family devices (ID: 17979)
+* FRR: patched CVE-2024-31948 vulnerability (ID: 17642)
+* FRR: patched CVE-2023-46752 and CVE-2023-46753 vulnerabilities for RUT300, TRB2XX devices (ID: 18374)
+* Mobile: fixed a SIM detection issue on some devices from RUTM family and RUT361 (ID: 18182)
+* Ledman: fixed WiFi LED indication when WiFi configuration is changed (ID: 17894)
+* DMVPN: fixed duplicate NHRP map entries creation (ID: 17758)
+* Serial: fixed kernel panic when "full-duplex" mode for RS485 is quickly switched on and off for TRB145 (ID: 17627)
+* Wireless: fixed connection issues after disabling encryption for RUTX family devices (ID: 17646)
+* Hotspot: fixed walled garden changes to take effect after save, added walled garden to backup (ID: 17646)
+* GPS: fixed outages on RUTX50 (ID: 16709)
+* HNAT: fixed cases of unintended forwarding when LAN and WAN subnets overlap on RUTX devices (ID: 18021)
+* HNAT: fixed instances of device misrouting packets to wired LAN when 'Hardware Flow Offloading' was enabled on RUTX devices (ID: 18322)
+* Backup: fixed backup validation for RUT200 devices (ID: 17947)
+* BGP: fixed instance migration issues (ID: 18515)
+* OpenVPN: added fixes for the insecure tls-cert-profile option usage (ID: 18594)
+* Sysupgrade: prevent reboot before update completes (ID: 18626)
+* ETH driver: fixed connection loss after changing of IP address for TRB500 devices (ID: 18605)
 
 # 2024-05-03 00.07.06.11
 

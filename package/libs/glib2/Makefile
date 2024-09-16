@@ -24,8 +24,8 @@ PKG_CPE_ID:=cpe:/a:gnome:glib
 
 PKG_BUILD_DIR:=$(BUILD_DIR)/glib-$(PKG_VERSION)
 HOST_BUILD_DIR:=$(BUILD_DIR_HOST)/glib-$(PKG_VERSION)
-PKG_BUILD_DEPENDS:=meson/host gettext-full libiconv/host
-HOST_BUILD_DEPENDS:=meson/host gettext-full/host libiconv/host libffi/host
+PKG_BUILD_DEPENDS:=meson/host gettext-full libiconv-full/host
+HOST_BUILD_DEPENDS:=meson/host gettext-full/host libiconv-full/host libffi/host
 PKG_CONFIG_DEPENDS:=CONFIG_BUILD_NLS
 PKG_BUILD_FLAGS:=gc-sections
 PKG_INSTALL:=1
@@ -52,7 +52,6 @@ TARGET_LDFLAGS += $(if $(INTL_FULL),-lintl)
 
 COMP_ARGS= \
 	-Ddefault_library=both \
-	-Diconv=external \
 	-Dselinux=disabled \
 	-Dlibmount=disabled \
 	-Dinternal_pcre=true \

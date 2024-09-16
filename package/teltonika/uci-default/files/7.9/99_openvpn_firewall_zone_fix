@@ -1,0 +1,15 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+fix_zone() {
+    config_get name "$1" "name"
+    if [ "$name" = "openvpn" ]; then
+        config_get device "$1" "device" ""
+        [ "$device" = "${device##*tap_+}" ] && uci_set "firewall" "$1" "device" "${device} tap_+"
+    fi
+}
+
+config_load "firewall"
+config_foreach fix_zone "zone"
+uci_commit firewall

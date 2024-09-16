@@ -85,7 +85,7 @@ prepare_control_f() {
 
 	tar -xf "$ipk_name" --get "./control.tar.gz" --to-stdout |
 		tar -xzf - --get "./control" --to-stdout |
-		grep -E 'Firmware|tlt_name|Router|Package|Version|pkg_reboot|pkg_network_restart|AppName' >"$main_f" &&
+		grep -E 'Firmware|tlt_name|Router|Package|Version|pkg_reboot|pkg_network_restart|AppName|HWInfo' >"$main_f" &&
 		tar -uf "${dirs[zipped_packages]}/$pm_name.tar" -C "${dirs[tmp_pm]}/$package_name" "./main"
 
 	rm -r "${dirs[tmp_pm]:?}/$package_name"

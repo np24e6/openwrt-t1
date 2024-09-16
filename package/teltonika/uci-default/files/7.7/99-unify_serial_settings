@@ -32,7 +32,7 @@ rename_serial_opts() {
 	fi
 }
 
-config_load "$DNP3_CONFIG"
+config_load "$DNP3_CONFIG" || return
 config_foreach rename_serial_opts serial_client
 uci_commit "$DNP3_CONFIG"
 

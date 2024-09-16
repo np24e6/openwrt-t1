@@ -14,6 +14,7 @@ HOST_INFO_OPT="host_info"
 merge_host() {
 	local CONFIG=$1
 	local SECTION_NAME=$2
+	local HOSTNAME PORT PROTOCOL host_info
 
 	config_load "$CONFIG" || return
 
@@ -21,9 +22,9 @@ merge_host() {
 	config_get PORT "$SECTION_NAME" "port" ""
 	config_get PROTOCOL "$SECTION_NAME" "proto" ""
 
-	uci_remove "$CONFIG" "$SECTION_NAME" "hostname"
-	uci_remove "$CONFIG" "$SECTION_NAME" "port"
-	uci_remove "$CONFIG" "$SECTION_NAME" "proto"
+	[ -n "$HOSTNAME" ] && uci_remove "$CONFIG" "$SECTION_NAME" "hostname"
+	[ -n "$PORT" ] && uci_remove "$CONFIG" "$SECTION_NAME" "port"
+	[ -n "$PROTOCOL" ] && uci_remove "$CONFIG" "$SECTION_NAME" "proto"
 
 	# WebUI displays default values without host_info, so just return.
 	[ -z "$HOSTNAME" ] || [ -z "$PORT" ] || [ -z "$PROTOCOL" ] && return
@@ -36,12 +37,16 @@ merge_host() {
 migrate_https_url_to_list() {
 	local CONFIG=$1
 	local SECTION_NAME=$2
+	local HOSTNAME
 
 	config_load "$CONFIG" || return
 
-	config_get HOSTNAME "$SECTION_NAME" "hostname" ""
+	HOSTNAME=$(uci -q -d ';' get "$CONFIG"."$SECTION_NAME".hostname)
 
 	[ -z "$HOSTNAME" ] && return
+
+	# check if hostname is already a list, if so, return
+	[ -n "$(echo "$HOSTNAME" | grep ';')" ] && return
 
 	uci_remove "$CONFIG" "$SECTION_NAME" "hostname"
 	uci_add_list "$CONFIG" "$SECTION_NAME" "hostname" "$HOSTNAME"
@@ -51,7 +56,7 @@ merge_host "$CONFIG_GPS" "$NMEA_SECTION_NAME"
 merge_host "$CONFIG_AVL" "$AVL_SECTION_NAME"
 migrate_https_url_to_list "$CONFIG_GPS" "$HTTPS_SECTION_NAME"
 
-uci_commit "$CONFIG_GPS"
-uci_commit "$CONFIG_AVL"
+[ -f /etc/config/gps ] && uci_commit "$CONFIG_GPS"
+[ -f /etc/config/avl ] && uci_commit "$CONFIG_AVL"
 
 exit 0

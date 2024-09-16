@@ -1,0 +1,11 @@
+--- a/cli.c
++++ b/cli.c
+@@ -46,6 +46,7 @@
+ 		[BLOBMSG_TYPE_STRING] = "\"String\"",
+ 		[BLOBMSG_TYPE_ARRAY] = "\"Array\"",
+ 		[BLOBMSG_TYPE_TABLE] = "\"Table\"",
++		[BLOBMSG_CAST_INT64] = "\"Integer\"",
+ 	};
+ 	const char *type = NULL;
+ 	size_t typeid;
+

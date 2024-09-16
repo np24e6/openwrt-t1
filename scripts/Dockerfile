@@ -1,4 +1,4 @@
-FROM ubuntu:focal-20230308
+FROM ubuntu:focal-20240530
 
 # Set environment variables
 ENV DEBIAN_FRONTEND noninteractive
@@ -25,6 +25,7 @@ RUN apt update && apt upgrade -y \
 	bzip2 \
 	ca-certificates \
 	curl \
+	cmake \
 	default-jdk \
 	device-tree-compiler \
 	devscripts \
@@ -35,7 +36,6 @@ RUN apt update && apt upgrade -y \
 	g++ \
 	gawk \
 	gcc \
-	gcc-multilib \
 	gengetopt \
 	gettext \
 	git \
@@ -48,6 +48,7 @@ RUN apt update && apt upgrade -y \
 	jq \
 	libc6-dev \
 	libffi-dev \
+	libexpat-dev \
 	libncurses5-dev \
 	libpcre3-dev \
 	libsqlite3-dev \

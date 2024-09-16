@@ -410,194 +410,6 @@ ucidef_add_vdsl_modem() {
 	json_select ..
 }
 
-ucidef_set_led_ataport() {
-	_ucidef_set_led_trigger "$1" "$2" "$3" ata"$4"
-}
-
-_ucidef_set_led_common() {
-	local cfg="led_$1"
-	local name="$2"
-	local sysfs="$3"
-
-	json_select_object led
-
-	json_select_object "$1"
-	json_add_string name "$name"
-	json_add_string sysfs "$sysfs"
-}
-
-ucidef_set_led_default() {
-	local default="$4"
-
-	_ucidef_set_led_common "$1" "$2" "$3"
-
-	json_add_string default "$default"
-	json_select ..
-
-	json_select ..
-}
-
-ucidef_set_led_gpio() {
-	local gpio="$4"
-	local inverted="$5"
-
-	_ucidef_set_led_common "$1" "$2" "$3"
-
-	json_add_string trigger "$trigger"
-	json_add_string type gpio
-	json_add_int gpio "$gpio"
-	json_add_boolean inverted "$inverted"
-	json_select ..
-
-	json_select ..
-}
-
-ucidef_set_led_ide() {
-	_ucidef_set_led_trigger "$1" "$2" "$3" disk-activity
-}
-
-ucidef_set_led_netdev() {
-	local dev="$4"
-	local mode="${5:-link tx rx}"
-
-	_ucidef_set_led_common "$1" "$2" "$3"
-
-	json_add_string type netdev
-	json_add_string device "$dev"
-	json_add_string mode "$mode"
-	json_select ..
-
-	json_select ..
-}
-
-ucidef_set_led_oneshot() {
-	_ucidef_set_led_timer $1 $2 $3 "oneshot" $4 $5
-}
-
-ucidef_set_led_portstate() {
-	local port_state="$4"
-
-	_ucidef_set_led_common "$1" "$2" "$3"
-
-	json_add_string trigger port_state
-	json_add_string type portstate
-	json_add_string port_state "$port_state"
-	json_select ..
-
-	json_select ..
-}
-
-ucidef_set_led_rssi() {
-	local iface="$4"
-	local minq="$5"
-	local maxq="$6"
-	local offset="${7:-0}"
-	local factor="${8:-1}"
-
-	_ucidef_set_led_common "$1" "$2" "$3"
-
-	json_add_string type rssi
-	json_add_string name "$name"
-	json_add_string iface "$iface"
-	json_add_string minq "$minq"
-	json_add_string maxq "$maxq"
-	json_add_string offset "$offset"
-	json_add_string factor "$factor"
-	json_select ..
-
-	json_select ..
-}
-
-ucidef_set_led_switch() {
-	local trigger_name="$4"
-	local port_mask="$5"
-	local speed_mask="$6"
-	local mode="$7"
-
-	_ucidef_set_led_common "$1" "$2" "$3"
-
-	json_add_string trigger "$trigger_name"
-	json_add_string type switch
-	json_add_string mode "$mode"
-	json_add_string port_mask "$port_mask"
-	json_add_string speed_mask "$speed_mask"
-	json_select ..
-
-	json_select ..
-}
-
-_ucidef_set_led_timer() {
-	local trigger_name="$4"
-	local delayon="$5"
-	local delayoff="$6"
-
-	_ucidef_set_led_common "$1" "$2" "$3"
-
-	json_add_string type "$trigger_name"
-	json_add_string trigger "$trigger_name"
-	json_add_int delayon "$delayon"
-	json_add_int delayoff "$delayoff"
-	json_select ..
-
-	json_select ..
-}
-
-ucidef_set_led_timer() {
-	_ucidef_set_led_timer $1 $2 $3 "timer" $4 $5
-}
-
-_ucidef_set_led_trigger() {
-	local trigger_name="$4"
-
-	_ucidef_set_led_common "$1" "$2" "$3"
-
-	json_add_string trigger "$trigger_name"
-	json_select ..
-
-	json_select ..
-}
-
-ucidef_set_led_usbdev() {
-	local dev="$4"
-
-	_ucidef_set_led_common "$1" "$2" "$3"
-
-	json_add_string type usb
-	json_add_string device "$dev"
-	json_select ..
-
-	json_select ..
-}
-
-ucidef_set_led_usbhost() {
-	_ucidef_set_led_trigger "$1" "$2" "$3" usb-host
-}
-
-ucidef_set_led_usbport() {
-	local obj="$1"
-	local name="$2"
-	local sysfs="$3"
-	shift
-	shift
-	shift
-
-	_ucidef_set_led_common "$obj" "$name" "$sysfs"
-
-	json_add_string type usbport
-	json_select_array ports
-		for port in "$@"; do
-			json_add_string port "$port"
-		done
-	json_select ..
-	json_select ..
-
-	json_select ..
-}
-
-ucidef_set_led_wlan() {
-	_ucidef_set_led_trigger "$1" "$2" "$3" "$4"
-}
-
 ucidef_set_rssimon() {
 	local dev="$1"
 	local refresh="$2"
@@ -649,7 +461,7 @@ ucidef_set_ntpserver() {
 }
 
 ucidef_set_network_options() {
-	json_add_object "network_options"
+	json_select_object "network_options"
 	n=$#
 
 	for i in $(seq $((n / 2))); do
@@ -664,30 +476,32 @@ ucidef_set_network_options() {
 		fi
 		shift; shift
 	done
-	json_close_object
+	json_select ..
 }
 
 ucidef_set_poe() {
-	json_add_object poe
-	json_add_string "bus" "/dev/$1"
-	json_add_int "chip_count" "$2"
-	json_add_int "budget" "$3"
-	json_add_int "poe_ports" "$4"
-	shift 4
-	json_add_array ports
-		while [ $# -gt 0 ]
-		do
-			json_add_object ""
-			json_add_string "name" "$1"
-			json_add_string "class" "$2"
-			json_add_int "budget" "$3"
-			json_close_object
-			shift 3
-		done
-	json_close_array
-	json_add_array poe_chips
-	json_close_array
-	json_close_object
+	local poe
+
+	json_get_var poe poe
+	[ -n "$poe" ] && return
+
+	json_select_object poe
+		json_add_string "bus" "/dev/$1"
+		json_add_int "chip_count" "$2"
+		json_add_int "budget" "$3"
+		json_add_int "poe_ports" "$4"
+		shift 4
+		json_select_array ports
+			while [ $# -gt 0 ]; do
+				json_add_object ""
+					json_add_string "name" "$1"
+					json_add_string "class" "$2"
+					json_add_int "budget" "$3"
+				json_close_object
+				shift 3
+			done
+		json_select ..
+	json_select ..
 }
 
 ucidef_set_poe_chip() {
@@ -739,4 +553,5 @@ board_config_update() {
 
 board_config_flush() {
 	json_dump -i -o ${CFG}
+	[ "$CFG" = "/etc/board.json" ] && md5sum ${CFG} > /etc/board.hash
 }

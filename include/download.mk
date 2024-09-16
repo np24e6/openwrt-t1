@@ -344,7 +344,7 @@ define Download/default
   $(if $(PKG_HASH),HASH:=$(PKG_HASH))
 endef
 
-define Download/upstream_vars
+define Download/default-upstream
   FILE:=$(PKG_UPSTREAM_FILE)
   URL:=$(PKG_UPSTREAM_URL)
   URL_FILE:=$(PKG_UPSTREAM_URL_FILE)
@@ -372,6 +372,11 @@ define Download
 
   $(DL_DIR)/$(FILE):
 	mkdir -p $(DL_DIR)
+ifdef UPSTREAM_FETCH
+ifneq ($(wildcard $(TOPDIR)/dl/$(FILE)),)
+	if cp $(TOPDIR)/dl/$(FILE) $(DL_DIR)/$(FILE); then exit 0; fi
+endif
+endif
 	$(call dl_retry,5, \
 		$(call locked, \
 			$(if $(DownloadMethod/$(call dl_method,$(URL),$(PROTO))), \
@@ -386,45 +391,19 @@ endef
 # 1 => amount of tries
 # 2 => command to run
 define dl_retry
-  set -e; \
   count=0; \
   until [ $$$$count -ge $(1) ]; do \
-    $(2) && break; \
+    $(if $(strip $(2)),$(2),true) && break; \
     count=$$$$((count+1)); \
 	$(call MESSAGE,Warning: Package $(PKG_NAME) failed to download: retrying $$$$count/$(1)...); \
-    sleep 10; \
+    sleep 20; \
   done; \
   if [ $$$$count -eq $(1) ]; then \
-	$(call MESSAGE,Warning: Package $(PKG_NAME) failed to download afer $(1) attempts.); \
+	$(call MESSAGE,Warning: Package $(PKG_NAME) failed to download after $(1) attempts.); \
     exit 1; \
   fi
 endef
 
-
-define Download/upstream
-  download_upstream: download $(DL_DIR)/upstream/$(PKG_UPSTREAM_FILE)
-
-  $(DL_DIR)/upstream/$(PKG_UPSTREAM_FILE):
-	mkdir -p $(DL_DIR)/upstream
-
-	$(eval $(Download/Defaults))
-  	$(eval $(Download/upstream_vars))
-	$(eval OLD_DL_DIR:=$(DL_DIR))
-	$(eval DL_DIR:=$(DL_DIR)/upstream)
-
-	$(call dl_retry,5, \
-		$(call locked, \
-			$(if $(DownloadMethod/$(call dl_method,$(URL),$(PROTO))), \
-				$(call DownloadMethod/$(call dl_method,$(URL),$(PROTO)),check,$(if $(filter default,$(1)),PKG_,Download/$(1):)), \
-				$(DownloadMethod/unknown) \
-			),\
-			$(FILE) \
-		) \
-	)
-
-	$(eval DL_DIR:=$(OLD_DL_DIR))
-	$(if $(DEFAULT_DOWNLOAD_SECTION),$(eval $(Download/$(DEFAULT_DOWNLOAD_SECTION))))
-endef
 
 define Download/ParseURL
 $(strip

@@ -31,11 +31,11 @@ pid=$(cat /sys$DEVPATH/idProduct)
 usb=/lib/network/wwan/$vid:$pid
 devicename="$DEVICENAME"
 
-[ "$ACTION" = "add" ] && [ "$vid" = "05c6" ] && [ "$pid" = "f601" ] && exit 0
+[ "$ACTION" = "add" ] && exit 0
 
 json_init
 json_load "$(cat $usb)"
-json_get_vars desc control serial_control data boudrate stop_bits gps
+json_get_vars desc control serial_control data_secondary boudrate stop_bits gps
 
 if [ -n "$serial_control" ]; then
 	at_device="/dev/ttyS${serial_control}"
@@ -45,7 +45,7 @@ fi
 
 [ "$gps" ] && gps_device="/dev/$(ls -d /sys/bus/usb/devices/${devicename}:1.${gps}/tty?* | sed "s/.*\///g" | tr "\n")"
 
-[ "$data" ] && data_device="/dev/$(ls -d /sys/bus/usb/devices/${devicename}:1.${data}/tty?* | sed "s/.*\///g" | tr "\n")"
+[ "$data_secondary" ] && data_device="/dev/$(ls -d /sys/bus/usb/devices/${devicename}:1.${data_secondary}/tty?* | sed "s/.*\///g" | tr "\n")"
 
 [ -s /etc/config/simcard ] && {
 	config_load "simcard"

@@ -156,6 +156,9 @@ config USES_SOFT_PORT_MIRROR
 config USES_VENDOR_WIFI_DRIVER
 	bool
 
+config MT7981_WIFI
+	bool
+
 config BASIC_ROUTER
 	bool
 
@@ -180,7 +183,7 @@ config GATEWAY_DEVICE
 
 config 64MB_RAM
 	bool
-
+	
 config SW_OFFLOAD
 	bool
 
@@ -190,7 +193,16 @@ config HW_OFFLOAD
 config MODEM_RESET_QUIRK
 	bool
 
-config BROKEN_SIM_IDLE_PROTECTION
+config PORT_LINK
+	bool
+
+config HAS_RS232
+	bool
+
+config HAS_RS485
+	bool
+
+config HIGH_STORAGE
 	bool
 
 # Architecture selection

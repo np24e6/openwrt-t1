@@ -217,7 +217,16 @@ generate_network() {
 		set network.$1.proto='none'
 	EOF
 	[ "$1" != "lan" ] && metric=$((metric+1))
-	[ "$guest" = "1" ] && uci set network.$1.guest='1'
+	[ "$guest" = "1" ] && {
+		uci -q batch <<-EOF
+			set network.$1.guest='1'
+			set network.br_guest='device'
+			set network.br_guest.type='bridge'
+			set network.br_guest.name='br-guest'
+			delete network.$1.type
+			set network.$1.device='br-guest'
+		EOF
+	}
 
 	case "$proto" in
 		static)

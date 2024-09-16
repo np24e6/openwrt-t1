@@ -184,11 +184,12 @@ proto_pppmobile_setup() {
 #~ Parameters part------------------------------------------------------
 	#[ -z "$sim" ] && sim=$(get_config_sim "$interface")
 	active_sim=$(get_active_sim "$interface" "$old_cb" "$mdm_ubus_obj")
+	[ "$active_sim" = "0" ] && echo "Failed to get active sim" && reload_mobifd "$modem" "$interface" && return
 	esim_profile_index=$(get_active_esim_profile_index "$modem")
 	# verify active sim by return value(non zero means that the check failed)
-	verify_active_sim "$sim" "$active_sim" "$interface" || return
+	verify_active_sim "$sim" "$active_sim" "$interface" || { reload_mobifd "$modem" "$interface"; return; }
 	# verify active esim profile index by return value(non zero means that the check failed)
-	verify_active_esim "$esim_profile_index" "$interface" || return
+	verify_active_esim "$esim_profile_index" "$interface" || { reload_mobifd "$modem" "$interface"; return; }
 	deny_roaming=$(get_deny_roaming "$active_sim" "$modem" "$esim_profile_index")
 
 	if [ "$deny_roaming" = "1" ]; then

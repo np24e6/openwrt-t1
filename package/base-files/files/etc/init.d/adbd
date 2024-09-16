@@ -1,0 +1,86 @@
+#!/bin/sh /etc/rc.common
+
+START=21
+
+. /lib/functions.sh
+. /usr/share/libubox/jshn.sh
+
+MANUF="Teltonika Networks"
+
+get_model_data() {
+	json_load_file "/etc/board.json"
+
+	json_select model
+
+	json_get_var platform platform
+	json_get_var pid pid
+	json_get_var vid vid
+
+	json_select ..
+
+	case $pid in
+	0x0004)
+		ifname="usb"
+		udc_name="8a00000.dwc3"
+		;;
+	0x0003)
+		ifname="ecm"
+		udc_name="a600000.dwc3"
+		;;
+	0x0002)
+		ifname="rndis"
+		udc_name="msm_hsusb"
+		platform="$platform""4X"
+		;;
+	esac
+	fun_name="rndis.$ifname""0"
+}
+
+boot() {
+	local p="/sys/kernel/config/usb_gadget/g1"
+	[ -d "$p" ] && return
+
+	get_model_data
+
+	# mount configfs for usb gadget configuration
+	mount -t configfs none /sys/kernel/config
+
+	mkdir "$p"
+
+	# write product info data
+	echo "$vid" > "$p/idVendor"
+	echo "$pid" > "$p/idProduct"
+	echo "0x02" > "$p/bDeviceClass"
+
+	local router_serial=$(/sbin/mnf_info --sn 2>/dev/null)
+
+	# write Windows OS specific descriptors
+	echo "0xcd" > "$p/os_desc/b_vendor_code"
+	echo "MSFT100" > "$p/os_desc/qw_sign"
+	echo "1" > "$p/os_desc/use"
+
+	mkdir "$p/strings/0x409"
+	echo "$MANUF" > "$p/strings/0x409/manufacturer"
+	echo "$platform" > "$p/strings/0x409/product"
+	echo "$router_serial" > "$p/strings/0x409/serialnumber"
+
+	# enable interface and function file-system gadgets
+	mkdir "$p/functions/$fun_name"
+	mkdir "$p/configs/c.1"
+	echo "$ifname%d" > "$p/functions/$fun_name/ifname"
+
+	# specify Windows OS specific descriptors for RNDIS
+	echo "RNDIS"   > $p/functions/$fun_name/os_desc/interface.rndis/compatible_id
+	echo "5162001" > $p/functions/$fun_name/os_desc/interface.rndis/sub_compatible_id
+
+	ln -s "$p/functions/$fun_name" "$p/configs/c.1"
+	ln -s ${p}/configs/c.1 ${p}/os_desc
+
+	# specify class, subclass and protocol for RNDIS
+	echo "EF" > "$p/functions/$fun_name/class"
+	echo "04" > "$p/functions/$fun_name/subclass"
+	echo "01" > "$p/functions/$fun_name/protocol"
+
+	# probe UDC
+	echo "$udc_name" > "$p/UDC"
+}

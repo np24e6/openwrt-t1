@@ -6,7 +6,7 @@
  busybox-all  := $(core-y) $(libs-y)
 -
 +ifdef CONFIG_FEATURE_IP_BLOCKD
-+CONFIG_EXTRA_LDLIBS:=ubus ubox uci log
++CONFIG_EXTRA_LDLIBS:=ubus ubox log
 +endif
  # Rule to link busybox - also used during CONFIG_KALLSYMS
  # May be overridden by arch/$(ARCH)/Makefile
@@ -26,7 +26,7 @@
  
  //applet:/* Needs to be run by root or be suid root - needs to change uid and gid: */
  //applet:IF_LOGIN(APPLET(login, BB_DIR_BIN, BB_SUID_REQUIRE))
-@@ -69,6 +75,22 @@
+@@ -69,6 +75,19 @@
  #include "libbb.h"
  #include "common_bufsiz.h"
  #include <syslog.h>
@@ -35,21 +35,18 @@
 +#include <libubus.h>
 +#include <libubox/blobmsg.h>
 +#include <string.h>
-+#include <uci.h>
 +#include <libtlt_utils.h>
++#include "lock_manager.h"
++#include "ip_block.h"
 +#endif // CONFIG_FEATURE_IP_BLOCKD
 +
-+static char ip_address[46];
-+
 +#ifdef CONFIG_FEATURE_IP_BLOCKD
-+void unblock_ip(char* host, char *port);
-+void block_ip(char *ip, char *port);
 +static void push_log(char *format, ...);
 +#endif // CONFIG_FEATURE_IP_BLOCKD
  
  #if ENABLE_SELINUX
  # include <selinux/selinux.h>  /* for is_selinux_enabled()  */
-@@ -330,6 +352,7 @@ int login_main(int argc UNUSED_PARAM, ch
+@@ -330,6 +349,7 @@ int login_main(int argc UNUSED_PARAM, ch
  	int count = 0;
  	struct passwd *pw;
  	char *opt_host = NULL;
@@ -57,7 +54,7 @@
  	char *opt_user = opt_user; /* for compiler */
  	char *full_tty;
  	char *short_tty;
-@@ -363,7 +386,7 @@ int login_main(int argc UNUSED_PARAM, ch
+@@ -363,7 +383,7 @@ int login_main(int argc UNUSED_PARAM, ch
  	bb_daemon_helper(DAEMON_CLOSE_EXTRA_FDS);
  
  	username[0] = '\0';
@@ -66,7 +63,7 @@
  	if (opt & LOGIN_OPT_f) {
  		if (!run_by_root)
  			bb_simple_error_msg_and_die("-f is for root only");
-@@ -391,10 +414,29 @@ int login_main(int argc UNUSED_PARAM, ch
+@@ -391,10 +411,29 @@ int login_main(int argc UNUSED_PARAM, ch
  		full_tty = xstrdup("UNKNOWN");
  	short_tty = skip_dev_pfx(full_tty);
  
@@ -76,7 +73,7 @@
 +
  	if (opt_host) {
 -		fromhost = xasprintf(" on '%s' from '%s'", short_tty, opt_host);
-+		// Fix IPv4 turning into IPv6
++		// Fix IPv4 mapped IPv6 address
 +		char *ip_log = opt_host;
 +
 +		if (strncmp(ip_log, "::ffff:", 7) == 0) {
@@ -98,7 +95,18 @@
  	}
  
  	/* Was breaking "login <username>" from shell command line: */
-@@ -485,11 +527,9 @@ int login_main(int argc UNUSED_PARAM, ch
+@@ -402,6 +441,10 @@ int login_main(int argc UNUSED_PARAM, ch
+ 
+ 	openlog(applet_name, LOG_PID | LOG_CONS, LOG_AUTH);
+ 
++#ifdef CONFIG_FEATURE_IP_BLOCKD
++	initialize_lock();
++#endif // CONFIG_FEATURE_IP_BLOCKD
++
+ 	while (1) {
+ 		/* flush away any type-ahead (as getty does) */
+ 		tcflush(0, TCIFLUSH);
+@@ -485,11 +528,9 @@ int login_main(int argc UNUSED_PARAM, ch
  		syslog(LOG_WARNING, "pam_%s call failed: %s (%d)", failed_msg,
  					pam_strerror(pamh, pamret), pamret);
  		login_pam_end(pamh);
@@ -110,36 +118,66 @@
  			goto fake_it;
  		}
  
-@@ -518,8 +558,17 @@ int login_main(int argc UNUSED_PARAM, ch
+@@ -515,19 +556,58 @@ int login_main(int argc UNUSED_PARAM, ch
+ #endif /* ENABLE_PAM */
+  auth_failed:
+ 		opt &= ~LOGIN_OPT_f;
++#ifdef CONFIG_FEATURE_IP_BLOCKD
++		if (opt_host) {
++			// Fix IPv4 mapped IPv6 address
++			char *fixed_ip = opt_host;
++
++			if (strncmp(fixed_ip, "::ffff:", 7) == 0) {
++				fixed_ip += 7;
++			}
++			if (signal_ip_block("push", fixed_ip, NULL, opt_port)) {
++				if (ENABLE_FEATURE_CLEAN_UP)
++					free(fromhost);
++				destroy_lock();
++				return EXIT_FAILURE;
++			}
++		}
++		push_log("Bad password attempt for %s%s", username, fromhost);
++#endif // CONFIG_FEATURE_IP_BLOCKD
  		pause_after_failed_login();
  		/* TODO: doesn't sound like correct English phrase to me */
  		puts("Login incorrect");
 +#ifndef CONFIG_FEATURE_IP_BLOCKD
  		syslog(LOG_WARNING, "invalid password for '%s'%s",
  					username, fromhost);
-+#else
-+		push_log("Bad password attempt for %s%s", username, fromhost);
-+
-+		if (opt_host) {
-+			block_ip(opt_host, opt_port);
-+		}
 +#endif // CONFIG_FEATURE_IP_BLOCKD
-+
  		if (++count == 3) {
  			if (ENABLE_FEATURE_CLEAN_UP)
  				free(fromhost);
-@@ -577,11 +626,22 @@ int login_main(int argc UNUSED_PARAM, ch
- 	}
- #endif
- 
++#ifdef CONFIG_FEATURE_IP_BLOCKD
++			destroy_lock();
++#endif // CONFIG_FEATURE_IP_BLOCKD
+ 			return EXIT_FAILURE;
+ 		}
+ 		username[0] = '\0';
+ 	} /* while (1) */
 +#ifdef CONFIG_FEATURE_IP_BLOCKD
 +	/* Tell ip_blockd to unblock host, if provided. */
 +	if (opt_host) {
-+		unblock_ip(opt_host, opt_port);
++		// Fix IPv4 mapped IPv6 address
++		char *fixed_ip = opt_host;
+ 
++		if (strncmp(fixed_ip, "::ffff:", 7) == 0) {
++			fixed_ip += 7;
++		}
++		if (signal_ip_block("unblock", fixed_ip, NULL, opt_port)) {
++			if (ENABLE_FEATURE_CLEAN_UP)
++				free(fromhost);
++			destroy_lock();
++			return EXIT_FAILURE;
++		}
 +	}
++	destroy_lock();
 +#endif // CONFIG_FEATURE_IP_BLOCKD
-+
- 	if (access(".hushlogin", F_OK) != 0)
+ 	alarm(0);
+ 	/* We can ignore /etc/nologin if we are logging in as root,
+ 	 * it doesn't matter whether we are run by root or not */
+@@ -581,7 +661,11 @@ int login_main(int argc UNUSED_PARAM, ch
  		motd();
  
  	if (pw->pw_uid == 0)
@@ -151,101 +189,12 @@
  
  	if (ENABLE_FEATURE_CLEAN_UP)
  		free(fromhost);
-@@ -616,3 +676,124 @@ int login_main(int argc UNUSED_PARAM, ch
+@@ -616,3 +700,35 @@ int login_main(int argc UNUSED_PARAM, ch
  
  	/* return EXIT_FAILURE; - not reached */
  }
 +
 +#ifdef CONFIG_FEATURE_IP_BLOCKD
-+void fix_mapped_ip(char *host){
-+	char *host_copy = strdup(host);
-+	char *token	= strtok(host_copy, ":");
-+	while (token != NULL) {
-+		strncpy(ip_address,token,sizeof(ip_address));
-+		token = strtok(NULL, ":");
-+	}
-+	free(host_copy);
-+}
-+
-+/* Calls ip_block unblock to clear the IP that just connected */
-+void unblock_ip(char* host, char *port)
-+{
-+	struct ubus_context *ubus;
-+	struct blob_buf b = { 0 };
-+	uint32_t id	  = 0;
-+	int ret		  = 0;
-+
-+	ubus = ubus_connect(NULL);
-+
-+	if (!ubus) {
-+		syslog(LOG_ERR, "Failed to connect to ubus");
-+		goto end;
-+	}
-+
-+	if (!port){
-+		goto end;
-+	}
-+
-+	if (strstr(host,".")){ //if host is IPv4 mapped IPv6 address
-+		fix_mapped_ip(host);
-+	} else {
-+		strncpy(ip_address,host,sizeof(ip_address));
-+	}
-+
-+	ret = ubus_lookup_id(ubus, "ip_block", &id);
-+	if (ret) {
-+		syslog(LOG_ERR, "Failed to find 'ip_block' object");
-+		goto end;
-+	}
-+	blob_buf_init(&b, 0);
-+	blobmsg_add_string(&b, "ip", ip_address);
-+	blobmsg_add_string(&b, "port", port);
-+	ubus_invoke(ubus, id, "unblock", b.head, NULL, NULL, 1000);
-+
-+end:
-+	blob_buf_free(&b);
-+	ubus_free(ubus);
-+}
-+
-+void block_ip(char* host, char *port)
-+{
-+	struct ubus_context *ubus;
-+	struct blob_buf b = { 0 };
-+	uint32_t id	  = 0;
-+	int ret		  = 0;
-+
-+	ubus = ubus_connect(NULL);
-+
-+	if (!ubus) {
-+		syslog(LOG_ERR, "Failed to connect to ubus");
-+		goto end;
-+	}
-+
-+	if (!port){
-+		goto end;
-+	}
-+
-+	if (strstr(host,".")){ //if host is IPv4 mapped IPv6 address
-+		fix_mapped_ip(host);
-+	} else {
-+		strncpy(ip_address,host,sizeof(ip_address));
-+	}
-+
-+	ret = ubus_lookup_id(ubus, "ip_block", &id);
-+	if (ret) {
-+		syslog(LOG_ERR, "Failed to find 'ip_block' object");
-+		goto end;
-+	}
-+	blob_buf_init(&b, 0);
-+	blobmsg_add_string(&b, "ip", ip_address);
-+	blobmsg_add_string(&b, "port", port);
-+	ubus_invoke(ubus, id, "push", b.head, NULL, NULL, 1000);
-+
-+end:
-+	blob_buf_free(&b);
-+	ubus_free(ubus);
-+}
-+
 +static void push_log(char *format, ...)
 +{
 +
@@ -354,3 +303,298 @@
  	if (IS_INETD) {
  		G.sessions = make_new_session(0);
  		if (!G.sessions) /* pty opening or vfork problem, exit */
+--- a/libbb/Kbuild.src
++++ b/libbb/Kbuild.src
+@@ -155,6 +155,7 @@ lib-$(CONFIG_SU) += pw_encrypt.o correct
+ lib-$(CONFIG_LOGIN) += pw_encrypt.o correct_password.o
+ lib-$(CONFIG_FEATURE_HTTPD_AUTH_MD5) += pw_encrypt.o
+ lib-$(CONFIG_FEATURE_FTP_AUTHENTICATION) += pw_encrypt.o
++lib-$(CONFIG_FEATURE_IP_BLOCKD) += ip_block.o lock_manager.o
+ 
+ lib-$(CONFIG_DF) += find_mount_point.o
+ lib-$(CONFIG_MKFS_MINIX) += find_mount_point.o
+--- /dev/null
++++ b/libbb/lock_manager.c
+@@ -0,0 +1,87 @@
++#include "lock_manager.h"
++#include <semaphore.h>
++#include <sys/mman.h>
++#include <stdio.h>
++#include <stdlib.h>
++#include <fcntl.h>
++#include <unistd.h>
++#include <time.h>
++#include <signal.h>
++
++#define SHM_NAME "/ip_block_busybox"
++
++static sem_t *lock;
++
++int initialize_lock()
++{
++	if (lock != NULL) {
++		return 0;
++	}
++
++	signal(SIGINT, cleanup);
++	signal(SIGTERM, cleanup);
++
++	lock = sem_open(SHM_NAME, O_CREAT, 0644, 1);
++	if (lock == SEM_FAILED) {
++		return -1;
++	}
++
++	return 0;
++}
++
++int destroy_lock()
++{
++	if (lock == NULL) {
++		return -1;
++	}
++
++	if (sem_close(lock) == -1) {
++		return -1;
++	}
++
++	if (sem_unlink(SHM_NAME) == -1) {
++		return -1;
++	}
++
++	lock = NULL;
++	return 0;
++}
++
++int acquire_lock()
++{
++	if (lock == NULL) {
++		return -1;
++	}
++
++	// Timeout to avoid deadlocks
++	struct timespec timeout;
++	clock_gettime(CLOCK_REALTIME, &timeout);
++	timeout.tv_sec += 30;
++
++	int ret = sem_timedwait(lock, &timeout);
++	if (ret != 0) {
++		release_lock();
++	}
++
++	return 0;
++}
++
++int release_lock()
++{
++	if (lock == NULL) {
++		return -1;
++	}
++
++	if (sem_post(lock) == -1) {
++		destroy_lock();
++		return -1;
++	}
++
++	return 0;
++}
++
++void cleanup(int signal)
++{
++	destroy_lock();
++	exit(EXIT_FAILURE);
++}
+\ No newline at end of file
+--- /dev/null
++++ b/libbb/lock_manager.h
+@@ -0,0 +1,10 @@
++#ifndef LOCK_MANAGER_H
++#define LOCK_MANAGER_H
++
++int initialize_lock();
++int destroy_lock();
++int acquire_lock();
++int release_lock();
++void cleanup(int signal);
++
++#endif
+\ No newline at end of file
+--- /dev/null
++++ b/libbb/ip_block.c
+@@ -0,0 +1,166 @@
++#include "ip_block.h"
++#include "lock_manager.h"
++
++#include <libubus.h>
++#include <libubox/blobmsg.h>
++
++enum { IP_BLOCK_BLOCKED, _IP_BLOCK_MAX };
++
++static const struct blobmsg_policy ip_block_policy[_IP_BLOCK_MAX] = {
++	[IP_BLOCK_BLOCKED] = { .name = "blocked", .type = BLOBMSG_TYPE_BOOL },
++};
++
++enum { IP_BLOCK_SHOW_GLOBALS, IP_BLOCK_SHOW_IPS, _IP_BLOCK_SHOW_MAX };
++
++static const struct blobmsg_policy ip_block_show_policy[_IP_BLOCK_SHOW_MAX] = {
++	[IP_BLOCK_SHOW_GLOBALS] = { .name = "globals", .type = BLOBMSG_TYPE_TABLE },
++	[IP_BLOCK_SHOW_IPS]	= { .name = "ips", .type = BLOBMSG_TYPE_ARRAY },
++};
++
++enum { IP_BLOCK_SHOW_NUM_IP, IP_BLOCK_SHOW_NUM_DEST_IP, IP_BLOCK_SHOW_NUM_PORT, _IP_BLOCK_SHOW_NUM_MAX };
++
++static const struct blobmsg_policy ip_block_show_num_policy[_IP_BLOCK_SHOW_NUM_MAX] = {
++	[IP_BLOCK_SHOW_NUM_IP]	    = { .name = "ip", .type = BLOBMSG_TYPE_STRING },
++	[IP_BLOCK_SHOW_NUM_DEST_IP] = { .name = "destination_ip", .type = BLOBMSG_TYPE_STRING },
++	[IP_BLOCK_SHOW_NUM_PORT]    = { .name = "port", .type = BLOBMSG_TYPE_STRING },
++};
++
++struct callback_data {
++	char *ip;
++	char *dest_ip;
++	char *port;
++	bool found;
++};
++
++static void blocked_ip_block_cb(struct ubus_request *req, int type, struct blob_attr *msg)
++{
++	size_t rem;
++	struct blob_attr *num_attr;
++	struct blob_attr *tb[_IP_BLOCK_SHOW_MAX];
++	struct callback_data *result = (struct callback_data *)req->priv;
++
++	if (!msg) {
++		result->found = false;
++		return;
++	}
++
++	blobmsg_parse(ip_block_show_policy, _IP_BLOCK_SHOW_MAX, tb, blobmsg_data(msg), blobmsg_len(msg));
++
++	struct blob_attr *ips = tb[IP_BLOCK_SHOW_IPS];
++	if (!ips) {
++		result->found = false;
++		return;
++	}
++
++	blobmsg_for_each_attr (num_attr, ips, rem) {
++		struct blob_attr *num_tb[_IP_BLOCK_SHOW_NUM_MAX];
++		blobmsg_parse(ip_block_show_num_policy, _IP_BLOCK_SHOW_NUM_MAX, num_tb,
++			      blobmsg_data(num_attr), blobmsg_len(num_attr));
++		if (!num_tb[IP_BLOCK_SHOW_NUM_IP] ||
++		    (result->dest_ip && !num_tb[IP_BLOCK_SHOW_NUM_DEST_IP]) ||
++		    (!result->dest_ip && num_tb[IP_BLOCK_SHOW_NUM_DEST_IP]) ||
++		    !num_tb[IP_BLOCK_SHOW_NUM_PORT]) {
++			continue;
++		}
++
++		const char *ip	    = blobmsg_get_string(num_tb[IP_BLOCK_SHOW_NUM_IP]);
++		const char *dest_ip = blobmsg_get_string(num_tb[IP_BLOCK_SHOW_NUM_DEST_IP]);
++		const char *port    = blobmsg_get_string(num_tb[IP_BLOCK_SHOW_NUM_PORT]);
++
++		int dest_ip_match =
++			result->dest_ip != NULL ?
++				(dest_ip && !strncmp(dest_ip, result->dest_ip, strlen(result->dest_ip))) :
++				1;
++		if (ip && !strncmp(ip, result->ip, strlen(result->ip)) && port &&
++		    !strncmp(port, result->port, strlen(result->port)) && dest_ip_match) {
++			result->found = true;
++			return;
++		}
++	}
++
++	result->found = false;
++}
++
++static int blocked_ip_block(char *ip, char *dest_ip, char *port)
++{
++	struct callback_data result  = { .found = false, .ip = ip, .dest_ip = dest_ip, .port = port };
++	struct ubus_context ubus_ctx = { 0 };
++	if (ubus_connect_ctx(&ubus_ctx, NULL)) {
++		return result.found;
++	}
++
++	uint32_t ip_block_obj = 0;
++	if (ubus_lookup_id(&ubus_ctx, "ip_block", &ip_block_obj)) {
++		goto clean;
++	}
++
++	struct blob_buf buffer = { 0 };
++	blob_buf_init(&buffer, 0);
++	blobmsg_add_string(&buffer, "type", "ip");
++	blobmsg_add_u8(&buffer, "blocked", true);
++
++	ubus_invoke(&ubus_ctx, ip_block_obj, "show", buffer.head, blocked_ip_block_cb, &result, 1000);
++
++	blob_buf_free(&buffer);
++clean:
++	ubus_shutdown(&ubus_ctx);
++
++	return result.found;
++}
++
++static void signal_ip_block_cb(struct ubus_request *req, int type, struct blob_attr *msg)
++{
++	struct blob_attr *tb[_IP_BLOCK_MAX];
++	int *blocked = (int *)req->priv;
++
++	if (!msg) {
++		*blocked = 0;
++		return;
++	}
++
++	blobmsg_parse(ip_block_policy, _IP_BLOCK_MAX, tb, blobmsg_data(msg), blobmsg_len(msg));
++	if (!tb[IP_BLOCK_BLOCKED]) {
++		*blocked = 0;
++		return;
++	}
++
++	*blocked = blobmsg_get_u8(tb[IP_BLOCK_BLOCKED]);
++}
++
++int signal_ip_block(char *op, char *ip, char *dest_ip, char *port)
++{
++	acquire_lock();
++	int ret = 0;
++	if (blocked_ip_block(ip, dest_ip, port)) {
++		ret = 1;
++		goto ret;
++	}
++	struct ubus_context ubus_ctx = { 0 };
++	if (ubus_connect_ctx(&ubus_ctx, NULL)) {
++		goto ret;
++	}
++
++	uint32_t ip_block_obj = 0;
++	if (ubus_lookup_id(&ubus_ctx, "ip_block", &ip_block_obj)) {
++		goto clean;
++	}
++
++	struct blob_buf buffer = { 0 };
++	blob_buf_init(&buffer, 0);
++	blobmsg_add_string(&buffer, "ip", ip);
++
++	if (dest_ip) {
++		blobmsg_add_string(&buffer, "destination_ip", dest_ip);
++	}
++
++	blobmsg_add_string(&buffer, "port", port);
++
++	ubus_invoke(&ubus_ctx, ip_block_obj, op, buffer.head, signal_ip_block_cb, &ret, 1000);
++
++	blob_buf_free(&buffer);
++clean:
++	ubus_shutdown(&ubus_ctx);
++ret:
++	release_lock();
++	return ret;
++}
+\ No newline at end of file
+--- /dev/null
++++ b/libbb/ip_block.h
+@@ -0,0 +1,6 @@
++#ifndef __IP_BLOCK_H
++#define __IP_BLOCK_H
++
++int signal_ip_block(char *op, char *ip, char *dest_ip, char *port);
++
++#endif
+\ No newline at end of file

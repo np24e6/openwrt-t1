@@ -1,8 +1,8 @@
 --- a/Makefile
 +++ b/Makefile
-@@ -607,6 +607,11 @@
+@@ -607,6 +607,11 @@ busybox-all  := $(core-y) $(libs-y)
  ifdef CONFIG_FEATURE_IP_BLOCKD
- CONFIG_EXTRA_LDLIBS:=ubus ubox uci log
+ CONFIG_EXTRA_LDLIBS:=ubus ubox log
  endif
 +
 +ifdef CONFIG_FEATURE_NETIFD
@@ -12,25 +12,23 @@
  # Rule to link busybox - also used during CONFIG_KALLSYMS
  # May be overridden by arch/$(ARCH)/Makefile
  quiet_cmd_busybox__ ?= LINK    $@
-
 --- a/networking/udhcp/common.h
 +++ b/networking/udhcp/common.h
-@@ -366,4 +366,8 @@
-
+@@ -366,4 +366,8 @@ int sprint_nip6(char *dest, /*const char
+ 
  POP_SAVED_FUNCTION_VISIBILITY
-
+ 
 +#ifdef CONFIG_FEATURE_NETIFD
 +void reload_mobifd(char *interface);
 +#endif
 +
  #endif
-
 --- a/networking/udhcp/common.c
 +++ b/networking/udhcp/common.c
 @@ -6,6 +6,11 @@
   */
  #include "common.h"
-
+ 
 +#ifdef CONFIG_FEATURE_NETIFD
 +#include <libubus.h>
 +#include <libnetifd.h>
@@ -39,7 +37,7 @@
  #if defined CONFIG_UDHCP_DEBUG && CONFIG_UDHCP_DEBUG >= 1
  unsigned dhcp_verbose;
  #endif
-@@ -718,3 +723,42 @@
+@@ -718,3 +723,42 @@ int FAST_FUNC sprint_nip6(char *dest, /*
  		hexstrbuf + 7 * 4
  	);
  }
@@ -82,8 +80,6 @@
 +	ubus_free(ctx);
 +}
 +#endif
-
-
 --- a/networking/udhcp/dhcpc.c
 +++ b/networking/udhcp/dhcpc.c
 @@ -17,6 +17,12 @@
@@ -97,9 +93,9 @@
 +//config:
 +
  //applet:IF_UDHCPC(APPLET(udhcpc, BB_DIR_SBIN, BB_SUID_DROP))
-
+ 
  //kbuild:lib-$(CONFIG_UDHCPC) += common.o packet.o signalpipe.o socket.o
-@@ -1570,7 +1576,12 @@
+@@ -1570,7 +1576,12 @@ int udhcpc_main(int argc UNUSED_PARAM, c
  				change_listen_mode(LISTEN_NONE);
  				bb_simple_info_msg("lease lost, entering init state");
  				d4_run_script_deconfig();
@@ -113,7 +109,6 @@
  				client_data.first_secs = 0; /* make secs field count from 0 */
  				timeout = 0;
  				packet_num = 0;
-
 --- a/networking/udhcp/d6_dhcpc.c
 +++ b/networking/udhcp/d6_dhcpc.c
 @@ -44,6 +44,11 @@
@@ -125,10 +120,10 @@
 +//config:	default y
 +//config:	depends on UDHCPC
 +//config:
-
+ 
  //applet:IF_UDHCPC6(APPLET(udhcpc6, BB_DIR_USR_BIN, BB_SUID_DROP))
-
-@@ -1495,6 +1500,11 @@
+ 
+@@ -1495,6 +1500,11 @@ int udhcpc6_main(int argc UNUSED_PARAM,
  				change_listen_mode(LISTEN_NONE);
  				bb_simple_info_msg("lease lost, entering init state");
  				d6_run_script_no_option("deconfig");

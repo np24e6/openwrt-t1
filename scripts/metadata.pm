@@ -137,17 +137,21 @@ sub parse_target_metadata($) {
 		/^Default-Subtarget:\s*(.+)\s*$/ and $target->{def_subtarget} = $1;
 		/^Default-Packages:\s*(.+)\s*$/ and $target->{packages} = [ split(/\s+/, $1) ];
 		/^Target-Profile:\s*(.+)\s*$/ and do {
+			my $profile_id = $1;
+
 			$profile = {
-				id => $1,
-				name => $1,
+				id => $profile_id,
+				name => $profile_id,
 				has_image_metadata => 0,
 				supported_devices => [],
 				priority => 999,
 				packages => [],
 				features => [],
-				default => "y if TARGET_ALL_PROFILES"
+				default => ($profile_id !~ /^DEVICE_TEMPLATE_/) ? "y if TARGET_ALL_PROFILES" : "n"
 			};
-			$1 =~ /^DEVICE_/ and $target->{has_devices} = 1;
+			if ($profile_id =~ /^DEVICE_/) {
+				$target->{has_devices} = 1;
+			}
 			push @{$target->{profiles}}, $profile;
 		};
 		/^Target-Profile-Name:\s*(.+)\s*$/ and $profile->{name} = $1;
@@ -158,6 +162,21 @@ sub parse_target_metadata($) {
 		/^Target-Profile-GPLPrefix:\s*(.+)\s*$/ and $profile->{gpl_prefix} = $1;
 		/^Target-Profile-SupportedDevices:\s*(.+)\s*$/ and $profile->{supported_devices} = [ split(/\s+/, $1) ];
 		/^Target-Profile-BootName:\s*(.*)\s*$/ and $profile->{boot_name} = $1;
+		/^Target-Profile-IncludedDevices:\s*(.*)\s*$/ and $profile->{included_devices} = $1;
+		/^Target-Profile-USBCheckPath:\s*(.*)\s*$/ and $profile->{usb_check_path} = $1;
+		/^Target-Profile-USBJackPath:\s*(.*)\s*$/ and $profile->{usb_jack_path} = $1;
+		/^Target-Profile-WLANBssidLimit:\s*(.*)\s*$/ and $profile->{wlan_bssid_limit} = $1;
+		/^Target-Profile-WLANBssidLimit:\s*(.*)\s*$/ and $profile->{wlan_bssid_limit} = $1;
+		/^Target-Profile-LANInterfaceOpt:\s*(.*)\s*$/ and $profile->{lan_iface_opt} = $1;
+		/^Target-Profile-WANInterfaceOpt:\s*(.*)\s*$/ and $profile->{wan_iface_opt} = $1;
+		/^Target-Profile-SwitchConfig:\s*(.*)\s*$/ and $profile->{switch_conf} = $1;
+		/^Target-Profile-LedSwitchConfig:\s*(.*)\s*$/ and $profile->{led_switch_conf} = $1;
+		/^Target-Profile-LedNetdevConfig:\s*(.*)\s*$/ and $profile->{led_netdev_conf} = $1;
+		/^Target-Profile-InterfaceConfig:\s*(.*)\s*$/ and $profile->{interface_conf} = $1;
+		/^Target-Profile-NetworkConfig:\s*(.*)\s*$/ and $profile->{net_conf} = $1;
+		/^Target-Profile-PoeConfig:\s*(.*)\s*$/ and $profile->{poe_conf} = $1;
+		/^Target-Profile-PoeChip:\s*(.*)\s*$/ and $profile->{poe_chip} = $1;
+		/^Target-Profile-SerialCapabilities:\s*(.*)\s*$/ and $profile->{serial_capabilities} = $1;
 		/^Target-Profile-Priority:\s*(\d+)\s*$/ and do {
 			$profile->{priority} = $1;
 			$target->{sort} = 1;

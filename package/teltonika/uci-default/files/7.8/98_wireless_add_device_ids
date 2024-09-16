@@ -66,6 +66,8 @@ add_default_id() {
 	return 0
 }
 
+[ ! -f /etc/config/wireless ] && exit 0
+
 config_load wireless
 config_foreach add_default_id "wifi-iface"
 config_foreach add_device_prefix "wifi-device"

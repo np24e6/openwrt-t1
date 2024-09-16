@@ -2,7 +2,7 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=dlms_client
-PKG_VERSION:=2024-07-26
+PKG_VERSION:=2024-08-01
 
 PKG_SOURCE_VERSION:=fa855d2e82db1a7d27c419d09ed7a11fe86b86f0
 PKG_SOURCE=GuruxDLMS.c-$(PKG_SOURCE_VERSION).tar.gz
@@ -20,7 +20,7 @@ define Package/$(PKG_NAME)
 	CATEGORY:=Network
 	TITLE:=DLMS Client for COSEM device monitoring
 	DEPENDS:=+libsqlite3 +libubus +libubox +libuci +libtlt_uci +libtlt_termios +libtlt-logger +libpthread \
-		+data-sender-mod-dlms +libdlms
+		+libdlms
 endef
 
 define Package/$(PKG_NAME)/description

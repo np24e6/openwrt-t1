@@ -27,7 +27,7 @@ Index: rpcd-2021-03-11-ccb75178/session.c
  	if (!acl)
  		return UBUS_STATUS_UNKNOWN_ERROR;
  
-@@ -516,6 +520,58 @@ rpc_session_revoke(struct rpc_session *s
+@@ -516,6 +520,83 @@ rpc_session_revoke(struct rpc_session *s
  	return 0;
  }
  
@@ -59,7 +59,23 @@ Index: rpcd-2021-03-11-ccb75178/session.c
 +	return 0;
 +}
 +
-+int rpc_add_exceptions(struct rpc_session *ses, struct rpc_permissions_manager permissions_manager) {
++static void cleanup_temp_scope(struct rpc_session *ses) {
++	struct rpc_session_acl_scope *acl_scope = NULL;
++	struct rpc_session_acl *current_acl = NULL, *tmp_acl = NULL;
++
++	acl_scope = avl_find_element(&ses->acls, "temp", acl_scope, avl);
++	if (acl_scope == NULL)
++		return;
++
++	avl_for_each_element_safe(&acl_scope->acls, current_acl, avl, tmp_acl) {
++		avl_delete(&acl_scope->acls, &current_acl->avl);
++		free(current_acl);
++	}
++	avl_delete(&ses->acls, &acl_scope->avl);
++	free(acl_scope);
++}
++
++int rpc_add_exceptions(struct rpc_session *ses, struct rpc_permissions_manager *permissions_manager) {
 +	struct rpc_session_acl_scope *acl_scope = NULL;
 +	struct rpc_session_acl *current_acl = NULL, *tmp_acl = NULL;
 +
@@ -67,49 +83,69 @@ Index: rpcd-2021-03-11-ccb75178/session.c
 +	if (acl_scope == NULL) {
 +		return -1;
 +	}
++
 +	// Process endpoint permissions
-+	for (int i = 0; i < permissions_manager.endpoint_count; i++) {
-+		const char *endpoint = permissions_manager.endpoint_permissions[i];
++	for (int i = 0; i < permissions_manager->endpoint_count; i++) {
++		const char *endpoint = permissions_manager->endpoint_permissions[i];
 +		avl_for_each_element_safe(&acl_scope->acls, current_acl, avl, tmp_acl) {
 +			if (strcmp(current_acl->object, endpoint) == 0) {
++				// If one of the options is *, it allows everything to an endpoint, so we remove it from exceptions and grant all read permissions
++				if (strcmp(current_acl->function, "*") == 0) {
++					rpc_session_grant(ses, "api", current_acl->object, "read");
++					free(permissions_manager->endpoint_permissions[i]);
++					for (int j = i; j < permissions_manager->endpoint_count - 1; j++) {
++						permissions_manager->endpoint_permissions[j] = permissions_manager->endpoint_permissions[j + 1];
++					}
++					permissions_manager->endpoint_permissions[permissions_manager->endpoint_count - 1] = NULL;
++					permissions_manager->endpoint_count--;
++					i--;
++					break;
++				}
 +				rpc_session_grant(ses, "exceptions", current_acl->object, current_acl->function);
++				rpc_session_revoke(ses, "api", current_acl->object, "read");
 +			}
-+			avl_delete(&acl_scope->acls, &current_acl->avl);
-+			free(current_acl);
 +		}
 +	}
-+	avl_delete(&ses->acls, &acl_scope->avl);
-+	free(acl_scope);
-+
 +	return 0;
 +}
  
  static int
  rpc_handle_acl(struct ubus_context *ctx, struct ubus_object *obj,
-@@ -595,10 +651,33 @@ rpc_session_acl_allowed(struct rpc_sessi
+@@ -595,10 +676,44 @@ rpc_session_acl_allowed(struct rpc_sessi
  	return false;
  }
  
 +static void rpc_session_dump_acls_for_object(struct rpc_session *ses, struct blob_buf *b, const char *object)
 +{
 +	struct rpc_session_acl *acl;
-+	struct rpc_session_acl_scope *acl_scope;
++	struct rpc_session_acl_scope *acl_scope = NULL;
 +	void *array = NULL;
 +
-+	avl_for_each_element(&ses->acls, acl_scope, avl) {
-+		avl_for_each_element(&acl_scope->acls, acl, avl) {
-+			if (!(strcmp(acl->object, object) == 0)) {
-+				continue;
++	acl_scope = avl_find_element(&ses->acls, "exceptions", acl_scope, avl);
++	if (!acl_scope)
++		return;
++
++	avl_for_each_element(&acl_scope->acls, acl, avl) {
++		size_t acl_object_len = strlen(acl->object);
++
++		if (acl->object[acl_object_len - 1] == '*') {
++			if (strncmp(acl->object, object, acl_object_len - 1) == 0) {
++				if (!array)
++					array = blobmsg_open_array(b, object);
++				blobmsg_add_string(b, NULL, acl->function);
 +			}
-+			if (!array) {
-+				array = blobmsg_open_array(b, object);
++		} else {
++			if (strncmp(acl->object, object, acl_object_len) == 0 ||
++			    strncmp(object, acl->object, acl_object_len) == 0) {
++				if (!array)
++					array = blobmsg_open_array(b, object);
++				blobmsg_add_string(b, NULL, acl->function);
 +			}
-+			blobmsg_add_string(b, NULL, acl->function);
 +		}
 +	}
-+	if (array) {
++
++	if (array)
 +		blobmsg_close_array(b, array);
-+	}
 +}
 +
  static int
@@ -120,7 +156,7 @@ Index: rpcd-2021-03-11-ccb75178/session.c
  {
  	struct rpc_session *ses;
  	struct blob_attr *tb[__RPC_SP_MAX];
-@@ -624,16 +703,24 @@ rpc_handle_access(struct ubus_context *c
+@@ -624,16 +739,24 @@ rpc_handle_access(struct ubus_context *c
  		allow = rpc_session_acl_allowed(ses, scope,
  		                                blobmsg_data(tb[RPC_SP_OBJECT]),
  		                                blobmsg_data(tb[RPC_SP_FUNCTION]));
@@ -150,7 +186,7 @@ Index: rpcd-2021-03-11-ccb75178/session.c
  	return 0;
  }
  
-@@ -870,7 +957,7 @@ rpc_login_test_auth_type(struct uci_cont
+@@ -870,7 +993,7 @@ rpc_login_test_auth_type(struct uci_cont
  	if (!uci_lookup_ptr(uci, &ptr, NULL, true)) {
  		if (!ptr.o || ptr.o->type != UCI_TYPE_STRING) {
  			return auth_type;
@@ -159,7 +195,7 @@ Index: rpcd-2021-03-11-ccb75178/session.c
  
          if (!strncmp(ptr.o->v.string, "shadow", sizeof("shadow") - 1)) {
              auth_type = AUTH_TYPE_SHADOW;
-@@ -1077,7 +1164,7 @@ rpc_login_test_login(struct uci_context
+@@ -1077,7 +1200,7 @@ rpc_login_test_login(struct uci_context
  			}
  		} else if (auth_type == AUTH_TYPE_NONE || auth_type & AUTH_TYPE_SHADOW)
  #endif
@@ -168,7 +204,16 @@ Index: rpcd-2021-03-11-ccb75178/session.c
  			if (rpc_login_test_password(ptr.o->v.string, password)) {
  				ptr.option = "group";
  				ptr.o = NULL;
-@@ -1207,9 +1294,66 @@ rpc_login_setup_acl_scope(struct rpc_ses
+@@ -1180,7 +1303,7 @@ rpc_login_setup_acl_scope(struct rpc_ses
+ 
+ 				rpc_session_grant(ses, blobmsg_name(acl_scope),
+ 				                       blobmsg_name(acl_obj),
+-				                       blobmsg_data(acl_func));
++				                       blobmsg_name(acl_perm));
+ 			}
+ 		}
+ 	}
+@@ -1207,9 +1330,91 @@ rpc_login_setup_acl_scope(struct rpc_ses
  	}
  }
  
@@ -189,9 +234,6 @@ Index: rpcd-2021-03-11-ccb75178/session.c
 +		blobmsg_for_each_attr(option_attr, endpoint_attr, rem_option) {
 +			// Get the option name
 +			const char *option_name = blobmsg_data(option_attr);
-+			if (strcmp(option_name, "*") == 0) {
-+				continue;
-+			}
 +			rpc_session_grant(ses, "temp", endpoint_name, option_name);
 +		}
 +	}
@@ -229,6 +271,34 @@ Index: rpcd-2021-03-11-ccb75178/session.c
 +	return 0;
 +}
 +
++static int unblock_source(struct blob_attr *acl_perm, char ***permissions, int *count) {
++	struct blob_attr *cur;
++	int rem;
++
++	blobmsg_for_each_attr(cur, acl_perm, rem) {
++		const char *attr_value = blobmsg_get_string(cur);
++		if (!attr_value) {
++			continue;
++		}
++		for (int i = 0; i < *count; i++) {
++			if (strcmp((*permissions)[i], attr_value) == 0) {
++				free((*permissions)[i]);
++				for (int j = i; j < *count - 1; j++) {
++					(*permissions)[j] = (*permissions)[j + 1];
++				}
++				(*count)--;
++				char **temp = realloc(*permissions, (*count) * sizeof(char *));
++				if (!temp && *count > 0) {
++					return ENOMEM;
++				}
++				*permissions = temp;
++				break;
++			}
++		}
++	}
++	return 0;
++}
++
  static void
  rpc_login_setup_acl_file(struct rpc_session *ses, struct uci_section *login,
 -                         const char *path)
@@ -236,7 +306,7 @@ Index: rpcd-2021-03-11-ccb75178/session.c
  {
  	struct blob_buf acl = { 0 };
  	struct blob_attr *acl_group, *acl_perm, *acl_scope;
-@@ -1224,15 +1368,21 @@ rpc_login_setup_acl_file(struct rpc_sess
+@@ -1224,15 +1429,24 @@ rpc_login_setup_acl_file(struct rpc_sess
  
  	/* Iterate access groups in toplevel object */
  	blob_for_each_attr(acl_group, acl.head, rem) {
@@ -257,6 +327,9 @@ Index: rpcd-2021-03-11-ccb75178/session.c
 +			if (strcmp(blobmsg_name(acl_perm), "exception") == 0 && !read_perm && !write_perm) {
 +				process_permissions(acl_perm, &permissions_manager->endpoint_permissions, &permissions_manager->endpoint_count);
 +			}
++			if (strcmp(blobmsg_name(acl_perm), "source") == 0 && read_perm) {
++				unblock_source(acl_perm, &permissions_manager->source_permissions, &permissions_manager->source_count);
++			}
 +
 +			if (strcmp(blobmsg_name(acl_perm), "read") && strcmp(blobmsg_name(acl_perm), "write")) {
  				continue;
@@ -264,7 +337,7 @@ Index: rpcd-2021-03-11-ccb75178/session.c
  
  			/*
  			 * Check if the current user context specifies the current
-@@ -1240,7 +1390,26 @@ rpc_login_setup_acl_file(struct rpc_sess
+@@ -1240,7 +1454,26 @@ rpc_login_setup_acl_file(struct rpc_sess
  			 */
  			if (!rpc_login_test_permission(login, blobmsg_name(acl_perm),
  			                                      blobmsg_name(acl_group)))
@@ -291,7 +364,7 @@ Index: rpcd-2021-03-11-ccb75178/session.c
  
  			/* Iterate scope objects within the permission object */
  			blobmsg_for_each_attr(acl_scope, acl_perm, rem3) {
-@@ -1281,6 +1450,7 @@ out:
+@@ -1281,6 +1514,7 @@ out:
  static void
  rpc_login_setup_acls(struct rpc_session *ses, struct uci_section *login)
  {
@@ -299,7 +372,7 @@ Index: rpcd-2021-03-11-ccb75178/session.c
  	int i;
  	glob_t gl;
  
-@@ -1288,7 +1458,35 @@ rpc_login_setup_acls(struct rpc_session
+@@ -1288,7 +1522,36 @@ rpc_login_setup_acls(struct rpc_session
  		return;
  
  	for (i = 0; i < gl.gl_pathc; i++)
@@ -309,11 +382,11 @@ Index: rpcd-2021-03-11-ccb75178/session.c
 +	}
 +
 +	if (permissions_manager.source_count > 0 || permissions_manager.endpoint_count > 0) {
-+		rpc_add_exceptions(ses, permissions_manager);
 +		for (int i = 0; i < permissions_manager.source_count; i++) {
 +			const char *permission = permissions_manager.source_permissions[i];
 +			rpc_session_revoke_similar(ses, "api", permission);
 +		}
++		rpc_add_exceptions(ses, &permissions_manager);
 +	}
 +
 +	if (permissions_manager.source_permissions != NULL) {
@@ -333,10 +406,11 @@ Index: rpcd-2021-03-11-ccb75178/session.c
 +	}
 +	permissions_manager.source_count = 0;
 +	permissions_manager.endpoint_count = 0;
++	cleanup_temp_scope(ses);
  
  	globfree(&gl);
  }
-@@ -1723,3 +1921,4 @@ void rpc_session_thaw(void)
+@@ -1723,3 +1986,4 @@ void rpc_session_thaw(void)
  
  	uci_free_context(uci);
  }
@@ -365,7 +439,7 @@ Index: rpcd-2021-03-11-ccb75178/include/rpcd/session.h
  };
 +int rpc_session_revoke_similar(struct rpc_session *ses, const char *scope,
 +					   const char *object);
-+int rpc_add_exceptions(struct rpc_session *ses, struct rpc_permissions_manager permissions_manager);
++int rpc_add_exceptions(struct rpc_session *ses, struct rpc_permissions_manager *permissions_manager);
  
  void rpc_session_create_cb(struct rpc_session_cb *cb);
  void rpc_session_destroy_cb(struct rpc_session_cb *cb);

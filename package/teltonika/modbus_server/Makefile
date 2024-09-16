@@ -6,12 +6,12 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=modbus_server
-PKG_VERSION:=2024-06-25
+PKG_VERSION:=2024-08-01
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
-PKG_SOURCE_VERSION:=7.8
+PKG_SOURCE_VERSION:=7.9
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_LICENSE:=Teltonika-closed
-PKG_RELEASE:=2
+PKG_RELEASE:=1
 
 include $(INCLUDE_DIR)/package.mk
 

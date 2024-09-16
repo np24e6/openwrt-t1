@@ -1,23 +1,6 @@
 --- a/device.c
 +++ b/device.c
-@@ -1308,10 +1308,24 @@
- 	return dev;
- }
- 
-+static int 
-+check_ifvlan(struct device *dev)
-+{
-+	if (!dev || !dev->type || !dev->type->name) {
-+		return EXIT_FAILURE;
-+	}
-+
-+	if (!dev->active && (!strcmp("8021ad", dev->type->name) || !strcmp("8021q", dev->type->name))) {
-+		return EXIT_FAILURE;
-+	}
-+
-+	return EXIT_SUCCESS;
-+}
-+
+@@ -1312,7 +1312,7 @@
  void
  device_dump_status(struct blob_buf *b, struct device *dev)
  {
@@ -26,13 +9,13 @@
  	void *c, *s;
  
  	if (!dev) {
-@@ -1337,8 +1351,11 @@
+@@ -1338,14 +1338,17 @@
  	blobmsg_add_u8(b, "carrier", !!dev->link_active);
  	blobmsg_add_u8(b, "auth_status", !!dev->auth_status);
  
 -	system_if_get_settings(dev, &dev->settings);
 -	device_merge_settings(dev, &st);
-+	if (!check_ifvlan(dev)) {
++	if (dev->active) {
 +		system_if_get_settings(dev, &dev->settings);
 +		device_merge_settings(dev, &st);
 +	}
@@ -40,6 +23,15 @@
  	if (st.flags & DEV_OPT_MACADDR)
  		blobmsg_add_string(b, "macaddr", format_macaddr(st.macaddr));
  
+-	if (dev->type->dump_info)
++	if (dev->active && dev->type->dump_info)
+ 		dev->type->dump_info(dev, b);
+-	else
++	else if (dev->active)
+ 		system_if_dump_info(dev, b);
+ 
+ 	if (dev->active) {
+
  --- a/vlandev.c
 +++ b/vlandev.c
 @@ -239,7 +239,11 @@

@@ -7,7 +7,7 @@ include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=gsm
 
-PKG_SOURCE_VERSION:=1.5.1
+PKG_SOURCE_VERSION:=1.6
 
 PKG_LICENSE:=Teltonika-closed
 
@@ -104,7 +104,6 @@ define Package/gsmd/install
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/files/gsmd.init $(1)/etc/init.d/gsmd
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/files/gsmd.hotplug $(1)/usr/share/usb/05_gsmd.sh
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/files/gsm_event.hotplug $(1)/usr/share/iface/89-gsm-event
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/files/check_vcert.hotplug $(1)/usr/share/gsm/1-check_vcert
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/files/fill_modem.hotplug $(1)/usr/share/gsm/2-fill-modem-info
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/files/notify_send_sms.hotplug $(1)/usr/share/gsm/4-notify-send-sms
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/files/notify_sim_state.hotplug $(1)/usr/share/gsm/4-notify-sim-state

@@ -136,9 +136,8 @@ define Package/hostapd/Default
 endef
 
 define Package/hostapd
-$(call Package/hostapd/Default,$(1))
-  TITLE+= (built-in full)
-  VARIANT:=full-internal
+  # hostapd internal implementation is broken, enforce openssl
+  $(Package/hostapd-openssl)
 endef
 
 define Package/hostapd/description
@@ -341,6 +340,7 @@ define Package/hostapd-common
   SECTION:=net
   CATEGORY:=Network
   SUBMENU:=WirelessAPD
+  DEPENDS:=+libopenssl
 endef
 
 define Package/hostapd-utils

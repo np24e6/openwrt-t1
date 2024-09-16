@@ -33,12 +33,12 @@ define gpl_install_mixed
 		$(if $(PKG_UPSTREAM_URL), \
 			$(if $(PKG_SOURCE_URL), \
 				printf "'$(PKG_SOURCE_URL)' '%s/Makefile'\0" "$$(a=$(CURDIR) && echo $${a#$(TOPDIR)/})" >>"$(TOPDIR)/tmp/SOURCE_URLs" && \
-				sed -i'' -E \
+				sed -i -E \
 					-e '/[\t ]*PKG_SOURCE.*[:?]?=.*$$/d' \
 					-e "s#^[\t ]*PKG_UPSTREAM_(SOURCE_)?#PKG_SOURCE_#gm" \
 					"$(1)/Makefile"; \
 			, \
-				sed -i'' -E \
+				sed -i -E \
 					-e '/[\t ]*(PKG_SOURCE|PKG_UPSTREAM).*[:?]?=.*$$/d' \
 					"$(1)/Makefile"; \
 			) \
@@ -47,7 +47,7 @@ define gpl_install_mixed
 				mkdir -p "$(1)/src"; \
 				tar xf "$(DL_DIR)/$(PKG_SOURCE)" --strip-components=$(if $(STRIP_COMPONENTS),$(STRIP_COMPONENTS),1) -C "$(1)/src" ||\
 					unzip -q -d "$(1)/src" $(DL_DIR)/$(PKG_SOURCE); \
-				sed -i'' -E \
+				sed -i -E \
 					-e "/^[\t ]*(PKG_SOURCE_PROTO|PKG_MIRROR_HASH|PKG_SOURCE_URL)[\t ]*[:?]?=/d" \
 					"$(1)/Makefile"; \
 			) \
@@ -107,11 +107,8 @@ define gpl_scan_deps
 	)
 endef
 
-download_upstream:
-
 ifdef PKG_UPSTREAM_URL
 include $(INCLUDE_DIR)/unpack-upstream.mk
-$(eval $(call Download/upstream))
 endif
 
 define gpl_install_orig_w_patch
@@ -129,7 +126,7 @@ define gpl_install_orig_w_patch
 	$(call gpl_install_mixed,$(1))
 	$(eval PKG_SOURCE_URL:=$(OLD_PKG_SOURCE_URL))
 	$(eval PKG_UPSTREAM_URL:=$(OLD_PKG_UPSTREAM_URL))
-	$(eval PKG_UPSTREAM_SOURCE_DIR:=$(1)/upstream)
+	$(eval PKG_UPSTREAM_SOURCE_DIR:=$(1)$(if $(PKG_UPSTREAM_URL),/upstream))
 
 	mkdir -p "$(PKG_UPSTREAM_SOURCE_DIR)"
 	$(call UPSTREAM_UNPACK_CMD,$(PKG_UPSTREAM_SOURCE_DIR))
@@ -151,14 +148,14 @@ define gpl_install_orig_w_patch
 	rm -fr "$(PKG_UPSTREAM_SOURCE_DIR)" $(if $(UPSTREAM_TO_LOCAL_SRC),,"$(1)/src"); \
 )
 	$(if $(UPSTREAM_TO_LOCAL_SRC), \
-		sed -i'' -E \
+		sed -i -E \
 			-e '/[\t ]*(PKG_SOURCE|PKG_UPSTREAM|PKG_BUILD_DIR|HOST_BUILD_DIR).*[:?]?=.*$$/d' \
 			"$(1)/Makefile"; \
 	, \
 		$(if $(PKG_SOURCE_URL), \
 			printf "'$(PKG_SOURCE_URL)' '%s/Makefile'\0" "$$(a=$(CURDIR) && echo $${a#$(TOPDIR)/})" >>"$(TOPDIR)/tmp/SOURCE_URLs"; \
 		) \
-		sed -i'' -E \
+		sed -i -E \
 			-e '/[\t ]*PKG_SOURCE_(VERSION|URL|PROTO|URL_FILE)[\t ]*[:?]?=.*$$/d' \
 			$(if $(PKG_UPSTREAM_BUILD_DIR), \
 				-e '/[\t ]*PKG_BUILD_DIR[\t ]*[:?]?=.*$$/d' \
@@ -226,7 +223,10 @@ $(GPL_BUILD_DIR)/package:
 	find "$(TOPDIR)/package" -maxdepth 1 -type f -exec cp "{}" "$@" \;
 	cp -rf "$(TOPDIR)/feeds" "$(GPL_BUILD_DIR)"
 
-gpl-install: $(GPL_BUILD_DIR)/package download_upstream
+gpl-install: $(GPL_BUILD_DIR)/package
+ifdef PKG_UPSTREAM_URL
+	UPSTREAM_FETCH=1 $(MAKE) download
+endif
 	$(if $(IS_TLT_LIC), \
 		$(if $(and $(IS_NDA_SRC),$(CONFIG_GPL_INCLUDE_WEB_SOURCES)), \
 			$(call Build/InstallGPL,$(PKG_GPL_BUILD_DIR)) \

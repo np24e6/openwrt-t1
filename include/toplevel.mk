@@ -105,7 +105,7 @@ ifneq ($(DISTRO_PKG_CONFIG),)
 scripts/config/%onf: export PATH:=$(if $(INSIDE_DOCKER),$(PATH),$(dir $(DISTRO_PKG_CONFIG)):$(PATH))
 endif
 scripts/config/%onf: CFLAGS+= -O2
-scripts/config/%onf:
+scripts/config/%onf: FORCE
 	@$(_SINGLE)$(SUBMAKE) $(if $(findstring s,$(OPENWRT_VERBOSE)),,-s) \
 		-C scripts/config $(notdir $@)
 
@@ -211,6 +211,10 @@ ifndef SDK
   DOWNLOAD_DIRS = tools/download toolchain/download package/download target/download
 else
   DOWNLOAD_DIRS = package/download
+endif
+
+ifdef INSIDE_DOCKER
+  DOWNLOAD_DIRS = package/download target/download
 endif
 
 download: .config FORCE $(if $(INSIDE_DOCKER),,$(if $(wildcard $(TOPDIR)/staging_dir/host/bin/flock),,tools/flock/compile))

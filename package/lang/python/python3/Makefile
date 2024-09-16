@@ -11,7 +11,7 @@ include $(TOPDIR)/rules.mk
 include ../python3-version.mk
 
 PKG_NAME:=python3
-PKG_RELEASE:=2
+PKG_RELEASE:=6
 PKG_VERSION:=$(PYTHON3_VERSION).$(PYTHON3_VERSION_MICRO)
 
 PKG_SOURCE:=Python-$(PKG_VERSION).tar.xz
@@ -137,7 +137,7 @@ $(call Package/python3/Default)
 endef
 
 define Package/python3/teltonika_rut9m
-  PKG_ROUTER:=RUT956 RUT906
+  PKG_HW_INFO:=usb
 endef
 
 define Package/python3/description

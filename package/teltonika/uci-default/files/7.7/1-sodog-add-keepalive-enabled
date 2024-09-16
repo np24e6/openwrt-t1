@@ -27,7 +27,7 @@ add_keepalive_enabled() {
 	fi
 }
 
-config_load "$CONFIG"
+config_load "$CONFIG" || return
 config_foreach add_keepalive_enabled
 uci_commit "$CONFIG"
 

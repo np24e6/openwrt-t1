@@ -1,7 +1,7 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=dfota
-PKG_VERSION:=2021-12-08
+PKG_VERSION:=2024-08-05
 PKG_RELEASE:=1
 
 PKG_LICENSE:=Teltonika-closed

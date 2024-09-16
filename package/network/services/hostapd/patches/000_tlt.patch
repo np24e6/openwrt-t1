@@ -1,6 +1,6 @@
 diff --recursive --unified --new-file --no-dereference upstream/hostapd/radius.c src/hostapd/radius.c
 --- upstream/hostapd/radius.c	1970-01-01 00:00:00.000000000 +0000
-+++ src/hostapd/radius.c	2024-08-22 05:00:52.076701525 +0000
++++ src/hostapd/radius.c	2024-08-29 10:36:43.176221202 +0000
 @@ -0,0 +1,715 @@
 +#include "utils/includes.h"
 +#include "utils/common.h"
@@ -719,7 +719,7 @@ diff --recursive --unified --new-file --no-dereference upstream/hostapd/radius.c
 +}
 diff --recursive --unified --new-file --no-dereference upstream/src/ap/ubus.c src/src/ap/ubus.c
 --- upstream/src/ap/ubus.c	1970-01-01 00:00:00.000000000 +0000
-+++ src/src/ap/ubus.c	2024-08-22 05:00:52.076701525 +0000
++++ src/src/ap/ubus.c	2024-08-29 10:36:43.180221197 +0000
 @@ -0,0 +1,2048 @@
 +/*
 + * hostapd / ubus support
@@ -2771,7 +2771,7 @@ diff --recursive --unified --new-file --no-dereference upstream/src/ap/ubus.c sr
 +}
 diff --recursive --unified --new-file --no-dereference upstream/src/ap/ubus.h src/src/ap/ubus.h
 --- upstream/src/ap/ubus.h	1970-01-01 00:00:00.000000000 +0000
-+++ src/src/ap/ubus.h	2024-08-22 05:00:52.076701525 +0000
++++ src/src/ap/ubus.h	2024-08-29 10:36:43.180221197 +0000
 @@ -0,0 +1,154 @@
 +/*
 + * hostapd / ubus support
@@ -2929,7 +2929,7 @@ diff --recursive --unified --new-file --no-dereference upstream/src/ap/ubus.h sr
 +#endif
 diff --recursive --unified --new-file --no-dereference upstream/src/ap/ucode.c src/src/ap/ucode.c
 --- upstream/src/ap/ucode.c	1970-01-01 00:00:00.000000000 +0000
-+++ src/src/ap/ucode.c	2024-08-22 05:00:52.076701525 +0000
++++ src/src/ap/ucode.c	2024-08-29 10:36:43.180221197 +0000
 @@ -0,0 +1,812 @@
 +#include <sys/un.h>
 +
@@ -3745,7 +3745,7 @@ diff --recursive --unified --new-file --no-dereference upstream/src/ap/ucode.c s
 +}
 diff --recursive --unified --new-file --no-dereference upstream/src/ap/ucode.h src/src/ap/ucode.h
 --- upstream/src/ap/ucode.h	1970-01-01 00:00:00.000000000 +0000
-+++ src/src/ap/ucode.h	2024-08-22 05:00:52.076701525 +0000
++++ src/src/ap/ucode.h	2024-08-29 10:36:43.180221197 +0000
 @@ -0,0 +1,54 @@
 +#ifndef __HOSTAPD_AP_UCODE_H
 +#define __HOSTAPD_AP_UCODE_H
@@ -3803,7 +3803,7 @@ diff --recursive --unified --new-file --no-dereference upstream/src/ap/ucode.h s
 +#endif
 diff --recursive --unified --new-file --no-dereference upstream/src/utils/build_features.h src/src/utils/build_features.h
 --- upstream/src/utils/build_features.h	1970-01-01 00:00:00.000000000 +0000
-+++ src/src/utils/build_features.h	2024-08-22 05:00:52.076701525 +0000
++++ src/src/utils/build_features.h	2024-08-29 10:36:43.180221197 +0000
 @@ -0,0 +1,65 @@
 +#ifndef BUILD_FEATURES_H
 +#define BUILD_FEATURES_H
@@ -3872,7 +3872,7 @@ diff --recursive --unified --new-file --no-dereference upstream/src/utils/build_
 +#endif /* BUILD_FEATURES_H */
 diff --recursive --unified --new-file --no-dereference upstream/src/utils/ucode.c src/src/utils/ucode.c
 --- upstream/src/utils/ucode.c	1970-01-01 00:00:00.000000000 +0000
-+++ src/src/utils/ucode.c	2024-08-22 05:00:52.076701525 +0000
++++ src/src/utils/ucode.c	2024-08-29 10:36:43.180221197 +0000
 @@ -0,0 +1,335 @@
 +#include <unistd.h>
 +#include "ucode.h"
@@ -4211,7 +4211,7 @@ diff --recursive --unified --new-file --no-dereference upstream/src/utils/ucode.
 +}
 diff --recursive --unified --new-file --no-dereference upstream/src/utils/ucode.h src/src/utils/ucode.h
 --- upstream/src/utils/ucode.h	1970-01-01 00:00:00.000000000 +0000
-+++ src/src/utils/ucode.h	2024-08-22 05:00:52.076701525 +0000
++++ src/src/utils/ucode.h	2024-08-29 10:36:43.180221197 +0000
 @@ -0,0 +1,29 @@
 +#ifndef __HOSTAPD_UTILS_UCODE_H
 +#define __HOSTAPD_UTILS_UCODE_H
@@ -4244,7 +4244,7 @@ diff --recursive --unified --new-file --no-dereference upstream/src/utils/ucode.
 +#endif
 diff --recursive --unified --new-file --no-dereference upstream/wpa_supplicant/ubus.c src/wpa_supplicant/ubus.c
 --- upstream/wpa_supplicant/ubus.c	1970-01-01 00:00:00.000000000 +0000
-+++ src/wpa_supplicant/ubus.c	2024-08-22 05:00:52.076701525 +0000
++++ src/wpa_supplicant/ubus.c	2024-08-29 10:36:43.180221197 +0000
 @@ -0,0 +1,514 @@
 +/*
 + * wpa_supplicant / ubus support
@@ -4762,7 +4762,7 @@ diff --recursive --unified --new-file --no-dereference upstream/wpa_supplicant/u
 +#endif /* CONFIG_WPS */
 diff --recursive --unified --new-file --no-dereference upstream/wpa_supplicant/ubus.h src/wpa_supplicant/ubus.h
 --- upstream/wpa_supplicant/ubus.h	1970-01-01 00:00:00.000000000 +0000
-+++ src/wpa_supplicant/ubus.h	2024-08-22 05:00:52.076701525 +0000
++++ src/wpa_supplicant/ubus.h	2024-08-29 10:36:43.180221197 +0000
 @@ -0,0 +1,89 @@
 +/*
 + * wpa_supplicant / ubus support
@@ -4855,7 +4855,7 @@ diff --recursive --unified --new-file --no-dereference upstream/wpa_supplicant/u
 +#endif
 diff --recursive --unified --new-file --no-dereference upstream/wpa_supplicant/ucode.c src/wpa_supplicant/ucode.c
 --- upstream/wpa_supplicant/ucode.c	1970-01-01 00:00:00.000000000 +0000
-+++ src/wpa_supplicant/ucode.c	2024-08-22 05:00:52.076701525 +0000
++++ src/wpa_supplicant/ucode.c	2024-08-29 10:36:43.180221197 +0000
 @@ -0,0 +1,298 @@
 +#include "utils/includes.h"
 +#include "utils/common.h"
@@ -5157,7 +5157,7 @@ diff --recursive --unified --new-file --no-dereference upstream/wpa_supplicant/u
 +}
 diff --recursive --unified --new-file --no-dereference upstream/wpa_supplicant/ucode.h src/wpa_supplicant/ucode.h
 --- upstream/wpa_supplicant/ucode.h	1970-01-01 00:00:00.000000000 +0000
-+++ src/wpa_supplicant/ucode.h	2024-08-22 05:00:52.076701525 +0000
++++ src/wpa_supplicant/ucode.h	2024-08-29 10:36:43.180221197 +0000
 @@ -0,0 +1,49 @@
 +#ifndef __WPAS_UCODE_H
 +#define __WPAS_UCODE_H

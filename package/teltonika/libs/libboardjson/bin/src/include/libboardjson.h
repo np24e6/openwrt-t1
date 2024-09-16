@@ -148,6 +148,7 @@ struct lbjson_hwinfo {
 	bool gigabit_port_2_5 : 1;
 	bool esim             : 1;
 	bool custom_usbcfg    : 1;
+	bool mbus	      : 1;
 };
 
 ///////////////////////////////////////////////

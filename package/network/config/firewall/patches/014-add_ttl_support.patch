@@ -1,0 +1,248 @@
+--- a/options.c
++++ b/options.c
+@@ -78,6 +78,7 @@ const char *fw3_flag_names[__FW3_FLAG_MA
+ 	"HELPER",
+ 	"MARK",
+ 	"DSCP",
++	"TTL",
+ 	"DNAT",
+ 	"SNAT",
+ 	"MASQUERADE",
+@@ -136,6 +137,12 @@ static const char *reflection_sources[]
+ 	"external",
+ };
+ 
++static const char *ttl_actions[] = {
++	"increment",
++	"decrement",
++	"set",
++};
++
+ static const struct { const char *name; uint8_t dscp; } dscp_classes[] = {
+ 	{ "CS0",  0x00 },
+ 	{ "CS1",  0x08 },
+@@ -1303,3 +1310,21 @@ fw3_address_to_string(struct fw3_address
+ 
+ 	return buf;
+ }
++
++bool
++fw3_parse_ttl_action(void *ptr, const char *val, bool is_list)
++{
++	return parse_enum(ptr, val, &ttl_actions[FW3_TTL_ACTION_INCREMENT],
++	                  FW3_TTL_ACTION_INCREMENT, FW3_TTL_ACTION_SET);
++}
++
++bool
++fw3_parse_ttl_value(void *ptr, const char *val, bool is_list)
++{
++	if (!fw3_parse_int(ptr,val,is_list))
++		return false;
++
++	int n = *((int *)ptr);
++
++	return (n >= 0 && n <= 255);
++}
+--- a/options.h
++++ b/options.h
+@@ -74,17 +74,18 @@ enum fw3_flag
+ 	FW3_FLAG_HELPER        = 10,
+ 	FW3_FLAG_MARK          = 11,
+ 	FW3_FLAG_DSCP          = 12,
+-	FW3_FLAG_DNAT          = 13,
+-	FW3_FLAG_SNAT          = 14,
+-	FW3_FLAG_MASQUERADE    = 15,
+-	FW3_FLAG_SRC_ACCEPT    = 16,
+-	FW3_FLAG_SRC_REJECT    = 17,
+-	FW3_FLAG_SRC_DROP      = 18,
+-	FW3_FLAG_CUSTOM_CHAINS = 19,
+-	FW3_FLAG_SYN_FLOOD     = 20,
+-	FW3_FLAG_MTU_FIX       = 21,
+-	FW3_FLAG_DROP_INVALID  = 22,
+-	FW3_FLAG_HOTPLUG       = 23,
++	FW3_FLAG_TTL           = 13,
++	FW3_FLAG_DNAT          = 14,
++	FW3_FLAG_SNAT          = 15,
++	FW3_FLAG_MASQUERADE    = 16,
++	FW3_FLAG_SRC_ACCEPT    = 17,
++	FW3_FLAG_SRC_REJECT    = 18,
++	FW3_FLAG_SRC_DROP      = 19,
++	FW3_FLAG_CUSTOM_CHAINS = 20,
++	FW3_FLAG_SYN_FLOOD     = 21,
++	FW3_FLAG_MTU_FIX       = 22,
++	FW3_FLAG_DROP_INVALID  = 23,
++	FW3_FLAG_HOTPLUG       = 24,
+ 
+ 	__FW3_FLAG_MAX
+ };
+@@ -139,6 +140,14 @@ enum fw3_ipset_type
+ extern const char *fw3_ipset_method_names[__FW3_IPSET_METHOD_MAX];
+ extern const char *fw3_ipset_type_names[__FW3_IPSET_TYPE_MAX];
+ 
++enum fw3_ttl_action
++{
++	FW3_TTL_ACTION_INCREMENT = 0,
++	FW3_TTL_ACTION_DECREMENT = 1,
++	FW3_TTL_ACTION_SET = 2,
++
++	__FW3_TTL_ACTION_MAX
++};
+ 
+ enum fw3_include_type
+ {
+@@ -398,6 +407,9 @@ struct fw3_rule
+ 	struct fw3_dscp set_dscp;
+ 	struct fw3_cthelpermatch set_helper;
+ 
++	enum fw3_ttl_action ttl_action;
++	int ttl_value;
++
+ 	const char *extra;
+ };
+ 
+@@ -634,6 +646,9 @@ bool fw3_parse_direction(void *ptr, cons
+ bool fw3_parse_cthelper(void *ptr, const char *val, bool is_list);
+ bool fw3_parse_setentry(void *ptr, const char *val, bool is_list);
+ 
++bool fw3_parse_ttl_action(void *ptr, const char *val, bool is_list);
++bool fw3_parse_ttl_value(void *ptr, const char *val, bool is_list);
++
+ bool fw3_parse_options(void *s, const struct fw3_option *opts,
+                        struct uci_section *section);
+ bool fw3_parse_blob_options(void *s, const struct fw3_option *opts,
+--- a/rules.c
++++ b/rules.c
+@@ -65,6 +65,9 @@ const struct fw3_option fw3_rule_opts[]
+ 	FW3_OPT("dscp",                dscp,      rule,     dscp),
+ 	FW3_OPT("set_dscp",            dscp,      rule,     set_dscp),
+ 
++	FW3_OPT("ttl_action",          ttl_action,     rule,     ttl_action),
++	FW3_OPT("ttl_value",           ttl_value,      rule,     ttl_value),
++
+ 	FW3_OPT("target",              target,    rule,     target),
+ 
+ 	{ }
+@@ -96,6 +99,7 @@ alloc_rule(struct fw3_state *state)
+ 
+ 		list_add_tail(&rule->list, &state->rules);
+ 		rule->enabled = true;
++		rule->ttl_action = FW3_TTL_ACTION_SET;
+ 	}
+ 
+ 	return rule;
+@@ -196,6 +200,13 @@ check_rule(struct fw3_state *state, stru
+ 		                "- assuming an output rule");
+ 	}
+ 
++	if (r->target == FW3_FLAG_TTL && !r->ttl_value)
++	{
++		warn_section("rule", r, e, "is set to target TTL but  does not specify "
++		                           "'ttl_value' option");
++		return false;
++	}
++
+ 	if (list_empty(&r->proto))
+ 	{
+ 		warn_section("rule", r, e, "does not specify a protocol, assuming TCP+UDP");
+@@ -207,7 +218,7 @@ check_rule(struct fw3_state *state, stru
+ 		warn_section("rule", r, e, "has no target specified, defaulting to REJECT");
+ 		r->target = FW3_FLAG_REJECT;
+ 	}
+-	else if (r->target > FW3_FLAG_DSCP)
++	else if (r->target > FW3_FLAG_TTL)
+ 	{
+ 		warn_section("rule", r, e, "has invalid target specified, defaulting to REJECT");
+ 		r->target = FW3_FLAG_REJECT;
+@@ -302,7 +313,7 @@ append_chain(struct fw3_ipt_rule *r, str
+ 	{
+ 		snprintf(chain, sizeof(chain), "zone_%s_helper", rule->src.name);
+ 	}
+-	else if (rule->target == FW3_FLAG_MARK || rule->target == FW3_FLAG_DSCP)
++	else if (rule->target == FW3_FLAG_MARK || rule->target == FW3_FLAG_DSCP || rule->target == FW3_FLAG_TTL)
+ 	{
+ 		if ((rule->_dest && rule->_src) ||
+ 		    (rule->dest.any && rule->src.any))
+@@ -351,11 +362,13 @@ append_chain(struct fw3_ipt_rule *r, str
+ 	fw3_ipt_rule_append(r, chain);
+ }
+ 
+-static void set_target(struct fw3_ipt_rule *r, struct fw3_rule *rule)
++static void set_target(struct fw3_ipt_rule *r, struct fw3_rule *rule, enum fw3_family family)
+ {
+ 	const char *name;
+ 	struct fw3_mark *mark;
+ 	char buf[sizeof("0xFFFFFFFF/0xFFFFFFFF")];
++	char ttl_action_buf[11];
++	char ttl_value_buf[4];
+ 
+ 	switch(rule->target)
+ 	{
+@@ -384,6 +397,42 @@ static void set_target(struct fw3_ipt_ru
+ 		fw3_ipt_rule_target(r, "CT");
+ 		fw3_ipt_rule_addarg(r, false, "--helper", rule->set_helper.ptr->name);
+ 		return;
++	case FW3_FLAG_TTL:
++
++		snprintf(ttl_value_buf, sizeof(ttl_value_buf), "%d", rule->ttl_value);
++		if (family == FW3_FAMILY_V4) {
++			switch (rule->ttl_action) {
++			case FW3_TTL_ACTION_INCREMENT:
++				strncpy(ttl_action_buf, "--ttl-inc", sizeof(ttl_action_buf));
++				break;
++			case FW3_TTL_ACTION_DECREMENT:
++				strncpy(ttl_action_buf, "--ttl-dec", sizeof(ttl_action_buf));
++				break;
++			case FW3_TTL_ACTION_SET:
++			default:
++				strncpy(ttl_action_buf, "--ttl-set", sizeof(ttl_action_buf));
++			}
++
++			fw3_ipt_rule_target(r, "TTL");
++		} else {
++			switch (rule->ttl_action) {
++			case FW3_TTL_ACTION_INCREMENT:
++				strncpy(ttl_action_buf, "--hl-inc", sizeof(ttl_action_buf));
++				break;
++			case FW3_TTL_ACTION_DECREMENT:
++				strncpy(ttl_action_buf, "--hl-dec", sizeof(ttl_action_buf));
++				break;
++			case FW3_TTL_ACTION_SET:
++			default:
++				strncpy(ttl_action_buf, "--hl-set", sizeof(ttl_action_buf));
++			}
++
++			fw3_ipt_rule_target(r, "HL");
++		}
++
++		fw3_ipt_rule_addarg(r, false, ttl_action_buf, NULL);
++		fw3_ipt_rule_addarg(r, false, ttl_value_buf, NULL);
++		return;
+ 
+ 	case FW3_FLAG_ACCEPT:
+ 	case FW3_FLAG_DROP:
+@@ -477,7 +526,7 @@ print_rule(struct fw3_ipt_handle *handle
+ 		return;
+ 	}
+ 
+-	if (rule->target == FW3_FLAG_DSCP || rule->target == FW3_FLAG_MARK)
++	if (rule->target == FW3_FLAG_DSCP || rule->target == FW3_FLAG_MARK || rule->target == FW3_FLAG_TTL)
+ 	{
+ 		if (rule->_src)
+ 			idevices = &rule->_src->devices;
+@@ -499,7 +548,7 @@ print_rule(struct fw3_ipt_handle *handle
+ 		fw3_ipt_rule_time(r, &rule->time);
+ 		fw3_ipt_rule_mark(r, &rule->mark);
+ 		fw3_ipt_rule_dscp(r, &rule->dscp);
+-		set_target(r, rule);
++		set_target(r, rule, handle->family);
+ 		fw3_ipt_rule_extra(r, rule->extra);
+ 		set_comment(r, rule->name, num);
+ 		append_chain(r, rule);
+@@ -532,6 +581,7 @@ expand_rule(struct fw3_ipt_handle *handl
+ 	    (rule->target == FW3_FLAG_HELPER && handle->table != FW3_TABLE_RAW)  ||
+ 	    (rule->target == FW3_FLAG_MARK && handle->table != FW3_TABLE_MANGLE) ||
+ 	    (rule->target == FW3_FLAG_DSCP && handle->table != FW3_TABLE_MANGLE) ||
++		(rule->target == FW3_FLAG_TTL && handle->table != FW3_TABLE_MANGLE) ||
+ 		(rule->target < FW3_FLAG_NOTRACK && handle->table != FW3_TABLE_FILTER))
+ 		return;
+ 

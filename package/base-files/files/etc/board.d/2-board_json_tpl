@@ -1,0 +1,38 @@
+#!/bin/sh
+#
+# # Copyright (C) 2024 Teltonika-Networks
+#
+
+. /lib/functions/system.sh
+. /lib/functions/uci-defaults.sh
+. /lib/functions/teltonika-defaults.sh
+
+[ -f /lib/functions/target-defaults.sh ] && \
+	. /lib/functions/target-defaults.sh
+
+setup_json() {
+	local model="$(mnf_info --name)" 2>/dev/null;
+	local hw_ver="$(cut -c -2 /sys/mnf_info/hwver)"
+	local branch_path="/sys/mnf_info/branch"
+	local branch
+	[ -f "$branch_path" ] && branch="$(cut -c -2 $branch_path)"
+
+	case "$model" in
+## DEVICE_CUSTOM_OPTIONS ##
+	*)
+		;;
+	esac
+
+	type ucidef_target_defaults &> /dev/null && \
+		ucidef_target_defaults "$model" "$hw_ver" "$branch"
+}
+
+
+platform="$(cat /proc/device-tree/platform)" 2>/dev/null
+
+board_config_update
+setup_json
+ucidef_set_board_platform "$platform"
+board_config_flush
+
+exit 0

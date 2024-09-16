@@ -59,6 +59,10 @@ ifeq ($(TLT_PLATFORM_TAP200), y)
 	FIREWALL_CONFIG=firewall.config-tap200
 endif
 
+ifeq ($(TLT_PLATFORM_TAP400), y)
+	FIREWALL_CONFIG=firewall.config-tap400
+endif
+
 ifeq ($(CONFIG_HW_OFFLOAD), y)
 	FIREWALL_CONFIG=firewall.config-offload-full
 endif

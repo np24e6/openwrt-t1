@@ -8,7 +8,7 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=ddns-scripts
-PKG_VERSION:=2024-04-16
+PKG_VERSION:=2024-08-02
 PKG_RELEASE:=1
 
 

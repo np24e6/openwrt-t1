@@ -1,72 +1,702 @@
-diff --recursive --unified --new-file --no-dereference upstream/.gitignore src/.gitignore
---- upstream/.gitignore	2020-03-26 13:55:38.000000000 +0000
-+++ src/.gitignore	1970-01-01 00:00:00.000000000 +0000
-@@ -1,62 +0,0 @@
--*~
--*.o
--*.a
--*.lo
--*.loT
--*.la
--*.so
--*.lai
--*.bz2
--*.gz
--*.sig
--*.orig
--*.rej
--.libs
--.depends
--*.log
--*.substvars
--*-stamp
--*.swp
--*.cache
--*.dist
--*.dylib
--*.rej
--*.orig
--*.dSYM
--*.patch
--.pc
+diff --recursive --unified --new-file --no-dereference upstream/.github/workflows/ci-deb.yml src/.github/workflows/ci-deb.yml
+--- upstream/.github/workflows/ci-deb.yml	2024-07-25 15:40:53.000000000 +0000
++++ src/.github/workflows/ci-deb.yml	1970-01-01 00:00:00.000000000 +0000
+@@ -1,180 +0,0 @@
+-name: "CI DEB"
 -
--# Editor projects
--*.kdev4
--*.cproject
--*.project
--*.bbprojectd
+-on:
+-  push:
+-    branches-ignore:
+-      - coverity_scan
+-  pull_request:
 -
--# Local icon files
--icon.png
+-env:
+-  DEBIAN_FRONTEND: noninteractive
+-  CI: 1
+-  CI_TEST_USER: tapioca
+-  CI_TEST_PASS: queijo
+-  GH_ACTIONS: 1
 -
--# OS specific cruft
--.DS_Store
+-jobs:
+-  pre-ci:
+-    runs-on: ubuntu-latest
+-    # Map a step output to a job output
+-    outputs:
+-      should_skip: ${{ steps.skip_check.outputs.should_skip }}
+-    steps:
+-      - id: skip_check
+-        uses: fkirc/skip-duplicate-actions@master
 -
--# Certificates and signing requests
--*.pem
--*.der
--*.csr
--*.key
+-  deb-build:
+-    #  If branch protection is in place with status checks enabled, ensure
+-    #  names are updated if new matrix entries are added or the name format
+-    #  changes.
+-    name: "DEB Build (ubuntu-20.04)"
 -
--# Autoconf and libtool output
--build
--config.status
--*confdefs.h
--*conftest*
--*confcache
--Make.inc
--libtool
--autom4te.cache
--config.h
--src/main/radattr
--src/modules/lib/
--warnings.txt
+-    needs: pre-ci
+-    if: ${{ needs.pre-ci.outputs.should_skip != 'true' }}
 -
--# Analyzer output
--/*.plist
+-    runs-on: "ubuntu-20.04"
+-
+-    strategy:
+-      fail-fast: false
+-
+-    steps:
+-
+-    # Checkout, but defer pulling LFS objects until we've restored the cache
+-    - uses: actions/checkout@v2
+-      with:
+-        lfs: false
+-
+-    - name: "Package manager performance improvements"
+-      run: |
+-        sudo sh -c 'echo force-unsafe-io > /etc/dpkg/dpkg.cfg.d/02speedup'
+-        echo 'man-db man-db/auto-update boolean false' | sudo debconf-set-selections
+-        sudo dpkg-reconfigure man-db
+-        sudo sed -i 's/^update_initramfs=.*/update_initramfs=no/' /etc/initramfs-tools/update-initramfs.conf
+-
+-    - name: "Install build dependencies based CI packages"
+-      run: |
+-        sudo apt-get update
+-        sudo apt-get install -y --no-install-recommends build-essential devscripts equivs quilt libpam0g-dev sshpass
+-        sudo mk-build-deps -irt"apt-get -y --no-install-recommends" scripts/ci/extra-packages.debian.control
+-
+-    - name: "Set compiler to GCC 10"
+-      run: |
+-        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-10 60 && sudo update-alternatives --set gcc /usr/bin/gcc-10
+-
+-    - name: "Build DEBs"
+-      run: |
+-        make deb
+-
+-    - name: "Install .deb packages"
+-      run: |
+-        sudo dpkg -i ../libpam*deb
+-
+-    - name: "Show infos of the .deb package"
+-      run: |
+-        sudo dpkg -s libpam-radius-auth
+-
+-    - name: "List content of the .deb package"
+-      run: |
+-        sudo dpkg -L libpam-radius-auth
+-
+-    - name: "Create the CI_TEST_USER user in /etc/passwd (no-password)"
+-      run: |
+-        sudo useradd -d /tmp ${CI_TEST_USER}
+-        id ${CI_TEST_USER}
+-
+-    - name: "Setup FreeRADIUS/SSHD/SYSLOG-NG/PAM then run full CI tests"
+-      run: |
+-        sudo apt-get update
+-        sudo apt-get install -y --no-install-recommends \
+-                          freeradius freeradius-utils freeradius-config \
+-                          syslog-ng \
+-                          openssh-server sshpass
+-
+-        echo "#######################################################"
+-        echo "## Stop the services syslog-ng/sshd/freeradius"
+-        sudo rm -f /var/log/auth.log # Needed to see the last results
+-        sudo systemctl restart syslog-ng
+-        sudo systemctl stop ssh
+-        sudo systemctl stop freeradius
+-
+-        echo "#######################################################"
+-        echo "## Setup the services"
+-        export CI_TEST_USER="$CI_TEST_USER" CI_TEST_PASS="$CI_TEST_PASS"
+-        for i in setup-pam_radius.sh setup-freeradius.sh setup-sshd.sh; do
+-            script="./scripts/ci/$i"
+-
+-            echo "Calling $i"
+-            sudo -E $script
+-        done
+-
+-        echo "#######################################################"
+-        echo "## Start the services syslog-ng/sshd/freeradius"
+-        sudo systemctl start ssh
+-        sudo systemctl start freeradius
+-
+-        echo "#######################################################"
+-        echo "## Show processes"
+-        ps aux | grep -E "([r]adius|[s]sh|[s]yslog)"
+-
+-    - name: "Content of /etc/ssh/sshd_config"
+-      run: |
+-        sudo cat /etc/ssh/sshd_config
+-
+-    - name: "Content of /etc/pam.d/sshd"
+-      run: |
+-        sudo cat /etc/pam.d/sshd
+-
+-    - name: "Content of /etc/pam_radius_auth.conf"
+-      run: |
+-        sudo cat /etc/pam_radius_auth.conf
+-
+-    - name: "Validate freeradius instance using radtest"
+-      run: |
+-        radtest -x $CI_TEST_USER $CI_TEST_PASS localhost 0 testing123
+-
+-    - name: "Run ssh authorization over pam_radius"
+-      run: |
+-        if ! sshpass -p "${CI_TEST_PASS}" -v \
+-          /usr/bin/ssh -T -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -p 22 ${CI_TEST_USER}@localhost id; then
+-            echo "ERROR: Something goes wrong with the SSH + PAM_RADIUS authentication!"
+-            echo "############## Show the logs in /var/log/auth.log"
+-            sudo tail -35 /var/log/auth.log
+-            exit 1
+-        fi
+-
+-    - name: "Looking for 'pam_radius_auth: authentication succeeded' in /var/log/auth.log"
+-      run: |
+-        echo "#######################################################"
+-        echo "## Show the logs in /var/log/auth.log"
+-        sudo cat -n /var/log/auth.log
+-
+-        if ! sudo grep -q "pam_radius_auth: authentication succeeded" /var/log/auth.log; then
+-          echo "ERROR: Something goes wrong with the SSH + PAM_RADIUS authentication!"
+-          exit 1
+-        fi
+-
+-    #
+-    #  If the CI has failed and the branch is ci-debug then we start a tmate
+-    #  session to provide interactive shell access to the session.
+-    #
+-    #  The SSH rendezvous point will be emitted continuously in the job output,
+-    #  which will look something like:
+-    #
+-    #      SSH: ssh VfuX8SrNuU5pGPMyZcz7TpJTa@sfo2.tmate.io
+-    #
+-    #  For example:
+-    #
+-    #      git push origin ci-debug --force
+-    #
+-    #  Look at the job output in: https://github.com/FreeRADIUS/freeradius-server/actions
+-    #
+-    #      ssh VfuX8SrNuU5pGPMyZcz7TpJTa@sfo2.tmate.io
+-    #
+-    #  Access requires that you have the private key corresponding to the
+-    #  public key of the GitHub user that initiated the job.
+-    #
+-    - name: "Debug: Start tmate"
+-      uses: mxschmitt/action-tmate@v3
+-      with:
+-        limit-access-to-actor: true
+-      if: ${{ github.ref == 'refs/heads/ci-debug' && failure() }}
+diff --recursive --unified --new-file --no-dereference upstream/.github/workflows/ci-rpm.yml src/.github/workflows/ci-rpm.yml
+--- upstream/.github/workflows/ci-rpm.yml	2024-07-25 15:40:53.000000000 +0000
++++ src/.github/workflows/ci-rpm.yml	1970-01-01 00:00:00.000000000 +0000
+@@ -1,281 +0,0 @@
+-name: "CI RPM"
+-
+-on:
+-  push:
+-    branches-ignore:
+-      - coverity_scan
+-  pull_request:
+-
+-env:
+-  CI: 1
+-  CI_TEST_USER: tapioca
+-  CI_TEST_PASS: queijo
+-  GH_ACTIONS: 1
+-
+-jobs:
+-  pre-ci:
+-    runs-on: ubuntu-latest
+-    # Map a step output to a job output
+-    outputs:
+-      should_skip: ${{ steps.skip_check.outputs.should_skip }}
+-    steps:
+-      - id: skip_check
+-        uses: fkirc/skip-duplicate-actions@master
+-
+-  rpm-build:
+-    #  If branch protection is in place with status checks enabled, ensure
+-    #  names are updated if new matrix entries are added or the name format
+-    #  changes.
+-    name: "RPM Build (${{ matrix.env.NAME }})"
+-
+-    needs: pre-ci
+-    if: ${{ needs.pre-ci.outputs.should_skip != 'true' }}
+-
+-    runs-on: ubuntu-latest
+-
+-    container:
+-      image: ${{ matrix.env.OS }}
+-
+-    strategy:
+-      fail-fast: false
+-      matrix:
+-        env:
+-          - { "NAME": "centos-7", "OS": "centos:7",                      "DIST": "centos" }
+-          - { "NAME": "centos-8", "OS": "centos:8",                      "DIST": "centos" }
+-          - { "NAME": "rocky-8",  "OS": "rockylinux/rockylinux:8",       "DIST": "rocky"  }
+-          - { "NAME": "rocky-9",  "OS": "rockylinux/rockylinux:9",       "DIST": "rocky"  }
+-
+-    steps:
+-    - name: Extra repos for CentOS and Rocky Linux 8
+-      if: ${{ matrix.env.NAME == 'centos-' || matrix.env.NAME == 'stream-8' || matrix.env.NAME == 'rocky-8' }}
+-      run: |
+-        echo '[ltb-project]'                                              >  /etc/yum.repos.d/ltb-project.repo
+-        echo 'name=LTB project packages'                                  >> /etc/yum.repos.d/ltb-project.repo
+-        echo 'baseurl=https://ltb-project.org/rpm/$releasever/$basearch'  >> /etc/yum.repos.d/ltb-project.repo
+-        echo 'enabled=1'                                                  >> /etc/yum.repos.d/ltb-project.repo
+-        echo 'gpgcheck=1'                                                 >> /etc/yum.repos.d/ltb-project.repo
+-        echo 'gpgkey=https://www.ltb-project.org/documentation/_static/RPM-GPG-KEY-LTB-project' >> /etc/yum.repos.d/ltb-project.repo
+-        rpm --import https://www.ltb-project.org/documentation/_static/RPM-GPG-KEY-LTB-project
+-
+-    #
+-    # Centos9 is EOL, so we need the below tricks to get it to work.
+-    #
+-    # Converting from CentOS Linux 8 to CentOS Stream 8 is the "official" process
+-    # (see centos.org/centos-stream/#centos-stream-8):
+-    #
+-    - name: Some hacks for CentOS 8 (EOL) to work again.
+-      if: ${{ matrix.env.NAME == 'centos-8' }}
+-      run: |
+-        sed -i 's/mirrorlist/#mirrorlist/g' /etc/yum.repos.d/CentOS-Linux-*
+-        sed -i 's|#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' /etc/yum.repos.d/CentOS-Linux-*
+-        yum upgrade -y
+-        yum -y --disablerepo '*' --enablerepo extras swap centos-linux-repos centos-stream-repos
+-        yum clean all && yum makecache
+-        yum distro-sync -y --allowerasing
+-
+-    - name: Enable EPEL for CentOS and Rocky Linux
+-      if: ${{ startsWith(matrix.env.NAME, 'centos-') || startsWith(matrix.env.NAME, 'rocky-') }}
+-      run: |
+-        yum install -y epel-release
+-
+-    # Required so that the checkout action uses git protocol rather than the GitHub REST API.
+-    # make rpm requires the FR directory to be a git repository.
+-    - name: Install recent git for CentOS 7
+-      if: ${{ matrix.env.NAME == 'centos-7' }}
+-      run: |
+-        yum install -y https://packages.endpointdev.com/rhel/7/os/x86_64/git-core-2.30.1-1.ep7.x86_64.rpm
+-
+-    - name: Install distro git for Rocky and CentOS 8.
+-      if: ${{ startsWith(matrix.env.NAME, 'rocky-') || matrix.env.NAME == 'centos-8' }}
+-      run: |
+-        yum install -y git-core git
+-
+-    - name: Enable PowerTools / CRB
+-      run: |
+-        yum install -y yum-utils dnf-plugins-core
+-        yum config-manager --enable PowerTools || :
+-        yum config-manager --enable powertools || :
+-        yum config-manager --enable crb || :
+-
+-    - name: Enable EPEL for Rocky Linux 9
+-      if: ${{ matrix.env.NAME == 'rocky-9' }}
+-      run: |
+-        yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm
+-
+-    - name: Set up NetworkRADIUS extras repository
+-      run: |
+-        echo '[networkradius-extras]'                                                               >  /etc/yum.repos.d/networkradius-extras.repo
+-        echo 'name=NetworkRADIUS-extras-$releasever'                                                >> /etc/yum.repos.d/networkradius-extras.repo
+-        echo 'baseurl=http://packages.networkradius.com/extras/${{ matrix.env.DIST }}/$releasever/' >> /etc/yum.repos.d/networkradius-extras.repo
+-        echo 'enabled=1'                                                                            >> /etc/yum.repos.d/networkradius-extras.repo
+-        echo 'gpgcheck=1'                                                                           >> /etc/yum.repos.d/networkradius-extras.repo
+-        echo 'gpgkey=https://packages.networkradius.com/pgp/packages@networkradius.com'             >> /etc/yum.repos.d/networkradius-extras.repo
+-        rpm --import https://packages.networkradius.com/pgp/packages@networkradius.com
+-
+-    - name: Install common tools
+-      run: |
+-        yum install -y rpm-build openssl make gcc perl
+-
+-    - name: "Install common tools"
+-      run: |
+-        yum install -y \
+-          yum-utils \
+-          bzip2 \
+-          gcc \
+-          hostname \
+-          make \
+-          perl \
+-          procps-ng \
+-          rpm-build \
+-          psmisc \
+-          sudo
+-
+-    - uses: actions/checkout@v3
+-      with:
+-        path: pam_radius
+-
+-    # Build Package
+-    - name: "Install build dependencies"
+-      run: |
+-        yum-builddep -y redhat/pam_radius_auth.spec
+-      working-directory: pam_radius
+-
+-    - name: "Build RPMs"
+-      run: |
+-        [ -r /opt/rh/devtoolset-8/enable ] && source /opt/rh/devtoolset-8/enable || :
+-        make rpm
+-      working-directory: pam_radius
+-
+-    - name: "Collect RPMs"
+-      run: |
+-        mkdir -p rpms/
+-        mv rpmbuild/RPMS/x86_64/*.rpm rpms/
+-      working-directory: pam_radius
+-
+-    - name: "Install .rpm packages"
+-      run: |
+-        rpm -ivh rpms/pam*.rpm
+-      working-directory: pam_radius
+-
+-    - name: "Show infos of the .rpm package"
+-      run: |
+-        rpm -qi pam_radius_auth
+-
+-    - name: "List content of the .rpm package"
+-      run: |
+-        rpm -qs pam_radius_auth
+-
+-    - name: "Create the CI_TEST_USER user in /etc/passwd (no-password)"
+-      run: |
+-        sudo useradd -d /tmp ${CI_TEST_USER}
+-        id ${CI_TEST_USER}
+-
+-    - name: "Setup FreeRADIUS/SSHD/SYSLOG-NG/PAM then run full CI tests"
+-      run: |
+-        sudo yum -y update
+-        sudo yum -y install \
+-                freeradius freeradius-utils \
+-                syslog-ng \
+-                openssh-server sshpass
+-
+-        echo "#######################################################"
+-        echo "## Stop the services syslog-ng/sshd/freeradius"
+-        ( sudo rm -f /var/log/secure && \
+-          sudo touch /var/log/secure && \
+-          sudo chmod 600 /var/log/secure
+-        )
+-        sudo killall -q -9 syslog-ng radiusd sshd || :
+-        # https://stackoverflow.com/questions/47973554/how-to-let-syslog-workable-in-docker
+-        sudo sed -i 's/system()/# system()/g' /etc/syslog-ng/syslog-ng.conf
+-        sudo /usr/sbin/syslog-ng --no-caps
+-
+-        echo "#######################################################"
+-        echo "## Setup the services"
+-        export CI_TEST_USER="$CI_TEST_USER" CI_TEST_PASS="$CI_TEST_PASS"
+-        for i in setup-pam_radius.sh setup-freeradius.sh setup-sshd.sh; do
+-            script="${PWD}/scripts/ci/$i"
+-
+-            echo "Calling $script"
+-            sudo -E $script
+-        done
+-
+-        echo "#######################################################"
+-        echo "## Start the services sshd"
+-        echo | sudo ssh-keygen -A
+-        sudo /usr/sbin/sshd
+-        sudo rm -f /run/nologin # Needed to enable the log in!
+-
+-        echo "## Start the services radiusd"
+-        ( sudo make -C /etc/raddb/certs/ destroycerts all && \
+-          sudo sed 's/dh_file =/#dh_file =/g' -i /etc/raddb/mods-available/eap && \
+-          sudo chmod 0644 /etc/raddb/certs/server.pem
+-        )
+-        sudo /usr/sbin/radiusd
+-
+-        echo "#######################################################"
+-        echo "## Show processes"
+-        ps aux | grep -E "([r]adius|[s]sh|[s]yslog)"
+-      working-directory: pam_radius
+-
+-    - name: "Content of /etc/ssh/sshd_config"
+-      run: |
+-        sudo cat /etc/ssh/sshd_config
+-
+-    - name: "Content of /etc/pam.d/sshd"
+-      run: |
+-        sudo cat /etc/pam.d/sshd
+-
+-    - name: "Content of /etc/pam_radius_auth.conf"
+-      run: |
+-        sudo cat /etc/pam_radius_auth.conf
+-
+-    - name: "Validate freeradius instance using radtest"
+-      run: |
+-        radtest -x $CI_TEST_USER $CI_TEST_PASS localhost 0 testing123
+-
+-    - name: "Run ssh authorization over pam_radius"
+-      run: |
+-        if ! sshpass -p "${CI_TEST_PASS}" -v \
+-          /usr/bin/ssh -T -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -p 22 ${CI_TEST_USER}@localhost id; then
+-            echo "ERROR: Something goes wrong with the SSH + PAM_RADIUS authentication!"
+-            echo "############## Show the logs in /var/log/secure"
+-            sudo tail -35 /var/log/secure
+-            exit 1
+-        fi
+-
+-    - name: "Looking for 'pam_radius_auth: authentication succeeded' in /var/log/secure"
+-      run: |
+-        echo "#######################################################"
+-        echo "## Show the logs in /var/log/secure"
+-        sudo cat -n /var/log/secure
+-
+-        # if ! grep -q "pam_radius_auth: authentication succeeded" /var/log/secure; then
+-        #   echo "ERROR: Something goes wrong with the SSH + PAM_RADIUS authentication!"
+-        #   exit 1
+-        # fi
+-
+-    #
+-    #  If the CI has failed and the branch is ci-debug then we start a tmate
+-    #  session to provide interactive shell access to the session.
+-    #
+-    #  The SSH rendezvous point will be emitted continuously in the job output,
+-    #  which will look something like:
+-    #
+-    #      SSH: ssh VfuX8SrNuU5pGPMyZcz7TpJTa@sfo2.tmate.io
+-    #
+-    #  For example:
+-    #
+-    #      git push origin ci-debug --force
+-    #
+-    #  Look at the job output in: https://github.com/FreeRADIUS/freeradius-server/actions
+-    #
+-    #      ssh VfuX8SrNuU5pGPMyZcz7TpJTa@sfo2.tmate.io
+-    #
+-    #  Access requires that you have the private key corresponding to the
+-    #  public key of the GitHub user that initiated the job.
+-    #
+-    - name: "Debug: Start tmate"
+-      uses: mxschmitt/action-tmate@v3
+-      with:
+-        limit-access-to-actor: true
+-      if: ${{ github.ref == 'refs/heads/ci-debug' && failure() }}
+diff --recursive --unified --new-file --no-dereference upstream/.github/workflows/ci.yml src/.github/workflows/ci.yml
+--- upstream/.github/workflows/ci.yml	2024-07-25 15:40:53.000000000 +0000
++++ src/.github/workflows/ci.yml	1970-01-01 00:00:00.000000000 +0000
+@@ -1,223 +0,0 @@
+-name: CI
+-
+-on:
+-  push:
+-    branches-ignore:
+-      - coverity_scan
+-  pull_request:
+-
+-env:
+-  ASAN_OPTIONS: symbolize=1 detect_leaks=1 detect_stack_use_after_return=1
+-  LSAN_OPTIONS: fast_unwind_on_malloc=0:malloc_context_size=50
+-  M_PERTURB: "0x42"
+-  DEBIAN_FRONTEND: noninteractive
+-  CI: 1
+-  GH_ACTIONS: 1
+-  CI_TEST_USER: tapioca
+-  CI_TEST_PASS: queijo
+-
+-jobs:
+-  pre-ci:
+-    runs-on: ubuntu-latest
+-    # Map a step output to a job output
+-    outputs:
+-      should_skip: ${{ steps.skip_check.outputs.should_skip }}
+-    steps:
+-      - id: skip_check
+-        uses: fkirc/skip-duplicate-actions@master
+-
+-  ci:
+-    needs: pre-ci
+-    if: ${{ needs.pre-ci.outputs.should_skip != 'true' }}
+-
+-    runs-on: ${{ matrix.env.OS }}
+-
+-    strategy:
+-      fail-fast: false
+-      matrix:
+-        env:
+-          - { CC: gcc,   OS: ubuntu-20.04, BUILD_CFLAGS: "",         NAME: linux-gcc           }
+-          - { CC: gcc,   OS: ubuntu-20.04, BUILD_CFLAGS: "-O2 -g3",  NAME: linux-gcc-O2-g3     }
+-          - { CC: gcc,   OS: ubuntu-20.04, BUILD_CFLAGS: "-DNDEBUG", NAME: linux-gcc-ndebug    }
+-          - { CC: clang, OS: ubuntu-20.04, BUILD_CFLAGS: "",         NAME: linux-clang         }
+-          - { CC: clang, OS: ubuntu-20.04, BUILD_CFLAGS: "-O2 -g3",  NAME: linux-clang-O2-g3   }
+-          - { CC: clang, OS: ubuntu-20.04, BUILD_CFLAGS: "-DNDEBUG", NAME: linux-clang-ndebug  }
+-
+-    env: ${{ matrix.env }}
+-
+-    #  If branch protection is in place with status checks enabled, ensure
+-    #  names are updated if new matrix entries are added or the name format
+-    #  changes.
+-    name: "master-${{ matrix.env.NAME }}"
+-
+-    steps:
+-
+-    # Checkout, but defer pulling LFS objects until we've restored the cache
+-    - uses: actions/checkout@v2
+-      with:
+-        lfs: false
+-
+-    - name: Package manager performance improvements
+-      run: |
+-        sudo sh -c 'echo force-unsafe-io > /etc/dpkg/dpkg.cfg.d/02speedup'
+-        echo 'man-db man-db/auto-update boolean false' | sudo debconf-set-selections
+-        sudo dpkg-reconfigure man-db
+-        sudo sed -i 's/^update_initramfs=.*/update_initramfs=no/' /etc/initramfs-tools/update-initramfs.conf
+-
+-    - name: Install build dependencies based CI packages
+-      run: |
+-        sudo apt-get update
+-        sudo apt-get install -y --no-install-recommends build-essential devscripts equivs quilt
+-        sudo mk-build-deps -irt"apt-get -y --no-install-recommends" scripts/ci/extra-packages.debian.control
+-
+-    - name: Install LLVM 10
+-      if: ${{ matrix.env.CC == 'clang' }}
+-      run: |
+-        sudo apt-get install -y --no-install-recommends clang-10 llvm-10 gdb
+-        sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-10 60 && sudo update-alternatives --set clang /usr/bin/clang-10
+-        sudo update-alternatives --install /usr/bin/llvm-symbolizer llvm-symbolizer /usr/bin/llvm-symbolizer-10 60 && sudo update-alternatives --set llvm-symbolizer /usr/bin/llvm-symbolizer-10
+-
+-    - name: Set compiler to GCC 10
+-      if: ${{ matrix.env.CC == 'gcc' }}
+-      run: |
+-        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-10 60 && sudo update-alternatives --set gcc /usr/bin/gcc-10
+-
+-    - name: Show versions
+-      run: |
+-        $CC --version
+-        make --version
+-
+-    - name: Configure
+-      run: |
+-        if $CC -v 2>&1 | grep -q clang; then
+-            echo "Enabling sanitizers"
+-            enable_sanitizers="--enable-address-sanitizer --enable-leak-sanitizer"
+-        else
+-            enable_sanitizers=""
+-        fi
+-
+-        CFLAGS="${BUILD_CFLAGS}" ./configure -C --enable-werror \
+-            $enable_sanitizers \
+-        || cat ./config.log
+-
+-    - name: Make
+-      run: |
+-        make -j `nproc` 2> build.warnings.log
+-
+-    - name: "Check if we have 'warnings'"
+-      run: |
+-        count=$(cat build.warnings.log | wc -l)
+-        if [ $count -gt 0 ]; then
+-          echo "ERROR: We can't continue due to the below 'build warnings'"
+-          echo "----------------------------------------------------------"
+-          cat build.warnings.log
+-          echo "----------------------------------------------------------"
+-          exit 666
+-        fi
+-
+-    - name: Install /lib/security/pam_radius_auth.so
+-      run: |
+-        sudo make install
+-        sudo ls -l /lib/security/
+-
+-    - name: Create the CI_TEST_USER user in /etc/passwd (no-password)
+-      run: |
+-        sudo useradd -d /tmp ${CI_TEST_USER}
+-        id ${CI_TEST_USER}
+-
+-    - name: Setup FreeRADIUS/SSHD/SYSLOG-NG/PAM then run full CI tests
+-      run: |
+-        sudo apt-get update
+-        sudo apt-get install -y --no-install-recommends \
+-                          freeradius freeradius-utils freeradius-config \
+-                          syslog-ng \
+-                          openssh-server sshpass
+-
+-        echo "#######################################################"
+-        echo "## Stop the services syslog-ng/sshd/freeradius"
+-        sudo rm -f /var/log/auth.log # Needed to see the last results
+-        sudo systemctl restart syslog-ng
+-        sudo systemctl stop ssh
+-        sudo systemctl stop freeradius
+-
+-        echo "#######################################################"
+-        echo "## Setup the services"
+-        export CI_TEST_USER="$CI_TEST_USER" CI_TEST_PASS="$CI_TEST_PASS"
+-        for i in setup-pam_radius.sh setup-freeradius.sh setup-sshd.sh; do
+-            script="./scripts/ci/$i"
+-
+-            echo "Calling $i"
+-            sudo -E $script
+-        done
+-
+-        echo "#######################################################"
+-        echo "## Start the services syslog-ng/sshd/freeradius"
+-        sudo systemctl start ssh
+-        sudo systemctl start freeradius
+-
+-        echo "#######################################################"
+-        echo "## Show processes"
+-        ps aux | grep -E "([r]adius|[s]sh|[s]yslog)"
+-
+-    - name: Content of /etc/ssh/sshd_config
+-      run: |
+-        cat /etc/ssh/sshd_config
+-
+-    - name: Content of /etc/pam.d/sshd
+-      run: |
+-        cat /etc/pam.d/sshd
+-
+-    - name: Content of /etc/pam_radius_auth.conf
+-      run: |
+-        cat /etc/pam_radius_auth.conf
+-
+-    - name: Validate freeradius instance using radtest
+-      run: |
+-        radtest -x $CI_TEST_USER $CI_TEST_PASS localhost 0 testing123
+-
+-    - name: Run ssh authorization over pam_radius
+-      run: |
+-        if ! sshpass -p "${CI_TEST_PASS}" -v \
+-          /usr/bin/ssh -T -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -p 22 ${CI_TEST_USER}@localhost id; then
+-            echo "ERROR: Something goes wrong with the SSH + PAM_RADIUS authentication!"
+-            echo "############## Show the logs in /var/log/auth.log"
+-            sudo cat -n /var/log/auth.log
+-            exit 1
+-        fi
+-
+-    - name: "Looking for 'pam_radius_auth: authentication succeeded' in /var/log/auth.log"
+-      run: |
+-        echo "#######################################################"
+-        echo "## Show the logs in /var/log/auth.log"
+-        sudo cat -n /var/log/auth.log
+-
+-        if ! sudo grep -q "pam_radius_auth: authentication succeeded" /var/log/auth.log; then
+-          echo "ERROR: Something goes wrong with the SSH + PAM_RADIUS authentication!"
+-          exit 1
+-        fi
+-
+-    #
+-    #  If the CI has failed and the branch is ci-debug then we start a tmate
+-    #  session to provide interactive shell access to the session.
+-    #
+-    #  The SSH rendezvous point will be emitted continuously in the job output,
+-    #  which will look something like:
+-    #
+-    #      SSH: ssh VfuX8SrNuU5pGPMyZcz7TpJTa@sfo2.tmate.io
+-    #
+-    #  For example:
+-    #
+-    #      git push origin ci-debug --force
+-    #
+-    #  Look at the job output in: https://github.com/FreeRADIUS/freeradius-server/actions
+-    #
+-    #      ssh VfuX8SrNuU5pGPMyZcz7TpJTa@sfo2.tmate.io
+-    #
+-    #  Access requires that you have the private key corresponding to the
+-    #  public key of the GitHub user that initiated the job.
+-    #
+-    - name: "Debug: Start tmate"
+-      uses: mxschmitt/action-tmate@v3
+-      with:
+-        limit-access-to-actor: true
+-      if: ${{ github.ref == 'refs/heads/ci-debug' && failure() }}
 diff --recursive --unified --new-file --no-dereference upstream/.gitlab-ci.yml src/.gitlab-ci.yml
 --- upstream/.gitlab-ci.yml	1970-01-01 00:00:00.000000000 +0000
-+++ src/.gitlab-ci.yml	2023-11-06 07:00:42.000000000 +0000
++++ src/.gitlab-ci.yml	2024-08-05 11:22:57.000000000 +0000
 @@ -0,0 +1,20 @@
 +include:
 +  - project: teltonika/ci-templates
@@ -89,27 +719,764 @@ diff --recursive --unified --new-file --no-dereference upstream/.gitlab-ci.yml s
 +  needs:
 +    - job: semgrep_errors
 \ No newline at end of file
-diff --recursive --unified --new-file --no-dereference upstream/.travis.yml src/.travis.yml
---- upstream/.travis.yml	2020-03-26 13:55:38.000000000 +0000
-+++ src/.travis.yml	1970-01-01 00:00:00.000000000 +0000
-@@ -1,13 +0,0 @@
--language: c
--compiler:
--  - gcc
--before_script:
--  - ./configure --enable-werror
--before_install:
--  - sudo apt-get update -qq
--  - >
--       sudo apt-get install --no-install-recommends -qq
--       autoconf
--       build-essential
--       libpam0g-dev
--script: make
+diff --recursive --unified --new-file --no-dereference upstream/README.rst src/README.rst
+--- upstream/README.rst	1970-01-01 00:00:00.000000000 +0000
++++ src/README.rst	2024-08-05 11:22:57.000000000 +0000
+@@ -0,0 +1,51 @@
++pam_radius
++----------
++
++|BuildStatus|_ 
++
++This is the PAM to RADIUS authentication module.  It allows any
++Linux, OSX or Solaris machine to become a RADIUS client for 
++authentication and password change requests.  You will need to supply 
++your own RADIUS server to perform the actual authentication.
++
++The latest version has a simple merger of the original pam_radius
++session accounting code which will work *only* on Linux.
++
++See INSTALL for instructions on building and installing this module.
++It has been successfully used it for RADIUS authentication on RedHat 4.2,
++RedHat 5.x, RedHat 6.x, Solaris 2.6 and OSX 10.9.1.
++
++A number of options are supported by this module.  See USAGE for
++more details.
++
++Care should be taken when configuring RADIUS authentication.  Your
++RADIUS server should have a minimal set of machines in it's 'clients'
++file.  The server should NOT be visible to the world at large, but
++should be contained behind a firewall.  If your RADIUS server is
++visible from the Internet, a number of attacks become possible.
++
++Any additional questions can be directed to the FreeRADIUS user's
++mailing list http://freeradius.org/list/users.html.
++
++For the latest version and updates, see the main web or ftp site:
++http://www.freeradius.org/
++ftp://ftp.freeradius.org/pub/radius/
++
++The pam_radius_auth module based on an old version of Cristian
++Gafton's pam_radius.c, and on the RADIUS Apache module.
++
++The source contains a full suite of RADIUS functions, instead of
++using libpwdb.  It makes sense, because we want it to compile
++out of the box on Linux and Solaris 2.6.
++
++There are minimal restrictions on using the code, as set out in the
++disclaimer and copyright notice in ``pam_radius_auth.c``.
++
++Building it is straightforward: use GNU make, and type ``./configure``,
++followed by ``make``.  If you've got some other weird make, you'll
++have to edit the Makefile to remove the GNU make directives.
++
++Alan DeKok <aland@freeradius.org>
++
++.. |BuildStatus| image:: https://travis-ci.org/FreeRADIUS/pam_radius.png?branch=master
++.. _BuildStatus: https://travis-ci.org/FreeRADIUS/pam_radius
+diff --recursive --unified --new-file --no-dereference upstream/VERSION src/VERSION
+--- upstream/VERSION	2024-07-25 15:40:53.000000000 +0000
++++ src/VERSION	2024-08-05 11:22:57.000000000 +0000
+@@ -1 +1 @@
+-3.0.0
+\ No newline at end of file
++3.0.0
+diff --recursive --unified --new-file --no-dereference upstream/debian/.gitignore src/debian/.gitignore
+--- upstream/debian/.gitignore	2024-07-25 15:40:53.000000000 +0000
++++ src/debian/.gitignore	1970-01-01 00:00:00.000000000 +0000
+@@ -1,4 +0,0 @@
+-changelog
+-files
+-libpam-radius-auth/
+-libpam-radius-auth.install
+diff --recursive --unified --new-file --no-dereference upstream/debian/changelog.in src/debian/changelog.in
+--- upstream/debian/changelog.in	2024-07-25 15:40:53.000000000 +0000
++++ src/debian/changelog.in	1970-01-01 00:00:00.000000000 +0000
+@@ -1,5 +0,0 @@
+-libpam-radius-auth (@VERSION@) unstable; urgency=medium
+-
+-  * Initial Debian version.
+-
+- -- Network RADIUS SARL <info@networkradius.com>  Tue, 2 Nov 2021 11:37:12 -0300
+diff --recursive --unified --new-file --no-dereference upstream/debian/clean src/debian/clean
+--- upstream/debian/clean	2024-07-25 15:40:53.000000000 +0000
++++ src/debian/clean	1970-01-01 00:00:00.000000000 +0000
+@@ -1,2 +0,0 @@
+-config.log
+-src/config.h
+diff --recursive --unified --new-file --no-dereference upstream/debian/control src/debian/control
+--- upstream/debian/control	2024-07-25 15:40:53.000000000 +0000
++++ src/debian/control	1970-01-01 00:00:00.000000000 +0000
+@@ -1,26 +0,0 @@
+-Source: libpam-radius-auth
+-Maintainer: Network RADIUS SARL <info@networkradius.com>
+-Uploaders: Network RADIUS SARL <info@networkradius.com>
+-Section: admin
+-Priority: optional
+-Standards-Version: 4.5.1
+-Build-Depends:
+- debhelper-compat (= 12),
+- libpam0g-dev | libpam-dev,
+-Rules-Requires-Root: no
+-Homepage: https://www.freeradius.org/pam_radius_auth/
+-Vcs-Browser: https://github.com/FreeRADIUS/pam_radius/
+-Vcs-Git: https://github.com/FreeRADIUS/pam_radius.git
+-
+-Package: libpam-radius-auth
+-Architecture: any
+-Depends:
+- ${misc:Depends},
+- ${shlibs:Depends},
+-Suggests:
+- radius-server,
+-Description: PAM RADIUS authentication module
+- This is the PAM to RADIUS authentication module. It allows any PAM-capable
+- machine to become a RADIUS client for authentication and accounting
+- requests. You will, however, need to supply your own RADIUS server to
+- perform the actual authentication
+diff --recursive --unified --new-file --no-dereference upstream/debian/libpam-radius-auth.NEWS src/debian/libpam-radius-auth.NEWS
+--- upstream/debian/libpam-radius-auth.NEWS	2024-07-25 15:40:53.000000000 +0000
++++ src/debian/libpam-radius-auth.NEWS	1970-01-01 00:00:00.000000000 +0000
+@@ -1,5 +0,0 @@
+-libpam-radius-auth (2.0.1) experimental; urgency=medium
+-
+-  Initial Version
+-
+- -- Network RADIUS SARL <info@networkradius.com>  Tue, 2 Nov 2021 11:37:12 -0300
+diff --recursive --unified --new-file --no-dereference upstream/debian/libpam-radius-auth.doc-base src/debian/libpam-radius-auth.doc-base
+--- upstream/debian/libpam-radius-auth.doc-base	2024-07-25 15:40:53.000000000 +0000
++++ src/debian/libpam-radius-auth.doc-base	1970-01-01 00:00:00.000000000 +0000
+@@ -1,12 +0,0 @@
+-Document: libpam-radius-auth
+-Title: PAM RADIUS authentication module documentation
+-Author: FreeRadius developers
+-Abstract: The documentation for the PAM RADIUS authentication module
+- This documentation is about the PAM to RADIUS authentication module. This
+- PAM allows any PAM-capable machine to become a RADIUS client for
+- authentication and accounting requests.
+-Section: System/Administration
+-
+-Format: HTML
+-Index: /usr/share/doc/libpam-radius-auth/index.html
+-Files: /usr/share/doc/libpam-radius-auth/*
+diff --recursive --unified --new-file --no-dereference upstream/debian/libpam-radius-auth.docs src/debian/libpam-radius-auth.docs
+--- upstream/debian/libpam-radius-auth.docs	2024-07-25 15:40:53.000000000 +0000
++++ src/debian/libpam-radius-auth.docs	1970-01-01 00:00:00.000000000 +0000
+@@ -1,3 +0,0 @@
+-README.md
+-USAGE
+-index.html
+diff --recursive --unified --new-file --no-dereference upstream/debian/libpam-radius-auth.examples src/debian/libpam-radius-auth.examples
+--- upstream/debian/libpam-radius-auth.examples	2024-07-25 15:40:53.000000000 +0000
++++ src/debian/libpam-radius-auth.examples	1970-01-01 00:00:00.000000000 +0000
+@@ -1,2 +0,0 @@
+-debian/pam_example
+-pam_radius_auth.conf
+diff --recursive --unified --new-file --no-dereference upstream/debian/libpam-radius-auth.install.in src/debian/libpam-radius-auth.install.in
+--- upstream/debian/libpam-radius-auth.install.in	2024-07-25 15:40:53.000000000 +0000
++++ src/debian/libpam-radius-auth.install.in	1970-01-01 00:00:00.000000000 +0000
+@@ -1,3 +0,0 @@
+-debian/pam-configs/radius usr/share/pam-configs
+-pam_radius_auth.conf      etc
+-pam_radius_auth.so        lib/@DEB_HOST_MULTIARCH@/security
+diff --recursive --unified --new-file --no-dereference upstream/debian/libpam-radius-auth.postinst src/debian/libpam-radius-auth.postinst
+--- upstream/debian/libpam-radius-auth.postinst	2024-07-25 15:40:53.000000000 +0000
++++ src/debian/libpam-radius-auth.postinst	1970-01-01 00:00:00.000000000 +0000
+@@ -1,10 +0,0 @@
+-#!/bin/sh
+-
+-set -e
+-
+-pam-auth-update --package radius
+-#pam-auth-update --force
+-
+-#DEBHELPER#
+-
+-exit 0
+diff --recursive --unified --new-file --no-dereference upstream/debian/libpam-radius-auth.prerm src/debian/libpam-radius-auth.prerm
+--- upstream/debian/libpam-radius-auth.prerm	2024-07-25 15:40:53.000000000 +0000
++++ src/debian/libpam-radius-auth.prerm	1970-01-01 00:00:00.000000000 +0000
+@@ -1,11 +0,0 @@
+-#!/bin/sh
+-
+-set -e
+-
+-if [ "$1" = "remove" ]; then
+-    pam-auth-update --package --remove radius
+-fi
+-
+-#DEBHELPER#
+-
+-exit 0
+diff --recursive --unified --new-file --no-dereference upstream/debian/lintian-overrides src/debian/lintian-overrides
+--- upstream/debian/lintian-overrides	2024-07-25 15:40:53.000000000 +0000
++++ src/debian/lintian-overrides	1970-01-01 00:00:00.000000000 +0000
+@@ -1,3 +0,0 @@
+-# It contains the radius secret, which should not be in a
+-# "world readable" file.
+-libpam-radius-auth: non-standard-file-perm etc/pam_radius_auth.conf 0600 != 0644
+diff --recursive --unified --new-file --no-dereference upstream/debian/pam-configs/radius src/debian/pam-configs/radius
+--- upstream/debian/pam-configs/radius	2024-07-25 15:40:53.000000000 +0000
++++ src/debian/pam-configs/radius	1970-01-01 00:00:00.000000000 +0000
+@@ -1,11 +0,0 @@
+-Name: Radius Authentication
+-Default: no
+-Priority: 129
+-Auth-Type: Primary
+-Auth-Initial:
+-        [success=end default=ignore]    pam_radius_auth.so
+-Auth:
+-        [success=end default=ignore]    pam_radius_auth.so use_first_pass
+-Account-Type: Additional
+-Account:
+-        [success=ok new_authtok_reqd=done ignore=ignore user_unknown=ignore authinfo_unavail=ignore default=bad] pam_radius_auth.so
+diff --recursive --unified --new-file --no-dereference upstream/debian/pam_example src/debian/pam_example
+--- upstream/debian/pam_example	2024-07-25 15:40:53.000000000 +0000
++++ src/debian/pam_example	1970-01-01 00:00:00.000000000 +0000
+@@ -1,64 +0,0 @@
+-This is a simple and safe example on how to enable radius
+-authentication to the console login on a Debian system and
+-you are too lazy to read the USAGE documentation.
+-
+-Edit /etc/pam.d/login
+-
+-The default looks like:
+-
+-[SNIP]
+-
+-# Disallows other than root logins when /etc/nologin exists
+-# (Replaces the `NOLOGINS_FILE' option from login.defs)
+-auth       requisite  pam_nologin.so
+-
+-# This module parses /etc/environment (the standard for setting
+-# environ vars) and also allows you to use an extended config
+-# file /etc/security/pam_env.conf.
+-# (Replaces the `ENVIRON_FILE' setting from login.defs)
+-auth       required   pam_env.so
+-
+-# Standard Un*x authentication. The "nullok" line allows passwordless
+-# accounts.
+-@include common-auth
+-
+-[SNIP]
+-
+-
+-Insert the following line:
+-
+-auth       sufficient   pam_radius_auth.so
+-
+-AFTER
+-
+-auth       required   pam_env.so
+-
+-and BEFORE
+-
+-# Standard Un*x authentication. The "nullok" line allows passwordless
+-# accounts.
+-@include common-auth
+-
+-so that it will looks like:
+-
+-[SNIP]
+-
+-# This module parses /etc/environment (the standard for setting
+-# environ vars) and also allows you to use an extended config
+-# file /etc/security/pam_env.conf.
+-# (Replaces the `ENVIRON_FILE' setting from login.defs)
+-auth       required   pam_env.so
+-
+-##### RADIUS #####
+-auth       sufficient   pam_radius_auth.so
+-
+-# Standard Un*x authentication. The "nullok" line allows passwordless
+-# accounts.
+-@include common-auth
+-
+-[SNIP]
+-
+-Try now to login in one of the consoles using the radius password.
+-If it fails the system will prompt again for a password. This time
+-provide the local one.
+-
+diff --recursive --unified --new-file --no-dereference upstream/debian/pam_sshd_example src/debian/pam_sshd_example
+--- upstream/debian/pam_sshd_example	2024-07-25 15:40:53.000000000 +0000
++++ src/debian/pam_sshd_example	1970-01-01 00:00:00.000000000 +0000
+@@ -1,16 +0,0 @@
+-# Example of SSHD+PAM for Debian/Ubuntu
+-auth       required     pam_radius_auth.so conf=/etc/pam_radius_auth.conf debug retry=123 client_id=666
+-account    required     pam_nologin.so
+-@include common-account
+-session [success=ok ignore=ignore module_unknown=ignore default=bad]        pam_selinux.so close
+-session    required     pam_loginuid.so
+-session    optional     pam_keyinit.so force revoke
+-@include common-session
+-session    optional     pam_motd.so  motd=/run/motd.dynamic
+-session    optional     pam_motd.so noupdate
+-session    optional     pam_mail.so standard noenv # [1]
+-session    required     pam_limits.so
+-session    required     pam_env.so # [1]
+-session    required     pam_env.so user_readenv=1 envfile=/etc/default/locale
+-session [success=ok ignore=ignore module_unknown=ignore default=bad]        pam_selinux.so open
+-@include common-password
+diff --recursive --unified --new-file --no-dereference upstream/debian/rules src/debian/rules
+--- upstream/debian/rules	2024-07-25 15:40:53.000000000 +0000
++++ src/debian/rules	1970-01-01 00:00:00.000000000 +0000
+@@ -1,59 +0,0 @@
+-#!/usr/bin/make -f
+-# @copyright 2021 Network RADIUS SAS (legal@networkradius.com)
+-# Author: Jorge Pereira <jorge@networkradius.com>
+-##
+-
+-# Uncomment this to turn on verbose mode.
+-export DH_VERBOSE=1
+-DPKG_EXPORT_BUILDFLAGS = 1
+-include /usr/share/dpkg/default.mk
+-
+-.NOTPARALLEL:
+-
+-export DEB_BUILD_MAINT_OPTIONS=hardening=+all
+-
+-# These are used for cross-compiling and for saving the configure script
+-# from having to guess our platform (since we know it already)
+-export DEB_HOST_GNU_TYPE  ?= $(shell dpkg-architecture -qDEB_HOST_GNU_TYPE)
+-export DEB_BUILD_GNU_TYPE ?= $(shell dpkg-architecture -qDEB_BUILD_GNU_TYPE)
+-
+-export DEB_HOST_MULTIARCH ?= $(shell dpkg-architecture -qDEB_HOST_MULTIARCH)
+-
+-# Let the make decide that!
+-unexport CC
+-
+-ifeq ($(DEB_BUILD_GNU_TYPE), $(DEB_HOST_GNU_TYPE))
+-	confflags += --build $(DEB_HOST_GNU_TYPE)
+-else
+-	confflags += --build $(DEB_BUILD_GNU_TYPE) --host $(DEB_HOST_GNU_TYPE)
+-endif
+-
+-debian/%.install: debian/%.install.in
+-	sed 's/@DEB_HOST_MULTIARCH@/$(DEB_HOST_MULTIARCH)/g' $< > $@
+-
+-%:
+-	dh $@
+-
+-# Don't touch in our config.guess
+-override_dh_update_autotools_config:
+-
+-# ... even the configure/aclocal
+-override_dh_autoreconf:
+-
+-override_dh_gencontrol:
+-	dh_gencontrol
+-
+-override_dh_auto_configure:
+-	./configure $(confflags) \
+-			--disable-developer 
+-
+-override_dh_auto_clean:
+-	# work around some stupid logic in top level makefile
+-	make -C src/ clean
+-
+-# Skip
+-override_dh_auto_install: debian/libpam-radius-auth.install
+-
+-override_dh_fixperms:
+-	dh_fixperms
+-	chmod 600 debian/libpam-radius-auth/etc/pam_radius_auth.conf
+diff --recursive --unified --new-file --no-dereference upstream/debian/source/format src/debian/source/format
+--- upstream/debian/source/format	2024-07-25 15:40:53.000000000 +0000
++++ src/debian/source/format	1970-01-01 00:00:00.000000000 +0000
+@@ -1 +0,0 @@
+-3.0 (quilt)
+diff --recursive --unified --new-file --no-dereference upstream/debian/source/options src/debian/source/options
+--- upstream/debian/source/options	2024-07-25 15:40:53.000000000 +0000
++++ src/debian/source/options	1970-01-01 00:00:00.000000000 +0000
+@@ -1,5 +0,0 @@
+-extend-diff-ignore=aclocal\.m4
+-extend-diff-ignore=configure
+-extend-diff-ignore=config\.status
+-extend-diff-ignore=config\.guess
+-
+diff --recursive --unified --new-file --no-dereference upstream/debian/upstream/metadata src/debian/upstream/metadata
+--- upstream/debian/upstream/metadata	2024-07-25 15:40:53.000000000 +0000
++++ src/debian/upstream/metadata	1970-01-01 00:00:00.000000000 +0000
+@@ -1,2 +0,0 @@
+-Repository-Browse: https://github.com/FreeRADIUS/pam_radius 
+-Bug-Submit: https://github.com/FreeRADIUS/pam_radius/issues
+diff --recursive --unified --new-file --no-dereference upstream/debian/watch src/debian/watch
+--- upstream/debian/watch	2024-07-25 15:40:53.000000000 +0000
++++ src/debian/watch	1970-01-01 00:00:00.000000000 +0000
+@@ -1,10 +0,0 @@
+-# uscan watch file
+-version=4
+-
+-opts="mode=git, \
+-      uversionmangle=s/-(beta|rc|dev)/~$1/; \
+-                     s/\.-(beta|rc|dev)\.\d.*//; \
+-                     s/\.\.//,\
+-      dversionmangle=s/\+dfsg(\.?\d+)?$//" \
+-      https://github.com/FreeRADIUS/pam_radius/ \
+-      refs/tags/release_(\d+)_(\d+)_(\d)
+diff --recursive --unified --new-file --no-dereference upstream/m4/ax_cc.m4 src/m4/ax_cc.m4
+--- upstream/m4/ax_cc.m4	2024-07-25 15:40:53.000000000 +0000
++++ src/m4/ax_cc.m4	2024-08-05 11:22:57.000000000 +0000
+@@ -88,7 +88,6 @@
+ 
+     CFLAGS_SAVED=$CFLAGS
+     CFLAGS="$CFLAGS -Werror -Qunused-arguments -foobar"
+-
+     AC_LANG_PUSH(C)
+     AC_TRY_COMPILE(
+       [],
+@@ -380,7 +379,6 @@
+                 count = 1;
+               }
+             }
+-
+             #else
+       	    count = sysconf(_SC_NPROCESSORS_ONLN);
+             #endif
+diff --recursive --unified --new-file --no-dereference upstream/pam_radius_auth.spec src/pam_radius_auth.spec
+--- upstream/pam_radius_auth.spec	1970-01-01 00:00:00.000000000 +0000
++++ src/pam_radius_auth.spec	2024-08-05 11:22:57.000000000 +0000
+@@ -0,0 +1,50 @@
++%define name pam_radius_auth
++%define version 1.4.1
++%define release 0
++
++Name: %{name}
++Summary: PAM Module for RADIUS Authentication
++Version: %{version}
++Release: %{release}
++Source: ftp://ftp.freeradius.org/pub/freeradius/pam_radius-%{version}.tar
++URL: http://www.freeradius.org/pam_radius_auth/
++Group: System Environment/Libraries
++BuildRoot: %{_tmppath}/%{name}-buildroot
++License: BSD-like or GNU GPL
++Requires: pam
++
++%description
++This is the PAM to RADIUS authentication module. It allows any PAM-capable
++machine to become a RADIUS client for authentication and accounting
++requests. You will need a RADIUS server to perform the actual
++authentication.
++
++%prep
++%setup -q -n pam_radius-%{version}
++
++%build
++./configure
++make
++
++%install
++mkdir -p %{buildroot}/lib/security
++cp -p pam_radius_auth.so %{buildroot}/lib/security
++mkdir -p %{buildroot}/etc/raddb
++[ -f %{buildroot}/etc/raddb/server ] || cp -p pam_radius_auth.conf %{buildroot}/etc/raddb/server
++
++%clean
++[ "$RPM_BUILD_ROOT" != "/" ] && rm -rf $RPM_BUILD_ROOT
++
++%postun
++rmdir /etc/raddb || true
++
++%files
++%defattr(-,root,root,0755)
++%doc README INSTALL USAGE Changelog
++%config /etc/raddb/server
++%config %attr(0600,root,root) /etc/raddb/server
++/lib/security/pam_radius_auth.so
++
++%changelog
++* Mon Jun 03 2002 Richie Laager <rlaager@wiktel.com> 1.3.15-0
++- Inital RPM Version
+diff --recursive --unified --new-file --no-dereference upstream/redhat/pam_radius_auth.spec src/redhat/pam_radius_auth.spec
+--- upstream/redhat/pam_radius_auth.spec	2024-07-25 15:40:53.000000000 +0000
++++ src/redhat/pam_radius_auth.spec	1970-01-01 00:00:00.000000000 +0000
+@@ -1,73 +0,0 @@
+-#
+-# @copyright 2021 Network RADIUS SAS (legal@networkradius.com)
+-# Author: Jorge Pereira <jorge@networkradius.com>
+-#
+-%global debug_package %{nil}
+-%define name pam_radius_auth
+-%define version %{_version}
+-%define release 0
+-
+-Name: %{name}
+-Summary: PAM Module for RADIUS Authentication
+-Version: %{version}
+-Release: %{release}
+-Source: ftp://ftp.freeradius.org/pub/freeradius/pam_radius-%{version}.tar.bz2
+-URL: http://www.freeradius.org/pam_radius_auth/
+-Group: System Environment/Libraries
+-BuildRoot: %{_tmppath}/%{name}-buildroot
+-Requires: pam
+-BuildRequires: pam-devel
+-BuildRequires: gcc
+-License: GNU GPL
+-Packager: Network RADIUS SARL <info@networkradius.com>
+-Vendor: Network RADIUS SARL
+-
+-# Disable shebang mangling script,
+-# which errors out on any file with versionless `python` in its shebang
+-# See: https://github.com/atom/atom/issues/21937
+-%undefine __brp_mangle_shebangs
+-
+-%description
+-This is the PAM to RADIUS authentication module. It allows any PAM-capable
+-machine to become a RADIUS client for authentication and accounting
+-requests. You will need a RADIUS server to perform the actual
+-authentication.
+-
+-%prep
+-%setup -q -n pam_radius-%{version}
+-
+-%build
+-# Retain CFLAGS from the environment...
+-export CFLAGS="$CFLAGS -fpic"
+-export CXXFLAGS="$CFLAGS"
+-
+-# Need to pass these explicitly for clang, else rpmbuilder bails when trying to extract debug info from
+-# the libraries.  Guessing GCC does this by default.  Why use clang over gcc? The version of clang
+-# which ships with RHEL 6 has basic C11 support, gcc doesn't.
+-export LDFLAGS="-Wl,--build-id"
+-
+-%configure --disable-developer
+-make
+-
+-%install
+-rm -rf %{buildroot}
+-mkdir -p %{buildroot}/%{_lib}/security
+-install -m 0755 pam_radius_auth.so %{buildroot}/%{_lib}/security
+-
+-# It contains the radius secret, which should not be in a "world readable" file.
+-mkdir -p %{buildroot}%{_sysconfdir}
+-install -m 0600 pam_radius_auth.conf %{buildroot}%{_sysconfdir}/pam_radius_auth.conf
+-
+-%clean
+-rm -rf %{buildroot}
+-
+-%files
+-%defattr(-,root,root)
+-%doc README.md INSTALL USAGE LICENSE Changelog
+-%config(noreplace) %attr(0600, root, root) %{_sysconfdir}/pam_radius_auth.conf
+-%dir %attr(755,root,root) /%{_lib}/security/
+-/%{_lib}/security/pam_radius_auth.so
+-
+-%changelog
+-* Thu Nov 4 2021 Network RADIUS SARL <info@networkradius.com> - %{_version}
+-- Initial Debian version.
+diff --recursive --unified --new-file --no-dereference upstream/redhat/pam_sshd_example src/redhat/pam_sshd_example
+--- upstream/redhat/pam_sshd_example	2024-07-25 15:40:53.000000000 +0000
++++ src/redhat/pam_sshd_example	1970-01-01 00:00:00.000000000 +0000
+@@ -1,15 +0,0 @@
+-# Example of SSHD+PAM for CentOS
+-#%PAM-1.0
+-auth     required   pam_radius_auth.so conf=/etc/pam_radius_auth.conf debug retry=123 client_id=666
+-account  required   pam_nologin.so
+-account  include    password-auth
+-password include    password-auth
+-# pam_selinux.so close should be the first session rule
+-session  required   pam_selinux.so close
+-session  required   pam_loginuid.so
+-# pam_selinux.so open should only be followed by sessions to be executed in the user
+-#context
+-session  required   pam_selinux.so open env_params
+-session  required   pam_namespace.so
+-session  optional   pam_keyinit.so force revoke
+-session  include    password-auth
+diff --recursive --unified --new-file --no-dereference upstream/scripts/ci/extra-packages.debian.control src/scripts/ci/extra-packages.debian.control
+--- upstream/scripts/ci/extra-packages.debian.control	2024-07-25 15:40:53.000000000 +0000
++++ src/scripts/ci/extra-packages.debian.control	1970-01-01 00:00:00.000000000 +0000
+@@ -1,5 +0,0 @@
+-# Extra packages that are installed for CI purposes
+-Source: freeradius
+-Build-Depends:
+-  libpam0g-dev,
+-  sshpass
+diff --recursive --unified --new-file --no-dereference upstream/scripts/ci/setup-freeradius.sh src/scripts/ci/setup-freeradius.sh
+--- upstream/scripts/ci/setup-freeradius.sh	2024-07-25 15:40:53.000000000 +0000
++++ src/scripts/ci/setup-freeradius.sh	1970-01-01 00:00:00.000000000 +0000
+@@ -1,93 +0,0 @@
+-#!/bin/bash
+-# @copyright 2021 Network RADIUS SAS (legal@networkradius.com)
+-# Author: Jorge Pereira <jorge@freeradius.org>
+-##
+-
+-if [ -e "/etc/freeradius/3.0/mods-config/files/authorize" ]; then
+-	raddb="/etc/freeradius/3.0"
+-elif [ -e "/etc/freeradius/mods-config/files/authorize" ]; then
+-	raddb="/etc/freeradius"
+-elif [ -e "/etc/raddb/mods-config/files/authorize" ]; then
+-	raddb="/etc/raddb"
+-else
+-	echo "$0: ERROR: We did not find the /etc/freeradius/mods-config/files/authorize or /etc/freeradius/3.0/mods-config/files/authorize"
+-	exit 123
+-fi
+-
+-radiusd="/usr/sbin/freeradius"
+-
+-if [ -z "$CI_TEST_USER" ]; then
+-	echo "$0: ERROR: Missing the env CI_TEST_USER"
+-	exit 1
+-fi
+-
+-if [ -z "$CI_TEST_PASS" ]; then
+-	echo "$0: ERROR: Missing the env CI_TEST_PASS"
+-	exit 1
+-fi
+-
+-# Setup the basic user setting
+-cat > ${raddb}/mods-config/files/authorize <<EOF
+-# Generated by $0
+-$CI_TEST_USER     Cleartext-Password := "$CI_TEST_PASS"
+-		Reply-Message := "Hello, %{User-Name}"
+-
+-EOF
+-
+-cat > ${raddb}/sites-enabled/default <<EOF
+-# Generated by $0
+-server default {
+-	listen {
+-		type = auth
+-		ipv6addr = ::
+-		ipaddr = *
+-		port = 0
+-		limit {
+-			max_connections = 16
+-			lifetime = 0
+-			idle_timeout = 30
+-		}
+-	}
+-
+-	listen {
+-		ipaddr = *
+-		ipv6addr = ::
+-		port = 0
+-		type = acct
+-		limit {
+-
+-		}
+-	}
+-
+-	listen {
+-		type = auth
+-		ipv6addr = ::	# any.  ::1 == localhost
+-		port = 0
+-		limit {
+-			max_connections = 16
+-			lifetime = 0
+-			idle_timeout = 30
+-		}
+-	}
+-
+-	listen {
+-		ipv6addr = ::
+-		port = 0
+-		type = acct
+-		limit {
+-
+-		}
+-	}
+-
+-	authorize {
+-		files
+-		pap
+-	}
+-
+-	authenticate {
+-		Auth-Type PAP {
+-			pap
+-		}
+-	}
+-}
+-EOF
+diff --recursive --unified --new-file --no-dereference upstream/scripts/ci/setup-pam_radius.sh src/scripts/ci/setup-pam_radius.sh
+--- upstream/scripts/ci/setup-pam_radius.sh	2024-07-25 15:40:53.000000000 +0000
++++ src/scripts/ci/setup-pam_radius.sh	1970-01-01 00:00:00.000000000 +0000
+@@ -1,27 +0,0 @@
+-#!/bin/bash
+-# @copyright 2021 Network RADIUS SAS (legal@networkradius.com)
+-# Author: Jorge Pereira <jorge@freeradius.org>
+-##
+-
+-if [ -z "$CI_TEST_USER" ]; then
+-	echo "$0: ERROR: Missing the env CI_TEST_USER"
+-	exit 1
+-fi
+-
+-if [ -z "$CI_TEST_PASS" ]; then
+-	echo "$0: ERROR: Missing the env CI_TEST_PASS"
+-	exit 1
+-fi
+-
+-# Setup the basic user setting
+-if [ -f /etc/redhat-release ]; then
+-	cp -f redhat/pam_sshd_example /etc/pam.d/sshd
+-else
+-	cp -f debian/pam_sshd_example /etc/pam.d/sshd
+-fi
+-
+-cat > /etc/pam_radius_auth.conf <<EOF
+-# Generated by $0
+-[::1]         testing123  5
+-127.0.0.1     testing123  5
+-EOF
+diff --recursive --unified --new-file --no-dereference upstream/scripts/ci/setup-sshd.sh src/scripts/ci/setup-sshd.sh
+--- upstream/scripts/ci/setup-sshd.sh	2024-07-25 15:40:53.000000000 +0000
++++ src/scripts/ci/setup-sshd.sh	1970-01-01 00:00:00.000000000 +0000
+@@ -1,38 +0,0 @@
+-#!/bin/bash
+-# @copyright 2021 Network RADIUS SAS (legal@networkradius.com)
+-# Author: Jorge Pereira <jorge@freeradius.org>
+-##
+-
+-if [ -z "$CI_TEST_USER" ]; then
+-	echo "$0: ERROR: Missing the env CI_TEST_USER"
+-	exit 1
+-fi
+-
+-if [ -z "$CI_TEST_PASS" ]; then
+-	echo "$0: ERROR: Missing the env CI_TEST_PASS"
+-	exit 1
+-fi
+-
+-# Setup the SSH
+-cat > /etc/ssh/sshd_config <<EOF
+-# Generated by $0
+-Port 22
+-AddressFamily any
+-ListenAddress 0.0.0.0
+-ListenAddress ::
+-ChallengeResponseAuthentication no
+-PasswordAuthentication yes
+-
+-UsePAM yes
+-
+-X11Forwarding no
+-PrintMotd yes
+-
+-SyslogFacility AUTH
+-LogLevel VERBOSE
+-
+-IgnoreUserKnownHosts yes
+-IgnoreRhosts yes
+-EOF
+-
+-mkdir -p /run/sshd
+diff --recursive --unified --new-file --no-dereference upstream/src/config.h.in src/src/config.h.in
+--- upstream/src/config.h.in	2024-07-25 15:40:53.000000000 +0000
++++ src/src/config.h.in	2024-08-05 11:22:57.000000000 +0000
+@@ -242,4 +242,4 @@
+ #undef PAM_RADIUS_VERSION_COMMIT
+ 
+ /* pam radius release id */
+-#undef PAM_RADIUS_VERSION_RELEASE
+\ No newline at end of file
++#undef PAM_RADIUS_VERSION_RELEASE
 diff --recursive --unified --new-file --no-dereference upstream/src/pam_radius_auth.c src/src/pam_radius_auth.c
---- upstream/src/pam_radius_auth.c	2020-03-26 13:55:38.000000000 +0000
-+++ src/src/pam_radius_auth.c	2023-11-06 07:00:42.000000000 +0000
-@@ -31,6 +31,8 @@
+--- upstream/src/pam_radius_auth.c	2024-07-25 15:40:53.000000000 +0000
++++ src/src/pam_radius_auth.c	2024-08-05 11:22:57.000000000 +0000
+@@ -34,6 +34,8 @@
  #include "pam_radius_auth.h"
  
  #define DPRINT if (debug) _pam_log
@@ -117,26 +1484,8 @@ diff --recursive --unified --new-file --no-dereference upstream/src/pam_radius_a
 +#define STR(x) STR_VALUE(x)
  
  /* internal data */
- static CONST char *pam_module_name = "pam_radius_auth";
-@@ -84,7 +86,7 @@
- 			ctrl |= PAM_SKIP_PASSWD;
- 
- 		} else if (!strncmp(*argv, "retry=", 6)) {
--			conf->retries = atoi(*argv+6);
-+			conf->retries = strtol(*argv+6, NULL, 0);
- 
- 		} else if (!strcmp(*argv, "localifdown")) {
- 			conf->localifdown = 1;
-@@ -125,7 +127,7 @@
- 			conf->prompt_attribute = TRUE;
- 
- 		} else if (!strncmp(*argv, "max_challenge=", 14)) {
--			conf->max_challenge = atoi(*argv+14);
-+			conf->max_challenge = strtol(*argv+14, NULL, 0);
- 
- 		} else if (!strcmp(*argv, "privilege_level")) {
- 			conf->privilege_level = TRUE;
-@@ -683,7 +685,7 @@
+ static CONST char pam_module_name[] = "pam_radius_auth";
+@@ -849,7 +851,7 @@
  		/*
  		 *	Scan the line for data.
  		 */
@@ -145,3 +1494,30 @@ diff --recursive --unified --new-file --no-dereference upstream/src/pam_radius_a
  			_pam_log(LOG_ERR, "ERROR reading %s, line %d: Could not read hostname or secret\n",
  				 conf->conf_file, line);
  			continue;			/* invalid line */
+@@ -903,7 +905,6 @@
+ 			case AF_INET:
+ 				memcpy(&salocal4, &salocal, sizeof(salocal));
+ 				break;
+-
+ 			case AF_INET6:
+ 				memcpy(&salocal6, &salocal, sizeof(salocal));
+ 				break;
+@@ -1484,7 +1485,6 @@
+ 	} /* end of password == NULL */
+ 
+ 	build_radius_packet(request, user, password, &config);
+-
+ 	/* not all servers understand this service type, but some do */
+ 	add_int_attribute(request, PW_USER_SERVICE_TYPE, PW_AUTHENTICATE_ONLY);
+ 
+diff --recursive --unified --new-file --no-dereference upstream/src/pam_radius_auth.h src/src/pam_radius_auth.h
+--- upstream/src/pam_radius_auth.h	2024-07-25 15:40:53.000000000 +0000
++++ src/src/pam_radius_auth.h	2024-08-05 11:22:57.000000000 +0000
+@@ -24,7 +24,6 @@
+ #include <netdb.h>
+ #include <fcntl.h>
+ #include <arpa/inet.h>
+-#include <stdint.h>
+ 
+ #if defined(HAVE_LINUX_IF_H)
+ #include <linux/if.h>

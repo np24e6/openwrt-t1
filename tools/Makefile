@@ -26,14 +26,14 @@ ifneq ($(CONFIG_TARGET_mdm9x07)$(CONFIG_TARGET_sdxprairie)$(CONFIG_TARGET_sdxlem
   BUILD_TOOLS = y
 endif
 
-tools-y += autoconf autoconf-archive automake bc bison cmake dosfstools
+tools-y += autoconf autoconf-archive automake bc bison dosfstools
 tools-y += e2fsprogs fakeroot findutils firmware-utils flex gengetopt upx
 tools-y += libressl libtool lzma m4 make-ext4fs missing-macros mkimage
 tools-y += mklibs mm-macros mtd-utils mtools padjffs2 patch-image usign
 tools-y += patchelf pkgconf quilt squashfskit4 sstrip zip zlib zstd emcc
 tools-$(BUILD_B43_TOOLS) += b43-tools
 tools-$(BUILD_ISL) += isl
-tools-$(BUILD_TOOLCHAIN) += expat gmp mpc mpfr
+tools-$(BUILD_TOOLCHAIN) += gmp mpc mpfr
 tools-$(CONFIG_TARGET_apm821xx)$(CONFIG_TARGET_gemini) += genext2fs
 tools-$(BUILD_TOOLS) += mkbootimg dtbtool
 tools-$(CONFIG_TARGET_mxs) += elftosb sdimage
@@ -49,20 +49,17 @@ $(curdir)/b43-tools/compile := $(curdir)/bison/compile
 $(curdir)/bc/compile := $(curdir)/bison/compile $(curdir)/libtool/compile
 $(curdir)/bison/compile := $(curdir)/flex/compile
 $(curdir)/cbootimage/compile += $(curdir)/automake/compile
-$(curdir)/cmake/compile += $(curdir)/libressl/compile
 $(curdir)/dosfstools/compile := $(curdir)/autoconf/compile $(curdir)/automake/compile
 $(curdir)/e2fsprogs/compile := $(curdir)/libtool/compile
 $(curdir)/fakeroot/compile := $(curdir)/libtool/compile
 $(curdir)/findutils/compile := $(curdir)/bison/compile
-$(curdir)/firmware-utils/compile += $(curdir)/cmake/compile $(curdir)/zlib/compile
+$(curdir)/firmware-utils/compile += $(curdir)/libressl/compile $(curdir)/zlib/compile
 $(curdir)/flex/compile := $(curdir)/libtool/compile
 $(curdir)/gengetopt/compile := $(curdir)/libtool/compile
-$(curdir)/upx/compile := $(curdir)/cmake/compile
 $(curdir)/gmp/compile := $(curdir)/libtool/compile
 $(curdir)/isl/compile := $(curdir)/gmp/compile
 $(curdir)/libressl/compile := $(curdir)/pkgconf/compile
 $(curdir)/libtool/compile := $(curdir)/m4/compile $(curdir)/autoconf/compile $(curdir)/automake/compile $(curdir)/missing-macros/compile
-$(curdir)/llvm-bpf/compile := $(curdir)/cmake/compile
 $(curdir)/make-ext4fs/compile := $(curdir)/zlib/compile
 $(curdir)/missing-macros/compile := $(curdir)/autoconf/compile
 $(curdir)/mkimage/compile += $(curdir)/libressl/compile
@@ -76,9 +73,6 @@ $(curdir)/patchelf/compile := $(curdir)/libtool/compile
 $(curdir)/quilt/compile := $(curdir)/autoconf/compile $(curdir)/findutils/compile
 $(curdir)/sdcc/compile := $(curdir)/bison/compile
 $(curdir)/squashfskit4/compile := $(curdir)/xz/compile $(curdir)/zlib/compile
-$(curdir)/zlib/compile := $(curdir)/cmake/compile
-$(curdir)/zstd/compile := $(curdir)/cmake/compile
-$(curdir)/usign/compile := $(curdir)/cmake/compile
 
 ifneq ($(HOST_OS),Linux)
   $(curdir)/squashfskit4/compile += $(curdir)/coreutils/compile
@@ -86,7 +80,7 @@ ifneq ($(HOST_OS),Linux)
 endif
 
 ifneq ($(CONFIG_CCACHE)$(CONFIG_SDK),)
-$(foreach tool, $(filter-out xz zstd patch pkgconf libressl cmake,$(tools-y)), $(eval $(curdir)/$(tool)/compile += $(curdir)/ccache/compile))
+$(foreach tool, $(filter-out xz zstd patch pkgconf libressl,$(tools-y)), $(eval $(curdir)/$(tool)/compile += $(curdir)/ccache/compile))
 tools-y += ccache
 $(curdir)/ccache/compile := $(curdir)/zstd/compile
 endif

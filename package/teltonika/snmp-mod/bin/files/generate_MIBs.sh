@@ -12,7 +12,7 @@ err_and_exit() {
 is_true() {
 	local var
 	json_get_var var "$1"
-	[ "$var" -eq 1 ]
+	[ -n "$var" ] && [ "$var" -eq 1 ]
 }
 
 is_installed() {
@@ -25,6 +25,10 @@ is_switch() {
 
 is_trb5() {
 	mnf_info -n | grep "TRB5" > /dev/null 2>&1
+}
+
+is_trb1() {
+	mnf_info -n | grep "TRB1" > /dev/null 2>&1
 }
 
 is_swm() {
@@ -95,6 +99,7 @@ unset port_vlan
 unset if_vlan
 unset sqm
 unset port
+unset mwan3
 
 device=1
 # To support external modems, mobile MIB should also be included
@@ -112,6 +117,7 @@ is_true "wifi" && wireless=1
 [ $if_vlan -eq 1 ]  || [ $port_vlan -eq 1 ] && vlan_gen=1
 ( ! is_switch ) && ( ! is_trb5 ) && ( ! is_swm ) && sqm=1
 (is_installed "port_eventsd") && port=1
+( ! is_switch ) && ( ! is_swm ) && ( ! is_trb5 ) && ( ! is_trb1 ) && mwan3=1
 
 # Unset 'traps' if neither 'mobile' nor 'ios' or 'hotspot' are supported
 traps=${mobile:-${ios:-${hotspot:-''}}}
@@ -139,6 +145,7 @@ fi
 
 sqm_mib=$(cat $MODULES_DIR/sqm.mib)
 port_mib=$(cat $MODULES_DIR/port.mib)
+mwan3_mib=$(cat $MODULES_DIR/mwan3.mib)
 
 beginning_mib="TELTONIKA-MIB DEFINITIONS ::= BEGIN
 
@@ -177,6 +184,7 @@ ${wireless:+wireless		OBJECT IDENTIFIER ::= { teltonika 7 \}\n}\
 ${vlan_gen:+vlan			OBJECT IDENTIFIER ::= { teltonika 8 \}\n}\
 ${sqm:+sqm			OBJECT IDENTIFIER ::= { teltonika 9 \}\n}\
 ${port:+port			OBJECT IDENTIFIER ::= { teltonika 10 \}\n}\
+${mwan3:+mwan3			OBJECT IDENTIFIER ::= { teltonika 12 \}\n}\
 
 ${device:+$device_mib\n\n}\
 ${mobile:+$mobile_mib\n\n}\
@@ -201,6 +209,7 @@ ${if_vlan:+$if_vlan_mib\n\n}\
 ${port_vlan:+$port_vlan_mib\n\n}\
 ${sqm:+$sqm_mib\n\n}\
 ${port:+$port_mib\n\n}\
+${mwan3:+$mwan3_mib\n\n}\
 
 ${end_mib}" >"$MIB_file"
 

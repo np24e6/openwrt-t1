@@ -245,6 +245,8 @@ define Build/CoreTargets
   $(STAMP_BUILT): $(STAMP_CONFIGURED) $(STAMP_BUILT_DEPENDS)
 	rm -f $$@
 	touch $$@_check
+	$(call ERROR_MESSAGE,• $(PKG_NAME) is rebuilt)
+	$(call pkg_rebuilt_info,$(PKG_NAME))
 	$(foreach hook,$(Hooks/Compile/Pre),$(call $(hook))$(sep))
 	$(Build/Compile)
 	$(foreach hook,$(Hooks/Compile/Post),$(call $(hook))$(sep))
@@ -297,6 +299,7 @@ endef
 
 define Build/DefaultTargets
   $(if $(PKG_SKIP_DOWNLOAD),,$(if $(strip $(PKG_SOURCE_URL)),$(call Download,default)))
+  $(if $(and $(strip $(PKG_UPSTREAM_URL)),$(strip $(UPSTREAM_FETCH))),$(call Download,default-upstream))
   $(if $(DUMP),,$(Build/CoreTargets))
 
   define Build/DefaultTargets

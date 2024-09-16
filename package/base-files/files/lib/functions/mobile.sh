@@ -253,10 +253,10 @@ setup_bridge_v4() {
 	ubus call network add_dynamic "$(json_dump)"
 
 	ip route add default dev "$dev" table 42
-	ip route add default dev br-lan table 43
 	ip route add "$bridge_ipaddr" dev br-lan
+	ip route add default via "$bridge_ipaddr" dev br-lan table 43
 
-	ip rule add pref 5042 from "$bridge_ipaddr" lookup 42
+	ip rule add pref 5042 iif br-lan lookup 42
 	ip rule add pref 5043 iif "$dev" lookup 43
 	#sysctl -w net.ipv4.conf.br-lan.proxy_arp=1 #2>/dev/null
 	model="$(gsmctl --model ${modem_num:+-O "$modem_num"})"
@@ -549,16 +549,40 @@ get_simcount_by_modem_num() {
 	echo $simcount
 }
 
+reload_mobifd() {
+	local gsm_modem="$1"
+	local interface="$2"
+	object=$(find_mdm_mobifd_obj $gsm_modem)
+	if [ -z "$object" ]; then
+		echo "Can't find modem $gsm_modem gsm object, reloading mobifd"
+		ubus -t 180 call mobifd reload
+		return
+	fi
+	echo "$gsm_modem $interface reloading mobifd"
+	ubus -t 180 call mobifd.$object reload
+}
+
 get_active_sim() {
 	local interface="$1"
 	local old_cb="$2"
 	local gsm_modem="$3"
 	local active_sim="0"
+	local max_retries=5
+	local retry=0
 
 	json_set_namespace gobinet old_cb
-	json_load "$(ubus call $gsm_modem get_sim_slot)"
-	json_get_var active_sim index
+
+	while [ "$retry" -le "$max_retries" ]; do
+		json_load "$(ubus call $gsm_modem get_sim_slot)"
+		json_get_var active_sim index
+		[ -n "$active_sim" ] && [ "$active_sim" != "0" ] && break
+		retry="$((retry + 1))"
+		sleep 2
+	done
+
 	json_set_namespace $old_cb
+
+	[ -z "$active_sim" ] && active_sim="0"
 
 	echo "$active_sim"
 }

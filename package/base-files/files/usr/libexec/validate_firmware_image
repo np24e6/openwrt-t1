@@ -66,11 +66,6 @@ fi
 fwtool_check_signature "$1" >&2
 FWTOOL_SIGNATURE=$?
 
-[ "$FWTOOL_SIGNATURE" -ne 0 ] && {
-	fwtool_get_vcert_state >&2
-	[ "$?" -ne 0 ] && notify_firmware_invalid
-}
-
 fwtool_check_image "$1" >&2
 FWTOOL_DEVICE_MATCH=$?
 [ "$FWTOOL_DEVICE_MATCH" -ne 0 ] && notify_firmware_invalid
@@ -81,9 +76,6 @@ fwtool_check_upgrade_type "$1" >&2
 [ "$?" -eq 1 ] && {
 	notify_firmware_no_backup
 	notify_firmware_is_downgrade
-
-	fwtool_check_downgrade_ability >&2
-	[ "$?" -eq 1 ] && notify_firmware_invalid
 }
 
 fwtool_check_passwd_warning "$1" >&2

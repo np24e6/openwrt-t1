@@ -1,0 +1,57 @@
+Index: backports-6.1.24/include/net/cfg80211.h
+===================================================================
+--- backports-6.1.24.orig/include/net/cfg80211.h
++++ backports-6.1.24/include/net/cfg80211.h
+@@ -1532,6 +1532,7 @@ struct iface_combination_params {
+ 	u8 radar_detect;
+ 	int iftype_num[NUM_NL80211_IFTYPES];
+ 	u32 new_beacon_int;
++	u32 freq;
+ };
+ 
+ /**
+Index: backports-6.1.24/net/mac80211/util.c
+===================================================================
+--- backports-6.1.24.orig/net/mac80211/util.c
++++ backports-6.1.24/net/mac80211/util.c
+@@ -4845,8 +4845,10 @@ int ieee80211_check_combinations(struct
+ 		return 0;
+ 	}
+ 
+-	if (chandef)
++	if (chandef && chandef->chan) {
+ 		params.num_different_channels = 1;
++		params.freq = chandef->chan->center_freq;
++	}
+ 
+ 	if (iftype != NL80211_IFTYPE_UNSPECIFIED)
+ 		params.iftype_num[iftype] = 1;
+Index: backports-6.1.24/net/wireless/util.c
+===================================================================
+--- backports-6.1.24.orig/net/wireless/util.c
++++ backports-6.1.24/net/wireless/util.c
+@@ -2217,6 +2217,7 @@ int cfg80211_iter_combinations(struct wi
+ 	u32 used_iftypes = 0;
+ 	u32 beacon_int_gcd;
+ 	bool beacon_int_different;
++	bool skip_channel_check = false;
+ 
+ 	/*
+ 	 * This is a bit strange, since the iteration used to rely only on
+@@ -2255,7 +2256,15 @@ int cfg80211_iter_combinations(struct wi
+ 
+ 		if (num_interfaces > c->max_interfaces)
+ 			continue;
+-		if (params->num_different_channels > c->num_different_channels)
++
++		skip_channel_check = false;
++		if (params->iftype_num[NL80211_IFTYPE_STATION] == 1 &&
++			params->iftype_num[NL80211_IFTYPE_AP] > 0 &&
++			params->freq >= 2400 && params->freq <= 2500) {
++			skip_channel_check = true;
++		}
++
++		if (!skip_channel_check && params->num_different_channels > c->num_different_channels)
+ 			continue;
+ 
+ 		limits = kmemdup(c->limits, sizeof(limits[0]) * c->n_limits,

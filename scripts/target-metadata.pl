@@ -76,6 +76,7 @@ sub target_config_features(@) {
 		/^soft_port_mirror$/ and $ret .= "\tselect USES_SOFT_PORT_MIRROR\n";
 		/^high-watchdog-priority$/ and $ret .= "\tselect HIGH_WATCHDOG_PRIORITY\n";
 		/^vendor_wifi$/ and $ret .= "\tselect USES_VENDOR_WIFI_DRIVER\n";
+		/^mt7981-wifi$/ and $ret .= "\tselect MT7981_WIFI\n";
 		/^basic-router$/ and $ret .= "\tselect BASIC_ROUTER\n";
 		/^serial-reset-quirk$/ and $ret .= "\tselect SERIAL_RESET_QUIRK\n";
 		/^bacnet$/ and $ret .= "\tselect BACNET_MODULE_SUPPORT\n";
@@ -89,7 +90,10 @@ sub target_config_features(@) {
 		/^hw-offload$/ and $ret .= "\tselect HW_OFFLOAD\n";
 		/^tlt-failsafe-boot$/ and $ret .= "\tselect TLT_FAILSAFE_BOOT\n";
 		/^modem-reset-quirk$/ and $ret .= "\tselect MODEM_RESET_QUIRK\n";
-		/^broken-sim-idle-protection$/ and $ret .= "\tselect BROKEN_SIM_IDLE_PROTECTION\n"
+		/^portlink$/ and $ret .= "\tselect PORT_LINK\n";
+		/^rs232$/ and $ret .= "\tselect HAS_RS232\n";
+		/^rs485$/ and $ret .= "\tselect HAS_RS485\n";
+		/^hi-storage$/ and $ret .= "\tselect HIGH_STORAGE\n"
 	}
 	return $ret;
 }
@@ -490,6 +494,19 @@ EOF
 
 	print <<EOF;
 
+config INCLUDED_DEVICES
+	string
+EOF
+	foreach my $target (@target) {
+		my $profiles = $target->{profiles};
+		foreach my $profile (@$profiles) {
+			next unless $profile->{included_devices};
+			print "\tdefault \"$profile->{included_devices}\" if TARGET_$target->{conf}_$profile->{id}\n";
+		}
+	}
+
+	print <<EOF;
+
 config TARGET_ARCH_PACKAGES
 	string
 
@@ -636,6 +653,43 @@ sub find_profile_target() {
 	}
 }
 
+sub find_profile_features() {
+	my $file = shift @ARGV;
+	my $prof = shift @ARGV;
+	my @target = parse_target_metadata($file);
+
+	OUT: foreach my $cur (@target) {
+
+		foreach my $profile (@{$cur->{profiles}}) {
+			next unless (index($profile->{id}, "DEVICE_teltonika_$prof") != -1 ||
+						 index($profile->{id}, "DEVICE_$prof") != -1);
+
+			print join(" ", @{$profile->{features}}), "\n";
+
+			last OUT;
+		}
+	}
+}
+
+sub find_profile_option() {
+	my $file = shift @ARGV;
+	my $prof = shift @ARGV;
+	my $opt = shift @ARGV;
+	my @target = parse_target_metadata($file);
+
+	OUT: foreach my $cur (@target) {
+
+		foreach my $profile (@{$cur->{profiles}}) {
+			next unless (index($profile->{id}, "DEVICE_teltonika_$prof") != -1 ||
+						 index($profile->{id}, "DEVICE_$prof") != -1);
+
+			print "$profile->{$opt}\n";
+
+			last OUT;
+		}
+	}
+}
+
 sub parse_command() {
 	GetOptions("ignore=s", \@ignore);
 	my $cmd = shift @ARGV;
@@ -645,6 +699,8 @@ sub parse_command() {
 		/^show$/ and return find_feature_option();
 		/^devlist$/ and return dump_device_list();
 		/^target$/ and return find_profile_target();
+		/^features$/ and return find_profile_features();
+		/^option$/ and return find_profile_option();
 	}
 	die <<EOF
 Available Commands:
@@ -653,6 +709,8 @@ Available Commands:
 	$0 show [feature]			Get Kconfig option from feature name
 	$0 devlist [file]			Get available device list
 	$0 target [file] [profile]		Get target and subtarget from device profile
+	$0 features [file] [profile]		Get target features from device profile
+	$0 option [file] [profile] [name]	Get target option value from device profile
 
 EOF
 }

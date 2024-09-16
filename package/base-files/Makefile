@@ -103,7 +103,7 @@ ifdef CONFIG_INSTALL_LOCAL_KEY
 endif
 
 ifneq ($(CONFIG_USE_OPENRC),)
-OPENRC_RUNLEVEL_DEFAULT:=rclocal done
+OPENRC_RUNLEVEL_DEFAULT:=adb rclocal done
 OPENRC_RUNLEVEL_SHUTDOWN:=umount
 endif
 
@@ -241,6 +241,8 @@ define Package/base-files/install
 	if [ ! $(CONFIG_SMP_SUPPORT) ]; then \
 		$(RM) $(1)/lib/functions/smp.sh; \
 	fi;
+
+	$(if $(CONFIG_BASEBAND_SUPPORT),,$(RM) $(1)/etc/init.d/adbd)
 
 	for svc in $(1)/etc/init.d/*.openrc; do \
 		$(if $(CONFIG_USE_OPENRC), \

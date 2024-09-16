@@ -1,12 +1,12 @@
 diff --recursive --unified --new-file --no-dereference upstream/README.md src/README.md
 --- upstream/README.md	1970-01-01 00:00:00.000000000 +0000
-+++ src/README.md	2024-07-23 09:00:10.000000000 +0000
++++ src/README.md	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,2 @@
 +# modems
 +
 diff --recursive --unified --new-file --no-dereference upstream/backup/0421-03a7 src/backup/0421-03a7
 --- upstream/backup/0421-03a7	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/0421-03a7	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/0421-03a7	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,6 @@
 +{
 +	"desc": "Nokia C5-00 Mobile phone",
@@ -16,7 +16,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/0421-03a7
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/0421-060d src/backup/0421-060d
 --- upstream/backup/0421-060d	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/0421-060d	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/0421-060d	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,6 @@
 +{
 +	"desc": "Nokia CS-10",
@@ -26,7 +26,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/0421-060d
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/0421-060e src/backup/0421-060e
 --- upstream/backup/0421-060e	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/0421-060e	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/0421-060e	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,6 @@
 +{
 +	"desc": "Nokia CS-10",
@@ -36,7 +36,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/0421-060e
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/0421-0612 src/backup/0421-0612
 --- upstream/backup/0421-0612	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/0421-0612	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/0421-0612	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,6 @@
 +{
 +	"desc": "Nokia CS-15/CS-18",
@@ -46,7 +46,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/0421-0612
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/0421-0619 src/backup/0421-0619
 --- upstream/backup/0421-0619	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/0421-0619	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/0421-0619	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,6 @@
 +{
 +	"desc": "Nokia CS-12",
@@ -56,7 +56,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/0421-0619
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/0421-061e src/backup/0421-061e
 --- upstream/backup/0421-061e	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/0421-061e	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/0421-061e	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,6 @@
 +{
 +	"desc": "Nokia CS-11",
@@ -66,7 +66,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/0421-061e
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/0421-0623 src/backup/0421-0623
 --- upstream/backup/0421-0623	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/0421-0623	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/0421-0623	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,6 @@
 +{
 +	"desc": "Nokia CS-17",
@@ -76,7 +76,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/0421-0623
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/0421-0629 src/backup/0421-0629
 --- upstream/backup/0421-0629	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/0421-0629	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/0421-0629	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,6 @@
 +{
 +	"desc": "Nokia CS-18",
@@ -86,7 +86,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/0421-0629
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/0421-062d src/backup/0421-062d
 --- upstream/backup/0421-062d	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/0421-062d	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/0421-062d	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,6 @@
 +{
 +	"desc": "Nokia CS-19",
@@ -96,7 +96,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/0421-062d
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/0421-062f src/backup/0421-062f
 --- upstream/backup/0421-062f	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/0421-062f	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/0421-062f	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,6 @@
 +{
 +	"desc": "Nokia CS-19",
@@ -106,7 +106,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/0421-062f
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/0421-0638 src/backup/0421-0638
 --- upstream/backup/0421-0638	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/0421-0638	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/0421-0638	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,6 @@
 +{
 +	"desc": "Nokia 21M-02",
@@ -116,7 +116,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/0421-0638
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/05c6-0016 src/backup/05c6-0016
 --- upstream/backup/05c6-0016	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/05c6-0016	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/05c6-0016	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,6 @@
 +{
 +	"desc": "iBall 3.5G Connect",
@@ -126,7 +126,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/05c6-0016
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/05c6-0023 src/backup/05c6-0023
 --- upstream/backup/05c6-0023	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/05c6-0023	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/05c6-0023	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Leoxsys LN-72V",
@@ -135,7 +135,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/05c6-0023
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/05c6-00a0 src/backup/05c6-00a0
 --- upstream/backup/05c6-00a0	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/05c6-00a0	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/05c6-00a0	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,6 @@
 +{
 +	"desc": "Axesstel MV241",
@@ -145,7 +145,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/05c6-00a0
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/05c6-6000 src/backup/05c6-6000
 --- upstream/backup/05c6-6000	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/05c6-6000	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/05c6-6000	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Siemens SG75",
@@ -154,7 +154,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/05c6-6000
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/05c6-9000 src/backup/05c6-9000
 --- upstream/backup/05c6-9000	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/05c6-9000	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/05c6-9000	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Generic Qualcomm",
@@ -163,7 +163,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/05c6-9000
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/05c6-9003 src/backup/05c6-9003
 --- upstream/backup/05c6-9003	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/05c6-9003	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/05c6-9003	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,8 @@
 +{
 +	"desc": "Quectel UC20",
@@ -175,7 +175,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/05c6-9003
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/05c6-9215 src/backup/05c6-9215
 --- upstream/backup/05c6-9215	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/05c6-9215	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/05c6-9215	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,8 @@
 +{
 +	"desc": "Quectel EC20",
@@ -187,7 +187,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/05c6-9215
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/05c6-f601 src/backup/05c6-f601
 --- upstream/backup/05c6-f601	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/05c6-f601	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/05c6-f601	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,11 @@
 +{
 +        "desc": "MeigLink SLM750",
@@ -202,7 +202,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/05c6-f601
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/07d1-3e01 src/backup/07d1-3e01
 --- upstream/backup/07d1-3e01	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/07d1-3e01	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/07d1-3e01	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "D-Link DWM-152",
@@ -211,7 +211,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/07d1-3e01
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/07d1-3e02 src/backup/07d1-3e02
 --- upstream/backup/07d1-3e02	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/07d1-3e02	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/07d1-3e02	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "D-Link DWM-156",
@@ -220,7 +220,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/07d1-3e02
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/07d1-7e11 src/backup/07d1-7e11
 --- upstream/backup/07d1-7e11	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/07d1-7e11	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/07d1-7e11	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,6 @@
 +{
 +	"desc": "D-Link DWM-156",
@@ -230,7 +230,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/07d1-7e11
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/0af0-4005 src/backup/0af0-4005
 --- upstream/backup/0af0-4005	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/0af0-4005	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/0af0-4005	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,4 @@
 +{
 +	"desc": "Option GIO711",
@@ -238,7 +238,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/0af0-4005
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/0af0-6901 src/backup/0af0-6901
 --- upstream/backup/0af0-6901	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/0af0-6901	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/0af0-6901	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Option GI0201",
@@ -247,7 +247,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/0af0-6901
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/0af0-7201 src/backup/0af0-7201
 --- upstream/backup/0af0-7201	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/0af0-7201	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/0af0-7201	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Option GTM380",
@@ -256,7 +256,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/0af0-7201
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/0af0-8120 src/backup/0af0-8120
 --- upstream/backup/0af0-8120	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/0af0-8120	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/0af0-8120	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,4 @@
 +{
 +	"desc": "Option GTM681W",
@@ -264,7 +264,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/0af0-8120
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/0af0-9200 src/backup/0af0-9200
 --- upstream/backup/0af0-9200	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/0af0-9200	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/0af0-9200	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Option GTM671WFS",
@@ -273,7 +273,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/0af0-9200
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/0b3c-c000 src/backup/0b3c-c000
 --- upstream/backup/0b3c-c000	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/0b3c-c000	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/0b3c-c000	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,4 @@
 +{
 +	"desc": "Olivetti Olicard 100",
@@ -281,7 +281,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/0b3c-c000
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/0b3c-c001 src/backup/0b3c-c001
 --- upstream/backup/0b3c-c001	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/0b3c-c001	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/0b3c-c001	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,4 @@
 +{
 +	"desc": "Olivetti Olicard 120",
@@ -289,7 +289,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/0b3c-c001
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/0b3c-c002 src/backup/0b3c-c002
 --- upstream/backup/0b3c-c002	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/0b3c-c002	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/0b3c-c002	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,4 @@
 +{
 +	"desc": "Olivetti Olicard 140",
@@ -297,7 +297,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/0b3c-c002
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/0b3c-c003 src/backup/0b3c-c003
 --- upstream/backup/0b3c-c003	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/0b3c-c003	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/0b3c-c003	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Olivetti Olicard 145",
@@ -306,7 +306,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/0b3c-c003
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/0b3c-c004 src/backup/0b3c-c004
 --- upstream/backup/0b3c-c004	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/0b3c-c004	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/0b3c-c004	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,4 @@
 +{
 +	"desc": "Olivetti Olicard 155",
@@ -314,7 +314,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/0b3c-c004
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/0b3c-c005 src/backup/0b3c-c005
 --- upstream/backup/0b3c-c005	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/0b3c-c005	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/0b3c-c005	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,4 @@
 +{
 +	"desc": "Olivetti Olicard 200",
@@ -322,7 +322,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/0b3c-c005
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/0b3c-c00a src/backup/0b3c-c00a
 --- upstream/backup/0b3c-c00a	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/0b3c-c00a	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/0b3c-c00a	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,4 @@
 +{
 +	"desc": "Olivetti Olicard 160",
@@ -330,7 +330,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/0b3c-c00a
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/0b3c-c00b src/backup/0b3c-c00b
 --- upstream/backup/0b3c-c00b	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/0b3c-c00b	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/0b3c-c00b	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,4 @@
 +{
 +	"desc": "Olivetti Olicard 500",
@@ -338,7 +338,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/0b3c-c00b
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/0bdb-1900 src/backup/0bdb-1900
 --- upstream/backup/0bdb-1900	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/0bdb-1900	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/0bdb-1900	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,6 @@
 +{
 +	"desc": "Ericsson F3507g",
@@ -348,7 +348,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/0bdb-1900
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/0bdb-1902 src/backup/0bdb-1902
 --- upstream/backup/0bdb-1902	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/0bdb-1902	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/0bdb-1902	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,6 @@
 +{
 +	"desc": "Ericsson F3507g",
@@ -358,7 +358,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/0bdb-1902
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/0bdb-190a src/backup/0bdb-190a
 --- upstream/backup/0bdb-190a	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/0bdb-190a	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/0bdb-190a	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,6 @@
 +{
 +	"desc": "Ericsson F3307",
@@ -368,7 +368,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/0bdb-190a
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/0bdb-190d src/backup/0bdb-190d
 --- upstream/backup/0bdb-190d	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/0bdb-190d	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/0bdb-190d	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,6 @@
 +{
 +	"desc": "Ericsson F5521gw",
@@ -378,7 +378,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/0bdb-190d
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/0bdb-1910 src/backup/0bdb-1910
 --- upstream/backup/0bdb-1910	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/0bdb-1910	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/0bdb-1910	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,6 @@
 +{
 +	"desc": "Ericsson F5521gw",
@@ -388,7 +388,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/0bdb-1910
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/0c88-17da src/backup/0c88-17da
 --- upstream/backup/0c88-17da	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/0c88-17da	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/0c88-17da	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Kyocera KPC650",
@@ -397,7 +397,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/0c88-17da
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/0c88-180a src/backup/0c88-180a
 --- upstream/backup/0c88-180a	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/0c88-180a	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/0c88-180a	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Kyocera KPC680",
@@ -406,7 +406,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/0c88-180a
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/0f3d-68a2 src/backup/0f3d-68a2
 --- upstream/backup/0f3d-68a2	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/0f3d-68a2	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/0f3d-68a2	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,4 @@
 +{
 +	"desc": "Sierra MC7700",
@@ -414,7 +414,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/0f3d-68a2
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/0f3d-68aa src/backup/0f3d-68aa
 --- upstream/backup/0f3d-68aa	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/0f3d-68aa	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/0f3d-68aa	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Sierra Wireless AC313U/320U/330U Direct IP",
@@ -423,7 +423,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/0f3d-68aa
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1004-6124 src/backup/1004-6124
 --- upstream/backup/1004-6124	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1004-6124	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1004-6124	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,6 @@
 +{
 +	"desc": "LG L-05A",
@@ -433,7 +433,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1004-6124
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1004-6141 src/backup/1004-6141
 --- upstream/backup/1004-6141	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1004-6141	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1004-6141	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,6 @@
 +{
 +	"desc": "LG LUU-2100TI",
@@ -443,7 +443,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1004-6141
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1004-6157 src/backup/1004-6157
 --- upstream/backup/1004-6157	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1004-6157	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1004-6157	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,6 @@
 +{
 +	"desc": "LG LUU-2110TI",
@@ -453,7 +453,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1004-6157
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1004-618f src/backup/1004-618f
 --- upstream/backup/1004-618f	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1004-618f	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1004-618f	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "LG L-02C",
@@ -462,7 +462,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1004-618f
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/106c-3711 src/backup/106c-3711
 --- upstream/backup/106c-3711	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/106c-3711	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/106c-3711	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,6 @@
 +{
 +	"desc": "PANTECH UM-150",
@@ -472,7 +472,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/106c-3711
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/106c-3714 src/backup/106c-3714
 --- upstream/backup/106c-3714	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/106c-3714	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/106c-3714	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,6 @@
 +{
 +	"desc": "PANTECH UM-175",
@@ -482,7 +482,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/106c-3714
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/106c-3715 src/backup/106c-3715
 --- upstream/backup/106c-3715	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/106c-3715	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/106c-3715	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,6 @@
 +{
 +	"desc": "PANTECH UM-175AL",
@@ -492,7 +492,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/106c-3715
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/106c-3716 src/backup/106c-3716
 --- upstream/backup/106c-3716	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/106c-3716	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/106c-3716	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,6 @@
 +{
 +	"desc": "PANTECH UM-190",
@@ -502,7 +502,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/106c-3716
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/106c-3717 src/backup/106c-3717
 --- upstream/backup/106c-3717	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/106c-3717	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/106c-3717	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,6 @@
 +{
 +	"desc": "PANTECH UM-185C/UM185E",
@@ -512,7 +512,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/106c-3717
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/106c-3718 src/backup/106c-3718
 --- upstream/backup/106c-3718	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/106c-3718	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/106c-3718	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,4 @@
 +{
 +	"desc": "PANTECH UML-290 4G Modem",
@@ -520,7 +520,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/106c-3718
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/106c-3721 src/backup/106c-3721
 --- upstream/backup/106c-3721	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/106c-3721	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/106c-3721	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,4 @@
 +{
 +	"desc": "PANTECH P4200 4G Modem",
@@ -528,7 +528,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/106c-3721
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1199-0017 src/backup/1199-0017
 --- upstream/backup/1199-0017	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1199-0017	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1199-0017	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Sierra EM5625",
@@ -537,7 +537,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1199-0017
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1199-0018 src/backup/1199-0018
 --- upstream/backup/1199-0018	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1199-0018	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1199-0018	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Sierra MC5720",
@@ -546,7 +546,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1199-0018
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1199-0019 src/backup/1199-0019
 --- upstream/backup/1199-0019	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1199-0019	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1199-0019	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Sierra AC595U",
@@ -555,7 +555,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1199-0019
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1199-0020 src/backup/1199-0020
 --- upstream/backup/1199-0020	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1199-0020	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1199-0020	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Sierra MC5725",
@@ -564,7 +564,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1199-0020
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1199-0021 src/backup/1199-0021
 --- upstream/backup/1199-0021	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1199-0021	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1199-0021	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Sierra AC597E",
@@ -573,7 +573,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1199-0021
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1199-0022 src/backup/1199-0022
 --- upstream/backup/1199-0022	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1199-0022	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1199-0022	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Sierra EM5725",
@@ -582,7 +582,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1199-0022
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1199-0023 src/backup/1199-0023
 --- upstream/backup/1199-0023	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1199-0023	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1199-0023	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Sierra AC597",
@@ -591,7 +591,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1199-0023
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1199-0024 src/backup/1199-0024
 --- upstream/backup/1199-0024	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1199-0024	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1199-0024	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Sierra MC5727 CDMA",
@@ -600,7 +600,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1199-0024
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1199-0025 src/backup/1199-0025
 --- upstream/backup/1199-0025	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1199-0025	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1199-0025	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Sierra AC598",
@@ -609,7 +609,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1199-0025
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1199-0026 src/backup/1199-0026
 --- upstream/backup/1199-0026	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1199-0026	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1199-0026	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Sierra T11",
@@ -618,7 +618,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1199-0026
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1199-0027 src/backup/1199-0027
 --- upstream/backup/1199-0027	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1199-0027	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1199-0027	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Sierra AC402",
@@ -627,7 +627,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1199-0027
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1199-0028 src/backup/1199-0028
 --- upstream/backup/1199-0028	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1199-0028	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1199-0028	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Sierra MC5728",
@@ -636,7 +636,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1199-0028
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1199-0112 src/backup/1199-0112
 --- upstream/backup/1199-0112	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1199-0112	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1199-0112	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Sierra CDMA 1xEVDO PC Card, AC580",
@@ -645,7 +645,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1199-0112
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1199-0120 src/backup/1199-0120
 --- upstream/backup/1199-0120	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1199-0120	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1199-0120	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Sierra AC595U",
@@ -654,7 +654,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1199-0120
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1199-0218 src/backup/1199-0218
 --- upstream/backup/1199-0218	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1199-0218	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1199-0218	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Sierra MC5720",
@@ -663,7 +663,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1199-0218
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1199-0220 src/backup/1199-0220
 --- upstream/backup/1199-0220	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1199-0220	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1199-0220	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Sierra MC5725",
@@ -672,7 +672,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1199-0220
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1199-0224 src/backup/1199-0224
 --- upstream/backup/1199-0224	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1199-0224	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1199-0224	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Sierra MC5727",
@@ -681,7 +681,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1199-0224
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1199-0301 src/backup/1199-0301
 --- upstream/backup/1199-0301	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1199-0301	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1199-0301	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Sierra AC250U",
@@ -690,7 +690,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1199-0301
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1199-6802 src/backup/1199-6802
 --- upstream/backup/1199-6802	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1199-6802	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1199-6802	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Sierra MC8755",
@@ -699,7 +699,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1199-6802
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1199-6803 src/backup/1199-6803
 --- upstream/backup/1199-6803	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1199-6803	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1199-6803	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Sierra MC8765",
@@ -708,7 +708,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1199-6803
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1199-6804 src/backup/1199-6804
 --- upstream/backup/1199-6804	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1199-6804	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1199-6804	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Sierra MC8755",
@@ -717,7 +717,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1199-6804
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1199-6805 src/backup/1199-6805
 --- upstream/backup/1199-6805	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1199-6805	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1199-6805	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Sierra MC8765",
@@ -726,7 +726,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1199-6805
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1199-6808 src/backup/1199-6808
 --- upstream/backup/1199-6808	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1199-6808	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1199-6808	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Sierra MC8755",
@@ -735,7 +735,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1199-6808
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1199-6809 src/backup/1199-6809
 --- upstream/backup/1199-6809	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1199-6809	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1199-6809	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Sierra MC8755",
@@ -744,7 +744,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1199-6809
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1199-6813 src/backup/1199-6813
 --- upstream/backup/1199-6813	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1199-6813	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1199-6813	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Sierra MC8775",
@@ -753,7 +753,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1199-6813
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1199-6815 src/backup/1199-6815
 --- upstream/backup/1199-6815	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1199-6815	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1199-6815	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Sierra MC8775",
@@ -762,7 +762,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1199-6815
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1199-6816 src/backup/1199-6816
 --- upstream/backup/1199-6816	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1199-6816	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1199-6816	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Sierra MC8775",
@@ -771,7 +771,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1199-6816
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1199-6820 src/backup/1199-6820
 --- upstream/backup/1199-6820	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1199-6820	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1199-6820	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Sierra AC875",
@@ -780,7 +780,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1199-6820
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1199-6821 src/backup/1199-6821
 --- upstream/backup/1199-6821	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1199-6821	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1199-6821	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Sierra AC875U",
@@ -789,7 +789,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1199-6821
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1199-6822 src/backup/1199-6822
 --- upstream/backup/1199-6822	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1199-6822	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1199-6822	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Sierra AC875E",
@@ -798,7 +798,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1199-6822
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1199-6833 src/backup/1199-6833
 --- upstream/backup/1199-6833	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1199-6833	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1199-6833	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Sierra MC8781",
@@ -807,7 +807,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1199-6833
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1199-6834 src/backup/1199-6834
 --- upstream/backup/1199-6834	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1199-6834	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1199-6834	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Sierra MC8780",
@@ -816,7 +816,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1199-6834
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1199-6835 src/backup/1199-6835
 --- upstream/backup/1199-6835	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1199-6835	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1199-6835	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Sierra MC8781",
@@ -825,7 +825,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1199-6835
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1199-6838 src/backup/1199-6838
 --- upstream/backup/1199-6838	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1199-6838	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1199-6838	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Sierra MC8780",
@@ -834,7 +834,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1199-6838
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1199-6839 src/backup/1199-6839
 --- upstream/backup/1199-6839	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1199-6839	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1199-6839	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Sierra MC8781",
@@ -843,7 +843,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1199-6839
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1199-683a src/backup/1199-683a
 --- upstream/backup/1199-683a	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1199-683a	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1199-683a	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Sierra MC8785",
@@ -852,7 +852,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1199-683a
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1199-683b src/backup/1199-683b
 --- upstream/backup/1199-683b	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1199-683b	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1199-683b	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Sierra MC8785 Composite",
@@ -861,7 +861,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1199-683b
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1199-6850 src/backup/1199-6850
 --- upstream/backup/1199-6850	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1199-6850	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1199-6850	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Sierra AC880",
@@ -870,7 +870,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1199-6850
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1199-6851 src/backup/1199-6851
 --- upstream/backup/1199-6851	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1199-6851	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1199-6851	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Sierra AC 881",
@@ -879,7 +879,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1199-6851
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1199-6852 src/backup/1199-6852
 --- upstream/backup/1199-6852	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1199-6852	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1199-6852	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Sierra AC880E",
@@ -888,7 +888,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1199-6852
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1199-6853 src/backup/1199-6853
 --- upstream/backup/1199-6853	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1199-6853	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1199-6853	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Sierra AC881E",
@@ -897,7 +897,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1199-6853
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1199-6855 src/backup/1199-6855
 --- upstream/backup/1199-6855	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1199-6855	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1199-6855	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Sierra AC880U",
@@ -906,7 +906,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1199-6855
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1199-6856 src/backup/1199-6856
 --- upstream/backup/1199-6856	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1199-6856	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1199-6856	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Sierra ATT USB Connect 881",
@@ -915,7 +915,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1199-6856
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1199-6859 src/backup/1199-6859
 --- upstream/backup/1199-6859	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1199-6859	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1199-6859	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Sierra AC885E",
@@ -924,7 +924,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1199-6859
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1199-685a src/backup/1199-685a
 --- upstream/backup/1199-685a	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1199-685a	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1199-685a	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Sierra AC885E",
@@ -933,7 +933,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1199-685a
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1199-6880 src/backup/1199-6880
 --- upstream/backup/1199-6880	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1199-6880	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1199-6880	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Sierra C885",
@@ -942,7 +942,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1199-6880
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1199-6890 src/backup/1199-6890
 --- upstream/backup/1199-6890	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1199-6890	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1199-6890	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Sierra C888",
@@ -951,7 +951,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1199-6890
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1199-6891 src/backup/1199-6891
 --- upstream/backup/1199-6891	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1199-6891	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1199-6891	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Sierra C22 and C33",
@@ -960,7 +960,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1199-6891
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1199-6892 src/backup/1199-6892
 --- upstream/backup/1199-6892	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1199-6892	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1199-6892	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Sierra Compass HSPA",
@@ -969,7 +969,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1199-6892
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1199-6893 src/backup/1199-6893
 --- upstream/backup/1199-6893	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1199-6893	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1199-6893	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Sierra C889",
@@ -978,7 +978,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1199-6893
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1199-68a2 src/backup/1199-68a2
 --- upstream/backup/1199-68a2	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1199-68a2	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1199-68a2	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,4 @@
 +{
 +	"desc": "Sierra MC7710",
@@ -986,7 +986,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1199-68a2
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1199-68aa src/backup/1199-68aa
 --- upstream/backup/1199-68aa	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1199-68aa	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1199-68aa	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Sierra AC320U/AC330U Direct IP",
@@ -995,7 +995,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1199-68aa
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-1035 src/backup/12d1-1035
 --- upstream/backup/12d1-1035	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/12d1-1035	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/12d1-1035	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "HUAWEI U8110",
@@ -1004,7 +1004,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-1035
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-1404 src/backup/12d1-1404
 --- upstream/backup/12d1-1404	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/12d1-1404	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/12d1-1404	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,4 @@
 +{
 +	"desc": "HUAWEI UMG1831",
@@ -1012,7 +1012,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-1404
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-1406 src/backup/12d1-1406
 --- upstream/backup/12d1-1406	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/12d1-1406	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/12d1-1406	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "HUAWEI/Option newer modems",
@@ -1021,7 +1021,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-1406
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-140b src/backup/12d1-140b
 --- upstream/backup/12d1-140b	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/12d1-140b	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/12d1-140b	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "HUAWEI/Option EC1260 Wireless Data Modem HSD USB Card",
@@ -1030,7 +1030,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-140b
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-140c src/backup/12d1-140c
 --- upstream/backup/12d1-140c	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/12d1-140c	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/12d1-140c	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,4 @@
 +{
 +	"desc": "HUAWEI/Option newer modems",
@@ -1038,7 +1038,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-140c
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-1412 src/backup/12d1-1412
 --- upstream/backup/12d1-1412	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/12d1-1412	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/12d1-1412	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "HUAWEI/Option EC168",
@@ -1047,7 +1047,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-1412
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-141b src/backup/12d1-141b
 --- upstream/backup/12d1-141b	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/12d1-141b	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/12d1-141b	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "HUAWEI/Option newer modems",
@@ -1056,7 +1056,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-141b
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-1433 src/backup/12d1-1433
 --- upstream/backup/12d1-1433	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/12d1-1433	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/12d1-1433	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "HUAWEI/Option E1756C",
@@ -1065,7 +1065,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-1433
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-1436 src/backup/12d1-1436
 --- upstream/backup/12d1-1436	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/12d1-1436	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/12d1-1436	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "HUAWEI/Option E1800",
@@ -1074,7 +1074,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-1436
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-1444 src/backup/12d1-1444
 --- upstream/backup/12d1-1444	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/12d1-1444	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/12d1-1444	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "HUAWEI/Option E352-R1",
@@ -1083,7 +1083,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-1444
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-144e src/backup/12d1-144e
 --- upstream/backup/12d1-144e	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/12d1-144e	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/12d1-144e	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Huawei K3806",
@@ -1092,7 +1092,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-144e
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-1464 src/backup/12d1-1464
 --- upstream/backup/12d1-1464	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/12d1-1464	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/12d1-1464	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Huawei K4505",
@@ -1101,7 +1101,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-1464
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-1465 src/backup/12d1-1465
 --- upstream/backup/12d1-1465	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/12d1-1465	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/12d1-1465	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Huawei K3765",
@@ -1110,7 +1110,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-1465
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-1491 src/backup/12d1-1491
 --- upstream/backup/12d1-1491	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/12d1-1491	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/12d1-1491	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Huawei R201",
@@ -1119,7 +1119,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-1491
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-14a5 src/backup/12d1-14a5
 --- upstream/backup/12d1-14a5	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/12d1-14a5	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/12d1-14a5	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Huawei E173",
@@ -1128,7 +1128,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-14a5
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-14a8 src/backup/12d1-14a8
 --- upstream/backup/12d1-14a8	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/12d1-14a8	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/12d1-14a8	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Huawei E173",
@@ -1137,7 +1137,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-14a8
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-14ac src/backup/12d1-14ac
 --- upstream/backup/12d1-14ac	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/12d1-14ac	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/12d1-14ac	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,4 @@
 +{
 +	"desc": "HUAWEI/Option newer modems",
@@ -1145,7 +1145,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-14ac
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-14ae src/backup/12d1-14ae
 --- upstream/backup/12d1-14ae	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/12d1-14ae	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/12d1-14ae	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Huawei K3806",
@@ -1154,7 +1154,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-14ae
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-14c6 src/backup/12d1-14c6
 --- upstream/backup/12d1-14c6	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/12d1-14c6	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/12d1-14c6	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,4 @@
 +{
 +	"desc": "Huawei K4605",
@@ -1162,7 +1162,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-14c6
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-14c8 src/backup/12d1-14c8
 --- upstream/backup/12d1-14c8	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/12d1-14c8	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/12d1-14c8	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,4 @@
 +{
 +	"desc": "Huawei K5005",
@@ -1170,7 +1170,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-14c8
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-14c9 src/backup/12d1-14c9
 --- upstream/backup/12d1-14c9	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/12d1-14c9	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/12d1-14c9	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,4 @@
 +{
 +	"desc": "Huawei K3770",
@@ -1178,7 +1178,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-14c9
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-14ca src/backup/12d1-14ca
 --- upstream/backup/12d1-14ca	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/12d1-14ca	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/12d1-14ca	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,4 @@
 +{
 +	"desc": "Huawei K3771",
@@ -1186,7 +1186,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-14ca
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-14cb src/backup/12d1-14cb
 --- upstream/backup/12d1-14cb	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/12d1-14cb	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/12d1-14cb	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Huawei K4510",
@@ -1195,7 +1195,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-14cb
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-14cc src/backup/12d1-14cc
 --- upstream/backup/12d1-14cc	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/12d1-14cc	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/12d1-14cc	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,4 @@
 +{
 +	"desc": "Huawei K4511",
@@ -1203,7 +1203,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-14cc
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-14cf src/backup/12d1-14cf
 --- upstream/backup/12d1-14cf	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/12d1-14cf	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/12d1-14cf	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Huawei K3772",
@@ -1212,7 +1212,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-14cf
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-14d2 src/backup/12d1-14d2
 --- upstream/backup/12d1-14d2	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/12d1-14d2	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/12d1-14d2	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,4 @@
 +{
 +	"desc": "Huawei E173/E177",
@@ -1220,7 +1220,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-14d2
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-1506 src/backup/12d1-1506
 --- upstream/backup/12d1-1506	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/12d1-1506	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/12d1-1506	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Huawei E367/E398",
@@ -1229,7 +1229,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-1506
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-150a src/backup/12d1-150a
 --- upstream/backup/12d1-150a	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/12d1-150a	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/12d1-150a	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,4 @@
 +{
 +	"desc": "Huawei E398",
@@ -1237,7 +1237,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-150a
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-150c src/backup/12d1-150c
 --- upstream/backup/12d1-150c	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/12d1-150c	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/12d1-150c	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,4 @@
 +{
 +	"desc": "Huawei E367",
@@ -1245,7 +1245,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-150c
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-150f src/backup/12d1-150f
 --- upstream/backup/12d1-150f	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/12d1-150f	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/12d1-150f	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,4 @@
 +{
 +	"desc": "Huawei E367",
@@ -1253,7 +1253,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-150f
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-151b src/backup/12d1-151b
 --- upstream/backup/12d1-151b	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/12d1-151b	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/12d1-151b	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,4 @@
 +{
 +	"desc": "Huawei E392u-12",
@@ -1261,7 +1261,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-151b
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-151d src/backup/12d1-151d
 --- upstream/backup/12d1-151d	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/12d1-151d	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/12d1-151d	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Huawei E3131",
@@ -1270,7 +1270,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-151d
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-156c src/backup/12d1-156c
 --- upstream/backup/12d1-156c	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/12d1-156c	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/12d1-156c	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Huawei E3276",
@@ -1279,7 +1279,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-156c
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-1576 src/backup/12d1-1576
 --- upstream/backup/12d1-1576	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/12d1-1576	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/12d1-1576	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,4 @@
 +{
 +	"desc": "Huawei K4201 composite",
@@ -1287,7 +1287,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-1576
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-1577 src/backup/12d1-1577
 --- upstream/backup/12d1-1577	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/12d1-1577	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/12d1-1577	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,4 @@
 +{
 +	"desc": "Huawei K4202 composite",
@@ -1295,7 +1295,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-1577
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-1578 src/backup/12d1-1578
 --- upstream/backup/12d1-1578	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/12d1-1578	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/12d1-1578	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,4 @@
 +{
 +	"desc": "Huawei K4606 composite",
@@ -1303,7 +1303,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-1578
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-1589 src/backup/12d1-1589
 --- upstream/backup/12d1-1589	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/12d1-1589	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/12d1-1589	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,4 @@
 +{
 +	"desc": "Huawei E8278",
@@ -1311,7 +1311,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-1589
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-1c05 src/backup/12d1-1c05
 --- upstream/backup/12d1-1c05	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/12d1-1c05	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/12d1-1c05	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Huawei E173s",
@@ -1320,7 +1320,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-1c05
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-1c07 src/backup/12d1-1c07
 --- upstream/backup/12d1-1c07	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/12d1-1c07	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/12d1-1c07	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Huawei E188",
@@ -1329,7 +1329,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-1c07
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-1c08 src/backup/12d1-1c08
 --- upstream/backup/12d1-1c08	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/12d1-1c08	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/12d1-1c08	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Huawei E173s",
@@ -1338,7 +1338,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-1c08
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-1c10 src/backup/12d1-1c10
 --- upstream/backup/12d1-1c10	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/12d1-1c10	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/12d1-1c10	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Huawei E173",
@@ -1347,7 +1347,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-1c10
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-1c12 src/backup/12d1-1c12
 --- upstream/backup/12d1-1c12	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/12d1-1c12	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/12d1-1c12	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Huawei E173",
@@ -1356,7 +1356,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-1c12
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-1c1e src/backup/12d1-1c1e
 --- upstream/backup/12d1-1c1e	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/12d1-1c1e	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/12d1-1c1e	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,4 @@
 +{
 +	"desc": "Huawei E586",
@@ -1364,7 +1364,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-1c1e
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-1c1f src/backup/12d1-1c1f
 --- upstream/backup/12d1-1c1f	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/12d1-1c1f	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/12d1-1c1f	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,4 @@
 +{
 +	"desc": "Huawei E587",
@@ -1372,7 +1372,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-1c1f
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-1c23 src/backup/12d1-1c23
 --- upstream/backup/12d1-1c23	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/12d1-1c23	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/12d1-1c23	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Huawei E173",
@@ -1381,7 +1381,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-1c23
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-1f16 src/backup/12d1-1f16
 --- upstream/backup/12d1-1f16	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/12d1-1f16	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/12d1-1f16	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,4 @@
 +{
 +	"desc": "Huawei K5150 composite",
@@ -1389,7 +1389,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/12d1-1f16
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1410-1400 src/backup/1410-1400
 --- upstream/backup/1410-1400	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1410-1400	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1410-1400	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Novatel U730",
@@ -1398,7 +1398,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1410-1400
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1410-1410 src/backup/1410-1410
 --- upstream/backup/1410-1410	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1410-1410	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1410-1410	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Novatel U740",
@@ -1407,7 +1407,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1410-1410
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1410-1420 src/backup/1410-1420
 --- upstream/backup/1410-1420	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1410-1420	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1410-1420	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Novatel U870",
@@ -1416,7 +1416,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1410-1420
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1410-1430 src/backup/1410-1430
 --- upstream/backup/1410-1430	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1410-1430	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1410-1430	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Novatel XU870",
@@ -1425,7 +1425,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1410-1430
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1410-1450 src/backup/1410-1450
 --- upstream/backup/1410-1450	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1410-1450	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1410-1450	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Novatel X950D",
@@ -1434,7 +1434,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1410-1450
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1410-2100 src/backup/1410-2100
 --- upstream/backup/1410-2100	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1410-2100	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1410-2100	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Novatel EV620",
@@ -1443,7 +1443,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1410-2100
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1410-2110 src/backup/1410-2110
 --- upstream/backup/1410-2110	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1410-2110	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1410-2110	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Novatel ES720",
@@ -1452,7 +1452,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1410-2110
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1410-2120 src/backup/1410-2120
 --- upstream/backup/1410-2120	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1410-2120	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1410-2120	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Novatel E725",
@@ -1461,7 +1461,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1410-2120
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1410-2130 src/backup/1410-2130
 --- upstream/backup/1410-2130	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1410-2130	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1410-2130	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Novatel ES620",
@@ -1470,7 +1470,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1410-2130
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1410-2400 src/backup/1410-2400
 --- upstream/backup/1410-2400	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1410-2400	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1410-2400	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Novatel EU730",
@@ -1479,7 +1479,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1410-2400
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1410-2410 src/backup/1410-2410
 --- upstream/backup/1410-2410	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1410-2410	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1410-2410	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Novatel EU740",
@@ -1488,7 +1488,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1410-2410
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1410-2420 src/backup/1410-2420
 --- upstream/backup/1410-2420	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1410-2420	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1410-2420	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Novatel EU870D",
@@ -1497,7 +1497,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1410-2420
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1410-4100 src/backup/1410-4100
 --- upstream/backup/1410-4100	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1410-4100	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1410-4100	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Novatel MC727/U727",
@@ -1506,7 +1506,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1410-4100
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1410-4400 src/backup/1410-4400
 --- upstream/backup/1410-4400	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1410-4400	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1410-4400	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Novatel Ovation MC930D/MC950D",
@@ -1515,7 +1515,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1410-4400
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1410-6000 src/backup/1410-6000
 --- upstream/backup/1410-6000	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1410-6000	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1410-6000	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Novatel USB760",
@@ -1524,7 +1524,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1410-6000
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1410-6001 src/backup/1410-6001
 --- upstream/backup/1410-6001	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1410-6001	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1410-6001	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Novatel USB760",
@@ -1533,7 +1533,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1410-6001
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1410-6002 src/backup/1410-6002
 --- upstream/backup/1410-6002	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1410-6002	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1410-6002	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Novatel USB760 3G",
@@ -1542,7 +1542,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1410-6002
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1410-6010 src/backup/1410-6010
 --- upstream/backup/1410-6010	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1410-6010	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1410-6010	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Novatel MC780",
@@ -1551,7 +1551,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1410-6010
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1410-7001 src/backup/1410-7001
 --- upstream/backup/1410-7001	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1410-7001	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1410-7001	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Novatel MiFi 2372",
@@ -1560,7 +1560,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1410-7001
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1410-7003 src/backup/1410-7003
 --- upstream/backup/1410-7003	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1410-7003	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1410-7003	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Novatel MiFi 2372",
@@ -1569,7 +1569,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1410-7003
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1410-7030 src/backup/1410-7030
 --- upstream/backup/1410-7030	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1410-7030	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1410-7030	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Novatel USB998",
@@ -1578,7 +1578,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1410-7030
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1410-7031 src/backup/1410-7031
 --- upstream/backup/1410-7031	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1410-7031	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1410-7031	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,6 @@
 +{
 +	"desc": "Novatel USB679",
@@ -1588,7 +1588,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1410-7031
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1410-7041 src/backup/1410-7041
 --- upstream/backup/1410-7041	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1410-7041	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1410-7041	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Novatel MF3470",
@@ -1597,7 +1597,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1410-7041
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1410-7042 src/backup/1410-7042
 --- upstream/backup/1410-7042	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1410-7042	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1410-7042	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Novatel Ovation MC545/MC547",
@@ -1606,7 +1606,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1410-7042
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1410-9011 src/backup/1410-9011
 --- upstream/backup/1410-9011	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1410-9011	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1410-9011	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,4 @@
 +{
 +	"desc": "Novatel E371",
@@ -1614,7 +1614,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1410-9011
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1410-b001 src/backup/1410-b001
 --- upstream/backup/1410-b001	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1410-b001	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1410-b001	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,4 @@
 +{
 +	"desc": "Novatel MC551/USB551L",
@@ -1622,7 +1622,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1410-b001
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1529-3100 src/backup/1529-3100
 --- upstream/backup/1529-3100	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1529-3100	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1529-3100	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,6 @@
 +{
 +	"desc": "UBIQUAM U-100/105/200/300/520",
@@ -1632,7 +1632,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1529-3100
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/16d5-6202 src/backup/16d5-6202
 --- upstream/backup/16d5-6202	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/16d5-6202	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/16d5-6202	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "AnyData ADU-620UW",
@@ -1641,7 +1641,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/16d5-6202
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/16d5-6501 src/backup/16d5-6501
 --- upstream/backup/16d5-6501	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/16d5-6501	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/16d5-6501	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "AnyData ADU-300A",
@@ -1650,7 +1650,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/16d5-6501
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/16d5-6502 src/backup/16d5-6502
 --- upstream/backup/16d5-6502	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/16d5-6502	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/16d5-6502	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "AnyData ADU-500A",
@@ -1659,7 +1659,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/16d5-6502
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/16d5-6603 src/backup/16d5-6603
 --- upstream/backup/16d5-6603	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/16d5-6603	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/16d5-6603	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,6 @@
 +{
 +	"desc": "AnyData ADU-890WH",
@@ -1669,7 +1669,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/16d5-6603
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/16d5-900d src/backup/16d5-900d
 --- upstream/backup/16d5-900d	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/16d5-900d	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/16d5-900d	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,6 @@
 +{
 +	"desc": "AnyData ADU-890WH",
@@ -1679,7 +1679,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/16d5-900d
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/16d8-5141 src/backup/16d8-5141
 --- upstream/backup/16d8-5141	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/16d8-5141	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/16d8-5141	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,6 @@
 +{
 +	"desc": "Cmotech CNU-510",
@@ -1689,7 +1689,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/16d8-5141
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/16d8-5533 src/backup/16d8-5533
 --- upstream/backup/16d8-5533	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/16d8-5533	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/16d8-5533	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,6 @@
 +{
 +	"desc": "Cmotech CNU-550",
@@ -1699,7 +1699,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/16d8-5533
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/16d8-5543 src/backup/16d8-5543
 --- upstream/backup/16d8-5543	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/16d8-5543	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/16d8-5543	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,6 @@
 +{
 +	"desc": "Cmotech CNU-550",
@@ -1709,7 +1709,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/16d8-5543
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/16d8-5553 src/backup/16d8-5553
 --- upstream/backup/16d8-5553	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/16d8-5553	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/16d8-5553	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,6 @@
 +{
 +	"desc": "Cmotech CDU-550",
@@ -1719,7 +1719,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/16d8-5553
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/16d8-6002 src/backup/16d8-6002
 --- upstream/backup/16d8-6002	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/16d8-6002	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/16d8-6002	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Franklin U300",
@@ -1728,7 +1728,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/16d8-6002
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/16d8-6006 src/backup/16d8-6006
 --- upstream/backup/16d8-6006	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/16d8-6006	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/16d8-6006	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Cmotech CGU-628",
@@ -1737,7 +1737,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/16d8-6006
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/16d8-6007 src/backup/16d8-6007
 --- upstream/backup/16d8-6007	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/16d8-6007	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/16d8-6007	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,4 @@
 +{
 +	"desc": "Cmotech CHE-628S",
@@ -1745,7 +1745,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/16d8-6007
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/16d8-6008 src/backup/16d8-6008
 --- upstream/backup/16d8-6008	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/16d8-6008	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/16d8-6008	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,4 @@
 +{
 +	"desc": "Franklin U301",
@@ -1753,7 +1753,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/16d8-6008
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/16d8-6522 src/backup/16d8-6522
 --- upstream/backup/16d8-6522	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/16d8-6522	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/16d8-6522	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,6 @@
 +{
 +	"desc": "Cmotech CDU-650",
@@ -1763,7 +1763,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/16d8-6522
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/16d8-6523 src/backup/16d8-6523
 --- upstream/backup/16d8-6523	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/16d8-6523	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/16d8-6523	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,6 @@
 +{
 +	"desc": "Cmotech CCU-650U",
@@ -1773,7 +1773,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/16d8-6523
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/16d8-6532 src/backup/16d8-6532
 --- upstream/backup/16d8-6532	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/16d8-6532	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/16d8-6532	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,6 @@
 +{
 +	"desc": "Cmotech CCU-650",
@@ -1783,7 +1783,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/16d8-6532
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/16d8-6533 src/backup/16d8-6533
 --- upstream/backup/16d8-6533	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/16d8-6533	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/16d8-6533	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,6 @@
 +{
 +	"desc": "Cmotech CNM-650",
@@ -1793,7 +1793,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/16d8-6533
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/16d8-6543 src/backup/16d8-6543
 --- upstream/backup/16d8-6543	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/16d8-6543	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/16d8-6543	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,6 @@
 +{
 +	"desc": "Cmotech CNU-650",
@@ -1803,7 +1803,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/16d8-6543
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/16d8-680a src/backup/16d8-680a
 --- upstream/backup/16d8-680a	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/16d8-680a	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/16d8-680a	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,6 @@
 +{
 +	"desc": "Cmotech CDU-680",
@@ -1813,7 +1813,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/16d8-680a
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0001 src/backup/19d2-0001
 --- upstream/backup/19d2-0001	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-0001	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-0001	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "ONDA MT505UP/ZTE",
@@ -1822,7 +1822,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0001
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0002 src/backup/19d2-0002
 --- upstream/backup/19d2-0002	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-0002	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-0002	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,4 @@
 +{
 +	"desc": "ZTE ET502HS/MT505UP/MF632",
@@ -1830,7 +1830,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0002
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0015 src/backup/19d2-0015
 --- upstream/backup/19d2-0015	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-0015	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-0015	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "ONDA MT505UP/ZTE",
@@ -1839,7 +1839,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0015
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0016 src/backup/19d2-0016
 --- upstream/backup/19d2-0016	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-0016	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-0016	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "ONDA MF110/ZTE",
@@ -1848,7 +1848,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0016
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0017 src/backup/19d2-0017
 --- upstream/backup/19d2-0017	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-0017	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-0017	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,4 @@
 +{
 +	"desc": "ONDA MT505UP/ZTE",
@@ -1856,7 +1856,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0017
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0018 src/backup/19d2-0018
 --- upstream/backup/19d2-0018	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-0018	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-0018	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "ONDA MSA110UP/ZTE",
@@ -1865,7 +1865,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0018
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0019 src/backup/19d2-0019
 --- upstream/backup/19d2-0019	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-0019	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-0019	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,4 @@
 +{
 +	"desc": "ONDA MT689DC/ZTE",
@@ -1873,7 +1873,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0019
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0022 src/backup/19d2-0022
 --- upstream/backup/19d2-0022	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-0022	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-0022	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "ZTE K2525",
@@ -1882,7 +1882,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0022
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0024 src/backup/19d2-0024
 --- upstream/backup/19d2-0024	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-0024	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-0024	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "ONDA MT503HSA",
@@ -1891,7 +1891,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0024
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0025 src/backup/19d2-0025
 --- upstream/backup/19d2-0025	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-0025	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-0025	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,4 @@
 +{
 +	"desc": "ZTE MF628",
@@ -1899,7 +1899,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0025
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0031 src/backup/19d2-0031
 --- upstream/backup/19d2-0031	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-0031	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-0031	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,4 @@
 +{
 +	"desc": "ZTE MF110/MF112/MF626",
@@ -1907,7 +1907,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0031
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0033 src/backup/19d2-0033
 --- upstream/backup/19d2-0033	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-0033	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-0033	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "ZTE MF636",
@@ -1916,7 +1916,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0033
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0037 src/backup/19d2-0037
 --- upstream/backup/19d2-0037	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-0037	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-0037	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "ONDA MT505UP/ZTE",
@@ -1925,7 +1925,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0037
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0039 src/backup/19d2-0039
 --- upstream/backup/19d2-0039	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-0039	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-0039	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "ZTE MF100",
@@ -1934,7 +1934,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0039
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0042 src/backup/19d2-0042
 --- upstream/backup/19d2-0042	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-0042	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-0042	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,4 @@
 +{
 +	"desc": "ZTE MF190",
@@ -1942,7 +1942,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0042
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0052 src/backup/19d2-0052
 --- upstream/backup/19d2-0052	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-0052	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-0052	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,4 @@
 +{
 +	"desc": "ONDA MT505UP/ZTE",
@@ -1950,7 +1950,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0052
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0055 src/backup/19d2-0055
 --- upstream/backup/19d2-0055	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-0055	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-0055	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,4 @@
 +{
 +	"desc": "ONDA MT505UP/ZTE",
@@ -1958,7 +1958,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0055
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0057 src/backup/19d2-0057
 --- upstream/backup/19d2-0057	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-0057	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-0057	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "AIKO 83D",
@@ -1967,7 +1967,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0057
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0063 src/backup/19d2-0063
 --- upstream/backup/19d2-0063	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-0063	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-0063	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,4 @@
 +{
 +	"desc": "ZTE K3565-Z",
@@ -1975,7 +1975,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0063
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0064 src/backup/19d2-0064
 --- upstream/backup/19d2-0064	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-0064	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-0064	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "ZTE MF627",
@@ -1984,7 +1984,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0064
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0066 src/backup/19d2-0066
 --- upstream/backup/19d2-0066	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-0066	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-0066	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "ZTE MF626",
@@ -1993,7 +1993,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0066
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0073 src/backup/19d2-0073
 --- upstream/backup/19d2-0073	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-0073	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-0073	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "ZTE A580",
@@ -2002,7 +2002,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0073
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0079 src/backup/19d2-0079
 --- upstream/backup/19d2-0079	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-0079	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-0079	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "ZTE A353",
@@ -2011,7 +2011,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0079
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0082 src/backup/19d2-0082
 --- upstream/backup/19d2-0082	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-0082	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-0082	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "ZTE MF668/MF190",
@@ -2020,7 +2020,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0082
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0086 src/backup/19d2-0086
 --- upstream/backup/19d2-0086	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-0086	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-0086	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "ZTE MF645",
@@ -2029,7 +2029,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0086
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0091 src/backup/19d2-0091
 --- upstream/backup/19d2-0091	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-0091	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-0091	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "ZTE MF636",
@@ -2038,7 +2038,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0091
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0094 src/backup/19d2-0094
 --- upstream/backup/19d2-0094	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-0094	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-0094	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "ZTE AC581",
@@ -2047,7 +2047,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0094
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0104 src/backup/19d2-0104
 --- upstream/backup/19d2-0104	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-0104	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-0104	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,4 @@
 +{
 +	"desc": "ZTE K4505-Z",
@@ -2055,7 +2055,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0104
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0108 src/backup/19d2-0108
 --- upstream/backup/19d2-0108	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-0108	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-0108	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "ONDA MT505UP/ZTE",
@@ -2064,7 +2064,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0108
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0116 src/backup/19d2-0116
 --- upstream/backup/19d2-0116	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-0116	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-0116	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,6 @@
 +{
 +	"desc": "ZTE MF651",
@@ -2074,7 +2074,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0116
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0117 src/backup/19d2-0117
 --- upstream/backup/19d2-0117	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-0117	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-0117	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "ZTE MF112",
@@ -2083,7 +2083,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0117
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0121 src/backup/19d2-0121
 --- upstream/backup/19d2-0121	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-0121	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-0121	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,4 @@
 +{
 +	"desc": "ZTE MF637",
@@ -2091,7 +2091,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0121
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0124 src/backup/19d2-0124
 --- upstream/backup/19d2-0124	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-0124	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-0124	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,4 @@
 +{
 +	"desc": "ZTE MF110",
@@ -2099,7 +2099,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0124
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0128 src/backup/19d2-0128
 --- upstream/backup/19d2-0128	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-0128	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-0128	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "ZTE MF651",
@@ -2108,7 +2108,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0128
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0142 src/backup/19d2-0142
 --- upstream/backup/19d2-0142	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-0142	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-0142	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,6 @@
 +{
 +	"desc": "ZTE MF665C",
@@ -2118,7 +2118,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0142
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0143 src/backup/19d2-0143
 --- upstream/backup/19d2-0143	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-0143	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-0143	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,6 @@
 +{
 +	"desc": "ZTE MF190B",
@@ -2128,7 +2128,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0143
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0152 src/backup/19d2-0152
 --- upstream/backup/19d2-0152	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-0152	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-0152	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "ZTE AC583",
@@ -2137,7 +2137,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0152
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0157 src/backup/19d2-0157
 --- upstream/backup/19d2-0157	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-0157	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-0157	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,4 @@
 +{
 +	"desc": "ZTE MF683",
@@ -2145,7 +2145,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0157
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0167 src/backup/19d2-0167
 --- upstream/backup/19d2-0167	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-0167	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-0167	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,4 @@
 +{
 +	"desc": "ZTE MF820D",
@@ -2153,7 +2153,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0167
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0170 src/backup/19d2-0170
 --- upstream/backup/19d2-0170	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-0170	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-0170	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,6 @@
 +{
 +	"desc": "ZTE A371",
@@ -2163,7 +2163,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0170
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0199 src/backup/19d2-0199
 --- upstream/backup/19d2-0199	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-0199	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-0199	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,4 @@
 +{
 +	"desc": "ZTE MF820S",
@@ -2171,7 +2171,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0199
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0257 src/backup/19d2-0257
 --- upstream/backup/19d2-0257	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-0257	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-0257	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,4 @@
 +{
 +	"desc": "ZTE MF821",
@@ -2179,7 +2179,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0257
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0265 src/backup/19d2-0265
 --- upstream/backup/19d2-0265	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-0265	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-0265	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,4 @@
 +{
 +	"desc": "Onda MT8205/ZTE",
@@ -2187,7 +2187,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0265
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0284 src/backup/19d2-0284
 --- upstream/backup/19d2-0284	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-0284	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-0284	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,4 @@
 +{
 +	"desc": "ZTE MF880",
@@ -2195,7 +2195,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0284
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0326 src/backup/19d2-0326
 --- upstream/backup/19d2-0326	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-0326	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-0326	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,4 @@
 +{
 +	"desc": "ZTE MF821D",
@@ -2203,7 +2203,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-0326
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-1003 src/backup/19d2-1003
 --- upstream/backup/19d2-1003	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-1003	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-1003	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,6 @@
 +{
 +	"desc": "ZTE K3805-Z",
@@ -2213,7 +2213,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-1003
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-1008 src/backup/19d2-1008
 --- upstream/backup/19d2-1008	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-1008	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-1008	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,4 @@
 +{
 +	"desc": "ZTE K3570-Z",
@@ -2221,7 +2221,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-1008
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-1010 src/backup/19d2-1010
 --- upstream/backup/19d2-1010	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-1010	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-1010	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,4 @@
 +{
 +	"desc": "ZTE K3571-Z",
@@ -2229,7 +2229,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-1010
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-1015 src/backup/19d2-1015
 --- upstream/backup/19d2-1015	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-1015	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-1015	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,6 @@
 +{
 +	"desc": "ZTE K3806-Z",
@@ -2239,7 +2239,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-1015
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-1018 src/backup/19d2-1018
 --- upstream/backup/19d2-1018	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-1018	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-1018	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,4 @@
 +{
 +	"desc": "ZTE K5006-Z",
@@ -2247,7 +2247,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-1018
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-1172 src/backup/19d2-1172
 --- upstream/backup/19d2-1172	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-1172	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-1172	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,6 @@
 +{
 +	"desc": "ZTE K4510-Z",
@@ -2257,7 +2257,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-1172
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-1173 src/backup/19d2-1173
 --- upstream/backup/19d2-1173	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-1173	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-1173	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,6 @@
 +{
 +	"desc": "ZTE K4510-Z",
@@ -2267,7 +2267,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-1173
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-1176 src/backup/19d2-1176
 --- upstream/backup/19d2-1176	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-1176	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-1176	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,4 @@
 +{
 +	"desc": "ZTE K3770-Z",
@@ -2275,7 +2275,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-1176
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-1177 src/backup/19d2-1177
 --- upstream/backup/19d2-1177	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-1177	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-1177	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,6 @@
 +{
 +	"desc": "ZTE K3770-Z",
@@ -2285,7 +2285,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-1177
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-1181 src/backup/19d2-1181
 --- upstream/backup/19d2-1181	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-1181	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-1181	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,6 @@
 +{
 +	"desc": "ZTE K3772-Z",
@@ -2295,7 +2295,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-1181
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-1203 src/backup/19d2-1203
 --- upstream/backup/19d2-1203	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-1203	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-1203	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,6 @@
 +{
 +	"desc": "ZTE MF691",
@@ -2305,7 +2305,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-1203
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-1208 src/backup/19d2-1208
 --- upstream/backup/19d2-1208	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-1208	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-1208	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,6 @@
 +{
 +	"desc": "ZTE MF192",
@@ -2315,7 +2315,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-1208
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-1211 src/backup/19d2-1211
 --- upstream/backup/19d2-1211	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-1211	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-1211	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,6 @@
 +{
 +	"desc": "ZTE MF195",
@@ -2325,7 +2325,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-1211
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-1212 src/backup/19d2-1212
 --- upstream/backup/19d2-1212	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-1212	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-1212	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,6 @@
 +{
 +	"desc": "ZTE MF195",
@@ -2335,7 +2335,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-1212
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-1217 src/backup/19d2-1217
 --- upstream/backup/19d2-1217	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-1217	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-1217	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,6 @@
 +{
 +	"desc": "ZTE MF192",
@@ -2345,7 +2345,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-1217
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-1218 src/backup/19d2-1218
 --- upstream/backup/19d2-1218	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-1218	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-1218	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,6 @@
 +{
 +	"desc": "ZTE MF192",
@@ -2355,7 +2355,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-1218
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-1220 src/backup/19d2-1220
 --- upstream/backup/19d2-1220	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-1220	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-1220	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,6 @@
 +{
 +	"desc": "ZTE MF192",
@@ -2365,7 +2365,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-1220
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-1222 src/backup/19d2-1222
 --- upstream/backup/19d2-1222	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-1222	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-1222	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,6 @@
 +{
 +	"desc": "ZTE MF192",
@@ -2375,7 +2375,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-1222
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-1245 src/backup/19d2-1245
 --- upstream/backup/19d2-1245	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-1245	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-1245	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,4 @@
 +{
 +	"desc": "ZTE MF190",
@@ -2383,7 +2383,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-1245
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-1252 src/backup/19d2-1252
 --- upstream/backup/19d2-1252	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-1252	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-1252	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,4 @@
 +{
 +	"desc": "ZTE MF669",
@@ -2391,7 +2391,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-1252
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-1254 src/backup/19d2-1254
 --- upstream/backup/19d2-1254	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-1254	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-1254	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,4 @@
 +{
 +	"desc": "ZTE MF190",
@@ -2399,7 +2399,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-1254
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-1256 src/backup/19d2-1256
 --- upstream/backup/19d2-1256	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-1256	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-1256	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,4 @@
 +{
 +	"desc": "ZTE MF190",
@@ -2407,7 +2407,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-1256
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-1270 src/backup/19d2-1270
 --- upstream/backup/19d2-1270	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-1270	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-1270	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,4 @@
 +{
 +	"desc": "ZTE MF667",
@@ -2415,7 +2415,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-1270
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-1401 src/backup/19d2-1401
 --- upstream/backup/19d2-1401	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-1401	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-1401	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,4 @@
 +{
 +	"desc": "ZTE MF60",
@@ -2423,7 +2423,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-1401
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-1402 src/backup/19d2-1402
 --- upstream/backup/19d2-1402	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-1402	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-1402	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,4 @@
 +{
 +	"desc": "ZTE MF60",
@@ -2431,7 +2431,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-1402
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-1426 src/backup/19d2-1426
 --- upstream/backup/19d2-1426	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-1426	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-1426	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,4 @@
 +{
 +	"desc": "ZTE MF91D",
@@ -2439,7 +2439,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-1426
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-1512 src/backup/19d2-1512
 --- upstream/backup/19d2-1512	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-1512	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-1512	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,6 @@
 +{
 +	"desc": "ZTE MFxxx",
@@ -2449,7 +2449,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-1512
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-1515 src/backup/19d2-1515
 --- upstream/backup/19d2-1515	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-1515	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-1515	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,6 @@
 +{
 +	"desc": "ZTE MF192",
@@ -2459,7 +2459,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-1515
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-1518 src/backup/19d2-1518
 --- upstream/backup/19d2-1518	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-1518	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-1518	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,6 @@
 +{
 +	"desc": "ZTE MF192",
@@ -2469,7 +2469,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-1518
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-1519 src/backup/19d2-1519
 --- upstream/backup/19d2-1519	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-1519	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-1519	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,6 @@
 +{
 +	"desc": "ZTE MF192",
@@ -2479,7 +2479,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-1519
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-1522 src/backup/19d2-1522
 --- upstream/backup/19d2-1522	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-1522	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-1522	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,6 @@
 +{
 +	"desc": "ZTE MF652",
@@ -2489,7 +2489,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-1522
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-1525 src/backup/19d2-1525
 --- upstream/backup/19d2-1525	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-1525	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-1525	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,6 @@
 +{
 +	"desc": "ZTE MF591",
@@ -2499,7 +2499,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-1525
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-1527 src/backup/19d2-1527
 --- upstream/backup/19d2-1527	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-1527	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-1527	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,6 @@
 +{
 +	"desc": "ZTE MF196",
@@ -2509,7 +2509,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-1527
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-1537 src/backup/19d2-1537
 --- upstream/backup/19d2-1537	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-1537	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-1537	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,6 @@
 +{
 +	"desc": "ZTE MF190J",
@@ -2519,7 +2519,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-1537
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-1538 src/backup/19d2-1538
 --- upstream/backup/19d2-1538	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-1538	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-1538	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,6 @@
 +{
 +	"desc": "ZTE MF190J",
@@ -2529,7 +2529,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-1538
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-1544 src/backup/19d2-1544
 --- upstream/backup/19d2-1544	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-1544	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-1544	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,6 @@
 +{
 +	"desc": "ZTE MF190J",
@@ -2539,7 +2539,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-1544
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-2002 src/backup/19d2-2002
 --- upstream/backup/19d2-2002	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-2002	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-2002	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,4 @@
 +{
 +	"desc": "ZTE K3765-Z",
@@ -2547,7 +2547,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-2002
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-2003 src/backup/19d2-2003
 --- upstream/backup/19d2-2003	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-2003	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-2003	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "ZTE MF180",
@@ -2556,7 +2556,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-2003
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-ffdd src/backup/19d2-ffdd
 --- upstream/backup/19d2-ffdd	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-ffdd	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-ffdd	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "ZTE AC682",
@@ -2565,7 +2565,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-ffdd
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-ffe4 src/backup/19d2-ffe4
 --- upstream/backup/19d2-ffe4	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-ffe4	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-ffe4	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,6 @@
 +{
 +	"desc": "ZTE AC3781",
@@ -2575,7 +2575,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-ffe4
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-ffe9 src/backup/19d2-ffe9
 --- upstream/backup/19d2-ffe9	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-ffe9	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-ffe9	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "ZTE AC2738",
@@ -2584,7 +2584,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-ffe9
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-fff1 src/backup/19d2-fff1
 --- upstream/backup/19d2-fff1	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-fff1	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-fff1	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "ZTE generic",
@@ -2593,7 +2593,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-fff1
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-fffb src/backup/19d2-fffb
 --- upstream/backup/19d2-fffb	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-fffb	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-fffb	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "ZTE MG880",
@@ -2602,7 +2602,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-fffb
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-fffc src/backup/19d2-fffc
 --- upstream/backup/19d2-fffc	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-fffc	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-fffc	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "ZTE MG880",
@@ -2611,7 +2611,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-fffc
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-fffd src/backup/19d2-fffd
 --- upstream/backup/19d2-fffd	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-fffd	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-fffd	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "ZTE MG880",
@@ -2620,7 +2620,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-fffd
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-fffe src/backup/19d2-fffe
 --- upstream/backup/19d2-fffe	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-fffe	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-fffe	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "ZTE AC8700",
@@ -2629,7 +2629,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-fffe
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-ffff src/backup/19d2-ffff
 --- upstream/backup/19d2-ffff	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/19d2-ffff	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/19d2-ffff	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "ZTE AC8710",
@@ -2638,7 +2638,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/19d2-ffff
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1a8d-1002 src/backup/1a8d-1002
 --- upstream/backup/1a8d-1002	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1a8d-1002	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1a8d-1002	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Bandrich C-100/C-120",
@@ -2647,7 +2647,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1a8d-1002
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1a8d-1003 src/backup/1a8d-1003
 --- upstream/backup/1a8d-1003	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1a8d-1003	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1a8d-1003	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Bandrich C-100/C-120",
@@ -2656,7 +2656,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1a8d-1003
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1a8d-1007 src/backup/1a8d-1007
 --- upstream/backup/1a8d-1007	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1a8d-1007	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1a8d-1007	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Bandrich C-270",
@@ -2665,7 +2665,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1a8d-1007
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1a8d-1009 src/backup/1a8d-1009
 --- upstream/backup/1a8d-1009	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1a8d-1009	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1a8d-1009	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Bandrich C-170/C-180",
@@ -2674,7 +2674,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1a8d-1009
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1a8d-100c src/backup/1a8d-100c
 --- upstream/backup/1a8d-100c	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1a8d-100c	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1a8d-100c	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Bandrich C-320",
@@ -2683,7 +2683,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1a8d-100c
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1a8d-100d src/backup/1a8d-100d
 --- upstream/backup/1a8d-100d	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1a8d-100d	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1a8d-100d	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Bandrich C-508",
@@ -2692,7 +2692,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1a8d-100d
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1a8d-2006 src/backup/1a8d-2006
 --- upstream/backup/1a8d-2006	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1a8d-2006	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1a8d-2006	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,6 @@
 +{
 +	"desc": "Bandrich C-33x",
@@ -2702,7 +2702,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1a8d-2006
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1bbb-0000 src/backup/1bbb-0000
 --- upstream/backup/1bbb-0000	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1bbb-0000	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1bbb-0000	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Alcatel X060S/X070S/X080S/X200",
@@ -2711,7 +2711,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1bbb-0000
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1bbb-0012 src/backup/1bbb-0012
 --- upstream/backup/1bbb-0012	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1bbb-0012	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1bbb-0012	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,6 @@
 +{
 +	"desc": "Alcatel X085C",
@@ -2721,7 +2721,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1bbb-0012
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1bbb-0017 src/backup/1bbb-0017
 --- upstream/backup/1bbb-0017	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1bbb-0017	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1bbb-0017	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Alcatel X220L",
@@ -2730,7 +2730,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1bbb-0017
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1bbb-0052 src/backup/1bbb-0052
 --- upstream/backup/1bbb-0052	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1bbb-0052	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1bbb-0052	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Alcatel X220L",
@@ -2739,7 +2739,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1bbb-0052
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1bbb-00b7 src/backup/1bbb-00b7
 --- upstream/backup/1bbb-00b7	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1bbb-00b7	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1bbb-00b7	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Alcatel X600",
@@ -2748,7 +2748,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1bbb-00b7
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1bbb-00ca src/backup/1bbb-00ca
 --- upstream/backup/1bbb-00ca	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1bbb-00ca	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1bbb-00ca	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,6 @@
 +{
 +	"desc": "Alcatel X080C",
@@ -2758,7 +2758,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1bbb-00ca
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1bbb-011e src/backup/1bbb-011e
 --- upstream/backup/1bbb-011e	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1bbb-011e	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1bbb-011e	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,4 @@
 +{
 +	"desc": "Alcatel L100V,",
@@ -2766,7 +2766,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1bbb-011e
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1bbb-0203 src/backup/1bbb-0203
 --- upstream/backup/1bbb-0203	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1bbb-0203	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1bbb-0203	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,4 @@
 +{
 +	"desc": "Alcatel L800Z,",
@@ -2774,7 +2774,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1bbb-0203
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1c9e-6060 src/backup/1c9e-6060
 --- upstream/backup/1c9e-6060	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1c9e-6060	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1c9e-6060	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,6 @@
 +{
 +	"desc": "Alcatel X020 & X030",
@@ -2784,7 +2784,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1c9e-6060
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1c9e-6061 src/backup/1c9e-6061
 --- upstream/backup/1c9e-6061	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1c9e-6061	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1c9e-6061	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,6 @@
 +{
 +	"desc": "Alcatel X020 & X030",
@@ -2794,7 +2794,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1c9e-6061
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1c9e-9000 src/backup/1c9e-9000
 --- upstream/backup/1c9e-9000	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1c9e-9000	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1c9e-9000	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,6 @@
 +{
 +	"desc": "4G Systems XS Stick W14",
@@ -2804,7 +2804,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1c9e-9000
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1c9e-9603 src/backup/1c9e-9603
 --- upstream/backup/1c9e-9603	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1c9e-9603	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1c9e-9603	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "4G Systems XS Stick W14",
@@ -2813,7 +2813,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1c9e-9603
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1c9e-9605 src/backup/1c9e-9605
 --- upstream/backup/1c9e-9605	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1c9e-9605	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1c9e-9605	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "4G Systems XS Stick W14",
@@ -2822,7 +2822,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1c9e-9605
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1c9e-9607 src/backup/1c9e-9607
 --- upstream/backup/1c9e-9607	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1c9e-9607	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1c9e-9607	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "4G Systems XS Stick W14",
@@ -2831,7 +2831,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1c9e-9607
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1c9e-9801 src/backup/1c9e-9801
 --- upstream/backup/1c9e-9801	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1c9e-9801	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1c9e-9801	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,6 @@
 +{
 +	"desc": "4G Systems XS Stick W21",
@@ -2841,7 +2841,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1c9e-9801
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1c9e-9900 src/backup/1c9e-9900
 --- upstream/backup/1c9e-9900	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1c9e-9900	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1c9e-9900	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,6 @@
 +{
 +	"desc": "Softbank C02LC",
@@ -2851,7 +2851,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1c9e-9900
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1e0e-9000 src/backup/1e0e-9000
 --- upstream/backup/1e0e-9000	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1e0e-9000	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1e0e-9000	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "PROLink PHS100, Hyundai MB-810, A-Link 3GU",
@@ -2860,7 +2860,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1e0e-9000
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1e0e-9100 src/backup/1e0e-9100
 --- upstream/backup/1e0e-9100	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1e0e-9100	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1e0e-9100	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "PROLink PHS300, A-Link 3GU",
@@ -2869,7 +2869,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1e0e-9100
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1e0e-9200 src/backup/1e0e-9200
 --- upstream/backup/1e0e-9200	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1e0e-9200	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1e0e-9200	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "PROLink PHS100, Hyundai MB-810, A-Link 3GU",
@@ -2878,7 +2878,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1e0e-9200
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1e0e-ce16 src/backup/1e0e-ce16
 --- upstream/backup/1e0e-ce16	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1e0e-ce16	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1e0e-ce16	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "D-Link DWM-162-U5, Micromax MMX 300c",
@@ -2887,7 +2887,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1e0e-ce16
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/1e0e-cefe src/backup/1e0e-cefe
 --- upstream/backup/1e0e-cefe	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/1e0e-cefe	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/1e0e-cefe	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,6 @@
 +{
 +	"desc": "D-Link DWM-162-U5, Micromax MMX 300c",
@@ -2897,7 +2897,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/1e0e-cefe
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/2001-7d00 src/backup/2001-7d00
 --- upstream/backup/2001-7d00	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/2001-7d00	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/2001-7d00	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,6 @@
 +{
 +	"desc": "D-Link DWM-156 A6",
@@ -2907,7 +2907,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/2001-7d00
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/2001-7d01 src/backup/2001-7d01
 --- upstream/backup/2001-7d01	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/2001-7d01	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/2001-7d01	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "D-Link DWM-156 A7",
@@ -2916,7 +2916,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/2001-7d01
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/2001-7d02 src/backup/2001-7d02
 --- upstream/backup/2001-7d02	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/2001-7d02	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/2001-7d02	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "D-Link DWM-156 A7",
@@ -2925,7 +2925,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/2001-7d02
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/2001-7d03 src/backup/2001-7d03
 --- upstream/backup/2001-7d03	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/2001-7d03	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/2001-7d03	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "D-Link DWM-156 A7",
@@ -2934,7 +2934,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/2001-7d03
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/211f-6801 src/backup/211f-6801
 --- upstream/backup/211f-6801	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/211f-6801	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/211f-6801	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Celot K-3000/CT-650/CT-680",
@@ -2943,7 +2943,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/211f-6801
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/2357-0201 src/backup/2357-0201
 --- upstream/backup/2357-0201	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/2357-0201	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/2357-0201	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,4 @@
 +{
 +	"desc": "TP-Link MA180",
@@ -2951,7 +2951,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/2357-0201
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/2357-0202 src/backup/2357-0202
 --- upstream/backup/2357-0202	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/2357-0202	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/2357-0202	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,4 @@
 +{
 +	"desc": "TP-Link MA180",
@@ -2959,7 +2959,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/2357-0202
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/2357-0203 src/backup/2357-0203
 --- upstream/backup/2357-0203	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/2357-0203	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/2357-0203	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,4 @@
 +{
 +	"desc": "TP-Link MA180",
@@ -2967,7 +2967,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/2357-0203
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/2357-9000 src/backup/2357-9000
 --- upstream/backup/2357-9000	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/2357-9000	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/2357-9000	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,4 @@
 +{
 +	"desc": "TP-Link MA260",
@@ -2975,7 +2975,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/2357-9000
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/2c7c-0121 src/backup/2c7c-0121
 --- upstream/backup/2c7c-0121	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/2c7c-0121	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/2c7c-0121	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,11 @@
 +{
 +	"desc": "Quectel EC21",
@@ -2990,7 +2990,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/2c7c-0121
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/2c7c-0125 src/backup/2c7c-0125
 --- upstream/backup/2c7c-0125	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/2c7c-0125	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/2c7c-0125	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,11 @@
 +{
 +	"desc": "Quectel EC25",
@@ -3005,7 +3005,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/2c7c-0125
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/2c7c-0296 src/backup/2c7c-0296
 --- upstream/backup/2c7c-0296	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/2c7c-0296	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/2c7c-0296	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,11 @@
 +{
 +	"desc": "Quectel BG96",
@@ -3020,7 +3020,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/2c7c-0296
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/2c7c-0306 src/backup/2c7c-0306
 --- upstream/backup/2c7c-0306	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/2c7c-0306	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/2c7c-0306	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,11 @@
 +{
 +	"desc": "Quectel EG06",
@@ -3035,7 +3035,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/2c7c-0306
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/2c7c-0512 src/backup/2c7c-0512
 --- upstream/backup/2c7c-0512	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/2c7c-0512	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/2c7c-0512	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,11 @@
 +{
 +	"desc": "Quectel EG12/EG18",
@@ -3050,7 +3050,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/2c7c-0512
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/413c-8114 src/backup/413c-8114
 --- upstream/backup/413c-8114	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/413c-8114	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/413c-8114	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Dell 5700",
@@ -3059,7 +3059,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/413c-8114
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/413c-8115 src/backup/413c-8115
 --- upstream/backup/413c-8115	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/413c-8115	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/413c-8115	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Dell 5500",
@@ -3068,7 +3068,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/413c-8115
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/413c-8116 src/backup/413c-8116
 --- upstream/backup/413c-8116	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/413c-8116	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/413c-8116	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Dell 5505",
@@ -3077,7 +3077,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/413c-8116
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/413c-8117 src/backup/413c-8117
 --- upstream/backup/413c-8117	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/413c-8117	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/413c-8117	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Dell 5700",
@@ -3086,7 +3086,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/413c-8117
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/413c-8118 src/backup/413c-8118
 --- upstream/backup/413c-8118	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/413c-8118	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/413c-8118	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Dell 5510",
@@ -3095,7 +3095,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/413c-8118
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/413c-8128 src/backup/413c-8128
 --- upstream/backup/413c-8128	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/413c-8128	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/413c-8128	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Dell 5700",
@@ -3104,7 +3104,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/413c-8128
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/413c-8129 src/backup/413c-8129
 --- upstream/backup/413c-8129	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/413c-8129	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/413c-8129	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Dell 5700",
@@ -3113,7 +3113,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/413c-8129
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/413c-8133 src/backup/413c-8133
 --- upstream/backup/413c-8133	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/413c-8133	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/413c-8133	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Dell 5720",
@@ -3122,7 +3122,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/413c-8133
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/413c-8134 src/backup/413c-8134
 --- upstream/backup/413c-8134	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/413c-8134	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/413c-8134	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Dell 5720",
@@ -3131,7 +3131,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/413c-8134
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/413c-8135 src/backup/413c-8135
 --- upstream/backup/413c-8135	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/413c-8135	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/413c-8135	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Dell 5720",
@@ -3140,7 +3140,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/413c-8135
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/413c-8136 src/backup/413c-8136
 --- upstream/backup/413c-8136	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/413c-8136	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/413c-8136	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Dell 5520",
@@ -3149,7 +3149,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/413c-8136
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/413c-8137 src/backup/413c-8137
 --- upstream/backup/413c-8137	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/413c-8137	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/413c-8137	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Dell 5520",
@@ -3158,7 +3158,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/413c-8137
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/413c-8138 src/backup/413c-8138
 --- upstream/backup/413c-8138	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/413c-8138	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/413c-8138	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Dell 5520",
@@ -3167,7 +3167,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/413c-8138
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/413c-8147 src/backup/413c-8147
 --- upstream/backup/413c-8147	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/413c-8147	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/413c-8147	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,6 @@
 +{
 +	"desc": "Dell 5530",
@@ -3177,7 +3177,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/413c-8147
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/413c-8180 src/backup/413c-8180
 --- upstream/backup/413c-8180	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/413c-8180	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/413c-8180	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Dell 5730",
@@ -3186,7 +3186,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/413c-8180
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/413c-8181 src/backup/413c-8181
 --- upstream/backup/413c-8181	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/413c-8181	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/413c-8181	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Dell 5730",
@@ -3195,7 +3195,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/413c-8181
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/413c-8182 src/backup/413c-8182
 --- upstream/backup/413c-8182	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/413c-8182	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/413c-8182	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Dell 5730",
@@ -3204,7 +3204,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/413c-8182
 +}}
 diff --recursive --unified --new-file --no-dereference upstream/backup/413c-8186 src/backup/413c-8186
 --- upstream/backup/413c-8186	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/413c-8186	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/413c-8186	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,4 @@
 +{
 +	"desc": "Dell 5620",
@@ -3212,7 +3212,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/413c-8186
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/413c-8194 src/backup/413c-8194
 --- upstream/backup/413c-8194	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/413c-8194	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/413c-8194	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,4 @@
 +{
 +	"desc": "Dell 5630",
@@ -3220,7 +3220,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/413c-8194
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/413c-8195 src/backup/413c-8195
 --- upstream/backup/413c-8195	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/413c-8195	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/413c-8195	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,4 @@
 +{
 +	"desc": "Dell 5800",
@@ -3228,7 +3228,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/413c-8195
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/413c-8196 src/backup/413c-8196
 --- upstream/backup/413c-8196	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/413c-8196	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/413c-8196	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,4 @@
 +{
 +	"desc": "Dell 5800v2",
@@ -3236,7 +3236,7 @@ diff --recursive --unified --new-file --no-dereference upstream/backup/413c-8196
 +}
 diff --recursive --unified --new-file --no-dereference upstream/backup/413c-819b src/backup/413c-819b
 --- upstream/backup/413c-819b	1970-01-01 00:00:00.000000000 +0000
-+++ src/backup/413c-819b	2024-07-23 09:00:10.000000000 +0000
++++ src/backup/413c-819b	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,5 @@
 +{
 +	"desc": "Dell 5804",
@@ -3402,7 +3402,7 @@ diff --recursive --unified --new-file --no-dereference upstream/data/05c6-9000 s
 -}
 diff --recursive --unified --new-file --no-dereference upstream/data/05c6-9003 src/data/05c6-9003
 --- upstream/data/05c6-9003	1970-01-01 00:00:00.000000000 +0000
-+++ src/data/05c6-9003	2024-07-23 09:00:10.000000000 +0000
++++ src/data/05c6-9003	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,9 @@
 +{
 +	"desc": "Quectel UC20",
@@ -3415,7 +3415,7 @@ diff --recursive --unified --new-file --no-dereference upstream/data/05c6-9003 s
 +}
 diff --recursive --unified --new-file --no-dereference upstream/data/05c6-9215 src/data/05c6-9215
 --- upstream/data/05c6-9215	1970-01-01 00:00:00.000000000 +0000
-+++ src/data/05c6-9215	2024-07-23 09:00:10.000000000 +0000
++++ src/data/05c6-9215	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,9 @@
 +{
 +	"desc": "Quectel EC20",
@@ -3428,7 +3428,7 @@ diff --recursive --unified --new-file --no-dereference upstream/data/05c6-9215 s
 +}
 diff --recursive --unified --new-file --no-dereference upstream/data/05c6-f601 src/data/05c6-f601
 --- upstream/data/05c6-f601	1970-01-01 00:00:00.000000000 +0000
-+++ src/data/05c6-f601	2024-07-23 09:00:10.000000000 +0000
++++ src/data/05c6-f601	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,16 @@
 +{
 +	"desc": "MeigLink SLM750",
@@ -6020,7 +6020,7 @@ diff --recursive --unified --new-file --no-dereference upstream/data/1bbb-0203 s
 -}
 diff --recursive --unified --new-file --no-dereference upstream/data/1bc7-1070 src/data/1bc7-1070
 --- upstream/data/1bc7-1070	1970-01-01 00:00:00.000000000 +0000
-+++ src/data/1bc7-1070	2024-07-23 09:00:10.000000000 +0000
++++ src/data/1bc7-1070	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,16 @@
 +{
 +	"desc": "Telit FN990A",
@@ -6028,7 +6028,7 @@ diff --recursive --unified --new-file --no-dereference upstream/data/1bc7-1070 s
 +	"control": 4,
 +	"boudrate": 115200,
 +	"stop_bits": 8,
-+	"gps": 1,
++	"gps": 3,
 +	"ep_iface": 2,
 +	"dl_max_size": 16384,
 +	"dl_max_datagrams": 32,
@@ -6040,7 +6040,7 @@ diff --recursive --unified --new-file --no-dereference upstream/data/1bc7-1070 s
 +}
 diff --recursive --unified --new-file --no-dereference upstream/data/1bc7-1071 src/data/1bc7-1071
 --- upstream/data/1bc7-1071	1970-01-01 00:00:00.000000000 +0000
-+++ src/data/1bc7-1071	2024-07-23 09:00:10.000000000 +0000
++++ src/data/1bc7-1071	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,16 @@
 +{
 +	"desc": "Telit FN990A",
@@ -6048,7 +6048,7 @@ diff --recursive --unified --new-file --no-dereference upstream/data/1bc7-1071 s
 +	"control": 5,
 +	"boudrate": 115200,
 +	"stop_bits": 8,
-+	"gps": 1,
++	"gps": 3,
 +	"ep_iface": 2,
 +	"dl_max_size": 16384,
 +	"dl_max_datagrams": 32,
@@ -6060,7 +6060,7 @@ diff --recursive --unified --new-file --no-dereference upstream/data/1bc7-1071 s
 +}
 diff --recursive --unified --new-file --no-dereference upstream/data/1bc7-1072 src/data/1bc7-1072
 --- upstream/data/1bc7-1072	1970-01-01 00:00:00.000000000 +0000
-+++ src/data/1bc7-1072	2024-07-23 09:00:10.000000000 +0000
++++ src/data/1bc7-1072	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,16 @@
 +{
 +	"desc": "Telit FN990A",
@@ -6068,7 +6068,7 @@ diff --recursive --unified --new-file --no-dereference upstream/data/1bc7-1072 s
 +	"control": 5,
 +	"boudrate": 115200,
 +	"stop_bits": 8,
-+	"gps": 1,
++	"gps": 3,
 +	"ep_iface": 2,
 +	"dl_max_size": 16384,
 +	"dl_max_datagrams": 32,
@@ -6080,7 +6080,7 @@ diff --recursive --unified --new-file --no-dereference upstream/data/1bc7-1072 s
 +}
 diff --recursive --unified --new-file --no-dereference upstream/data/1bc7-1073 src/data/1bc7-1073
 --- upstream/data/1bc7-1073	1970-01-01 00:00:00.000000000 +0000
-+++ src/data/1bc7-1073	2024-07-23 09:00:10.000000000 +0000
++++ src/data/1bc7-1073	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,16 @@
 +{
 +	"desc": "Telit FN990A",
@@ -6088,7 +6088,7 @@ diff --recursive --unified --new-file --no-dereference upstream/data/1bc7-1073 s
 +	"control": 5,
 +	"boudrate": 115200,
 +	"stop_bits": 8,
-+	"gps": 1,
++	"gps": 3,
 +	"ep_iface": 2,
 +	"dl_max_size": 16384,
 +	"dl_max_datagrams": 32,
@@ -6301,7 +6301,7 @@ diff --recursive --unified --new-file --no-dereference upstream/data/2357-9000 s
 -}
 diff --recursive --unified --new-file --no-dereference upstream/data/2c7c-0121 src/data/2c7c-0121
 --- upstream/data/2c7c-0121	1970-01-01 00:00:00.000000000 +0000
-+++ src/data/2c7c-0121	2024-07-23 09:00:10.000000000 +0000
++++ src/data/2c7c-0121	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,14 @@
 +{
 +	"desc": "Quectel EC21",
@@ -6319,7 +6319,7 @@ diff --recursive --unified --new-file --no-dereference upstream/data/2c7c-0121 s
 +}
 diff --recursive --unified --new-file --no-dereference upstream/data/2c7c-0125 src/data/2c7c-0125
 --- upstream/data/2c7c-0125	1970-01-01 00:00:00.000000000 +0000
-+++ src/data/2c7c-0125	2024-07-23 09:00:10.000000000 +0000
++++ src/data/2c7c-0125	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,15 @@
 +{
 +	"desc": "Quectel EC25",
@@ -6338,7 +6338,7 @@ diff --recursive --unified --new-file --no-dereference upstream/data/2c7c-0125 s
 +}
 diff --recursive --unified --new-file --no-dereference upstream/data/2c7c-0296 src/data/2c7c-0296
 --- upstream/data/2c7c-0296	1970-01-01 00:00:00.000000000 +0000
-+++ src/data/2c7c-0296	2024-07-23 09:00:10.000000000 +0000
++++ src/data/2c7c-0296	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,15 @@
 +{
 +	"desc": "Quectel BG96",
@@ -6357,7 +6357,7 @@ diff --recursive --unified --new-file --no-dereference upstream/data/2c7c-0296 s
 +}
 diff --recursive --unified --new-file --no-dereference upstream/data/2c7c-0306 src/data/2c7c-0306
 --- upstream/data/2c7c-0306	1970-01-01 00:00:00.000000000 +0000
-+++ src/data/2c7c-0306	2024-07-23 09:00:10.000000000 +0000
++++ src/data/2c7c-0306	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,16 @@
 +{
 +	"desc": "Quectel EG06",
@@ -6377,7 +6377,7 @@ diff --recursive --unified --new-file --no-dereference upstream/data/2c7c-0306 s
 +}
 diff --recursive --unified --new-file --no-dereference upstream/data/2c7c-030b src/data/2c7c-030b
 --- upstream/data/2c7c-030b	1970-01-01 00:00:00.000000000 +0000
-+++ src/data/2c7c-030b	2024-07-23 09:00:10.000000000 +0000
++++ src/data/2c7c-030b	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,16 @@
 +{
 +	"desc": "Quectel EG060K",
@@ -6397,7 +6397,7 @@ diff --recursive --unified --new-file --no-dereference upstream/data/2c7c-030b s
 +}
 diff --recursive --unified --new-file --no-dereference upstream/data/2c7c-0316 src/data/2c7c-0316
 --- upstream/data/2c7c-0316	1970-01-01 00:00:00.000000000 +0000
-+++ src/data/2c7c-0316	2024-07-23 09:00:10.000000000 +0000
++++ src/data/2c7c-0316	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,18 @@
 +{
 +	"desc": "Quectel RG255C",
@@ -6419,7 +6419,7 @@ diff --recursive --unified --new-file --no-dereference upstream/data/2c7c-0316 s
 +}
 diff --recursive --unified --new-file --no-dereference upstream/data/2c7c-0512 src/data/2c7c-0512
 --- upstream/data/2c7c-0512	1970-01-01 00:00:00.000000000 +0000
-+++ src/data/2c7c-0512	2024-07-23 09:00:10.000000000 +0000
++++ src/data/2c7c-0512	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,16 @@
 +{
 +	"desc": "Quectel EG12/EG18",
@@ -6439,7 +6439,7 @@ diff --recursive --unified --new-file --no-dereference upstream/data/2c7c-0512 s
 +}
 diff --recursive --unified --new-file --no-dereference upstream/data/2c7c-0700 src/data/2c7c-0700
 --- upstream/data/2c7c-0700	1970-01-01 00:00:00.000000000 +0000
-+++ src/data/2c7c-0700	2024-07-23 09:00:10.000000000 +0000
++++ src/data/2c7c-0700	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,17 @@
 +{
 +	"desc": "Quectel BG95",
@@ -6448,7 +6448,7 @@ diff --recursive --unified --new-file --no-dereference upstream/data/2c7c-0700 s
 +	"boudrate": 115200,
 +	"stop_bits": 8,
 +	"gps": 1,
-+	"data": 2,
++	"data_secondary": 2,
 +	"ep_iface": 4,
 +	"dl_max_size": 2048,
 +	"dl_max_datagrams": 8,
@@ -6460,7 +6460,7 @@ diff --recursive --unified --new-file --no-dereference upstream/data/2c7c-0700 s
 +}
 diff --recursive --unified --new-file --no-dereference upstream/data/2c7c-0800 src/data/2c7c-0800
 --- upstream/data/2c7c-0800	1970-01-01 00:00:00.000000000 +0000
-+++ src/data/2c7c-0800	2024-07-23 09:00:10.000000000 +0000
++++ src/data/2c7c-0800	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,17 @@
 +{
 +	"desc": "Quectel RG50X",
@@ -6481,8 +6481,8 @@ diff --recursive --unified --new-file --no-dereference upstream/data/2c7c-0800 s
 +}
 diff --recursive --unified --new-file --no-dereference upstream/data/2c7c-0801 src/data/2c7c-0801
 --- upstream/data/2c7c-0801	1970-01-01 00:00:00.000000000 +0000
-+++ src/data/2c7c-0801	2024-07-23 09:00:10.000000000 +0000
-@@ -0,0 +1,16 @@
++++ src/data/2c7c-0801	2024-08-13 05:38:08.000000000 +0000
+@@ -0,0 +1,17 @@
 +{
 +	"desc": "Quectel RG52X",
 +	"type": "gobinet",
@@ -6497,11 +6497,12 @@ diff --recursive --unified --new-file --no-dereference upstream/data/2c7c-0801 s
 +	"ul_max_datagrams": 11,
 +	"power_off_ms": 800,
 +	"reset_ms": 500,
-+	"data_secondary": 3
++	"data_secondary": 3,
++	"gps_optional": true
 +}
 diff --recursive --unified --new-file --no-dereference upstream/data/2c7c-0900 src/data/2c7c-0900
 --- upstream/data/2c7c-0900	1970-01-01 00:00:00.000000000 +0000
-+++ src/data/2c7c-0900	2024-07-23 09:00:10.000000000 +0000
++++ src/data/2c7c-0900	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,17 @@
 +{
 +	"desc": "Quectel RG500U",
@@ -6522,7 +6523,7 @@ diff --recursive --unified --new-file --no-dereference upstream/data/2c7c-0900 s
 +}
 diff --recursive --unified --new-file --no-dereference upstream/data/2c7c-6005 src/data/2c7c-6005
 --- upstream/data/2c7c-6005	1970-01-01 00:00:00.000000000 +0000
-+++ src/data/2c7c-6005	2024-07-23 09:00:10.000000000 +0000
++++ src/data/2c7c-6005	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,14 @@
 +{
 +	"desc": "Quectel EC200A",
@@ -6540,8 +6541,8 @@ diff --recursive --unified --new-file --no-dereference upstream/data/2c7c-6005 s
 +}
 diff --recursive --unified --new-file --no-dereference upstream/data/2c7c-6007 src/data/2c7c-6007
 --- upstream/data/2c7c-6007	1970-01-01 00:00:00.000000000 +0000
-+++ src/data/2c7c-6007	2024-07-23 09:00:10.000000000 +0000
-@@ -0,0 +1,17 @@
++++ src/data/2c7c-6007	2024-08-13 05:38:08.000000000 +0000
+@@ -0,0 +1,18 @@
 +{
 +	"desc": "Quectel EG915Q",
 +	"type": "gobinet",
@@ -6557,11 +6558,12 @@ diff --recursive --unified --new-file --no-dereference upstream/data/2c7c-6007 s
 +	"ul_max_datagrams": 8,
 +	"power_on_ms": 750,
 +	"power_off_ms": 1000,
-+	"reset_ms": 400
++	"reset_ms": 400,
++	"data_secondary": 3
 +}
 diff --recursive --unified --new-file --no-dereference upstream/data/2dee-4d22 src/data/2dee-4d22
 --- upstream/data/2dee-4d22	1970-01-01 00:00:00.000000000 +0000
-+++ src/data/2dee-4d22	2024-07-23 09:00:10.000000000 +0000
++++ src/data/2dee-4d22	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,17 @@
 +{
 +	"desc": "MeigLink SLM828",
@@ -6582,7 +6584,7 @@ diff --recursive --unified --new-file --no-dereference upstream/data/2dee-4d22 s
 +}
 diff --recursive --unified --new-file --no-dereference upstream/data/2dee-4d58 src/data/2dee-4d58
 --- upstream/data/2dee-4d58	1970-01-01 00:00:00.000000000 +0000
-+++ src/data/2dee-4d58	2024-07-23 09:00:10.000000000 +0000
++++ src/data/2dee-4d58	2024-08-13 05:38:08.000000000 +0000
 @@ -0,0 +1,12 @@
 +{
 +        "desc": "MeigLink SLM770",

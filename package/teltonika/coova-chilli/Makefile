@@ -9,7 +9,7 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=coova-chilli
-PKG_VERSION:=2024-07-12
+PKG_VERSION:=2024-08-06
 PKG_MAINTAINER:=Jaehoon You <teslamint@gmail.com>
 PKG_LICENSE:=GPL-2.0-or-later
 PKG_LICENSE_FILES:=COPYING
@@ -49,7 +49,8 @@ define Package/coova-chilli
   SECTION:=net
   CATEGORY:=Network
   DEPENDS:=+libuci +libtlt_uci +kmod-tun +librt +COOVACHILLI_CYASSL:libcyassl +COOVACHILLI_OPENSSL:libopenssl \
-	+COOVACHILLI_DATABASE:libsqlite3 +MOBILE_SUPPORT:libgsm +libubus +libubox +libtltchilli +libjson-c +COOVACHILLI_CURL:libcurl
+	+COOVACHILLI_DATABASE:libsqlite3 +MOBILE_SUPPORT:libgsm +libubus +libubox +libtltchilli +libjson-c +COOVACHILLI_CURL:libcurl \
+	+COOVACHILLI_KMOD:kmod-ipt-coova
   TITLE:=Wireless LAN HotSpot controller (Coova Chilli Version)
   URL:=https://coova.github.io/
   MENU:=1
@@ -72,7 +73,7 @@ endef
 define KernelPackage/ipt-coova
   URL:=http://www.coova.org/CoovaChilli
   SUBMENU:=Netfilter Extensions
-  DEPENDS:=coova-chilli +kmod-ipt-core +libxtables
+  DEPENDS:=+kmod-ipt-core +libxtables +kmod-ifb +tc
   TITLE:=Coova netfilter module
   FILES:=$(PKG_BUILD_DIR)/src/linux/xt_*.$(LINUX_KMOD_SUFFIX)
   AUTOLOAD:=$(call AutoProbe,xt_coova)
@@ -128,7 +129,7 @@ define Build/Configure
 	$(if $(CONFIG_IPV6),--with,--without)-ipv6 \
 	$(if $(CONFIG_COOVACHILLI_OPENSSL),--with,--without)-openssl \
 	$(if $(CONFIG_COOVACHILLI_CURL),--with,--without)-curl \
-	$(if $(CONFIG_PACKAGE_kmod-ipt-coova),--with-nfcoova) \
+	$(if $(CONFIG_COOVACHILLI_KMOD),--with-nfcoova) \
 	)
 endef
 
@@ -143,6 +144,8 @@ define Package/coova-chilli/install
 	$(CP) $(PKG_INSTALL_DIR)/etc/chilli/* $(1)/etc/chilli/
 	$(INSTALL_BIN) files/conup.sh $(1)/etc/chilli/
 	$(INSTALL_BIN) files/condown.sh $(1)/etc/chilli/
+	$(INSTALL_BIN) files/macup.sh $(1)/etc/chilli/
+	$(INSTALL_BIN) files/macdown.sh $(1)/etc/chilli/
 	$(INSTALL_BIN) files/users.db $(1)/etc/chilli/
 	$(INSTALL_DIR) $(1)/etc/hotplug.d/net
 	$(INSTALL_DATA) ./files/chilli.hotplug $(1)/etc/hotplug.d/net/99-chilli
@@ -150,7 +153,7 @@ define Package/coova-chilli/install
 	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/chilli* $(1)/usr/sbin/
 	$(INSTALL_DIR) $(1)/usr/lib/
 	$(CP) $(PKG_INSTALL_DIR)/usr/lib/lib*.so.* $(1)/usr/lib/
-	$(if $(CONFIG_PACKAGE_kmod-ipt-coova), \
+	$(if $(CONFIG_COOVACHILLI_KMOD), \
 		$(INSTALL_DIR) $(1)/usr/lib/iptables; \
 		$(CP) $(PKG_INSTALL_DIR)/usr/lib/iptables/lib*.so $(1)/usr/lib/iptables/ \
 	)

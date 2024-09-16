@@ -2,7 +2,7 @@
 
 IMG_NAME_PREFIX=git.teltonika.lt:4567/docker/buildsys/
 IMG_NAME=${IMG_NAME:-${IMG_NAME_PREFIX}tools}
-IMG_TAG=${IMG_TAG:-1.4.3}
+IMG_TAG=${IMG_TAG:-1.7.3}
 
 # Color codes
 RED='\033[0;31m'
@@ -70,9 +70,10 @@ GROUP="/etc/group"
 HOSTS="/etc/hosts"
 USER_GROUP="$(id -u "$USER"):$(id -g "$USER")"
 
-CONTAINER_NAME=${IMG_NAME##"$IMG_NAME_PREFIX"}_$WORKDIR
+CONTAINER_NAME=${IMG_NAME##"$IMG_NAME_PREFIX"}_${WORKDIR}_${IMG_TAG}
 CONTAINER_NAME=${CONTAINER_NAME//\//_}
 CONTAINER_NAME=${CONTAINER_NAME//__/_}
+CONTAINER_NAME=${CONTAINER_NAME//./_}
 
 # Execute Docker run command with dynamic image name and tag
 

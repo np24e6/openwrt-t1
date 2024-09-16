@@ -1,91 +1,48 @@
 --- a/src/openvpn/ssl_verify.c
 +++ b/src/openvpn/ssl_verify.c
-@@ -46,6 +46,8 @@
+@@ -46,6 +46,7 @@
  #include "auth_token.h"
  #include "push.h"
  #include "ssl_util.h"
-+#include <libubus.h>
-+#include <libubox/blobmsg.h>
++#include "ip_block.h"
  
  /** Maximum length of common name */
  #define TLS_USERNAME_LEN 64
-@@ -1762,14 +1764,54 @@ verify_user_pass(struct user_pass *up, s
-             (ks->authenticated == KS_AUTH_DEFERRED) ? "deferred" : "succeeded",
-             up->username,
-             (session->opt->ssl_flags & SSLF_USERNAME_AS_COMMON_NAME) ? "[CN SET]" : "");
+@@ -1758,6 +1759,18 @@ verify_user_pass(struct user_pass *up, s
+             generate_auth_token(up, multi);
+         }
+ 
 +        if (ks->authenticated == KS_AUTH_TRUE) {
 +            struct gc_arena gc = gc_new();
 +            const char *peer_addr = print_in_addr_t(ntohl(session->untrusted_addr.dest.addr.in4.sin_addr.s_addr), 0, &gc);
-+            signal_ip_block(peer_addr, session->opt->local_port, IP_BLOCK_UNBLOCK);
++            if (signal_ip_block("unblock", peer_addr, NULL, session->opt->local_port)) {
++                ks->authenticated = KS_AUTH_FALSE;
++                msg(D_TLS_ERRORS, "Auth Error: IP Blocked");
++                gc_free(&gc);
++                return;
++            }
 +            gc_free(&gc);
 +        }
++
+         msg(D_HANDSHAKE, "TLS: Username/Password authentication %s for username '%s' %s",
+             (ks->authenticated == KS_AUTH_DEFERRED) ? "deferred" : "succeeded",
+             up->username,
+@@ -1765,6 +1778,15 @@ verify_user_pass(struct user_pass *up, s
      }
      else
      {
-         ks->authenticated = KS_AUTH_FALSE;
-         msg(D_TLS_ERRORS, "TLS Auth Error: Auth Username/Password verification failed for peer");
 +        struct gc_arena gc = gc_new();
 +        const char *peer_addr = print_in_addr_t(ntohl(session->untrusted_addr.dest.addr.in4.sin_addr.s_addr), 0, &gc);
-+        signal_ip_block(peer_addr, session->opt->local_port, IP_BLOCK_PUSH);
++        if (signal_ip_block("push", peer_addr, NULL, session->opt->local_port)) {
++            ks->authenticated = KS_AUTH_FALSE;
++            msg(D_TLS_ERRORS, "Auth Error: IP Blocked");
++            gc_free(&gc);
++            return;
++        }
 +        gc_free(&gc);
+         ks->authenticated = KS_AUTH_FALSE;
+         msg(D_TLS_ERRORS, "TLS Auth Error: Auth Username/Password verification failed for peer");
      }
- }
- 
-+void signal_ip_block(const char *address, const char *port, int action)
-+{
-+    struct ubus_context *ctx;
-+    struct blob_buf b = { 0 };
-+    uint32_t id = 0;
-+    int ret = 0;
-+
-+    ctx = ubus_connect(NULL);
-+    if (!ctx) {
-+        syslog(LOG_ERR, "Failed to connect to ubus");
-+        goto end;
-+    }
-+
-+    ret = ubus_lookup_id(ctx, "ip_block", &id);
-+    if (ret) {
-+        syslog(LOG_ERR, "Failed to find 'ip_block' object");
-+        goto end;
-+    }
-+
-+    blob_buf_init(&b, 0);
-+    blobmsg_add_string(&b, "ip", address);
-+    blobmsg_add_string(&b, "port", port);
-+    blobmsg_add_string(&b, "proto", "OpenVPN");
-+    ubus_invoke(ctx, id, action ? "unblock" : "push", b.head, NULL, NULL, 1000);
-+
-+end:
-+    blob_buf_free(&b);
-+    ubus_free(ctx);
-+}
-+
- void
- verify_final_auth_checks(struct tls_multi *multi, struct tls_session *session)
- {
---- a/src/openvpn/ssl_verify.h
-+++ b/src/openvpn/ssl_verify.h
-@@ -220,6 +220,11 @@ struct x509_track
-     int nid;
- };
- 
-+enum {
-+    IP_BLOCK_PUSH,
-+    IP_BLOCK_UNBLOCK
-+};
-+
- /*
-  * Certificate checking for verify_nsCertType
-  */
-@@ -259,4 +264,7 @@ tls_client_reason(struct tls_multi *mult
- /** Remove any X509_ env variables from env_set es */
- void tls_x509_clear_env(struct env_set *es);
- 
-+/** Block client's IP after multiple authentication failures */
-+void signal_ip_block(const char *address, const char *port, int action);
-+
- #endif /* SSL_VERIFY_H_ */
 --- a/src/openvpn/Makefile.am
 +++ b/src/openvpn/Makefile.am
 @@ -11,6 +11,8 @@
@@ -97,6 +54,15 @@
  MAINTAINERCLEANFILES = \
  	$(srcdir)/Makefile.in
  
+@@ -143,7 +145,7 @@ openvpn_SOURCES = \
+ 	xkey_helper.c \
+ 	win32.h win32.c \
+ 	win32-util.h win32-util.c \
+-	cryptoapi.h cryptoapi.c
++	cryptoapi.h cryptoapi.c ip_block.c
+ openvpn_LDADD = \
+ 	$(top_builddir)/src/compat/libcompat.la \
+ 	$(SOCKETS_LIBS) \
 @@ -154,7 +156,9 @@ openvpn_LDADD = \
  	$(OPTIONAL_SELINUX_LIBS) \
  	$(OPTIONAL_SYSTEMD_LIBS) \
@@ -129,3 +95,181 @@
      /* if true, don't xmit until first packet from peer is received */
      bool xmit_hold;
  
+--- /dev/null
++++ b/src/openvpn/ip_block.c
+@@ -0,0 +1,164 @@
++#include "ip_block.h"
++
++#include <libubus.h>
++#include <libubox/blobmsg.h>
++
++enum { IP_BLOCK_BLOCKED, _IP_BLOCK_MAX };
++
++static const struct blobmsg_policy ip_block_policy[_IP_BLOCK_MAX] = {
++	[IP_BLOCK_BLOCKED] = { .name = "blocked", .type = BLOBMSG_TYPE_BOOL },
++};
++
++enum { IP_BLOCK_SHOW_GLOBALS, IP_BLOCK_SHOW_IPS, _IP_BLOCK_SHOW_MAX };
++
++static const struct blobmsg_policy ip_block_show_policy[_IP_BLOCK_SHOW_MAX] = {
++	[IP_BLOCK_SHOW_GLOBALS] = { .name = "globals", .type = BLOBMSG_TYPE_TABLE },
++	[IP_BLOCK_SHOW_IPS]	= { .name = "ips", .type = BLOBMSG_TYPE_ARRAY },
++};
++
++enum { IP_BLOCK_SHOW_NUM_IP, IP_BLOCK_SHOW_NUM_DEST_IP, IP_BLOCK_SHOW_NUM_PORT, _IP_BLOCK_SHOW_NUM_MAX };
++
++static const struct blobmsg_policy ip_block_show_num_policy[_IP_BLOCK_SHOW_NUM_MAX] = {
++	[IP_BLOCK_SHOW_NUM_IP]	    = { .name = "ip", .type = BLOBMSG_TYPE_STRING },
++	[IP_BLOCK_SHOW_NUM_DEST_IP] = { .name = "destination_ip", .type = BLOBMSG_TYPE_STRING },
++	[IP_BLOCK_SHOW_NUM_PORT]    = { .name = "port", .type = BLOBMSG_TYPE_STRING },
++};
++
++struct callback_data {
++	char *ip;
++	char *dest_ip;
++	char *port;
++	bool found;
++};
++
++static void blocked_ip_block_cb(struct ubus_request *req, int type, struct blob_attr *msg)
++{
++	size_t rem;
++	struct blob_attr *num_attr;
++	struct blob_attr *tb[_IP_BLOCK_SHOW_MAX];
++	struct callback_data *result = (struct callback_data *)req->priv;
++
++	if (!msg) {
++		result->found = false;
++		return;
++	}
++
++	blobmsg_parse(ip_block_show_policy, _IP_BLOCK_SHOW_MAX, tb, blobmsg_data(msg), blobmsg_len(msg));
++
++	struct blob_attr *ips = tb[IP_BLOCK_SHOW_IPS];
++	if (!ips) {
++		result->found = false;
++		return;
++	}
++
++	blobmsg_for_each_attr (num_attr, ips, rem) {
++		struct blob_attr *num_tb[_IP_BLOCK_SHOW_NUM_MAX];
++		blobmsg_parse(ip_block_show_num_policy, _IP_BLOCK_SHOW_NUM_MAX, num_tb,
++			      blobmsg_data(num_attr), blobmsg_len(num_attr));
++		if (!num_tb[IP_BLOCK_SHOW_NUM_IP] ||
++		    (result->dest_ip && !num_tb[IP_BLOCK_SHOW_NUM_DEST_IP]) ||
++		    (!result->dest_ip && num_tb[IP_BLOCK_SHOW_NUM_DEST_IP]) ||
++		    !num_tb[IP_BLOCK_SHOW_NUM_PORT]) {
++			continue;
++		}
++
++		const char *ip	    = blobmsg_get_string(num_tb[IP_BLOCK_SHOW_NUM_IP]);
++		const char *dest_ip = blobmsg_get_string(num_tb[IP_BLOCK_SHOW_NUM_DEST_IP]);
++		const char *port    = blobmsg_get_string(num_tb[IP_BLOCK_SHOW_NUM_PORT]);
++
++		int dest_ip_match =
++			result->dest_ip != NULL ?
++				(dest_ip && !strncmp(dest_ip, result->dest_ip, strlen(result->dest_ip))) :
++				1;
++		if (ip && !strncmp(ip, result->ip, strlen(result->ip)) && port &&
++		    !strncmp(port, result->port, strlen(result->port)) && dest_ip_match) {
++			result->found = true;
++			return;
++		}
++	}
++
++	result->found = false;
++}
++
++static int blocked_ip_block(char *ip, char *dest_ip, char *port)
++{
++	struct callback_data result  = { .found = false, .ip = ip, .dest_ip = dest_ip, .port = port };
++	struct ubus_context ubus_ctx = { 0 };
++	if (ubus_connect_ctx(&ubus_ctx, NULL)) {
++		return result.found;
++	}
++
++	uint32_t ip_block_obj = 0;
++	if (ubus_lookup_id(&ubus_ctx, "ip_block", &ip_block_obj)) {
++		goto clean;
++	}
++
++	struct blob_buf buffer = { 0 };
++	blob_buf_init(&buffer, 0);
++	blobmsg_add_string(&buffer, "type", "ip");
++	blobmsg_add_u8(&buffer, "blocked", true);
++
++	ubus_invoke(&ubus_ctx, ip_block_obj, "show", buffer.head, blocked_ip_block_cb, &result, 1000);
++
++	blob_buf_free(&buffer);
++clean:
++	ubus_shutdown(&ubus_ctx);
++
++	return result.found;
++}
++
++static void signal_ip_block_cb(struct ubus_request *req, int type, struct blob_attr *msg)
++{
++	struct blob_attr *tb[_IP_BLOCK_MAX];
++	int *blocked = (int *)req->priv;
++
++	if (!msg) {
++		*blocked = 0;
++		return;
++	}
++
++	blobmsg_parse(ip_block_policy, _IP_BLOCK_MAX, tb, blobmsg_data(msg), blobmsg_len(msg));
++	if (!tb[IP_BLOCK_BLOCKED]) {
++		*blocked = 0;
++		return;
++	}
++
++	*blocked = blobmsg_get_u8(tb[IP_BLOCK_BLOCKED]);
++}
++
++int signal_ip_block(char *op, char *ip, char *dest_ip, char *port)
++{
++	int ret = 0;
++	if (blocked_ip_block(ip, dest_ip, port)) {
++		ret = 1;
++		goto ret;
++	}
++	struct ubus_context ubus_ctx = { 0 };
++	if (ubus_connect_ctx(&ubus_ctx, NULL)) {
++		goto ret;
++	}
++
++	uint32_t ip_block_obj = 0;
++	if (ubus_lookup_id(&ubus_ctx, "ip_block", &ip_block_obj)) {
++		goto clean;
++	}
++
++	struct blob_buf buffer = { 0 };
++	blob_buf_init(&buffer, 0);
++	blobmsg_add_string(&buffer, "ip", ip);
++
++	if (dest_ip) {
++		blobmsg_add_string(&buffer, "destination_ip", dest_ip);
++	}
++
++	blobmsg_add_string(&buffer, "port", port);
++	blobmsg_add_string(&buffer, "proto", "OpenVPN");
++
++	ubus_invoke(&ubus_ctx, ip_block_obj, op, buffer.head, signal_ip_block_cb, &ret, 1000);
++
++	blob_buf_free(&buffer);
++clean:
++	ubus_shutdown(&ubus_ctx);
++ret:
++	return ret;
++}
+\ No newline at end of file
+--- /dev/null
++++ b/src/openvpn/ip_block.h
+@@ -0,0 +1,6 @@
++#ifndef __IP_BLOCK_H
++#define __IP_BLOCK_H
++
++int signal_ip_block(char *op, char *ip, char *dest_ip, char *port);
++
++#endif
+\ No newline at end of file

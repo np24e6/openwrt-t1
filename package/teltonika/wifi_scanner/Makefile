@@ -21,7 +21,7 @@ define Package/$(PKG_NAME)
 	SECTION:=base
 	CATEGORY:=Base system
 	TITLE:=$(PKG_NAME)
-	DEPENDS:=+libuci +libubox +libtlt-logger +libubus +lsqlite3 +libiwinfo +data-sender-mod-wifiscan
+	DEPENDS:=+libuci +libubox +libtlt-logger +libubus +lsqlite3 +libiwinfo
 endef
 
 define Package/$(PKG_NAME)/description

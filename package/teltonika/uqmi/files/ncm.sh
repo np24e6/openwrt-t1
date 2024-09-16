@@ -24,8 +24,12 @@ proto_ncm_init_config() {
 	proto_config_add_string pdptype
 	proto_config_add_string sim
 	proto_config_add_string method
-	proto_config_add_int mtu
 	proto_config_add_string delay
+	proto_config_add_string passthrough_mode
+	proto_config_add_string leasetime
+	proto_config_add_string mac
+	proto_config_add_int mtu
+
 	proto_config_add_defaults
 }
 
@@ -116,13 +120,13 @@ failure_notify() {
 
 proto_ncm_setup() {
 	local interface="$1"
-	local mtu method device pdp modem pdptype sim dhcp dhcpv6 $PROTO_DEFAULT_OPTIONS IFACE4 IFACE6 delay
+	local mtu method device pdp modem pdptype sim dhcp dhcpv6 $PROTO_DEFAULT_OPTIONS IFACE4 IFACE6 delay passthrough_mode leasetime mac
 	local ip4table ip6table mdm_ubus_obj pin_state pdp_ctx_state pdp_ctx
 	local timeout=2 retries=0
 	local active_sim="1"
 	local retry_before_reinit
 
-	json_get_vars mtu method device modem pdptype sim dhcp dhcpv6 delay ip4table ip6table $PROTO_DEFAULT_OPTIONS
+	json_get_vars mtu method device modem pdptype sim dhcp dhcpv6 delay ip4table ip6table passthrough_mode leasetime mac $PROTO_DEFAULT_OPTIONS
 
 	local mdm_ubus_obj="$(find_mdm_ubus_obj "$modem")"
 	[ -z "$mdm_ubus_obj" ] && echo "gsm.modem object not found. Downing $interface interface" && ifdown $interface
@@ -131,15 +135,16 @@ proto_ncm_setup() {
 
 	[ -n "$delay" ] || [ "$pdp" = "1" ] && delay=0 || delay=3
 	sleep "$delay"
-	
+
 #~ Parameters part------------------------------------------------------
 	[ -z "$sim" ] && sim=$(get_config_sim "$interface")
 	active_sim=$(get_active_sim "$interface" "$old_cb" "$mdm_ubus_obj")
+	[ "$active_sim" = "0" ] && echo "Failed to get active sim" && reload_mobifd "$modem" "$interface" && return
 	esim_profile_index=$(get_active_esim_profile_index "$modem")
 	# verify active sim by return value(non zero means that the check failed)
-	verify_active_sim "$sim" "$active_sim" "$interface" || return
+	verify_active_sim "$sim" "$active_sim" "$interface" || { reload_mobifd "$modem" "$interface"; return; }
 	# verify active esim profile index by return value(non zero means that the check failed)
-	verify_active_esim "$esim_profile_index" "$interface" || return
+	verify_active_esim "$esim_profile_index" "$interface" || { reload_mobifd "$modem" "$interface"; return; }
 	deny_roaming=$(get_deny_roaming "$active_sim" "$modem" "$esim_profile_index")
 #~ ---------------------------------------------------------------------
 

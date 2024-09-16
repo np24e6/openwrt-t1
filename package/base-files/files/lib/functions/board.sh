@@ -11,11 +11,11 @@ is_builtin_modem() {
 		-e "primary=@['modems'][@.id='$1'].primary" \
 		)"
 
+	[ -z "$builtin" ] && echo 0 && return
+
 	[ "$builtin" -eq 1 ] && {
-		[ "$primary" -eq 1 ] && {
-			echo 2
-			return
-		}
+		[ -z "$primary" ] && echo 1 && return
+		[ "$primary" -eq 1 ] && echo 2 && return
 		echo 1
 		return
 	}

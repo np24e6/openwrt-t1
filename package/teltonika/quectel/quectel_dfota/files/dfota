@@ -99,11 +99,13 @@ while [ -n "$1" ]; do
 			shift
 			MODE="link"
 			MODE_PATH="$1"
+			update="true"
 		;;
 		-f)
 			shift
 			MODE="file"
 			MODE_PATH="$1"
+			update="true"
 		;;
 		-m)
 			shift
@@ -162,10 +164,11 @@ control_services() {
 end() {
 	local option="$1"
 	local message="$2"
+	local notify_params="$3"
 	case "$option" in
 		"$UPDATE_SUCCESS" | "$UPDATE_ERROR")
 			[ "$less_status" -eq 1 ] || {
-				[ "$option" = "$UPDATE_SUCCESS" ] && notify_webui "stop" || notify_webui "error"
+				[ "$option" = "$UPDATE_SUCCESS" ] && notify_webui "stop" || notify_webui "error" "$notify_params"
 			}
 			control_services "start"
 			;;
@@ -196,20 +199,22 @@ wait_for_wan() {
 
 notify_webui() {
 	local action="$1"
+	local data="$2"
 	case "$action" in
+		upgrade)
+			ubus send vuci.notify "{\"event\": \"dfota_upgrade\", \"data\": ${data:-\"\"}}"
+			rm -rf /tmp/dfota_update
+			;;
 		start)
-			mkdir -p /tmp/vuci
-			touch /tmp/vuci/dfota_update
+			ubus send vuci.notify "{\"event\": \"dfota_update\", \"data\": ${data:-\"\"}}"
 			touch /tmp/dfota_update
 			;;
 		stop)
-			mkdir -p /tmp/vuci
-			touch /tmp/vuci/dfota_finish
+			ubus send vuci.notify "{\"event\": \"dfota_finish\", \"data\": ${data:-\"\"}}"
 			rm -rf /tmp/dfota_update
 			;;
 		error)
-			mkdir -p /tmp/vuci
-			touch /tmp/vuci/dfota_error
+			ubus send vuci.notify "{\"event\": \"dfota_error\", \"data\": ${data:-\"\"}}"
 			rm -rf /tmp/dfota_update
 			;;
 	esac
@@ -446,11 +451,9 @@ do_update() {
 		}
 	}
 
-	notify_webui "start"
-
 	print_output "Starting download!"
 	json_update_modem_status "$modem_id" "downloading"
-	notify_webui "start"
+	notify_webui "start" "{\"modem_id\": \"$(get_from_info "$m_id" "usb_id")\"}"
 	# Add notification to rut_fota about start of downloading
 	[ -z "$MODE" ] && rut_fota --notify_server
 	if [ "$MODE" != "file" ]; then
@@ -552,6 +555,64 @@ do_update() {
 	return 1
 }
 
+do_update_EG915Q() {
+	local free_size
+	local dl_file_size
+	local cmd_port
+	local modem_id="$1"
+	local ret
+
+	# Sets size for modem to expect
+	[ "$MODE" == "link" ] && firmware_size=$(curl -sI "$MODE_PATH" | awk -e '$0 ~ /^Content-Length: ([0-9]+)/ { print $2 }')
+	[ "$MODE" == "file" ] && firmware_size=$(du -b "$MODE_PATH" | awk '{print $1}')
+	[ -n "$MODE" ] && [ -z "$firmware_size" ] && {
+		print_error "Failed to get firmware_size from $MODE_PATH"
+		return 1
+	}
+
+	print_output "Preparing system for update!"
+
+	ret="$(ubus call "$modem_id" get_storage_space)"
+	free_size=$(get_value_from_json "$ret" "free")
+	if [ "$firmware_size" -lt "$free_size" ]; then
+		debug "modem memory check pass"
+	else
+		print_error "Not enough memory in modem filesystem!" "$EC_NOT_ENOUGH_MEM"
+		return 1
+	fi
+	cmd_port=$(get_from_info "$modem_id" "tty_port")
+	echo "Found cmd port: $cmd_port"
+
+	notify_webui "start"
+
+	print_output "Starting download!"
+	json_update_modem_status "$modem_id" "downloading"
+	notify_webui "start"
+	# Add notification to rut_fota about start of downloading
+	[ -z "$MODE" ] && rut_fota --notify_server
+	if [ "$MODE" != "file" ]; then
+		if [ "$MODE" = "link" ]; then
+			download_link="$MODE_PATH"
+		fi
+		modem_model=$(get_from_info "$modem_id" "firmware" | head -c 6)
+	fi
+
+	ret=$(ubus call "$modem_id" upload_file "{\"size\":${firmware_size}}")
+	echo "$ret" | grep -q "OK" || {
+		print_error "Failed to enter download mode!" "$EC_EDL_FAILED"
+		return 1
+	}
+
+	print_output "Sending update command!"
+	if [ "$MODE" = "file" ]; then
+		cat "$MODE_PATH" >"$cmd_port"
+	else
+		curl -s --ssl-reqd --connect-timeout 30 --max-time 900 -L "$download_link" -o "$cmd_port"
+	fi
+
+	return 0
+}
+
 do_update_mobile_only() {
 	#Do modem firmware update using mobile connection only
 	local free_size
@@ -570,6 +631,7 @@ do_update_mobile_only() {
 	}
 
 	ret="$(ubus call "$modem_id" get_attached_pdp_ctx_list)"
+	modem_usb_id=$(get_from_info "$modem_id" "usb_id")
 	ip_addr=$(get_value_from_json "$ret" "ip_addr")
 	state_id=$(get_value_from_json "$ret" "state_id")
 	state=$(gsmctl -j -O $modem_usb_id)
@@ -612,7 +674,7 @@ do_update_mobile_only() {
 	print_output "Starting download!"
 
 	json_update_modem_status "$modem_id" "downloading"
-	notify_webui "start"
+	notify_webui "start" "{\"modem_id\": \"$modem_usb_id\"}"
 
 	# Add notification to rut_fota about start of downloading
 	[ -z "$MODE" ] && rut_fota --notify_server
@@ -633,11 +695,59 @@ track_update_status() {
 	json_update_modem_status "$modem_id" "waiting"
 	modem_usb_id=$(get_from_info "$modem_id" "usb_id")
 
+	local modem_json="{\"modem_id\": \"$modem_usb_id\"}"
+
 	# Counter and max wait time
 	counter=0
 
 	while [ -e "/sys/bus/usb/devices/$modem_usb_id" ]; do
 		counter=$((counter+1))
+		if [ $counter -ge $max_wait ]; then
+			print_error "Unable to start update process" $EC_UPGRADE_START_ERROR
+			json_update_modem_error "$modem_id" "$LAST_ERROR" "$LAST_ERROR_CODE"
+			json_update_dfota_status "finished" "$UPDATE_FAILED"
+			end "$UPDATE_ERROR" "Update script done!" "$modem_json"
+		fi
+
+		sleep 1
+	done
+
+	print_output "Update has been started! Modem will perform few restarts and will be available after few minutes."
+	print_output "*** DO NOT POWER OFF THE DEVICE! ***"
+
+	json_update_modem_status "$modem_id" "updating"
+	while true; do
+		cnt=$((cnt+1))
+		ret=$(get_firmware "$modem_id") > /dev/null 2>&1
+
+		[ -z "$ret" ] || [ "$ret" = "Command failed: Not found" ] || break
+		debug "Update status result: $ret"
+		if [ $((cnt % 5)) -eq 0 ]; then
+			print_output "Update is in progress..."
+		fi
+		sleep 2
+	done;
+	print_output "Update finished! Firmware version - \"$ret\""
+	json_update_modem_status "$modem_id" "finished"
+	notify_webui "upgrade" "$modem_json"
+	return 0
+}
+
+track_update_status_EG915Q() {
+	local modem_id="$1"
+	local ret
+	local cnt=0
+	print_output "Waiting for the update to start..."
+	json_update_modem_status "$modem_id" "waiting"
+	# modem_usb_id=$(get_from_info "$modem_id" "usb_id")
+	dfota_state=$(get_from_info "$modem_id" "\"state\": \"UPDATING\"") > /dev/null 2>&1
+
+	# Counter and max wait time
+	counter=0
+
+	while [ -z "$dfota_state" ]; do
+		counter=$((counter+1))
+		dfota_state=$(get_from_info "$modem_id" "\"state\": \"UPDATING\"") > /dev/null 2>&1
 		if [ $counter -ge $max_wait ]; then
 			print_error "Unable to start update process" $EC_UPGRADE_START_ERROR
 			json_update_modem_error "$modem_id" "$LAST_ERROR" "$LAST_ERROR_CODE"
@@ -807,6 +917,7 @@ update_loop(){
 			continue
 		}
 
+		max_wait=30
 		if [ "$forced" = "true" ] || [ "$update" = "true" ]; then
 			debug "Update flag found!"
 			control_services "stop"
@@ -815,16 +926,17 @@ update_loop(){
 			if [ "$modem_model" = "RG520N" ]; then
 				ret=$(ubus call "$m_id" get_qabfota_state)
 				state_str=$(get_value_from_json "$ret" "state_str")
-				[ "$state_str" = "succeed" ] && legacy_AT_commands=0
+				[ -n "$state_str" ] && legacy_AT_commands=0
 			fi
 			if [ "$modem_model" = "EC200A" ]; then
 				max_wait=250
 				func=do_update_mobile_only
+			elif [ "$modem_model" = "EG915Q" ]; then
+				func=do_update_EG915Q
 			elif [ "$modem_model" = "RG520N" ] && [ "$legacy_AT_commands" -eq 0 ]; then
 				max_wait=240
 				func=do_update
 			else
-				max_wait=30
 				func=do_update
 			fi
 
@@ -834,7 +946,11 @@ update_loop(){
 				break
 			}
 
-			track_update_status "$m_id"
+			if [ "$modem_model" = "EG915Q" ]; then
+				track_update_status_EG915Q "$m_id"
+			else
+				track_update_status "$m_id"
+			fi
 		fi
 	done
 

@@ -17,8 +17,7 @@ define Package/azure_iothub
 	SECTION:=base
 	CATEGORY:=Base system
 	DEPENDS:=+libc +libuci +libubus +libblobmsg-json +libtlt-logger \
-		 +libubox +libazure-iot-sdk-c +libmnfinfo +liblua +libtlt_uci \
-		 +data-sender-api-mod-azure
+		 +libubox +libazure-iot-sdk-c +libmnfinfo +liblua +libtlt_uci
 	TITLE:=Azure IoT Hub client
 endef
 

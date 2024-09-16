@@ -1,0 +1,124 @@
+--- a/options.h
++++ b/options.h
+@@ -474,8 +474,8 @@ struct fw3_snat
+ 
+ 	struct list_head proto;
+ 
+-	struct fw3_address ip_src;
+-	struct fw3_port port_src;
++	struct list_head ip_src;
++	struct list_head port_src;
+ 
+ 	struct fw3_address ip_dest;
+ 	struct fw3_port port_dest;
+--- a/snats.c
++++ b/snats.c
+@@ -32,8 +32,8 @@ const struct fw3_option fw3_snat_opts[]
+ 
+ 	FW3_LIST("proto",              protocol,  snat,     proto),
+ 
+-	FW3_OPT("src_ip",              network,   snat,     ip_src),
+-	FW3_OPT("src_port",            port,      snat,     port_src),
++	FW3_LIST("src_ip",              network,   snat,     ip_src),
++	FW3_LIST("src_port",            port,      snat,     port_src),
+ 
+ 	FW3_OPT("snat_ip",             network,   snat,     ip_snat),
+ 	FW3_OPT("snat_port",           port,      snat,     port_snat),
+@@ -83,10 +83,13 @@ check_families(struct uci_element *e, st
+ 		return false;
+ 	}
+ 
+-	if (r->ip_src.family && r->ip_src.family != r->family)
+-	{
+-		warn_section("nat", r, e, "uses source ip with different family");
+-		return false;
++	struct fw3_address *src;
++	list_for_each_entry(src, &r->ip_src, list){
++		if (src->family && src->family != r->family)
++		{
++			warn_section("nat", r, e, "uses source ip with different family");
++			return false;
++		}
+ 	}
+ 
+ 	if (r->ip_dest.family && r->ip_dest.family != r->family)
+@@ -112,6 +115,8 @@ alloc_snat(struct fw3_state *state)
+ 
+ 	if (snat) {
+ 		INIT_LIST_HEAD(&snat->proto);
++		INIT_LIST_HEAD(&snat->ip_src);
++		INIT_LIST_HEAD(&snat->port_src);
+ 		list_add_tail(&snat->list, &state->snats);
+ 		snat->enabled = true;
+ 	}
+@@ -328,18 +333,16 @@ set_comment(struct fw3_ipt_rule *r, cons
+ 
+ static void
+ print_snat(struct fw3_ipt_handle *h, struct fw3_state *state,
+-           struct fw3_snat *snat, int num, struct fw3_protocol *proto)
++           struct fw3_snat *snat, int num, struct fw3_protocol *proto, struct fw3_address *src, struct fw3_port *spt)
+ {
+ 	struct fw3_ipt_rule *r;
+-	struct fw3_address *src, *dst;
+-	struct fw3_port *spt, *dpt;
++	struct fw3_address *dst;
++	struct fw3_port *dpt;
+ 
+ 	switch (h->table)
+ 	{
+ 	case FW3_TABLE_NAT:
+-		src = &snat->ip_src;
+ 		dst = &snat->ip_dest;
+-		spt = &snat->port_src;
+ 		dpt = &snat->port_dest;
+ 
+ 		r = fw3_ipt_rule_create(h, proto, NULL, NULL, src, dst);
+@@ -365,6 +368,8 @@ expand_snat(struct fw3_ipt_handle *handl
+                 struct fw3_snat *snat, int num)
+ {
+ 	struct fw3_protocol *proto;
++	struct fw3_address *src;
++	struct fw3_port *spt;
+ 
+ 	if (snat->name)
+ 		info("   * NAT '%s'", snat->name);
+@@ -377,15 +382,20 @@ expand_snat(struct fw3_ipt_handle *handl
+ 		return;
+ 	}
+ 
+-	if (!fw3_is_family(&snat->ip_src, handle->family) ||
+-	    !fw3_is_family(&snat->ip_dest, handle->family) ||
+-		!fw3_is_family(&snat->ip_snat, handle->family))
+-	{
+-		if (!snat->ip_src.resolved ||
+-		    !snat->ip_dest.resolved ||
+-		    !snat->ip_snat.resolved)
+-			info("     ! Skipping due to different family of ip address");
++	list_for_each_entry (src, &snat->ip_src, list) {
++		if (!fw3_is_family(src, handle->family)) {
++			if (!src->resolved) {
++				info("     ! Skipping due to different family of ip address");
++			}
++			return;
++		}
++	}
+ 
++	if (!fw3_is_family(&snat->ip_dest, handle->family) ||
++		!fw3_is_family(&snat->ip_snat, handle->family)) {
++		if (!snat->ip_dest.resolved || !snat->ip_snat.resolved) {
++			info("     ! Skipping due to different family of ip address");
++		}
+ 		return;
+ 	}
+ 
+@@ -409,7 +419,9 @@ expand_snat(struct fw3_ipt_handle *handl
+ 	}
+ 
+ 	fw3_foreach(proto, &snat->proto)
+-		print_snat(handle, state, snat, num, proto);
++	fw3_foreach(src, &snat->ip_src)
++	fw3_foreach(spt, &snat->port_src)
++		print_snat(handle, state, snat, num, proto, src, spt);
+ }
+ 
+ void

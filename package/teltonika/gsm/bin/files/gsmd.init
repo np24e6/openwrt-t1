@@ -14,7 +14,6 @@ start_service() {
 
     [ -h "/etc/hotplug.d/usb/05_gsmd.sh" ] || ln -s /usr/share/usb/05_gsmd.sh  /etc/hotplug.d/usb/05_gsmd.sh &>/dev/null
     [ -h "/etc/hotplug.d/iface/89-gsm-event" ] || ln -s /usr/share/iface/89-gsm-event /etc/hotplug.d/iface/89-gsm-event &>/dev/null
-    [ -h "/etc/hotplug.d/gsm/1-check_vcert" ] || ln -s /usr/share/gsm/1-check_vcert /etc/hotplug.d/gsm/1-check_vcert &>/dev/null
     [ -h "/etc/hotplug.d/gsm/2-fill-modem-info" ] || ln -s /usr/share/gsm/2-fill-modem-info /etc/hotplug.d/gsm/2-fill-modem-info &>/dev/null
     [ -h "/etc/hotplug.d/gsm/4-notify-send-sms" ] || ln -s /usr/share/gsm/4-notify-send-sms /etc/hotplug.d/gsm/4-notify-send-sms &>/dev/null
     [ -h "/etc/hotplug.d/gsm/4-notify-sim-state" ] || ln -s /usr/share/gsm/4-notify-sim-state /etc/hotplug.d/gsm/4-notify-sim-state &>/dev/null
@@ -36,7 +35,6 @@ start_service() {
 stop_service() {
     [ -h "/etc/hotplug.d/usb/05_gsmd.sh" ] && rm /etc/hotplug.d/usb/05_gsmd.sh &>/dev/null
     [ -h "/etc/hotplug.d/iface/89-gsm-event" ] && rm /etc/hotplug.d/iface/89-gsm-event &>/dev/null
-    [ -h "/etc/hotplug.d/gsm/1-check_vcert" ] && rm /etc/hotplug.d/gsm/1-check_vcert &>/dev/null
     [ -h "/etc/hotplug.d/gsm/2-fill-modem-info" ] && rm /etc/hotplug.d/gsm/2-fill-modem-info &>/dev/null
     [ -h "/etc/hotplug.d/gsm/4-notify-send-sms" ] && rm /etc/hotplug.d/gsm/4-notify-send-sms &>/dev/null
     [ -h "/etc/hotplug.d/gsm/4-notify-sim-state" ] && rm /etc/hotplug.d/gsm/4-notify-sim-state &>/dev/null

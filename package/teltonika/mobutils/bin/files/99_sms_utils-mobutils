@@ -10,42 +10,37 @@ fix_sms_utils(){
 	config_get smstext "$sec" "smstext"
 	case "$action" in
 	"wifi")
-		[ "$wifi" -eq 0 ] && {
+		[ -z "$wifi" ] || [ "$wifi" -eq 0 ] && {
 			uci_remove "sms_utils" "$sec"
 		}
 		;;
-	"gps")
-		[ "$gps" -eq 0 ] && {
+	"gps"|"gps_coordinates")
+		[ -z "$gps" ] || [ "$gps" -eq 0 ] && {
 			uci_remove "sms_utils" "$sec"
 		}
 		;;
 	"mobile")
-		[ "$mobile" -eq 0 ] && {
+		[ -z "$mobile" ] || [ "$mobile" -eq 0 ] && {
 			uci_remove "sms_utils" "$sec"
 		}
 		;;
 	"switch_sim")
-		[ "$dual_sim" -eq 0 ] && {
-			uci_remove "sms_utils" "$sec"
-		}
-		;;
-	"gps_coordinates")
-		[ "$gps" -eq 0 ] && {
+		[ -z "$dual_sim" ] || [ "$dual_sim" -eq 0 ] && {
 			uci_remove "sms_utils" "$sec"
 		}
 		;;
 	"io_set")
-		[ "$ios" -eq 0 ] && {
+		[ -z "$ios" ] || [ "$ios" -eq 0 ] && {
 			uci_remove "sms_utils" "$sec"
 		}
 		;;
 	"send_status")
-		[ "$smstext" = "iostatus" ] && [ "$ios" -eq 0 ] && {
+		{ [ -z "$smstext" ] || [ "$smstext" = "iostatus" ]; } && { [ -z "$ios" ] || [ "$ios" -eq 0 ]; } && {
 			uci_remove "sms_utils" "$sec"
 		}
 		;;
 	"esim_list"|"esim_change"|"esim_install")
-		[ "$esim" -eq 1 ] || {
+		[ -z "$esim" ] || [ "$esim" -eq 0 ] && {
 			uci_remove "sms_utils" "$sec"
 		}
 	esac

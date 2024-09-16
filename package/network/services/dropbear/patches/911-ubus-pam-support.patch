@@ -41,7 +41,7 @@
          char *pubkey_plugin_options;
 --- a/svr-auth.c
 +++ b/svr-auth.c
-@@ -146,18 +146,26 @@ void recv_msg_userauth_request() {
+@@ -169,18 +169,26 @@ void recv_msg_userauth_request() {
  		}
  	}
  	
@@ -70,7 +70,7 @@
  
  #if DROPBEAR_SVR_PAM_AUTH
  	if (!svr_opts.noauthpass &&
-@@ -167,6 +175,7 @@ void recv_msg_userauth_request() {
+@@ -190,6 +198,7 @@ void recv_msg_userauth_request() {
  				strncmp(methodname, AUTH_METHOD_PASSWORD,
  					AUTH_METHOD_PASSWORD_LEN) == 0) {
  			svr_auth_pam(valid_user);
@@ -316,7 +316,7 @@
  	addnewvar("PATH", DEFAULT_PATH);
 --- a/svr-session.c
 +++ b/svr-session.c
-@@ -235,7 +235,7 @@ void svr_dropbear_exit(int exitcode, con
+@@ -236,7 +236,7 @@ void svr_dropbear_exit(int exitcode, con
  		/* user has authenticated */
  		snprintf(fullmsg, sizeof(fullmsg),
  				"Exit (%s)%s: %s", 

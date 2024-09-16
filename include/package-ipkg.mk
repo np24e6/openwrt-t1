@@ -198,6 +198,7 @@ $$(call addfield,Depends,$$(Package/$(1)/DEPENDS)
 )$(if $(PKG_NETWORK_RESTART),pkg_network_restart: $(PKG_NETWORK_RESTART)
 )$(if $(PKG_TLT_NAME),tlt_name: $(PKG_TLT_NAME)
 )$(if $(PKG_APP_NAME),AppName: $(PKG_APP_NAME)
+)$(if $(PKG_HW_INFO),HWInfo: $(PKG_HW_INFO)
 )Architecture: $(PKGARCH)
 Installed-Size: 0
 $(_endef)

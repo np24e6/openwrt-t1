@@ -53,6 +53,12 @@ $(eval $(call TestHostCommand,ncurses, \
 	Please install ncurses. (Missing libncurses.so or ncurses.h), \
 	echo 'int main(int argc, char **argv) { initscr(); return 0; }' | \
 		gcc -include ncurses.h -x c -o $(TMP_DIR)/a.out - -lncurses))
+
+$(eval $(call TestHostCommand,expat, \
+	Please install expat. (Missing libexpat.so or expat.h), \
+	echo 'int main(int argc, char **argv) { XML_ParserCreate(NULL); return 0; }' | \
+		gcc -include expat.h -x c -o $(TMP_DIR)/a.out - -lexpat))
+
 endif # IB
 
 ifeq ($(HOST_OS),Linux)
@@ -167,7 +173,7 @@ $(eval $(call SetupHostCommand,python3,Please install Python >= 3.9, \
 	python3 -V 2>&1 | grep -E 'Python 3\.(9|[0-9][0-9])\.?'))
 
 $(eval $(call TestHostCommand,python3-distutils, \
-	Please install the Python3 distutils module, \
+	Please install the Python3 distutils module (or Python3 setuputils module on Python >= 3.12), \
 	$(STAGING_DIR_HOST)/bin/python3 -c 'from distutils import util'))
 
 $(eval $(call SetupHostCommand,git,Please install Git (git-core) >= 1.7.12.2, \
@@ -205,3 +211,6 @@ $(eval $(call SetupHostCommand,jq,Please install 'jq', \
 
 $(eval $(call SetupHostCommand,gperf,Please install 'gperf', \
 	gperf --version 2>&1 ))
+
+$(eval $(call SetupHostCommand,cmake,Please install 'cmake', \
+	cmake --version 2>&1 ))

@@ -1,0 +1,50 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+ convert_guest_bridge(){
+	local section="$1"
+
+	config_get type "$section" type ""
+
+	[ "$section" != "guest" ] || [ "$type" != "bridge" ] && return
+
+	config_get device "$section" device ""
+	config_get device_type
+	is_bridge=0
+	
+	check_device() {
+		local device_section="$1"
+		local _name=$2
+
+		[ -z "$_name" ] && return
+
+		config_get name "$device_section" name ""
+		config_get device_type "$device_section" type ""
+
+		[ "$name" = "$_name" ] && [ "$type" = "bridge" ] && is_bridge=1
+	}
+
+	config_foreach check_device device "$device"
+
+	[ $is_bridge -eq 1 ] && return
+	
+
+	uci set network.br_guest='device'
+	uci set network.br_guest.type='bridge'
+	uci set network.br_guest.name='br-guest'
+
+	config_get device "$section" device ""
+
+	[ -n "$device" ] && uci add_list network.br_guest.ports="$device"
+
+	uci delete network.$section.type 2>/dev/null
+	uci set network.$section.device='br-guest'
+
+}
+
+config_load network
+config_foreach convert_guest_bridge interface
+uci commit network
+
+exit 0

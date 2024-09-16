@@ -1,18 +1,73 @@
 [
   {
-    "category": "Services",
-    "name": "Modbus TCP over Serial Gateway",
+    "category": "System",
+    "name": "Package Restore",
+    "depends": [
+      {
+        "type": "family",
+        "name": "Router"
+      }
+    ]
+  },
+  {
+    "category": "System",
+    "name": "User Settings",
     "depends": []
   },
   {
     "category": "Services",
-    "name": "AVL",
+    "name": "Python3",
+    "depends": []
+  },
+  {
+    "category": "Network",
+    "name": "Curl",
+    "depends": []
+  },
+  {
+    "category": "Services",
+    "name": "Docker",
+    "depends": [
+      {
+        "type": "device",
+        "name": "RUTC50"
+      }
+    ]
+  },
+  {
+    "category": "Network",
+    "name": "NAT64",
     "depends": [
       {
         "type": "hw",
-        "name": "gps"
+        "name": "flash16mb",
+        "value": false
       }
     ]
+  },
+  {
+    "category": "Services",
+    "name": "L2TP",
+    "depends": []
+  },
+  {
+    "category": "System",
+    "name": "Side Widget",
+    "depends": [
+      {
+        "type": "family",
+        "name": "Router"
+      }
+    ]
+  },
+  {
+    "category": "Services",
+    "name": "Events Reporting",
+    "depends": []
+  },
+  {
+    "category": "System",
+    "name": "Backup"
   },
   {
     "category": "Services",

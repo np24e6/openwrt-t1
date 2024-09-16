@@ -1,0 +1,29 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+CONFIG="rms_mqtt"
+SECTION="rms_connect_timer_level"
+
+delete_existing_rms_connect_timer_levels() {
+	local section="$1"
+	uci delete "$CONFIG.$section"
+}
+
+add() {
+	local set_section="$(uci add "$CONFIG" "$SECTION")"
+
+	uci_set "$CONFIG" "$set_section" "repeat_time" "$1"
+	uci_set "$CONFIG" "$set_section" "whole_time" "$2"
+}
+
+config_load "$CONFIG"
+
+config_foreach delete_existing_rms_connect_timer_levels "$SECTION"
+
+add "120" "3600"
+add "300" "3600"
+add "600" "3600"
+add "3600" "1209600"
+
+uci_commit "$CONFIG"

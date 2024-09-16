@@ -1,0 +1,29 @@
+Index: coova-chilli-84479567ac02840b124649783078b0e78f7219e2-2024-05-30/src/dhcp.c
+===================================================================
+--- coova-chilli-84479567ac02840b124649783078b0e78f7219e2-2024-05-30.orig/src/dhcp.c	2024-05-29 12:18:57.000000000 +0300
++++ coova-chilli-84479567ac02840b124649783078b0e78f7219e2-2024-05-30/src/dhcp.c	2024-06-07 10:40:37.017225350 +0300
+@@ -3849,24 +3849,6 @@
+   }
+ 
+   /*
+-   * Do not drop all fragments, only if they have DF bit.
+-   * Note: this is as in SVN before R462 / git e4a934 (2012-03-01 15:46:22).
+-   */
+-
+-  if (iph_tot_len > _options.mtu && (pack_iph->opt_off_high & 64)) {
+-    uint8_t icmp_pack[1500];
+-    if (_options.debug)
+-      syslog(LOG_DEBUG,
+-             "%s(%d): ICMP frag forbidden for IP packet with length %d > %d", __FUNCTION__, __LINE__,
+-             iph_tot_len, _options.mtu);
+-    dhcp_send(this, ctx->idx, pack_ethh->src, icmp_pack,
+-	      icmpfrag(conn, icmp_pack, sizeof(icmp_pack), pack));
+-    OTHER_SENDING(conn, pkt_iphdr(icmp_pack));
+-    OTHER_RECEIVED(conn, pack_iph);
+-    return 0;
+-  }
+-
+-  /*
+    *  Chop off any trailer length
+    */
+   if (len > (size_t) eth_tot_len) {

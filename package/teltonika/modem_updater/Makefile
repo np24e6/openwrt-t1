@@ -6,7 +6,7 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=modem_updater
-PKG_SOURCE_VERSION:=7.1.1
+PKG_SOURCE_VERSION:=8.0
 
 PKG_LICENSE:=Teltonika-closed
 

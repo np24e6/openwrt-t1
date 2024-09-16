@@ -1,0 +1,64 @@
+#!/sbin/openrc-run
+
+. /lib/functions.sh
+. /usr/share/libubox/jshn.sh
+
+MANUF="Teltonika Networks"
+
+get_model_data() {
+	json_load_file "/etc/board.json"
+
+	json_select model
+
+	json_get_var platform platform
+	json_get_var pid pid
+	json_get_var vid vid
+
+	json_select ..
+
+	case $pid in
+	0x0004)
+		ifname="usb"
+		udc_name="8a00000.dwc3"
+		;;
+	0x0003)
+		ifname="ecm"
+		udc_name="a600000.dwc3"
+		;;
+	0x0002)
+		ifname="rndis"
+		udc_name="msm_hsusb"
+		platform="$platform""4X"
+		;;
+	esac
+	fun_name="rndis.$ifname""0"
+}
+
+start() {
+	local p="/sys/kernel/config/usb_gadget/g1"
+	[ -d "$p" ] && return
+
+	get_model_data
+
+	# mount configfs for usb gadget configuration
+	mount -t configfs none /sys/kernel/config
+
+	mkdir "$p"
+
+	# write product info data
+	echo "$vid" > "$p/idVendor"
+	echo "$pid" > "$p/idProduct"
+
+	mkdir "$p/strings/0x409"
+	echo "$MANUF" > "$p/strings/0x409/manufacturer"
+	echo "$platform" > "$p/strings/0x409/product"
+
+	# enable interface and function file-system gadgets
+	mkdir "$p/functions/$fun_name"
+	mkdir "$p/configs/c.1"
+	echo "$ifname%d" > "$p/functions/$fun_name/ifname"
+	ln -s "$p/functions/$fun_name" "$p/configs/c.1"
+
+	# probe UDC
+	echo "$udc_name" > "$p/UDC"
+}

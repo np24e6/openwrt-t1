@@ -104,52 +104,13 @@ ucidef_add_wlan_bssid_limit() {
 
 ucidef_set_hwinfo() {
 	local args=" $* "
-	local options='
-	dual_sim
-	at_sim
-	wifi
-	dual_band_ssid
-	wps
-	mobile
-	gps
-	usb
-	poe
-	bluetooth
-	ethernet
-	sfp_port
-	ios
-	power_ios
-	sfp_switch
-	rs232
-	rs485
-	rs232_control
-	console
-	dual_modem
-	m2_modem
-	sd_card
-	sw_rst_on_init
-	dsa
-	nat_offloading
-	hw_nat
-	vcert
-	port_link
-	multi_tag
-	micro_usb
-	soft_port_mirror
-	gigabit_port
-	2_5_gigabit_port
-	custom_usbcfg
-	'
 
 	json_select_object hwinfo
 
-	for opt in $options; do
+	for opt in $args; do
 		[ -z "$opt" ] && continue
-		if [[ "$args" =~ " $(echo "$opt" | tr -d '\011\012\015\040') " ]]; then
-			json_add_boolean "$opt" 1
-		else
-			json_add_boolean "$opt" 0
-		fi
+		json_add_boolean "$opt" 1
+		shift
 	done
 
 	json_select ..

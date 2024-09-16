@@ -1,0 +1,152 @@
+--- a/ubus.c
++++ b/ubus.c
+@@ -1385,6 +1385,130 @@
+ 	return interface_parse_data(iface, msg);
+ }
+ 
++enum {
++	TYPE_IFNAME,
++	__TYPE_MAX,
++};
++
++static const struct blobmsg_policy if_type_policy[__TYPE_MAX] = {
++	[TYPE_IFNAME] = { .name = "name", .type = BLOBMSG_TYPE_STRING },
++};
++
++static int check_if_wireless(const char *ifname) {
++
++	struct wireless_device *wdev = NULL;
++	struct wireless_interface *vif = NULL;
++
++	if (!ifname) {
++		return EXIT_FAILURE;
++	}
++
++	vlist_for_each_element(&wireless_devices, wdev, node) {
++
++		vlist_for_each_element(&wdev->interfaces, vif, node) {
++            
++			if (!vif->section) {
++				continue;
++			}
++
++			if (!strcmp(ifname, vif->section)) {
++				return EXIT_SUCCESS;
++			}
++		}
++	}
++
++	return EXIT_FAILURE;
++}
++
++static int check_if_mobile(const char *ifname) {
++
++	if (!ifname) {
++		return EXIT_FAILURE;
++	}
++
++	struct interface *iface = vlist_find(&interfaces, ifname, iface, node);
++	if (!iface) {
++		return EXIT_FAILURE;
++	}
++
++	if (!iface->proto_handler && !iface->proto_handler->name) {
++		return EXIT_FAILURE;
++	}
++
++	if (!strcmp("wwan", iface->proto_handler->name) || !strcmp("connm", iface->proto_handler->name)) {
++		return EXIT_SUCCESS;
++	}
++
++	return EXIT_FAILURE;
++}
++
++static const char *check_dev_types(const char *ifname) {
++
++	if (!ifname) {
++		return NULL;
++	}
++
++	struct interface *iface = vlist_find(&interfaces, ifname, iface, node);
++	if (!iface) {
++		return NULL;
++	}
++
++	if (!iface->main_dev.dev || !iface->main_dev.dev->type) {
++		return NULL;
++	}
++
++	if (!strcmp("lo", iface->main_dev.dev->ifname)) {
++		return "loopback";
++	}
++
++	return iface->main_dev.dev->type->name;
++}
++
++static int
++netifd_get_interface_type(struct ubus_context *ctx, struct ubus_object *obj,
++				struct ubus_request_data *req, const char *method,
++				struct blob_attr *msg)
++{
++	struct blob_attr *tb[__TYPE_MAX];
++	struct blob_buf blob_buf = { 0 };
++
++	const char *type = NULL;
++	int rc = UBUS_STATUS_OK;
++
++	blobmsg_parse(if_type_policy, __TYPE_MAX, tb, blobmsg_data(msg), blobmsg_len(msg));
++
++	if (!tb[TYPE_IFNAME]) {
++		return UBUS_STATUS_INVALID_ARGUMENT;
++	}
++
++	const char *name = blobmsg_get_string(tb[TYPE_IFNAME]);
++	if (!name) {
++		return UBUS_STATUS_NOT_FOUND;
++	}
++
++	if (blob_buf_init(&blob_buf, 0)) {
++		return UBUS_STATUS_UNKNOWN_ERROR;
++	}
++
++	if (!check_if_wireless(name)) {
++		type = "wireless";
++	} else if (!check_if_mobile(name)) {
++		type = "mobile";
++	} else {
++		type = check_dev_types(name);
++	}
++
++	blobmsg_add_string(&blob_buf, "interface_type", type ? type : "Unknown");
++
++	if (ubus_send_reply(ctx, req, blob_buf.head)) {
++		rc = UBUS_STATUS_UNKNOWN_ERROR;
++	}
++
++	blob_buf_free(&blob_buf);
++
++	return rc;
++}
++
+ static struct ubus_method iface_object_methods[] = {
+ 	{ .name = "up", .handler = netifd_handle_up },
+ 	{ .name = "down", .handler = netifd_handle_down },
+@@ -1397,6 +1521,7 @@
+ 	{ .name = "notify_proto", .handler = netifd_iface_notify_proto },
+ 	{ .name = "remove", .handler = netifd_iface_remove },
+ 	{ .name = "set_data", .handler = netifd_handle_set_data },
++	UBUS_METHOD("get_interface_type", netifd_get_interface_type, if_type_policy ),
+ };
+ 
+ static struct ubus_object_type iface_object_type =
+@@ -1467,6 +1592,10 @@
+ 	for (i = 0; i < ARRAY_SIZE(iface_object_methods); i++) {
+ 		if (methods[i].handler == netifd_handle_dump)
+ 			continue;
++
++		if (methods[i].handler == netifd_get_interface_type) {
++			continue;
++		}
+ 
+ 		methods[i].handler = netifd_handle_iface;
+ 		methods[i].policy = &iface_policy;

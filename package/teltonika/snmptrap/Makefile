@@ -6,7 +6,7 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=snmptrap
-PKG_VERSION:=2024-06-18
+PKG_VERSION:=2024-06-19
 PKG_RELEASE:=1
 
 PKG_SOURCE_VERSION:=1.7

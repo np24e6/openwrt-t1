@@ -105,7 +105,7 @@
 	},
 	"vuci-app-snmp-ui": {
 		"vuci_dep": "vuci-app-snmp-api",
-		"base_dep": "snmp snmpd libpcre libnetsnmp snmp-mib snmp-mod-sqm snmp-mod-wireless snmp-mod-vlan snmp-mod-chilli snmp-mod-device snmp-mod-gps snmp-mod-gsm snmp-mod-io snmp-mod-port libtltchilli snmptrap libpci",
+		"base_dep": "snmp snmpd libpcre libnetsnmp snmp-mib snmp-mod-sqm snmp-mod-wireless snmp-mod-vlan snmp-mod-chilli snmp-mod-device snmp-mod-gps snmp-mod-gsm snmp-mod-io snmp-mod-port snmp-mod-mwan3 libtltchilli snmptrap libpci",
 		"name": "snmp"
 	},
 	"vuci-app-samba-ui": {
@@ -125,8 +125,9 @@
 		"name": "wake_on_lan"
 	},
 	"vuci-app-coovachilli-ui": {
-		"base_dep": "libtltchilli coova-chilli libjson-c libcurl",
+		"base_dep": "libtltchilli coova-chilli tc-tiny libjson-c libcurl",
 		"vuci_dep": "vuci-app-coovachilli-api vuci-app-landingpage tlt_hs_theme_default",
+		"kmod_dep": "kmod-ipt-coova kmod-ifb kmod-sched-core",
 		"name": "hotspot"
 	},
 	"vuci-app-hotspot2-ui": {
@@ -186,7 +187,7 @@
 		"name": "mqtt_modbus_gateway"
 	},
 	"vuci-app-modbus-client-ui": {
-		"base_dep": "modbus_client libmodbus data-sender-mod-modbus data-sender-mod-modbus_alarm libtlt_termios1.0",
+		"base_dep": "modbus_client libmodbus data-sender-mod-modbus data-sender-mod-modbus-alarm libtlt_termios1.0",
 		"vuci_dep": "vuci-app-modbus-client-api vuci-app-modbus-serial-ui vuci-app-modbus-serial-api data-sender-api-mod-modbus data-sender-api-mod-modbus-alarm",
 		"name": "modbus_client"
 	},
@@ -443,5 +444,19 @@
 	},
 	"iperf3":{
 		"name": "iperf3"
+	},
+	"vxlan": {
+		"name": "vxlan",
+		"kmod_dep": "kmod-vxlan"
+	},
+	"jool": {
+		"name": "jool",
+		"base_dep": "libnl200 libnl-cli200 libnl-nf200 libnl-route200",
+		"kmod_dep": "kmod-jool"
+	},
+	"docker":{
+		"name": "docker",
+		"kmod_dep": "iptables-mod-extra kmod-br-netfilter kmod-ipt-extra kmod-ipt-nat6 kmod-ipt-physdev kmod-nf-ipvs kmod-nf-nat6 kmod-veth",
+		"base_dep": "ca-certificates libseccomp dockerd containerd runc tini"
 	}
 }

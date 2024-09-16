@@ -18,6 +18,7 @@ radius_pam_conf() {
 	config_get secret "$sec" secret
 	config_get port "$sec" port 1812
 	config_get timeout "$sec" timeout 3
+	config_get require_message_auth "$sec" require_message_auth
 
 	[ "$service" == "rpcd" ] && {
 		local external_users="$(uci -q get rpcd.@rpcd[0].pam_all_users)"
@@ -33,6 +34,8 @@ radius_pam_conf() {
 		logger -t pam "Radius server ip or secret is not configured"
 		return
 	}
+
+	[ -n "$require_message_auth" ] && [ "$require_message_auth" -eq 1 ] && additional="$additional require_message_authenticator"
 
 	[ ! -d "$RADIUS_DIR" ] && mkdir "$RADIUS_DIR"
 

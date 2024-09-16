@@ -1,35 +1,42 @@
 #!/bin/sh
 
-logger -t "hotspot" "User ${USER_NAME} logged on."
+[ "$KNAME" != "" ] || return
 
-#Script executed after a session is authorized. Executed with the following environment variables:
-#
-#DEV                            - The TUN/TAP device.
-#ADDR                           - IP Address of hotspot service.
-#NET                            - Network of hotspot service.
-#MASK                           - Network mask of hotspot service.
-#NAS_ID                         - NAS Identifier.
-#WISPR_LOCATION_ID              - The radiuslocation ID.
-#WISPR_LOCATION_NAME            - The radius location name.
-#USER_NAME                      - Username used to login.
-#FRAMED_IP_ADDRESS              - The client's IP address.
-#CALLING_STATION_ID             - The client's MAC address.
-#CALLED_STATION_ID              - The MAC address of the hotspot interface.
-#SESSION_TIMEOUT                - The max session time in sec, as set locally or by RADIUS Session-Timeout.
-#                                   (0, meaning unlimited).
-#IDLE_TIMEOUT                   - The max idle time, as set locally or by RADIUS Idle-Timeout (0, meaning unlimited).
-#COOVACHILLI_MAX_INPUT_OCTETS   - Max input octets set locally or by RADIUS ChilliSpot-Max-Input-Octets.
-#COOVACHILLI_MAX_OUTPUT_OCTETS  - Max output octets set locally or by RADIUS ChilliSpot-Max-Output-Octets.
-#COOVACHILLI_MAX_TOTAL_OCTETS   - Max total octets set by RADIUS ChilliSpot-Max-Total-Octets.
-#INPUT_OCTETS                   - Number of octets received during the session.
-#OUTPUT_OCTETS                  - Number of octets transmitted during the session.
-#INPUT_PACKETS                  - Number of packets received during the session.
-#OUTPUT_PACKETS                 - Number of packets transmitted during the session.
-#SESSION_TIME                   - Session duration in seconds.
-#TERMINATE_CAUSE                - 1=User-Request, 2=Lost-Carrier, 4=Idle-Timeout, 5=Session-Timeout, 11=NAS-Reboot
-#IDLE_TIME                      - Idle time duration in seconds.
-#ACCT_SESSION_ID                - Unique Accounting ID
-#ACCT_INTERIM_INTERVAL          - Interim-interval for RADIUS accounting unless otherwise set by RADIUS
-#                                   (defaults to 0, meaning unlimited).
-#WISPR_LOCATION_ID              - Radius location id
-#WISPR_LOCATION_NAME            - Radius location name
+tc_outgoing() {
+	local iface="$1"
+	local speed="$2"
+	local addr="$3"
+
+	local class_id="1$(echo $addr | awk -F. '{print $4}')"
+
+	tc qdisc show dev $iface root 2>/dev/null | grep -q '^qdisc htb 1:' || tc qdisc add dev $iface root handle 1: htb
+
+	tc class add dev $iface parent 1: classid 1:$class_id htb rate $speed
+	tc filter add dev $iface protocol ip parent 1: prio 1 u32 match ip dst $addr flowid 1:$class_id
+}
+
+tc_incoming() {
+	local iface="$1"
+	local speed="$2"
+	local addr="$3"
+
+	local virtual="ifb0"
+	local class_id="1$(echo $addr | awk -F. '{print $4}')"
+
+	ifconfig $virtual >/dev/null 2>&1 || ip link add name $virtual type ifb
+	ip link set dev $virtual up
+
+	tc qdisc show dev $virtual root 2>/dev/null | grep -q '^qdisc htb 2:' || \
+		tc qdisc add dev $virtual root handle 2: htb
+
+	tc qdisc show dev $iface ingress 2>/dev/null | grep -q '^qdisc ingress ffff:' || {
+		tc qdisc add dev $iface handle ffff: ingress
+		tc filter add dev $iface parent ffff: protocol ip u32 match u32 0 0 action mirred egress redirect dev $virtual
+	}
+
+	tc class add dev $virtual parent 2: classid 2:$class_id htb rate $speed
+	tc filter add dev $virtual protocol ip parent 2: prio 1 u32 match ip src $addr flowid 2:$class_id
+}
+
+[ "$WISPR_BANDWIDTH_MAX_DOWN" -gt 0 ] && tc_outgoing "$IF" "$WISPR_BANDWIDTH_MAX_DOWN" "$FRAMED_IP_ADDRESS"
+[ "$WISPR_BANDWIDTH_MAX_UP" -gt 0 ] && tc_incoming "$IF" "$WISPR_BANDWIDTH_MAX_UP" "$FRAMED_IP_ADDRESS"

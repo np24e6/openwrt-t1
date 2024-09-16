@@ -6,10 +6,10 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=package_restore
-PKG_VERSION:=2024-06-17
-PKG_RELEASE:=1
+PKG_VERSION:=2024-08-20
+PKG_RELEASE:=2
 
-PKG_SOURCE_VERSION:=3.5
+PKG_SOURCE_VERSION:=3.7
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_SOURCE_VERSION)-$(PKG_VERSION)
 PKG_SOURCE:=$(PKG_SOURCE_SUBDIR).tar.gz
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_SOURCE_SUBDIR)
@@ -22,6 +22,7 @@ define Package/package_restore
 	SECTION:=base
 	CATEGORY:=Base system
 	TITLE:=Auto package restore
+	DEPENDS:=+vuci-app-package-manager-api
 endef
 
 define Package/package_restore/conffiles
@@ -32,7 +33,7 @@ endef
 
 define Package/package_restore/install
 	$(INSTALL_DIR) $(1)/sbin
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/files/package_restore.sh $(1)/sbin/package_restore.sh
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/files/package_restore.lua $(1)/sbin/package_restore.lua
 
 	$(INSTALL_DIR) $(1)/etc/init.d
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/files/package_restore.init $(1)/etc/init.d/package_restore

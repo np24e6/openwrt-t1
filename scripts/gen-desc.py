@@ -127,6 +127,77 @@ class Profile:
 
         self.hw = self.convert_to_array_format(self.hw)
 
+    def parse_expr(self, expr):
+        pattern = re.compile(r'if\s+(.*)', re.DOTALL)
+        match = pattern.match(expr)
+
+        if not match:
+            raise ValueError(f'Invalid detail line format: {expr}')
+
+        condition_expr = match.group(1)
+
+        if condition_expr:
+            tokens = re.findall(r'\w+|&&|\|\||!|\(|\)', condition_expr)
+        else:
+            tokens = []
+
+        return tokens
+
+    def evaluate_expr(self, tokens):
+        def eval_token(token):
+            if token in self.conf:
+                return self.conf[token] in {True, 'm'}
+            return False
+
+        def eval_not(token):
+            return not eval_token(token)
+
+        def eval_and(tokens):
+            return all(self.evaluate_expr(t) for t in tokens)
+
+        def eval_or(tokens):
+            return any(self.evaluate_expr(t) for t in tokens)
+
+        stack = []
+        i = 0
+        while i < len(tokens):
+            token = tokens[i]
+            if token == '&&':
+                stack.append('&&')
+            elif token == '||':
+                stack.append('||')
+            elif token == '!':
+                stack.append(eval_not(tokens[i+1]))
+                i += 1
+            elif token == '(':
+                sub_expr = []
+                paren_count = 1
+                i += 1
+                while i < len(tokens):
+                    if tokens[i] == '(':
+                        paren_count += 1
+                    elif tokens[i] == ')':
+                        paren_count -= 1
+                        if paren_count == 0:
+                            break
+                    sub_expr.append(tokens[i])
+                    i += 1
+                stack.append(self.evaluate_expr(sub_expr))
+            else:
+                stack.append(eval_token(token))
+            i += 1
+
+        result = stack[0]
+        i = 1
+        while i < len(stack):
+            if stack[i] == '&&':
+                result = result and stack[i+1]
+            elif stack[i] == '||':
+                result = result or stack[i+1]
+            i += 2
+
+        return result
+
     def prepare_dotconfig(self):
         f = open('.config', 'w')
 
@@ -149,9 +220,29 @@ class Profile:
                     self.conf[option.split('CONFIG_')[1]] = True if value == 'y' else value
 
     def fetch_features(self):
-        self.features = [f for f in list_features if f.name in self.conf]
-        for feature in self.features:
-            feature.external = (self.conf[feature.name] == 'm')
+        self.features = []
+
+        for f in list_features:
+            if not f.name in self.conf:
+                continue
+
+            new_detail = []
+
+            for d in f.detail:
+                new_item = {'key': d['key'], 'value': d['value']}
+
+                if not d['expr']:
+                    new_detail.append(new_item)
+                    continue
+
+                expr = self.parse_expr(d['expr'])
+                if self.evaluate_expr(expr):
+                    new_detail.append(new_item)
+
+            f.detail = new_detail
+            f.external = (self.conf[f.name] == 'm')
+
+            self.features.append(f)
 
     def find_package_deps(self, deps):
         packages = []
@@ -199,7 +290,7 @@ class Profile:
 
         data["features"] = dump_features(self.features, descriptions_only)
 
-        return json.dumps(data, indent=2)
+        return json.dumps(data, indent=2, ensure_ascii=False)
 
 def initialize_targets(targetDevice=None, targetFamily=None):
     ti = 'tmp/.targetinfo'
@@ -249,35 +340,36 @@ class Feature:
         self.external = False
         self.packages = []
         self.desc = ''
-        self.detail = ''
+        self.detail = []
 
-    def parse_detail(self, data):
-        if data == '':
-            return []
+    def parse_detail(self, line, expr):
+        l = line.strip()
 
-        lines = data.split('\n')
+        if not l:
+            return
 
-        formatted_data = []
-        current_key = None
+        key, value = '', ''
 
-        for line in lines:
-            if ':' in line:
-                key, value = line.split(':', 1)
-                current_key = key.strip()
-                value = value.strip()
-                formatted_data.append({'key': current_key, 'value': value})
-            else:
-                continued_value = line.strip()
-                if len(formatted_data) == 0:
-                    formatted_data.append({'key': '', 'value': continued_value})
-                else:
-                    formatted_data[-1]['value'] += ' ' + continued_value
+        if ':' in l:
+            key, value = l.split(':', 1)
+            key = key.strip()
+            value = value.strip()
+        else:
+            value = l.strip()
 
-        return formatted_data
+            # update previous value
+            if len(self.detail) > 0:
+                previous = self.detail[-1]
+                previous['value'] += ' ' + value
+                return
+
+        self.detail.append({'key': key, 'value': value, 'expr': expr})
 
     def parse(self, file):
         help_parse = False
         detail_parse = False
+        detail_expr_parse = False
+        detail_expr_str = ''
 
         while True:
             position = file.tell()
@@ -289,39 +381,50 @@ class Feature:
             if is_match('^config ', l):
                 file.seek(position)
                 break
-            elif 'bool ' in l or 'tristate ' in l:
+            elif is_match('^\tbool ', l) or is_match('^\ttristate ', l):
                 help_parse = False
                 detail_parse = False
+                detail_expr_parse = False
                 tmp = l.split(' ', 1)
 
                 if len(tmp) >= 2:
                     self.title = tmp[1][:-1].strip('"')
-            elif 'select ' in l or 'imply ' in l:
+            elif is_match('^\tselect ', l) or is_match('^\timply ', l):
                 help_parse = False
                 detail_parse = False
+                detail_expr_parse = False
                 info = l.split(' ', 2)
 
                 if 'PACKAGE_' in info[1]:
                     self.packages.append(info[1][8:].strip())
                 else:
                     self.packages.append(info[1][:-1])
-            elif 'default ' in l:
+            elif is_match('^\tdefault ', l):
                 help_parse = False
                 detail_parse = False
-            elif 'maintainer ' in l:
+                detail_expr_parse = False
+            elif is_match('^\tmaintainer ', l):
                 help_parse = False
                 detail_parse = False
                 self.maintainer = l[13:-2]
-            elif 'depends on ' in l:
+            elif is_match('^\tdepends on ', l):
                 help_parse = False
                 detail_parse = False
-            elif 'detail' in l:
+                detail_expr_parse = False
+            elif is_match('^\tdetail', l):
                 help_parse = False
                 detail_parse = True
-                self.detail = l[7:]
-            elif 'help' in l:
+                if 'detail if ' in l:
+                    detail_expr_str = l[7:].strip()
+                    if l[:-1].strip().endswith('\\'):
+                        detail_expr_parse = True
+                        detail_expr_str = detail_expr_str[:-2]
+                else:
+                    detail_expr_str = ''
+            elif is_match('^\thelp', l):
                 help_parse = True
                 detail_parse = False
+                detail_expr_parse = False
                 self.desc = l[5:]
             elif l.lstrip().startswith('#'):
                 continue
@@ -329,15 +432,21 @@ class Feature:
                 if help_parse is True:
                     self.desc = self.desc + l
                 elif detail_parse is True:
-                    self.detail = self.detail + l
+                    l = l.strip()
+
+                    if not l:
+                        continue
+
+                    if detail_expr_parse:
+                        detail_expr_str += ' ' + l.strip()
+                        if not l[:-1].strip().endswith('\\'):
+                            detail_expr_parse = False
+                        continue
+
+                    self.parse_detail(l, detail_expr_str)
 
         self.desc = ''.join(self.desc.split('\n\t', 1))
         self.desc = ''.join(self.desc.split('\t')).strip()
-
-        self.detail = ''.join(self.detail.split('\n\t', 1))
-        self.detail = ''.join(self.detail.split('\t')).strip()
-        self.detail = self.parse_detail(self.detail)
-
 
 def initialize_features():
     confs = [
@@ -370,11 +479,11 @@ def dump_features(data, descriptions_only=False):
         info = {
             "title": f.title,
             "description": f.desc,
-            "detail": f.detail,
+            "detail": [{'key': item['key'], 'value': item['value']} for item in f.detail],
         }
 
         if descriptions_only:
-            if f.title or f.desc or f.detail:
+            if f.title:
                 features.append(info)
             continue
 
@@ -509,7 +618,7 @@ def generate_device_features(dump=False, descriptions_only=False, target=None, f
         os.makedirs(default_dir)
 
     if dump_list:
-        json_data = json.dumps(dump_features(list_features, descriptions_only), indent=2)
+        json_data = json.dumps(dump_features(list_features, descriptions_only), indent=2, ensure_ascii=False)
     else:
         data = []
         for p in list_profiles:

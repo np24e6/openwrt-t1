@@ -2,8 +2,8 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=mqtt-modbus-gateway
-PKG_VERSION:=2024-05-31
-PKG_SOURCE_VERSION:=7.8-2
+PKG_VERSION:=2024-08-01
+PKG_SOURCE_VERSION:=7.9
 PKG_LICENSE:=Teltonika-closed
 
 # TARGET_CFLAGS += -ggdb3 -O0

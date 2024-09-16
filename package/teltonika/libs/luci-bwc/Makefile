@@ -2,7 +2,7 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=luci-bwc
-PKG_VERSION:=2024-06-17
+PKG_VERSION:=2024-08-26
 PKG_RELEASE:=1
 PKG_LICENSE:=Apache-2.0 license
 

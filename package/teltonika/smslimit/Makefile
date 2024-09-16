@@ -7,7 +7,7 @@ include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=smslimit
 
-PKG_SOURCE_VERSION:=6.0
+PKG_SOURCE_VERSION:=7.0
 
 PKG_LICENSE:=Teltonika-closed
 

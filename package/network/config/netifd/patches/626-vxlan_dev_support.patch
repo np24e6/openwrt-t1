@@ -1,0 +1,755 @@
+Index: netifd-2024-01-04-c18cc79d/vxlan.c
+===================================================================
+--- /dev/null
++++ netifd-2024-01-04-c18cc79d/vxlan.c
+@@ -0,0 +1,330 @@
++#include <string.h>
++#include <stdlib.h>
++#include <stdio.h>
++#include <assert.h>
++#include <errno.h>
++
++#include "netifd.h"
++#include "device.h"
++#include "interface.h"
++#include "system.h"
++
++enum {
++	VXLAN_ATTR_ID,
++	VXLAN_ATTR_PORT,
++	VXLAN_ATTR_MACADDR,
++	VXLAN_ATTR_MTU,
++	VXLAN_ATTR_AGEING,
++	VXLAN_ATTR_LIMIT,
++	VXLAN_ATTR_LOCAL,
++	VXLAN_ATTR_REMOTE,
++	VXLAN_ATTR_UDP_CSUM,
++	VXLAN_ATTR_LEARNING,
++	VXLAN_ATTR_PROXY,
++	VXLAN_ATTR_RSC,
++	VXLAN_ATTR_L2MISS,
++	VXLAN_ATTR_L3MISS,
++	VXLAN_ATTR_UDP6ZEROCSUMTX,
++	VXLAN_ATTR_UDP6ZEROCSUMRX,
++	VXLAN_ATTR_REMCSUMTX,
++	VXLAN_ATTR_REMCSUMRX,
++	VXLAN_ATTR_EXTERNAL,
++	__VXLAN_ATTR_MAX
++};
++
++static const struct blobmsg_policy vxlan_attrs[__VXLAN_ATTR_MAX] = {
++	[VXLAN_ATTR_ID] = { .name = "id", .type = BLOBMSG_TYPE_INT32 },
++	[VXLAN_ATTR_PORT] = { .name = "port", .type = BLOBMSG_TYPE_INT32 },
++	[VXLAN_ATTR_MACADDR] = { .name = "macaddr", .type = BLOBMSG_TYPE_STRING },
++	[VXLAN_ATTR_MTU] = { .name = "mtu", .type = BLOBMSG_TYPE_INT32 },
++	[VXLAN_ATTR_AGEING] = { .name = "ageing", .type = BLOBMSG_TYPE_INT32 },
++	[VXLAN_ATTR_LIMIT] = { .name = "maxaddress", .type = BLOBMSG_TYPE_INT32 },
++	[VXLAN_ATTR_LOCAL] = { .name = "local", .type = BLOBMSG_TYPE_STRING },
++	[VXLAN_ATTR_REMOTE] = { .name = "remote", .type = BLOBMSG_TYPE_STRING },
++	[VXLAN_ATTR_UDP_CSUM] = {.name = "udpcsum", .type = BLOBMSG_TYPE_BOOL },
++	[VXLAN_ATTR_LEARNING] = {.name = "learning", .type = BLOBMSG_TYPE_BOOL },
++	[VXLAN_ATTR_PROXY] = {.name = "proxy", .type = BLOBMSG_TYPE_BOOL },
++	[VXLAN_ATTR_RSC] = {.name = "rsc", .type = BLOBMSG_TYPE_BOOL },
++	[VXLAN_ATTR_L2MISS] = {.name = "l2miss", .type = BLOBMSG_TYPE_BOOL },
++	[VXLAN_ATTR_L3MISS] = {.name = "l3miss", .type = BLOBMSG_TYPE_BOOL },
++	[VXLAN_ATTR_UDP6ZEROCSUMTX] = {.name = "udp6zerocsumtx", .type = BLOBMSG_TYPE_BOOL },
++	[VXLAN_ATTR_UDP6ZEROCSUMRX] = {.name = "udp6zerocsumrx", .type = BLOBMSG_TYPE_BOOL },
++	[VXLAN_ATTR_REMCSUMTX] = {.name = "remcsumtx", .type = BLOBMSG_TYPE_BOOL },
++	[VXLAN_ATTR_REMCSUMRX] = {.name = "remcsumrx", .type = BLOBMSG_TYPE_BOOL },
++	[VXLAN_ATTR_EXTERNAL] = {.name = "external", .type = BLOBMSG_TYPE_BOOL },
++};
++
++const struct uci_blob_param_list vxlan_attr_list = {
++	.n_params = __VXLAN_ATTR_MAX,
++	.params = vxlan_attrs,
++};
++
++struct vxlan {
++	struct device dev;
++
++	device_state_cb set_state;
++
++	struct blob_attr *config_data;
++	struct vxlan_config config;
++};
++
++static int
++vxlan_set_down(struct vxlan *vxlan)
++{
++	vxlan->set_state(&vxlan->dev, false);
++	system_vxlan_del(&vxlan->dev);
++
++	return 0;
++}
++
++static int
++vxlan_set_up(struct vxlan *vxlan)
++{
++	int ret;
++
++	ret = system_vxlan_add(&vxlan->dev, &vxlan->config);
++	if (ret < 0)
++		return ret;
++
++	ret = vxlan->set_state(&vxlan->dev, true);
++	if (ret)
++		goto delete;
++
++	return 0;
++
++delete:
++	system_vxlan_del(&vxlan->dev);
++	return ret;
++}
++
++static int
++vxlan_set_state(struct device *dev, bool up)
++{
++	struct vxlan *vxlan;
++
++	vxlan = container_of(dev, struct vxlan, dev);
++	if (up)
++		return vxlan_set_up(vxlan);
++	else
++		return vxlan_set_down(vxlan);
++}
++
++static void
++vxlan_free(struct device *dev)
++{
++	struct vxlan *vxlan;
++
++	vxlan = container_of(dev, struct vxlan, dev);
++	free(vxlan->config_data);
++	free(vxlan);
++}
++
++static void
++vxlan_dump_info(struct device *dev, struct blob_buf *b)
++{
++	struct vxlan *vxlan;
++
++	vxlan = container_of(dev, struct vxlan, dev);
++
++	blobmsg_add_u32(b, "id", vxlan->config.id);
++	blobmsg_add_u32(b, "port", vxlan->config.port);
++
++	system_if_dump_info(dev, b);
++}
++
++static void
++vxlan_config_init(struct device *dev)
++{
++	device_set_present(dev, true);
++}
++
++static void
++vxlan_apply_settings(struct vxlan *vxlan, struct blob_attr **tb)
++{
++	struct vxlan_config *cfg = &vxlan->config;
++	struct blob_attr *cur;
++	struct ether_addr *ea;
++
++	cfg->flags = 0;
++
++	if ((cur = tb[VXLAN_ATTR_ID]))
++	{
++		cfg->id = blobmsg_get_u32(cur);
++		cfg->flags |= VXLAN_OPT_ID;
++	}
++
++	if ((cur = tb[VXLAN_ATTR_PORT]))
++	{
++		cfg->port = blobmsg_get_u32(cur);
++		cfg->flags |= VXLAN_OPT_PORT;
++	}
++
++	if ((cur = tb[VXLAN_ATTR_MACADDR]))
++	{
++		ea = ether_aton(blobmsg_data(cur));
++		if (ea) {
++			memcpy(cfg->macaddr, ea, 6);
++			cfg->flags |= MACVLAN_OPT_MACADDR;
++		}
++	}
++
++	if ((cur = tb[VXLAN_ATTR_MACADDR]))
++	{
++		cfg->mtu = blobmsg_get_u32(cur);
++		cfg->flags |= VXLAN_OPT_MTU;
++	}
++
++	if ((cur = tb[VXLAN_ATTR_AGEING]))
++	{
++		cfg->ageing = blobmsg_get_u32(cur);
++		cfg->flags |= VXLAN_OPT_AGEING;
++	}
++
++	if ((cur = tb[VXLAN_ATTR_LIMIT]))
++	{
++		cfg->limit = blobmsg_get_u32(cur);
++		cfg->flags |= VXLAN_OPT_LIMIT;
++	}
++
++	if ((cur = tb[VXLAN_ATTR_LOCAL]))
++	{
++		const char *local_ip = blobmsg_get_string(cur);
++		if (inet_pton(AF_INET, local_ip, &(cfg->local_v4)) == 1) {
++			cfg->flags |= VXLAN_OPT_LOCAL_V4;
++		} else if (inet_pton(AF_INET6, local_ip, &(cfg->local_v6)) == 1) {
++			cfg->flags |= VXLAN_OPT_LOCAL_V6;
++		}
++	}
++
++	if ((cur = tb[VXLAN_ATTR_REMOTE]))
++	{
++		const char *remote_ip = blobmsg_get_string(cur);
++                if (inet_pton(AF_INET, remote_ip, &(cfg->remote_v4)) == 1) {
++			cfg->flags |= VXLAN_OPT_REMOTE_V4;
++		} else if (inet_pton(AF_INET6, remote_ip, &(cfg->remote_v6)) == 1) {
++			cfg->flags |= VXLAN_OPT_REMOTE_V6;
++		}
++	}
++
++	if ((cur = tb[VXLAN_ATTR_UDP_CSUM]) && blobmsg_get_u8(cur) == 1)
++		cfg->flags |= VXLAN_OPT_UDP_CSUM;
++
++	if ((cur = tb[VXLAN_ATTR_LEARNING]) && blobmsg_get_u8(cur) == 1)
++		cfg->flags |= VXLAN_OPT_LEARNING;
++
++	if ((cur = tb[VXLAN_ATTR_PROXY]) && blobmsg_get_u8(cur) == 1)
++		cfg->flags |=VXLAN_OPT_PROXY;
++
++	if ((cur = tb[VXLAN_ATTR_RSC]) && blobmsg_get_u8(cur) == 1)
++		cfg->flags |= VXLAN_OPT_RSC;
++
++	if ((cur = tb[VXLAN_ATTR_L2MISS]) && blobmsg_get_u8(cur) == 1)
++		cfg->flags |= VXLAN_OPT_L2MISS;
++
++	if ((cur = tb[VXLAN_ATTR_L3MISS]) && blobmsg_get_u8(cur) == 1)
++		cfg->flags |= VXLAN_OPT_L3MISS;
++
++	if ((cur = tb[VXLAN_ATTR_UDP6ZEROCSUMTX]) && blobmsg_get_u8(cur) == 1)
++		cfg->flags |= VXLAN_OPT_UDP6ZEROCSUMTX;
++
++	if ((cur = tb[VXLAN_ATTR_UDP6ZEROCSUMRX]) && blobmsg_get_u8(cur) == 1)
++		cfg->flags |= VXLAN_OPT_UDP6ZEROCSUMRX;
++
++	if ((cur = tb[VXLAN_ATTR_REMCSUMTX]) && blobmsg_get_u8(cur) == 1)
++		cfg->flags |= VXLAN_OPT_REMCSUMTX;
++
++	if ((cur = tb[VXLAN_ATTR_REMCSUMRX]) && blobmsg_get_u8(cur) == 1)
++		cfg->flags |= VXLAN_OPT_REMCSUMRX;
++
++	if ((cur = tb[VXLAN_ATTR_EXTERNAL]) && blobmsg_get_u8(cur) == 1)
++		cfg->flags |= VXLAN_OPT_EXTERNAL;
++
++}
++
++static enum dev_change_type
++vxlan_reload(struct device *dev, struct blob_attr *attr)
++{
++	struct blob_attr *tb_dev[__DEV_ATTR_MAX];
++	struct blob_attr *tb_mv[__VXLAN_ATTR_MAX];
++	enum dev_change_type ret = DEV_CONFIG_APPLIED;
++	struct vxlan *vxlan;
++
++	vxlan = container_of(dev, struct vxlan, dev);
++	attr = blob_memdup(attr);
++
++	blobmsg_parse(device_attr_list.params, __DEV_ATTR_MAX, tb_dev,
++		blob_data(attr), blob_len(attr));
++	blobmsg_parse(vxlan_attrs, __VXLAN_ATTR_MAX, tb_mv,
++		blob_data(attr), blob_len(attr));
++
++	device_init_settings(dev, tb_dev);
++	vxlan_apply_settings(vxlan, tb_mv);
++
++	if (vxlan->config_data) {
++		struct blob_attr *otb_dev[__DEV_ATTR_MAX];
++		struct blob_attr *otb_mv[__VXLAN_ATTR_MAX];
++
++		blobmsg_parse(device_attr_list.params, __DEV_ATTR_MAX, otb_dev,
++			blob_data(vxlan->config_data), blob_len(vxlan->config_data));
++
++		if (uci_blob_diff(tb_dev, otb_dev, &device_attr_list, NULL))
++			ret = DEV_CONFIG_RESTART;
++
++		blobmsg_parse(vxlan_attrs, __VXLAN_ATTR_MAX, otb_mv,
++			blob_data(vxlan->config_data), blob_len(vxlan->config_data));
++
++		if (uci_blob_diff(tb_mv, otb_mv, &vxlan_attr_list, NULL))
++			ret = DEV_CONFIG_RESTART;
++
++		vxlan_config_init(dev);
++	}
++
++	free(vxlan->config_data);
++	vxlan->config_data = attr;
++	return ret;
++}
++
++static struct device *
++vxlan_create(const char *name, struct device_type *devtype,
++	struct blob_attr *attr)
++{
++	struct vxlan *vxlan;
++	struct device *dev = NULL;
++
++	vxlan = calloc(1, sizeof(*vxlan));
++	if (!vxlan)
++		return NULL;
++
++	dev = &vxlan->dev;
++	if (device_init(dev, devtype, name) < 0) {
++		device_cleanup(dev);
++		free(vxlan);
++		return NULL;
++	}
++
++	dev->config_pending = true;
++
++	vxlan->set_state = dev->set_state;
++	dev->set_state = vxlan_set_state;
++
++	dev->hotplug_ops = NULL;
++
++	vxlan_reload(dev, attr);
++
++	return dev;
++}
++
++static struct device_type vxlan_device_type = {
++	.name = "vxlan",
++	.config_params = &vxlan_attr_list,
++	.create = vxlan_create,
++	.config_init = vxlan_config_init,
++	.reload = vxlan_reload,
++	.free = vxlan_free,
++	.dump_info = vxlan_dump_info,
++};
++
++static void __init vxlan_device_type_init(void)
++{
++	device_type_add(&vxlan_device_type);
++}
+Index: netifd-2024-01-04-c18cc79d/system-linux.c
+===================================================================
+--- netifd-2024-01-04-c18cc79d.orig/system-linux.c
++++ netifd-2024-01-04-c18cc79d/system-linux.c
+@@ -4260,41 +4260,13 @@ failure:
+ }
+ #endif
+ 
+-#ifdef IFLA_VXLAN_MAX
+-static void system_vxlan_map_bool_attr(struct nl_msg *msg, struct blob_attr **tb_data, int attrtype, int vxlandatatype, bool invert) {
+-	struct blob_attr *cur;
+-	if ((cur = tb_data[vxlandatatype])) {
+-		bool val = blobmsg_get_bool(cur);
+-		if (invert)
+-			val = !val;
+-
+-#ifdef IFLA_VXLAN_GBP
+-		if ((attrtype == IFLA_VXLAN_GBP) && val)
+-			nla_put_flag(msg, attrtype);
+-		else 
+-			nla_put_u8(msg, attrtype, val);
+-#else
+-		nla_put_u8(msg, attrtype, val);
+-#endif // IFLA_VXLAN_GBP
+-
+-	}
+-}
+-
+-static int system_add_vxlan(const char *name, const unsigned int link, struct blob_attr **tb, bool v6)
++int system_vxlan_add(struct device *vxlan, struct vxlan_config *cfg)
+ {
+-	struct blob_attr *tb_data[__VXLAN_DATA_ATTR_MAX];
+ 	struct nl_msg *msg;
+ 	struct nlattr *linkinfo, *data;
+ 	struct ifinfomsg iim = { .ifi_family = AF_UNSPEC, };
+-	struct blob_attr *cur;
+ 	int ret = 0;
+ 
+-	if ((cur = tb[TUNNEL_ATTR_DATA]))
+-		blobmsg_parse(vxlan_data_attr_list.params, __VXLAN_DATA_ATTR_MAX, tb_data,
+-			blobmsg_data(cur), blobmsg_len(cur));
+-	else
+-		return -EINVAL;
+-
+ 	msg = nlmsg_alloc_simple(RTM_NEWLINK, NLM_F_REQUEST | NLM_F_CREATE | NLM_F_EXCL);
+ 
+ 	if (!msg)
+@@ -4302,22 +4274,13 @@ static int system_add_vxlan(const char *
+ 
+ 	nlmsg_append(msg, &iim, sizeof(iim), 0);
+ 
+-	nla_put_string(msg, IFLA_IFNAME, name);
++	nla_put_string(msg, IFLA_IFNAME, vxlan->ifname);
+ 
+-	if ((cur = tb_data[VXLAN_DATA_ATTR_MACADDR])) {
+-		struct ether_addr *ea = ether_aton(blobmsg_get_string(cur));
+-		if (!ea) {
+-			ret = -EINVAL;
+-			goto failure;
+-		}
+-
+-		nla_put(msg, IFLA_ADDRESS, ETH_ALEN, ea);
+-	}
++	if (cfg->flags & VXLAN_OPT_MACADDR)
++		nla_put(msg, IFLA_ADDRESS, sizeof(cfg->macaddr), cfg->macaddr);
+ 
+-	if ((cur = tb[TUNNEL_ATTR_MTU])) {
+-		uint32_t mtu = blobmsg_get_u32(cur);
+-		nla_put_u32(msg, IFLA_MTU, mtu);
+-	}
++	if (cfg->flags & VXLAN_OPT_MTU)
++		nla_put_u32(msg, IFLA_MTU, cfg->mtu);
+ 
+ 	if (!(linkinfo = nla_nest_start(msg, IFLA_LINKINFO))) {
+ 		ret = -ENOMEM;
+@@ -4331,144 +4294,65 @@ static int system_add_vxlan(const char *
+ 		goto failure;
+ 	}
+ 
+-	if (link)
+-		nla_put_u32(msg, IFLA_VXLAN_LINK, link);
+-
+-	if ((cur = tb_data[VXLAN_DATA_ATTR_ID])) {
+-		uint32_t id = blobmsg_get_u32(cur);
+-		if (id >= (1u << 24) - 1) {
++	if (cfg->flags & VXLAN_OPT_ID) {
++		if (cfg->id >= (1u << 24) - 1) {
+ 			ret = -EINVAL;
+ 			goto failure;
+ 		}
+ 
+-		nla_put_u32(msg, IFLA_VXLAN_ID, id);
+-	}
+-
+-	if (v6) {
+-		struct in6_addr in6buf;
+-		if ((cur = tb[TUNNEL_ATTR_LOCAL])) {
+-			if (inet_pton(AF_INET6, blobmsg_data(cur), &in6buf) < 1) {
+-				ret = -EINVAL;
+-				goto failure;
+-			}
+-			nla_put(msg, IFLA_VXLAN_LOCAL6, sizeof(in6buf), &in6buf);
+-		}
+-
+-		if ((cur = tb[TUNNEL_ATTR_REMOTE])) {
+-			if (inet_pton(AF_INET6, blobmsg_data(cur), &in6buf) < 1) {
+-				ret = -EINVAL;
+-				goto failure;
+-			}
+-			nla_put(msg, IFLA_VXLAN_GROUP6, sizeof(in6buf), &in6buf);
+-		}
+-	} else {
+-		struct in_addr inbuf;
+-
+-		if ((cur = tb[TUNNEL_ATTR_LOCAL])) {
+-			if (inet_pton(AF_INET, blobmsg_data(cur), &inbuf) < 1) {
+-				ret = -EINVAL;
+-				goto failure;
+-			}
+-			nla_put(msg, IFLA_VXLAN_LOCAL, sizeof(inbuf), &inbuf);
+-		}
+-
+-		if ((cur = tb[TUNNEL_ATTR_REMOTE])) {
+-			if (inet_pton(AF_INET, blobmsg_data(cur), &inbuf) < 1) {
+-				ret = -EINVAL;
+-				goto failure;
+-			}
+-			nla_put(msg, IFLA_VXLAN_GROUP, sizeof(inbuf), &inbuf);
+-		}
+-	}
+-
+-	uint32_t port = 4789;
+-	if ((cur = tb_data[VXLAN_DATA_ATTR_PORT])) {
+-		port = blobmsg_get_u32(cur);
+-		if (port < 1 || port > 65535) {
++		if (nla_put_u32(msg, IFLA_VXLAN_ID, cfg->id)) {
+ 			ret = -EINVAL;
+ 			goto failure;
+ 		}
+ 	}
+-	nla_put_u16(msg, IFLA_VXLAN_PORT, htons(port));
+ 
+-	if ((cur = tb_data[VXLAN_DATA_ATTR_SRCPORTMIN])) {
+-		struct ifla_vxlan_port_range srcports = {0,0};
++	if (cfg->flags & VXLAN_OPT_REMOTE_V4) {
++		nla_put(msg, IFLA_VXLAN_GROUP, sizeof(struct in_addr), &(cfg->remote_v4));
+ 
+-		uint32_t low = blobmsg_get_u32(cur);
+-		if (low < 1 || low > 65535 - 1) {
+-			ret = -EINVAL;
+-			goto failure;
++		if (cfg->flags & VXLAN_OPT_LOCAL_V4) {
++			nla_put(msg, IFLA_VXLAN_LOCAL, sizeof(struct in_addr), &(cfg->local_v4));
+ 		}
+ 
+-		srcports.low = htons((uint16_t) low);
+-		srcports.high = htons((uint16_t) (low+1));
++	} else if (cfg->flags & VXLAN_OPT_REMOTE_V6) {
++		nla_put(msg, IFLA_VXLAN_GROUP6, sizeof(struct in6_addr), &(cfg->remote_v6));
+ 
+-		if ((cur = tb_data[VXLAN_DATA_ATTR_SRCPORTMAX])) {
+-			uint32_t high = blobmsg_get_u32(cur);
+-			if (high < 1 || high > 65535) {
+-				ret = -EINVAL;
+-				goto failure;
+-			}
+-
+-			if (high > low)
+-				srcports.high = htons((uint16_t) high);
++		if (cfg->flags & VXLAN_OPT_LOCAL_V6) {
++			nla_put(msg, IFLA_VXLAN_LOCAL6, sizeof(struct in6_addr), &(cfg->local_v6));
+ 		}
+-
+-		nla_put(msg, IFLA_VXLAN_PORT_RANGE, sizeof(srcports), &srcports);
+ 	}
+ 
+-	system_vxlan_map_bool_attr(msg, tb_data, IFLA_VXLAN_UDP_CSUM, VXLAN_DATA_ATTR_TXCSUM, false);
+-	system_vxlan_map_bool_attr(msg, tb_data, IFLA_VXLAN_UDP_ZERO_CSUM6_RX, VXLAN_DATA_ATTR_RXCSUM, true);
+-	system_vxlan_map_bool_attr(msg, tb_data, IFLA_VXLAN_UDP_ZERO_CSUM6_TX, VXLAN_DATA_ATTR_TXCSUM, true);
+-	system_vxlan_map_bool_attr(msg, tb_data, IFLA_VXLAN_LEARNING, VXLAN_DATA_ATTR_LEARNING, false);
+-	system_vxlan_map_bool_attr(msg, tb_data, IFLA_VXLAN_RSC , VXLAN_DATA_ATTR_RSC, false);
+-	system_vxlan_map_bool_attr(msg, tb_data, IFLA_VXLAN_PROXY , VXLAN_DATA_ATTR_PROXY, false);
+-	system_vxlan_map_bool_attr(msg, tb_data, IFLA_VXLAN_L2MISS , VXLAN_DATA_ATTR_L2MISS, false);
+-	system_vxlan_map_bool_attr(msg, tb_data, IFLA_VXLAN_L3MISS , VXLAN_DATA_ATTR_L3MISS, false);
+-#ifdef IFLA_VXLAN_GBP
+-	system_vxlan_map_bool_attr(msg, tb_data, IFLA_VXLAN_GBP , VXLAN_DATA_ATTR_GBP, false);
+-#endif // IFLA_VXLAN_GBP
+-
+-	if ((cur = tb_data[VXLAN_DATA_ATTR_AGEING])) {
+-		uint32_t ageing = blobmsg_get_u32(cur);
+-		nla_put_u32(msg, IFLA_VXLAN_AGEING, ageing);
+-	}
+-
+-	if ((cur = tb_data[VXLAN_DATA_ATTR_LIMIT])) {
+-		uint32_t maxaddress = blobmsg_get_u32(cur);
+-		nla_put_u32(msg, IFLA_VXLAN_LIMIT, maxaddress);
+-	}
+-
+-	if ((cur = tb[TUNNEL_ATTR_TOS])) {
+-		char *str = blobmsg_get_string(cur);
+-		unsigned tos = 1;
++	if (cfg->flags & VXLAN_OPT_PORT)
++		nla_put_u16(msg, IFLA_VXLAN_PORT, htons(cfg->port));
+ 
+-		if (strcmp(str, "inherit")) {
+-			if (!system_tos_aton(str, &tos)) {
+-				ret = -EINVAL;
+-				goto failure;
+-			}
+-		}
++	if (cfg->flags & VXLAN_OPT_AGEING)
++		nla_put_u32(msg, IFLA_VXLAN_AGEING, cfg->ageing);
+ 
+-		nla_put_u8(msg, IFLA_VXLAN_TOS, tos);
+-	}
++	if (cfg->flags & VXLAN_OPT_LIMIT)
++		nla_put_u32(msg, IFLA_VXLAN_LIMIT, cfg->limit);
+ 
+-	if ((cur = tb[TUNNEL_ATTR_TTL])) {
+-		uint32_t ttl = blobmsg_get_u32(cur);
+-		if (ttl < 1 || ttl > 255) {
+-			ret = -EINVAL;
+-			goto failure;
+-		}
+ 
+-		nla_put_u8(msg, IFLA_VXLAN_TTL, ttl);
++	if (nla_put_u8(msg, IFLA_VXLAN_UDP_CSUM, !!(cfg->flags & VXLAN_OPT_UDP_CSUM)) ||
++	    nla_put_u8(msg, IFLA_VXLAN_LEARNING, !!(cfg->flags & VXLAN_OPT_LEARNING)) ||
++	    nla_put_u8(msg, IFLA_VXLAN_PROXY, !!(cfg->flags & VXLAN_OPT_PROXY)) ||
++	    nla_put_u8(msg, IFLA_VXLAN_RSC, !!(cfg->flags & VXLAN_OPT_RSC)) ||
++	    nla_put_u8(msg, IFLA_VXLAN_L2MISS, !!(cfg->flags & VXLAN_OPT_L2MISS)) ||
++	    nla_put_u8(msg, IFLA_VXLAN_L3MISS, !!(cfg->flags & VXLAN_OPT_L3MISS)) ||
++	    nla_put_u8(msg, IFLA_VXLAN_UDP_ZERO_CSUM6_TX, !!(cfg->flags & VXLAN_OPT_UDP6ZEROCSUMTX)) ||
++	    nla_put_u8(msg, IFLA_VXLAN_UDP_ZERO_CSUM6_RX, !!(cfg->flags & VXLAN_OPT_UDP6ZEROCSUMRX)) ||
++	    nla_put_u8(msg, IFLA_VXLAN_REMCSUM_TX, !!(cfg->flags & VXLAN_OPT_REMCSUMTX)) ||
++	    nla_put_u8(msg, IFLA_VXLAN_REMCSUM_RX, !!(cfg->flags & VXLAN_OPT_REMCSUMRX)) ||
++	    nla_put_u8(msg, IFLA_VXLAN_COLLECT_METADATA, !!(cfg->flags & VXLAN_OPT_EXTERNAL))) {
++		ret = -EMSGSIZE;
++		goto failure;
+ 	}
+ 
+ 	nla_nest_end(msg, data);
+ 	nla_nest_end(msg, linkinfo);
+ 
+ 	ret = system_rtnl_call(msg);
++
+ 	if (ret)
+-		D(SYSTEM, "Error adding vxlan '%s': %d\n", name, ret);
++		D(SYSTEM, "Error adding vxlan '%s': %d\n", vxlan->ifname, ret);
+ 
+ 	return ret;
+ 
+@@ -4476,7 +4360,11 @@ failure:
+ 	nlmsg_free(msg);
+ 	return ret;
+ }
+-#endif
++
++int system_vxlan_del(struct device *vxlan)
++{
++	return system_link_del(vxlan->ifname);
++}
+ 
+ static int system_add_sit_tunnel(const char *name, const unsigned int link, struct blob_attr **tb)
+ {
+@@ -4676,12 +4564,6 @@ int system_add_ip_tunnel(const struct de
+ 	} else if (!strcmp(str, "xfrm")) {
+ 		return system_add_xfrm_tunnel(dev->ifname, "xfrm", link, tb);
+ #endif
+-#ifdef IFLA_VXLAN_MAX
+-	} else if(!strcmp(str, "vxlan")) {
+-		return system_add_vxlan(dev->ifname, link, tb, false);
+-	} else if(!strcmp(str, "vxlan6")) {
+-		return system_add_vxlan(dev->ifname, link, tb, true);
+-#endif
+ #endif
+ 	} else if (!strcmp(str, "ipip")) {
+ 		return system_add_proto_tunnel(dev->ifname, IPPROTO_IPIP, link, tb);
+Index: netifd-2024-01-04-c18cc79d/system.h
+===================================================================
+--- netifd-2024-01-04-c18cc79d.orig/system.h
++++ netifd-2024-01-04-c18cc79d/system.h
+@@ -39,25 +39,6 @@ enum tunnel_param {
+ 
+ extern const struct uci_blob_param_list tunnel_attr_list;
+ 
+-enum vxlan_data {
+-	VXLAN_DATA_ATTR_ID,
+-	VXLAN_DATA_ATTR_PORT,
+-	VXLAN_DATA_ATTR_MACADDR,
+-	VXLAN_DATA_ATTR_RXCSUM,
+-	VXLAN_DATA_ATTR_TXCSUM,
+-	VXLAN_DATA_ATTR_SRCPORTMIN,
+-	VXLAN_DATA_ATTR_SRCPORTMAX,
+-	VXLAN_DATA_ATTR_LEARNING,
+-	VXLAN_DATA_ATTR_RSC,
+-	VXLAN_DATA_ATTR_PROXY,
+-	VXLAN_DATA_ATTR_L2MISS,
+-	VXLAN_DATA_ATTR_L3MISS,
+-	VXLAN_DATA_ATTR_GBP,
+-	VXLAN_DATA_ATTR_AGEING,
+-	VXLAN_DATA_ATTR_LIMIT,
+-	__VXLAN_DATA_ATTR_MAX
+-};
+-
+ enum gre_data {
+ 	GRE_DATA_IKEY,
+ 	GRE_DATA_OKEY,
+@@ -100,7 +81,6 @@ enum fmr_data {
+ 	__FMR_DATA_ATTR_MAX
+ };
+ 
+-extern const struct uci_blob_param_list vxlan_data_attr_list;
+ extern const struct uci_blob_param_list gre_data_attr_list;
+ extern const struct uci_blob_param_list vti_data_attr_list;
+ extern const struct uci_blob_param_list xfrm_data_attr_list;
+@@ -167,6 +147,46 @@ struct veth_config {
+ 	unsigned char peer_macaddr[6];
+ };
+ 
++enum vxlan_opt {
++	VXLAN_OPT_ID = (1 << 0),
++	VXLAN_OPT_PORT = (1 << 1),
++	VXLAN_OPT_MACADDR = (1 << 2),
++	VXLAN_OPT_MTU = (1 << 3),
++	VXLAN_OPT_AGEING = (1 << 4),
++	VXLAN_OPT_LIMIT = (1 << 5),
++	VXLAN_OPT_LOCAL_V4 = (1 << 6),
++	VXLAN_OPT_REMOTE_V4 = (1 << 7),
++	VXLAN_OPT_LOCAL_V6 = (1 << 8),
++	VXLAN_OPT_REMOTE_V6 = (1 << 9),
++	VXLAN_OPT_UDP_CSUM = (1 << 10),
++	VXLAN_OPT_LEARNING = (1 << 11),
++	VXLAN_OPT_PROXY = (1 << 12),
++	VXLAN_OPT_RSC = (1 << 13),
++	VXLAN_OPT_L2MISS = (1 << 14),
++	VXLAN_OPT_L3MISS = (1 << 15),
++	VXLAN_OPT_UDP6ZEROCSUMTX = (1 << 16),
++	VXLAN_OPT_UDP6ZEROCSUMRX = (1 << 17),
++	VXLAN_OPT_REMCSUMTX = (1 << 18),
++	VXLAN_OPT_REMCSUMRX = (1 << 19),
++	VXLAN_OPT_EXTERNAL = (1 << 20),
++};
++
++struct vxlan_config {
++	enum vxlan_opt flags;
++
++	uint32_t id;
++	uint16_t port;
++	unsigned char macaddr[6];
++	uint32_t mtu;
++	uint32_t ageing;
++	uint32_t limit;
++
++	struct in_addr local_v4;
++	struct in6_addr local_v6;
++	struct in_addr remote_v4;
++	struct in6_addr remote_v6;
++};
++
+ enum vlan_proto {
+ 	VLAN_PROTO_8021Q = 0x8100,
+ 	VLAN_PROTO_8021AD = 0x88A8
+@@ -266,6 +286,9 @@ int system_vlan_del(struct device *dev);
+ int system_vlandev_add(struct device *vlandev, struct device *dev, struct vlandev_config *cfg);
+ int system_vlandev_del(struct device *vlandev);
+ 
++int system_vxlan_add(struct device *vxlan, struct vxlan_config *cfg);
++int system_vxlan_del(struct device *vxlan);
++
+ void system_if_get_settings(struct device *dev, struct device_settings *s);
+ void system_if_clear_state(struct device *dev);
+ int system_if_up(struct device *dev);
+Index: netifd-2024-01-04-c18cc79d/system.c
+===================================================================
+--- netifd-2024-01-04-c18cc79d.orig/system.c
++++ netifd-2024-01-04-c18cc79d/system.c
+@@ -32,29 +32,6 @@ const struct uci_blob_param_list tunnel_
+ 	.params = tunnel_attrs,
+ };
+ 
+-static const struct blobmsg_policy vxlan_data_attrs[__VXLAN_DATA_ATTR_MAX] = {
+-	[VXLAN_DATA_ATTR_ID] = { .name = "id", .type = BLOBMSG_TYPE_INT32 },
+-	[VXLAN_DATA_ATTR_PORT] = { .name = "port", .type = BLOBMSG_TYPE_INT32 },
+-	[VXLAN_DATA_ATTR_MACADDR] = { .name = "macaddr", .type = BLOBMSG_TYPE_STRING },
+-	[VXLAN_DATA_ATTR_RXCSUM] = { .name = "rxcsum", .type = BLOBMSG_TYPE_BOOL },
+-	[VXLAN_DATA_ATTR_TXCSUM] = { .name = "txcsum", .type = BLOBMSG_TYPE_BOOL },
+-	[VXLAN_DATA_ATTR_SRCPORTMIN] = { .name = "srcportmin", .type = BLOBMSG_TYPE_INT32 },
+-	[VXLAN_DATA_ATTR_SRCPORTMAX] = { .name = "srcportmax", .type = BLOBMSG_TYPE_INT32 },
+-	[VXLAN_DATA_ATTR_LEARNING] = { .name = "learning", .type = BLOBMSG_TYPE_BOOL },
+-	[VXLAN_DATA_ATTR_RSC] = { .name = "rsc", .type = BLOBMSG_TYPE_BOOL },
+-	[VXLAN_DATA_ATTR_PROXY] = { .name = "proxy", .type = BLOBMSG_TYPE_BOOL },
+-	[VXLAN_DATA_ATTR_L2MISS] = { .name = "l2miss", .type = BLOBMSG_TYPE_BOOL },
+-	[VXLAN_DATA_ATTR_L3MISS] = { .name = "l3miss", .type = BLOBMSG_TYPE_BOOL },
+-	[VXLAN_DATA_ATTR_GBP] = { .name = "gbp", .type = BLOBMSG_TYPE_BOOL },
+-	[VXLAN_DATA_ATTR_AGEING] = { .name = "ageing", .type = BLOBMSG_TYPE_INT32 },
+-	[VXLAN_DATA_ATTR_LIMIT] = { .name = "maxaddress", .type = BLOBMSG_TYPE_INT32 },
+-};
+-
+-const struct uci_blob_param_list vxlan_data_attr_list = {
+-	.n_params = __VXLAN_DATA_ATTR_MAX,
+-	.params = vxlan_data_attrs,
+-};
+-
+ static const struct blobmsg_policy gre_data_attrs[__GRE_DATA_ATTR_MAX] = {
+ 	[GRE_DATA_IKEY] = { .name = "ikey", .type = BLOBMSG_TYPE_STRING },
+ 	[GRE_DATA_OKEY] = { .name = "okey", .type = BLOBMSG_TYPE_STRING },
+Index: netifd-2024-01-04-c18cc79d/CMakeLists.txt
+===================================================================
+--- netifd-2024-01-04-c18cc79d.orig/CMakeLists.txt
++++ netifd-2024-01-04-c18cc79d/CMakeLists.txt
+@@ -24,7 +24,7 @@ SET(SOURCES
+ 	main.c utils.c system.c tunnel.c handler.c
+ 	interface.c interface-ip.c interface-event.c
+ 	iprule.c proto.c proto-static.c proto-shell.c
+-	config.c device.c bridge.c veth.c vlan.c alias.c
++	config.c device.c bridge.c veth.c vxlan.c vlan.c alias.c
+ 	macvlan.c ubus.c vlandev.c wireless.c
+ 	extdev.c bonding.c port_link.c)
+ 

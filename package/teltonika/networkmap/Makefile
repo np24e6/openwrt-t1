@@ -7,7 +7,7 @@ include $(INCLUDE_DIR)/download.mk
 PKG_RELEASE:=1
 
 PKG_NAME:=networkmap
-PKG_VERSION:=2024-03-06
+PKG_VERSION:=2024-08-02
 
 PKG_SOURCE_VERSION:=1.2
 PKG_LICENSE:=Teltonika-closed

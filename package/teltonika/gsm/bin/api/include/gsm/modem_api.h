@@ -73,6 +73,15 @@ typedef enum {
 } evt_type_t;
 
 /**
+ * Enumeration of event types
+ */
+typedef enum {
+	ASYNC_SEND_SMS,
+	__ASYNC_MAX,
+} async_type_t;
+
+
+/**
  * Enumeration of modem pin states
  */
 enum pin_state_id {
@@ -1353,6 +1362,13 @@ const char *act_status_str(func_t status);
  * @return const char *. String of readable event name.
  */
 const char *evt_name_str(evt_type_t evt);
+
+/**
+ * Convert async type to name.
+ * @param[in]	async	Async type value.
+ * @return const char *. String of readable async name.
+ */
+const char *async_name_str(async_type_t async);
 
 /**
  * Convert pin state value to string.

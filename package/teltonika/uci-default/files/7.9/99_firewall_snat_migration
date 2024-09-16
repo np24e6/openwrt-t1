@@ -1,0 +1,56 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+CONFIG="firewall"
+INDEX=1
+
+config_cb() {
+	local type="$1"
+	local name="$2"
+
+	[ "$type" != "redirect" ] && return
+
+	local target=$(uci_get firewall "$name" target "")
+	[ "$target" != "SNAT" ] && return
+
+	[ "${name:0:3}" = "cfg" ] && {
+		while uci_get "firewall" "$INDEX" >/dev/null
+		do
+			INDEX=$((INDEX + 1))
+		done
+		name=$INDEX
+	}
+
+	uci set "$CONFIG.$name=nat"
+
+	option_cb() {
+		local option="$1"
+		local value="$2"
+		local name=$CONFIG_SECTION
+
+		if [ "${name:0:3}" = "cfg" ]; then
+			name=$INDEX
+		else
+			[ "$option" = "src_dip" ] || [ "$option" = "src_dport" ] || [ "$option" = "dest" ] && uci delete "$CONFIG.$name.$option"
+		fi
+
+		[ "$option" = "src_dip" ] && option="snat_ip"
+		[ "$option" = "src_dport" ] && option="snat_port"
+		[ "$option" = "dest" ] && option="src"
+
+		uci set "$CONFIG.$name.$option=$value"
+	}
+
+	list_cb() {
+		local option="$1"
+		local value="$2"
+		[ "${CONFIG_SECTION:0:3}" != "cfg" ] && return
+		uci add_list "$CONFIG.$INDEX.$option=$value"
+	}
+
+	[ "${2:0:3}" = "cfg" ] && uci delete "$CONFIG.$2"
+}
+
+config_load "$CONFIG"
+uci_commit "$CONFIG"

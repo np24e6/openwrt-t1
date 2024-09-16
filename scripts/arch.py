@@ -29,6 +29,12 @@ def parse_args() -> object:
         "--target",
         help="Print information only for specified target",
     )
+    parser.add_argument(
+        "-x",
+        "--exclude",
+        action="append",
+        help="Exclude target from list",
+    )
 
     parser.add_argument(
         "targetinfo_file",
@@ -76,7 +82,8 @@ for line in content.splitlines():
 
     if profile_match and current_arch and current_cpu:
         profile = profile_match.group(1)
-        if args.all < 2 and len(profile) > 6:  # skip 'trb1411' and alike
+        target_name = re.sub(r"x{2,}$", "", profile, flags=re.MULTILINE)
+        if (args.exclude and current_arch in args.exclude) or (args.all < 2 and len(profile) > 6):  # skip 'trb1411' and alike, as well as excluded targets
             profile_match = None
             continue
 
@@ -84,7 +91,7 @@ for line in content.splitlines():
         if key not in unique_combinations or not unique_combinations[key]:
             unique_combinations[key] = list()
 
-        unique_combinations[key].append(re.sub(r"x{2,}$", "", profile, flags=re.MULTILINE))
+        unique_combinations[key].append(target_name)
 
 
 if args.format == "ci":

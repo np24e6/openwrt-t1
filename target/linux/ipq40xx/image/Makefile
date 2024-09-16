@@ -1,5 +1,6 @@
 include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/image.mk
+include devices/rutxxx_family.mk
 
 define Build/UbootFw
 	$(CP) ./uboot_fw/ $(TMP_DIR)/
@@ -35,7 +36,7 @@ define Device/teltonika_rutx
 	PAGESIZE := 2048
 	FILESYSTEMS := squashfs
 	DEVICE_FEATURES := usb-port gps serial modbus io wifi bt dualsim \
-			port-mirror ntrip hw-offload mobile dot1x-client
+			port-mirror ntrip hw-offload mobile dot1x-client portlink
 	GPL_PREFIX := GPL
 	# Default common packages for RUTX series
 	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

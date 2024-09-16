@@ -12,8 +12,7 @@ proto_l2tp_init_config() {
 	proto_config_add_string "username"
 	proto_config_add_string "password"
 	proto_config_add_string "keepalive"
-	proto_config_add_string "pppd_options"
-	proto_config_add_boolean "ipv6"
+	proto_config_add_array "pppd_options"
 	proto_config_add_int "mtu"
 	proto_config_add_int "checkup_interval"
 	proto_config_add_string "server"
@@ -32,6 +31,10 @@ check_bind() {
         [ -z "$(ipsec status ${1%%_*}-${1} | grep "1 up")" ] && BIND_STOP=1
 }                                                                          
 
+proto_l2tp_add_opts() {
+	[ -n "$1" ] && echo "$1" >> "$3"
+}
+
 proto_l2tp_setup() {
 	local interface="$1"
 
@@ -47,7 +50,6 @@ proto_l2tp_setup() {
 	local ip serv_addr server host defaultroute
 
 	json_get_vars server defaultroute
-
 	BIND_STOP=0                                                        
 	config_load ipsec         
 	config_foreach check_bind connection "$interface"
@@ -95,9 +97,8 @@ proto_l2tp_setup() {
 		done
 	fi
 
-	local ipv6 demand keepalive username password pppd_options mtu
-	json_get_vars ipv6 demand keepalive username password pppd_options mtu
-	[ "$ipv6" = 1 ] || ipv6=""
+	local demand keepalive username password pppd_options mtu
+	json_get_vars demand keepalive username password pppd_options mtu
 	if [ "${demand:-0}" -gt 0 ]; then
 		demand="precompiled-active-filter /etc/ppp/filter demand idle $demand"
 	else
@@ -109,7 +110,6 @@ proto_l2tp_setup() {
 
 	keepalive="${keepalive:+lcp-echo-interval $interval lcp-echo-failure ${keepalive%%[, ]*}}"
 	username="${username:+user \"$username\" password \"$password\"}"
-	ipv6="${ipv6:++ipv6}"
 	mtu="${mtu:+mtu $mtu mru $mtu}"
 
 	config_load network
@@ -126,13 +126,13 @@ ipparam "$interface"
 ifname "l2tp-$interface"
 $keepalive
 $username
-$ipv6
 $mtu
-$pppd_options
 $allow_pap
 $allow_chap
 $allow_mschap2
 EOF
+
+	json_for_each_item proto_l2tp_add_opts pppd_options "$optfile"
 
 	xl2tpd-control add-lac l2tp-${interface} pppoptfile=${optfile} lns=${server} || {
 		echo "xl2tpd-control: Add l2tp-$interface failed" >&2

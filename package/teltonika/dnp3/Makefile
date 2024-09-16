@@ -2,11 +2,11 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=dnp3
-PKG_VERSION:=2024-06-25
+PKG_VERSION:=2024-08-01
 PKG_RELEASE:=1
 
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
-PKG_SOURCE_VERSION:=7.8
+PKG_SOURCE_VERSION:=7.9
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_SOURCE_SUBDIR)
 PKG_LICENSE:=Teltonika-closed
@@ -19,7 +19,7 @@ define Package/dnp3
 	TITLE:=dnp3 stack
 	DEPENDS:=+libstdcpp +libuci +libubus +libopenssl +libsqlite3 +MOBILE_SUPPORT:libgsm \
 		+GPS_SUPPORT:libgps +libtlt_uci +libtlt_termios +MOBILE_SUPPORT:libmdcollect +libjson-c +opendnp3 \
-		+libubox +libblobmsg-json +libmnfinfo +data-sender-mod-dnp3 +IO_SUPPORT:iomand +MOBILE_SUPPORT:libboardjson
+		+libubox +libblobmsg-json +libmnfinfo +IO_SUPPORT:iomand +MOBILE_SUPPORT:libboardjson
 endef
 
 ifeq ($(CONFIG_IO_SUPPORT),y)

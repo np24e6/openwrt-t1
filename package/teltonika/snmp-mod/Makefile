@@ -2,10 +2,10 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=snmp-mod
-PKG_VERSION:=2024-06-18
+PKG_VERSION:=2024-08-13
 PKG_RELEASE:=1
 
-PKG_SOURCE_VERSION:=3.8
+PKG_SOURCE_VERSION:=3.9
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_SOURCE_VERSION)-$(PKG_VERSION)
 PKG_SOURCE:=$(PKG_SOURCE_SUBDIR).tar.gz
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_SOURCE_SUBDIR)
@@ -24,7 +24,8 @@ define Package/snmp
 	$(call Package/snmp-mod/Default)
 	DEPENDS+=+snmpd +snmp-mib +snmp-mod-chilli +snmp-mod-device \
 			+GPS_SUPPORT:snmp-mod-gps +MOBILE_SUPPORT:snmp-mod-gsm +IO_SUPPORT:snmp-mod-io \
-			+snmp-mod-sqm +snmp-mod-vlan +WIFI_SUPPORT:snmp-mod-wireless +snmp-mod-port +snmptrap
+			+snmp-mod-sqm +snmp-mod-vlan +WIFI_SUPPORT:snmp-mod-wireless +snmp-mod-port \
+			+snmp-mod-mwan3 +snmptrap
 	TITLE:=SNMP Meta package
 endef
 
@@ -67,7 +68,7 @@ endef
 
 define Package/snmp-mod-wireless
 	$(call Package/snmp-mod/Default)
-	DEPENDS+=+libuci +libubus
+	DEPENDS+=+libuci +libubus +libblobmsg-json
 	TITLE:=SNMP wireless module
 endef
 
@@ -86,6 +87,11 @@ endef
 define Package/snmp-mod-port
 	$(call Package/snmp-mod/Default)
 	TITLE:=SNMP Port module
+endef
+
+define Package/snmp-mod-mwan3
+	$(call Package/snmp-mod/Default)
+	TITLE:=SNMP MultiWAN (MWAN3) module
 endef
 
 define Package/snmp-mib
@@ -131,3 +137,4 @@ $(eval $(call BuildPlugin,wireless))
 $(eval $(call BuildPlugin,vlan))
 $(eval $(call BuildPlugin,sqm))
 $(eval $(call BuildPlugin,port))
+$(eval $(call BuildPlugin,mwan3))

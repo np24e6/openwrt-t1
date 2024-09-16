@@ -344,6 +344,7 @@ DEVICE_HARDWARE_VARS = \
   HARDWARE/System_Characteristics/Flash_Storage \
   HARDWARE/Wireless/Wireless_mode \
   HARDWARE/Wireless/WIFI_users \
+  HARDWARE/Bluetooth/Bluetooth_4.0 \
   HARDWARE/Ethernet/Port \
   HARDWARE/Ethernet/Speed \
   HARDWARE/Ethernet/Standard \
@@ -353,6 +354,7 @@ DEVICE_HARDWARE_VARS = \
   HARDWARE/LAN/Port \
   HARDWARE/LAN/Speed \
   HARDWARE/LAN/Standard \
+  HARDWARE/Fibre/Port \
   HARDWARE/PoE_In/PoE_ports \
   HARDWARE/PoE_In/PoE_standards \
   HARDWARE/PoE_Out/PoE_ports \
@@ -364,6 +366,7 @@ DEVICE_HARDWARE_VARS = \
   HARDWARE/Power/Power_consumption \
   HARDWARE/Input_Output/Input \
   HARDWARE/Input_Output/Output \
+  HARDWARE/Input_Output/Configurable_IO \
   HARDWARE/Serial/RS232 \
   HARDWARE/Serial/RS485 \
   HARDWARE/Serial/Serial_functions \
@@ -381,19 +384,24 @@ DEVICE_HARDWARE_VARS = \
   HARDWARE/Physical_Interfaces/SIM \
   HARDWARE/Physical_Interfaces/Power \
   HARDWARE/Physical_Interfaces/Input_output \
-  HARDWARE/Physical_Interfaces/Atennas \
+  HARDWARE/Physical_Interfaces/Antennas \
   HARDWARE/Physical_Interfaces/Antennas_specifications \
   HARDWARE/Physical_Interfaces/USB \
   HARDWARE/Physical_Interfaces/RS232 \
   HARDWARE/Physical_Interfaces/RS485 \
   HARDWARE/Physical_Interfaces/Reset \
+  HARDWARE/Physical_Interfaces/Fibre \
+  HARDWARE/Physical_Interfaces/1_Wire \
+  HARDWARE/Physical_Interfaces/M_Bus \
+  HARDWARE/Physical_Interfaces/WiFi \
+  HARDWARE/Physical_Interfaces/WPS \
   HARDWARE/Physical_Specification/Casing_material \
   HARDWARE/Physical_Specification/Dimensions \
   HARDWARE/Physical_Specification/Weight \
   HARDWARE/Physical_Specification/Mounting_options \
-  HARDWARE/Operating_Enviroment/Operating_Temperature \
-  HARDWARE/Operating_Enviroment/Operating_Humidity \
-  HARDWARE/Operating_Enviroment/Ingress_Protenction_Rating \
+  HARDWARE/Operating_Environment/Operating_Temperature \
+  HARDWARE/Operating_Environment/Operating_Humidity \
+  HARDWARE/Operating_Environment/Ingress_Protection_Rating \
   HARDWARE/Regulatory_&_Type_Approvals/Regulatory \
   HARDWARE/Regulatory_&_Type_Approvals/Operator \
   HARDWARE/EMC_Emissions_&_Immunity/Standards \
@@ -439,6 +447,18 @@ define Device/InitProfile
   HW_SUPPORT :=
   DEVICE_COMPAT_CODE := ".*"
   DEVICE_BOOT_NAME :=
+  INCLUDED_DEVICES :=
+  DEVICE_USB_CHECK_PATH :=
+  DEVICE_USB_JACK_PATH :=
+  DEVICE_WLAN_BSSID_LIMIT :=
+  DEVICE_LAN_OPTION :=
+  DEVICE_WAN_OPTION :=
+  DEVICE_SWITCH_CONF :=
+  DEVICE_INTERFACE_CONF :=
+  DEVICE_NET_CONF :=
+  DEVICE_POE_CONF :=
+  DEVICE_POE_CHIP :=
+  DEVICE_SERIAL_CAPABILITIES :=
   $$(foreach var,$$(DEVICE_HARDWARE_VARS),$$(eval $$(var):=))
 endef
 
@@ -514,7 +534,12 @@ DEFAULT_DEVICE_VARS := \
   DEVICE_ALT2_VENDOR DEVICE_ALT2_MODEL DEVICE_ALT2_VARIANT \
   DEVICE_INITIAL_FIRMWARE_SUPPORT DEVICE_MULTI_PROFILE_NAME \
   GPL_PREFIX HW_MODS HW_SUPPORT DEVICE_COMPAT_CODE \
-  DEVICE_MTD_LOG_PARTNAME DEVICE_BOOT_NAME $(DEVICE_HARDWARE_VARS)
+  DEVICE_MTD_LOG_PARTNAME DEVICE_BOOT_NAME NCLUDED_DEVICES \
+  DEVICE_USB_CHECK_PATH DEVICE_USB_JACK_PATH DEVICE_WLAN_BSSID_LIMIT \
+  DEVICE_LAN_OPTION DEVICE_WAN_OPTION DEVICE_SWITCH_CONF \
+  DEVICE_INTERFACE_CONF DEVICE_NET_CONF DEVICE_POE_CONF \
+  DEVICE_POE_CHIP DEVICE_SERIAL_CAPABILITIES \
+  $(DEVICE_HARDWARE_VARS)
 
 define Device/ExportVar
   $(1) : $(2):=$$($(2))
@@ -607,6 +632,18 @@ define Device/Build/initramfs
 	DEVICE_MULTI_PROFILE_NAME="$$(DEVICE_MULTI_PROFILE_NAME)" \
 	SUPPORTED_DEVICES="$$(SUPPORTED_DEVICES)" \
 	DEVICE_BOOT_NAME="$$(DEVICE_BOOT_NAME)" \
+	INCLUDED_DEVICES="$$(INCLUDED_DEVICES)" \
+	DEVICE_USB_CHECK_PATH="$$(DEVICE_USB_CHECK_PATH)" \
+	DEVICE_USB_JACK_PATH="$$(DEVICE_USB_JACK_PATH)" \
+	DEVICE_WLAN_BSSID_LIMIT="$$(DEVICE_WLAN_BSSID_LIMIT)" \
+	DEVICE_LAN_OPTION="$$(DEVICE_LAN_OPTION)" \
+	DEVICE_WAN_OPTION="$$(DEVICE_WAN_OPTION)" \
+	DEVICE_SWITCH_CONF="$$(DEVICE_SWITCH_CONF)" \
+	DEVICE_INTERFACE_CONF="$$(DEVICE_INTERFACE_CONF)" \
+	DEVICE_NET_CONF="$$(DEVICE_NET_CONF)" \
+	DEVICE_POE_CONF="$$(DEVICE_POE_CONF)" \
+	DEVICE_POE_CHIP="$$(DEVICE_POE_CHIP)" \
+	DEVICE_SERIAL_CAPABILITIES="$$(DEVICE_SERIAL_CAPABILITIES)" \
 	$(TOPDIR)/scripts/json_add_image_info.py $$@
 endef
 endif
@@ -721,6 +758,18 @@ define Device/Build/image
 	DEVICE_MULTI_PROFILE_NAME="$(DEVICE_MULTI_PROFILE_NAME)" \
 	SUPPORTED_DEVICES="$(SUPPORTED_DEVICES)" \
 	DEVICE_BOOT_NAME="$(DEVICE_BOOT_NAME)" \
+	INCLUDED_DEVICES="$(INCLUDED_DEVICES)" \
+	DEVICE_USB_CHECK_PATH="$(DEVICE_USB_CHECK_PATH)" \
+	DEVICE_USB_JACK_PATH="$(DEVICE_USB_JACK_PATH)" \
+	DEVICE_WLAN_BSSID_LIMIT="$(DEVICE_WLAN_BSSID_LIMIT)" \
+	DEVICE_LAN_OPTION="$(DEVICE_LAN_OPTION)" \
+	DEVICE_WAN_OPTION="$(DEVICE_WAN_OPTION)" \
+	DEVICE_SWITCH_CONF="$(DEVICE_SWITCH_CONF)" \
+	DEVICE_INTERFACE_CONF="$(DEVICE_INTERFACE_CONF)" \
+	DEVICE_NET_CONF="$(DEVICE_NET_CONF)" \
+	DEVICE_POE_CONF="$(DEVICE_POE_CONF)" \
+	DEVICE_POE_CHIP="$(DEVICE_POE_CHIP)" \
+	DEVICE_SERIAL_CAPABILITIES="$(DEVICE_SERIAL_CAPABILITIES)" \
 	$(TOPDIR)/scripts/json_add_image_info.py $$@
 
 endef
@@ -769,6 +818,18 @@ Target-Profile-hasImageMetadata: $(if $(foreach image,$(IMAGES),$(findstring app
 Target-Profile-GPLPrefix: $(GPL_PREFIX)
 Target-Profile-SupportedDevices: $(SUPPORTED_DEVICES)
 Target-Profile-BootName: $(DEVICE_BOOT_NAME)
+Target-Profile-IncludedDevices: $(INCLUDED_DEVICES)
+Target-Profile-USBCheckPath: $(DEVICE_USB_CHECK_PATH)
+Target-Profile-USBJackPath: $(DEVICE_USB_JACK_PATH)
+Target-Profile-WLANBssidLimit: $(DEVICE_WLAN_BSSID_LIMIT)
+Target-Profile-LANInterfaceOpt: $(DEVICE_LAN_OPTION)
+Target-Profile-WANInterfaceOpt: $(DEVICE_WAN_OPTION)
+Target-Profile-SwitchConfig: $(DEVICE_SWITCH_CONF)
+Target-Profile-InterfaceConfig: $(DEVICE_INTERFACE_CONF)
+Target-Profile-NetworkConfig: $(DEVICE_NET_CONF)
+Target-Profile-PoeConfig: $(DEVICE_POE_CONF)
+Target-Profile-PoeChip: $(DEVICE_POE_CHIP)
+Target-Profile-SerialCapabilities: $(DEVICE_SERIAL_CAPABILITIES)
 $(if $(BROKEN),Target-Profile-Broken: $(BROKEN))
 $(if $(DEFAULT),Target-Profile-Default: $(DEFAULT))
 $(TARGET_PROFILE_VARS)
