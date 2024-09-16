@@ -11,12 +11,13 @@ PKG_NAME:=flac
 PKG_VERSION:=1.3.3
 PKG_RELEASE:=1
 
-PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.xz
+PKG_SOURCE_VERSION:=1.3.3
+PKG_SOURCE:=$(PKG_NAME)-$(PKG_SOURCE_VERSION).tar.xz
 PKG_SOURCE_URL:=https://downloads.xiph.org/releases/flac/
 PKG_HASH:=213e82bd716c9de6db2f98bcadbc4c24c7e2efe8c75939a1a84e28539c4e1748
 
 PKG_MAINTAINER:=Ted Hess <thess@kitschensync.net>
-PKG_LICENSE:=GFDL-1.2 GPL-2 LGPL-2.1 BSD-3-Clause
+PKG_LICENSE:=GFDL-1.2-or-later GPL-2.0-or-later LGPL-2.1-or-later BSD-3-Clause
 PKG_LICENSE_FILES:=README COPYING.FDL COPYING.GPL COPYING.LGPL COPYING.Xiph
 PKG_CPE_ID:=cpe:/a:flac_project:flac
 

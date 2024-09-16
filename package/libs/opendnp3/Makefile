@@ -6,10 +6,13 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=opendnp3
-PKG_SOURCE_VERSION:=37211571ca68e6a96a265c547055a1e3d572e8d9
+
+PKG_SOURCE_PROTO:=git
+PKG_SOURCE_VERSION:=4372862728851f559a01edcd88bc15ce6ce7f350
+PKG_SOURCE_URL:=https://github.com/dnp3/opendnp3.git
 
 PKG_LICENSE:=Apache-2.0
-PKG_ORIGIN_URL:=https://github.com/dnp3/opendnp3
+PKG_LICENSE_FILES:=LICENSE NOTICE
 
 include $(INCLUDE_DIR)/package.mk
 include $(INCLUDE_DIR)/cmake.mk

@@ -3,7 +3,7 @@ include $(TOPDIR)/rules.mk
 PKG_NAME:=qssdk-shell
 PKG_RELEASE:=1
 
-PKG_LICENSE:=Custom-Permissive-License
+PKG_LICENSE:=Teltonika-3p-closed
 
 include $(INCLUDE_DIR)/package.mk
 

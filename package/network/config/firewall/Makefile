@@ -11,17 +11,21 @@ include $(TOPDIR)/rules.mk
 PKG_NAME:=firewall
 PKG_RELEASE:=2
 
-PKG_SOURCE_PROTO:=git
-PKG_SOURCE_URL=$(PROJECT_GIT)/project/firewall3.git
 PKG_SOURCE_DATE:=2022-02-17
-PKG_SOURCE_VERSION:=4cd7d4f36bea731bf901cb067456f1d460294926
-PKG_MIRROR_HASH:=ce9e8ac1bcf22afbb0a80c3da1a8e8e887851299681097e3dfbfc347f2c4c80f
 PKG_MAINTAINER:=Jo-Philipp Wich <jo@mein.io>
 PKG_LICENSE:=ISC
+PKG_LICENSE_FILES:=LICENSE
 
-PKG_CONFIG_DEPENDS := CONFIG_IPV6
+PKG_CONFIG_DEPENDS += \
+	CONFIG_IPV6 \
+	CONFIG_USE_PROCD \
+	CONFIG_USE_OPENRC
 
 PKG_BUILD_FLAGS:=gc-sections lto
+
+PKG_SOURCE_PROTO:=git
+PKG_SOURCE_URL=$(PROJECT_GIT)/project/firewall3.git
+PKG_SOURCE_VERSION:=4cd7d4f36bea731bf901cb067456f1d460294926
 
 include $(INCLUDE_DIR)/package.mk
 include $(INCLUDE_DIR)/cmake.mk
@@ -73,6 +77,22 @@ ifeq ($(CONFIG_GATEWAY_DEVICE), y)
 endif
 endif
 
+ifeq ($(CONFIG_POE_SUPPORT), y)
+	FIREWALL_CONFIG=firewall.config-without-wan
+endif
+
+ifeq ($(CONFIG_SW_OFFLOAD), y)
+ifeq ($(CONFIG_POE_SUPPORT), y)
+	FIREWALL_CONFIG=firewall.config-offload-sw-without-wan
+endif
+endif
+
+ifeq ($(CONFIG_HW_OFFLOAD), y)
+ifeq ($(CONFIG_POE_SUPPORT), y)
+	FIREWALL_CONFIG=firewall.config-offload-full-without-wan
+endif
+endif
+
 ifeq ($(TLT_PLATFORM_TCR1), y)
 	FIREWALL_CONFIG=firewall.config-tcr100
 endif
@@ -95,10 +115,17 @@ define Package/firewall/install
 		$(INSTALL_DIR) $(1)/usr $(1)/usr/bin; \
 		$(INSTALL_BIN) ./files/attack_prevention.sh $(1)/usr/bin/attack_prevention;)
 
+	$(if $(CONFIG_POE_SUPPORT),\
+		$(INSTALL_DIR) $(1)/etc/uci-defaults/; \
+		$(INSTALL_BIN) ./files/migrate_poe_wan.defaults $(1)/etc/uci-defaults/;)
+
 	if [ $(TLT_PLATFORM_RUTX) ]; then \
 		$(INSTALL_DIR) $(1)/usr/bin; \
 		$(INSTALL_BIN) ./files/rutx_hnat.sh $(1)/usr/bin/rutx_hnat; \
 	fi;
+
+	$(if $(CONFIG_USE_OPENRC),\
+		$(OPENRC_INSTALL) boot firewall ./files/firewall.openrc $(1))
 endef
 
 $(eval $(call BuildPackage,firewall))

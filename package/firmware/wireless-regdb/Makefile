@@ -4,12 +4,15 @@ PKG_NAME:=wireless-regdb
 PKG_VERSION:=2021.04.21
 PKG_RELEASE:=1
 
-PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.xz
-PKG_SOURCE_URL:=@KERNEL/software/network/wireless-regdb/
 PKG_HASH:=9e4c02b2a9710df4dbdb327c39612e8cbbae6495987afeddaebab28c1ea3d8fa
 
 PKG_MAINTAINER:=Felix Fietkau <nbd@nbd.name>
-PKG_LICENSE:=GPL-2.0-only
+PKG_LICENSE:=ISC
+PKG_LICENSE_FILES:=LICENSE
+
+PKG_SOURCE_VERSION:=2021.04.21
+PKG_SOURCE:=$(PKG_NAME)-$(PKG_SOURCE_VERSION).tar.xz
+PKG_SOURCE_URL:=@KERNEL/software/network/wireless-regdb
 
 include $(INCLUDE_DIR)/package.mk
 

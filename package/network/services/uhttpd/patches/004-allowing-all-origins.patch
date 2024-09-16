@@ -1,11 +1,19 @@
 --- a/ubus.c
 +++ b/ubus.c
-@@ -185,6 +185,8 @@ static void uh_ubus_send_header(struct c
+@@ -177,6 +177,7 @@ static void uh_ubus_add_cors_headers(str
+ 
+ 	ustream_printf(cl->us, "Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n");
+ 	ustream_printf(cl->us, "Access-Control-Allow-Credentials: true\r\n");
++	ustream_printf(cl->us, "Access-Control-Allow-Private-Network: true\r\n");
+ }
+ 
+ static void uh_ubus_send_header(struct client *cl, int code, const char *summary, const char *content_type)
+@@ -185,6 +186,8 @@ static void uh_ubus_send_header(struct c
  
  	if (conf.ubus_cors)
  		uh_ubus_add_cors_headers(cl);
-+	
-+	ustream_printf(cl->us, "Access-Control-Allow-Origin: *\r\n");
++	else
++		ustream_printf(cl->us, "Access-Control-Allow-Origin: *\r\n");
  
  	ustream_printf(cl->us, "Content-Type: %s\r\n", content_type);
  

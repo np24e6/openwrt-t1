@@ -1,0 +1,12 @@
+#!/sbin/openrc-run
+
+command="/sbin/rpcd"
+command_args="-s /var/run/ubus/ubus.sock -t 200"
+pidfile="/run/${RC_SVCNAME}.pid"
+supervisor=supervise-daemon
+respawn_delay=1
+respawn_max=0
+
+depend() {
+    need ubusd
+}

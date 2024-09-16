@@ -6,9 +6,15 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=libmodbus
-PKG_SOURCE_VERSION:=33743a4c635b62ec50878ab4bc80b19e902d2455
+
+PKG_SOURCE_PROTO:=git
+PKG_SOURCE_VERSION:=v3.1.6
+PKG_SOURCE_URL:=https://github.com/stephane/libmodbus.git
+
+
 PKG_LICENSE:=LGPL-2.1-or-later
-PKG_LICENSE_FILES:=COPYING.LESSER
+PKG_LICENSE_FILES:=LICENSE COPYING.LESSER
+
 PKG_FIXUP:=autoreconf
 PKG_INSTALL:=1
 

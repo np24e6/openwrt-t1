@@ -143,6 +143,21 @@ void cli_perror(struct uci_context *ctx, char *str);
 char *ucix_get_list_option(struct uci_context *ctx, const char *p, const char *s, const char *o);
 
 /**
+ @brief Gets list as an array of strings. Supports strings with spaces in them.
+ @warning Returned string array members must be freed in case of success with n > 0.
+ @warning Returned string array must be freed in case of success with n > 0.
+ @param ctx UCI context.
+ @param p UCI package.
+ @param s UCI section name.
+ @param o UCI option name.
+ @param n String array length.
+ @return An array of list values.
+ @retval NULL Success, if n is 0.
+ @retval NULL Failure, if n is not 0.
+ */
+char **ucix_get_list(struct uci_context *ctx, const char *p, const char *s, const char *o, size_t *n);
+
+/**
  * @brief count sections with the same type
  * @param pkg uci package
  * @param t section type

@@ -1,0 +1,147 @@
+diff --recursive --unified --new-file --no-dereference upstream/.gitignore src/.gitignore
+--- upstream/.gitignore	2020-03-26 13:55:38.000000000 +0000
++++ src/.gitignore	1970-01-01 00:00:00.000000000 +0000
+@@ -1,62 +0,0 @@
+-*~
+-*.o
+-*.a
+-*.lo
+-*.loT
+-*.la
+-*.so
+-*.lai
+-*.bz2
+-*.gz
+-*.sig
+-*.orig
+-*.rej
+-.libs
+-.depends
+-*.log
+-*.substvars
+-*-stamp
+-*.swp
+-*.cache
+-*.dist
+-*.dylib
+-*.rej
+-*.orig
+-*.dSYM
+-*.patch
+-.pc
+-
+-# Editor projects
+-*.kdev4
+-*.cproject
+-*.project
+-*.bbprojectd
+-
+-# Local icon files
+-icon.png
+-
+-# OS specific cruft
+-.DS_Store
+-
+-# Certificates and signing requests
+-*.pem
+-*.der
+-*.csr
+-*.key
+-
+-# Autoconf and libtool output
+-build
+-config.status
+-*confdefs.h
+-*conftest*
+-*confcache
+-Make.inc
+-libtool
+-autom4te.cache
+-config.h
+-src/main/radattr
+-src/modules/lib/
+-warnings.txt
+-
+-# Analyzer output
+-/*.plist
+diff --recursive --unified --new-file --no-dereference upstream/.gitlab-ci.yml src/.gitlab-ci.yml
+--- upstream/.gitlab-ci.yml	1970-01-01 00:00:00.000000000 +0000
++++ src/.gitlab-ci.yml	2023-11-06 07:00:42.000000000 +0000
+@@ -0,0 +1,20 @@
++include:
++  - project: teltonika/ci-templates
++    file:
++      - /templates/semgrep.yml
++
++workflow:
++  rules:
++    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
++    - if: $CI_PIPELINE_SOURCE == "web"
++    - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
++      when: never
++    - if: $CI_COMMIT_BRANCH
++
++semgrep_errors:
++  extends: .semgrep_errors
++
++semgrep_info:
++  extends: .semgrep_info
++  needs:
++    - job: semgrep_errors
+\ No newline at end of file
+diff --recursive --unified --new-file --no-dereference upstream/.travis.yml src/.travis.yml
+--- upstream/.travis.yml	2020-03-26 13:55:38.000000000 +0000
++++ src/.travis.yml	1970-01-01 00:00:00.000000000 +0000
+@@ -1,13 +0,0 @@
+-language: c
+-compiler:
+-  - gcc
+-before_script:
+-  - ./configure --enable-werror
+-before_install:
+-  - sudo apt-get update -qq
+-  - >
+-       sudo apt-get install --no-install-recommends -qq
+-       autoconf
+-       build-essential
+-       libpam0g-dev
+-script: make
+diff --recursive --unified --new-file --no-dereference upstream/src/pam_radius_auth.c src/src/pam_radius_auth.c
+--- upstream/src/pam_radius_auth.c	2020-03-26 13:55:38.000000000 +0000
++++ src/src/pam_radius_auth.c	2023-11-06 07:00:42.000000000 +0000
+@@ -31,6 +31,8 @@
+ #include "pam_radius_auth.h"
+ 
+ #define DPRINT if (debug) _pam_log
++#define STR_VALUE(x) #x
++#define STR(x) STR_VALUE(x)
+ 
+ /* internal data */
+ static CONST char *pam_module_name = "pam_radius_auth";
+@@ -84,7 +86,7 @@
+ 			ctrl |= PAM_SKIP_PASSWD;
+ 
+ 		} else if (!strncmp(*argv, "retry=", 6)) {
+-			conf->retries = atoi(*argv+6);
++			conf->retries = strtol(*argv+6, NULL, 0);
+ 
+ 		} else if (!strcmp(*argv, "localifdown")) {
+ 			conf->localifdown = 1;
+@@ -125,7 +127,7 @@
+ 			conf->prompt_attribute = TRUE;
+ 
+ 		} else if (!strncmp(*argv, "max_challenge=", 14)) {
+-			conf->max_challenge = atoi(*argv+14);
++			conf->max_challenge = strtol(*argv+14, NULL, 0);
+ 
+ 		} else if (!strcmp(*argv, "privilege_level")) {
+ 			conf->privilege_level = TRUE;
+@@ -683,7 +685,7 @@
+ 		/*
+ 		 *	Scan the line for data.
+ 		 */
+-		if (sscanf(p, "%s %s %d %s %s", hostname, secret, &timeout, src_ip, vrf) < 2) {
++		if (sscanf(p, "%" STR(BUFFER_SIZE) "s %" STR(BUFFER_SIZE) "s %d %" STR(MAX_IP_LEN) "s %" STR(IFNAMSIZ) "s", hostname, secret, &timeout, src_ip, vrf) < 2) {
+ 			_pam_log(LOG_ERR, "ERROR reading %s, line %d: Could not read hostname or secret\n",
+ 				 conf->conf_file, line);
+ 			continue;			/* invalid line */

@@ -11,8 +11,6 @@ PKG_SOURCE_VERSION:=1.3
 
 PKG_LICENSE:=Teltonika-closed
 
-GPL_INCLUDE_HEADERS:=1
-
 include $(INCLUDE_DIR)/package.mk
 
 define Package/libtlt_smtp

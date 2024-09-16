@@ -9,8 +9,6 @@ PKG_NAME:=smslimit
 
 PKG_SOURCE_VERSION:=6.0
 
-GPL_INCLUDE_HEADERS:=1
-
 PKG_LICENSE:=Teltonika-closed
 
 include $(INCLUDE_DIR)/package.mk

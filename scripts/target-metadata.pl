@@ -52,11 +52,12 @@ sub target_config_features(@) {
 		/^testing-kernel$/ and $ret .= "\tselect HAS_TESTING_KERNEL\n";
 		/^downstream-kernel$/ and $ret .= "\tselect HAS_DOWNSTREAM_KERNEL\n";
 		/^hnat$/ and $ret .= "\tselect HNAT\n";
-		/^mbus$/ and $ret .= "\tselect MBUS\n";
+		/^mbus$/ and $ret .= "\tselect MBUS_SUPPORT\n";
 		/^gps$/ and $ret .= "\tselect GPS_SUPPORT\n";
 		/^serial$/ and $ret .= "\tselect SERIAL_SUPPORT\n";
 		/^modbus$/ and $ret .= "\tselect HAS_MODBUS\n";
 		/^io$/ and $ret .= "\tselect HAS_IO\n";
+		/^dot1x-client$/ and $ret .= "\tselect HAS_DOT1X_CLIENT\n";
 		/^power-control$/ and $ret .= "\tselect HAS_POWER_CONTROL\n";
 		/^single-port$/ and $ret .= "\tselect HAS_SINGLE_ETH_PORT\n";
 		/^wifi$/ and $ret .= "\tselect WIFI_SUPPORT\n";
@@ -64,6 +65,7 @@ sub target_config_features(@) {
 		/^bt$/ and $ret .= "\tselect BLUETOOTH_SUPPORT\n";
 		/^mobile$/ and $ret .= "\tselect MOBILE_SUPPORT\n";
 		/^dualsim$/ and $ret .= "\tselect DUAL_SIM_SUPPORT\n";
+		/^tpm$/ and $ret .= "\tselect TPM_SUPPORT\n";
 		/^rndis$/ and $ret .= "\tselect RNDIS_SUPPORT\n";
 		/^ncm$/ and $ret .= "\tselect USB_NCM_SUPPORT\n";
 		/^poe$/ and $ret .= "\tselect POE_SUPPORT\n";
@@ -86,7 +88,8 @@ sub target_config_features(@) {
 		/^sw-offload$/ and $ret .= "\tselect SW_OFFLOAD\n";
 		/^hw-offload$/ and $ret .= "\tselect HW_OFFLOAD\n";
 		/^tlt-failsafe-boot$/ and $ret .= "\tselect TLT_FAILSAFE_BOOT\n";
-		/^modem-reset-quirk$/ and $ret .= "\tselect MODEM_RESET_QUIRK\n"
+		/^modem-reset-quirk$/ and $ret .= "\tselect MODEM_RESET_QUIRK\n";
+		/^broken-sim-idle-protection$/ and $ret .= "\tselect BROKEN_SIM_IDLE_PROTECTION\n"
 	}
 	return $ret;
 }
@@ -581,6 +584,9 @@ sub dump_device_list() {
 
 	foreach my $cur (@target) {
 		foreach my $profile (@{$cur->{profiles}}) {
+			# skip profile if it starts with template name
+			next if $profile->{id} =~ /^DEVICE_TEMPLATE_/;
+
 			# remove device profile prefix
 			$profile->{id} =~ s/DEVICE_//;
 			$profile->{id} =~ s/teltonika_//;

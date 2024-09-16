@@ -63,7 +63,11 @@ typedef enum {
 	EVT_OPERATOR, /*!< Operator change event */
 	EVT_SIM_CHANGE, /*!< SIM change event */
 
+	EVT_MODEM_STATE_CHANGE, /*!< Modem state change event */
+
 	EVT_ACT, /*!< Network access technology event */
+
+	EVT_BAND_CHANGE, /*!< Band change event */
 
 	__EVT_MAX,
 } evt_type_t;
@@ -1321,6 +1325,22 @@ enum mm5g_cause_id {
 };
 
 /**
+ * Enumeration of QABFOTA state format types
+ */
+enum qabfota_state_id {
+	QABFOTA_STATE_SUCCEED, /*!< Unknown error occured */
+	QABFOTA_STATE_UPDATE, /*!< Update of the inactive system is in progress */
+	QABFOTA_STATE_BACKUP, /*!< Synchronization of the updated system and the inactive system
+is in progress. */
+	QABFOTA_STATE_FAILED, /*!< Update failed */
+	QABFOTA_STATE_WRITEDONE, /*!< Not supported */
+	QABFOTA_STATE_NEEDSYNC, /*!< Update failed and the damaged system needs to be restored. */
+	QABFOTA_STATE_UNKNOWN, /*!< Unknown error occured */
+
+	__QABFOTA_STATE_MAX,
+};
+
+/**
  * Convert modem action status value to string.
  * @param[in]	status	Action status value.
  * @return const char *. String of readable status value.
@@ -2430,4 +2450,12 @@ enum ipv6_ndp_state_t ipv6_ndp_state_enum(const char *arg);
  * @return const char *. String of ipv6 ndp state value.
  */
 const char *ipv6_ndp_state_str(enum ipv6_ndp_state_t state);
+
+/**
+ * Convert qabfota state enum to string.
+ * @param[in]    state    qabfota state to convert
+ * @return const char *. String of qabfotastate
+ */
+const char *qabfota_state_str(enum qabfota_state_id state);
+
 #endif // GSM_MODEM_API

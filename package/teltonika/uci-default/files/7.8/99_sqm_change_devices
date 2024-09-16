@@ -1,0 +1,86 @@
+#!/bin/sh
+. /lib/functions.sh
+
+ARR=""
+
+IND_2G=0
+IND_5G=0
+
+[ -e "/etc/config/sqm" ] || exit 0
+
+# Get all wlan devices from sqm configuration with its section ID
+sqm_interfaces_cb() {
+
+	config_get ifname "$1" "interface" ""
+	
+	[ -z "$ifname" ] && return 0
+	
+	[[ "$ifname" == *"wlan"* ]] && ARR="$ARR$ifname:$1 "
+}
+
+config_load "sqm"
+config_foreach sqm_interfaces_cb "queue"
+
+compare_devices() {
+
+	local sqm_device="${1%:*}"
+	local sqm_section="${1#*:}"
+	local old_ifname="$2"
+	local radio="$3"
+	local new_id="$4"
+	local new_ifname="wlan${radio}-${new_id}"
+
+	[ "$old_ifname" != "$sqm_device" ] && return 0
+	
+	uci_set "sqm" "$sqm_section" "interface" "$new_ifname"
+}
+
+migrate_value() {
+	
+	local index="$1"
+	local radio="$2"
+	local dev_id="$3"
+
+	local ifname="wlan${radio}"
+
+	[ "$index" -gt "0" ] && ifname="${ifname}-${index}"
+
+	for i in $ARR; do
+		compare_devices "$i" "$ifname" "$radio" "$dev_id"
+	done
+}
+
+wifi_interfaces_cb() {
+
+	config_get disabled "$1" "disabled" "0"
+	config_get new_dev_id "$1" "_device_id" ""
+	
+	[ "$disabled" == "1" ] && return 0
+
+	config_get device "$1" "device"
+
+	[ -z "$device" ] && return 0
+
+	[ "$device" == "radio0" ] && {
+
+		migrate_value "$IND_2G" "0" "$new_dev_id"
+		IND_2G=$((IND_2G + 1))
+
+		return 0
+	}
+
+	[ "$device" == "radio1" ] && {
+		
+		migrate_value "$IND_5G" "1" "$new_dev_id"
+		IND_5G=$((IND_5G + 1))
+
+		return 0
+	}
+
+	return 0	
+}
+
+config_load "wireless"
+config_foreach wifi_interfaces_cb "wifi-iface"
+
+uci_commit sqm

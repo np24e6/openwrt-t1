@@ -79,7 +79,7 @@ ModemEntry ::=
 	mSimState		DisplayString,
 	mPinState		DisplayString,
 	mNetState		DisplayString,
-	mSignal		INTEGER,
+	mSignal			DisplayString,
 	mOperator		DisplayString,
 	mOperatorNumber 	DisplayString,
 	mConnectionState	DisplayString,
@@ -175,7 +175,7 @@ mNetState OBJECT-TYPE
 	::= { modemEntry 11 }
 
 mSignal OBJECT-TYPE
-	SYNTAX		INTEGER
+	SYNTAX		DisplayString (SIZE (0..255))
 	MAX-ACCESS	read-only
 	STATUS		current
 	DESCRIPTION	"Signal level"

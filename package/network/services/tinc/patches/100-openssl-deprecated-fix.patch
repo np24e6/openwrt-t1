@@ -1,0 +1,509 @@
+Index: tinc-1.0.36/src/connection.h
+===================================================================
+--- tinc-1.0.36.orig/src/connection.h
++++ tinc-1.0.36/src/connection.h
+@@ -71,7 +71,11 @@ typedef struct connection_t {
+ 	struct node_t *node;            /* node associated with the other end */
+ 	struct edge_t *edge;            /* edge associated with this connection */
+ 
+-	RSA *rsa_key;                   /* his public/private key */
++	#if OPENSSL_VERSION_NUMBER < 0x30000000L
++		RSA *rsa_key;                   /* his public/private key */
++	#else
++		EVP_PKEY *pkey;
++	#endif
+ 	const EVP_CIPHER *incipher;     /* Cipher he will use to send data to us */
+ 	const EVP_CIPHER *outcipher;    /* Cipher we will use to send data to him */
+ 	EVP_CIPHER_CTX *inctx;          /* Context of encrypted meta data that will come from him to us */
+Index: tinc-1.0.36/src/connection.c
+===================================================================
+--- tinc-1.0.36.orig/src/connection.c
++++ tinc-1.0.36/src/connection.c
+@@ -107,10 +107,17 @@ void free_connection_partially(connectio
+ 		c->outctx = NULL;
+ 	}
+ 
++#if OPENSSL_VERSION_NUMBER < 0x30000000L
+ 	if(c->rsa_key) {
+ 		RSA_free(c->rsa_key);
+ 		c->rsa_key = NULL;
+ 	}
++#else
++	if(c->pkey) {
++		EVP_PKEY_free(c->pkey);
++		c->pkey = NULL;
++	}
++#endif
+ }
+ 
+ void free_connection(connection_t *c) {
+Index: tinc-1.0.36/src/net_setup.c
+===================================================================
+--- tinc-1.0.36.orig/src/net_setup.c
++++ tinc-1.0.36/src/net_setup.c
+@@ -49,6 +49,8 @@
+ char *myport;
+ devops_t devops;
+ 
++#if OPENSSL_VERSION_NUMBER < 0x30000000L
++
+ #ifndef HAVE_RSA_SET0_KEY
+ int RSA_set0_key(RSA *r, BIGNUM *n, BIGNUM *e, BIGNUM *d) {
+ 	BN_free(r->n);
+@@ -61,6 +63,8 @@ int RSA_set0_key(RSA *r, BIGNUM *n, BIGN
+ }
+ #endif
+ 
++#endif
++
+ bool read_rsa_public_key(connection_t *c) {
+ 	FILE *fp;
+ 	char *pubname;
+@@ -69,11 +73,15 @@ bool read_rsa_public_key(connection_t *c
+ 	BIGNUM *n = NULL;
+ 	BIGNUM *e = NULL;
+ 
++#if OPENSSL_VERSION_NUMBER < 0x30000000L
+ 	if(!c->rsa_key) {
+ 		c->rsa_key = RSA_new();
+ //		RSA_blinding_on(c->rsa_key, NULL);
+ 	}
+ 
++#else
++	c->pkey = EVP_PKEY_new();
++#endif
+ 	/* First, check for simple PublicKey statement */
+ 
+ 	if(get_config_string(lookup_config(c->config_tree, "PublicKey"), &key)) {
+@@ -86,12 +94,14 @@ bool read_rsa_public_key(connection_t *c
+ 		free(key);
+ 		BN_hex2bn(&e, "FFFF");
+ 
++#if OPENSSL_VERSION_NUMBER < 0x30000000L
+ 		if(!n || !e || RSA_set0_key(c->rsa_key, n, e, NULL) != 1) {
+ 			BN_free(e);
+ 			BN_free(n);
+ 			logger(LOG_ERR, "RSA_set0_key() failed with PublicKey for %s!", c->name);
+ 			return false;
+ 		}
++#endif
+ 
+ 		return true;
+ 	}
+@@ -107,10 +117,18 @@ bool read_rsa_public_key(connection_t *c
+ 			return false;
+ 		}
+ 
++#if OPENSSL_VERSION_NUMBER < 0x30000000L
+ 		c->rsa_key = PEM_read_RSAPublicKey(fp, &c->rsa_key, NULL, NULL);
++#else
++		c->pkey = PEM_read_PUBKEY(fp, &c->pkey, NULL, NULL);
++#endif
+ 		fclose(fp);
+ 
++#if OPENSSL_VERSION_NUMBER < 0x30000000L
+ 		if(c->rsa_key) {
++#else
++		if(c->pkey) {
++#endif
+ 			free(pubname);
+ 			return true;            /* Woohoo. */
+ 		}
+@@ -124,10 +142,19 @@ bool read_rsa_public_key(connection_t *c
+ 			return false;
+ 		}
+ 
++#if OPENSSL_VERSION_NUMBER < 0x30000000L
+ 		c->rsa_key = PEM_read_RSA_PUBKEY(fp, &c->rsa_key, NULL, NULL);
+ 		fclose(fp);
+ 
+ 		if(c->rsa_key) {
++
++#else
++		c->pkey = PEM_read_PUBKEY(fp, &c->pkey, NULL, NULL);
++		fclose(fp);
++
++		if(c->pkey) {
++#endif
++
+ //				RSA_blinding_on(c->rsa_key, NULL);
+ 			free(pubname);
+ 			return true;
+@@ -149,10 +176,17 @@ bool read_rsa_public_key(connection_t *c
+ 		return false;
+ 	}
+ 
++#if OPENSSL_VERSION_NUMBER < 0x30000000L
+ 	c->rsa_key = PEM_read_RSAPublicKey(fp, &c->rsa_key, NULL, NULL);
+ 	fclose(fp);
+ 
+ 	if(c->rsa_key) {
++#else
++	c->pkey = PEM_read_PUBKEY(fp, &c->pkey, NULL, NULL);
++	fclose(fp);
++
++	if(c->pkey) {
++#endif
+ 		free(hcfname);
+ 		return true;
+ 	}
+@@ -168,11 +202,18 @@ bool read_rsa_public_key(connection_t *c
+ 	}
+ 
+ 	free(hcfname);
++#if OPENSSL_VERSION_NUMBER < 0x30000000L
+ 	c->rsa_key = PEM_read_RSA_PUBKEY(fp, &c->rsa_key, NULL, NULL);
+ //	RSA_blinding_on(c->rsa_key, NULL);
+ 	fclose(fp);
+ 
+ 	if(c->rsa_key) {
++#else
++	c->pkey = PEM_read_PUBKEY(fp, &c->pkey, NULL, NULL);
++	fclose(fp);
++
++	if(c->pkey) {
++#endif
+ 		return true;
+ 	}
+ 
+@@ -189,7 +230,12 @@ static bool read_rsa_private_key(void) {
+ 	BIGNUM *d = NULL;
+ 
+ 	if(get_config_string(lookup_config(config_tree, "PrivateKey"), &key)) {
++#if OPENSSL_VERSION_NUMBER < 0x30000000L
+ 		myself->connection->rsa_key = RSA_new();
++		//		RSA_blinding_on(myself->connection->rsa_key, NULL);
++#else
++		myself->connection->pkey = EVP_PKEY_new();
++#endif
+ 
+ //		RSA_blinding_on(myself->connection->rsa_key, NULL);
+ 		if((size_t)BN_hex2bn(&d, key) != strlen(key)) {
+@@ -216,6 +262,7 @@ static bool read_rsa_private_key(void) {
+ 		free(pubkey);
+ 		BN_hex2bn(&e, "FFFF");
+ 
++#if OPENSSL_VERSION_NUMBER < 0x30000000L
+ 		if(!n || !e || !d || RSA_set0_key(myself->connection->rsa_key, n, e, d) != 1) {
+ 			BN_free(d);
+ 			BN_free(e);
+@@ -223,6 +270,7 @@ static bool read_rsa_private_key(void) {
+ 			logger(LOG_ERR, "RSA_set0_key() failed with PrivateKey for myself!");
+ 			return false;
+ 		}
++#endif
+ 
+ 		return true;
+ 	}
+@@ -253,10 +301,18 @@ static bool read_rsa_private_key(void) {
+ 
+ #endif
+ 
++#if OPENSSL_VERSION_NUMBER < 0x30000000L
+ 	myself->connection->rsa_key = PEM_read_RSAPrivateKey(fp, NULL, NULL, NULL);
+ 	fclose(fp);
+ 
+ 	if(!myself->connection->rsa_key) {
++#else
++	myself->connection->pkey = PEM_read_PrivateKey(fp, NULL, NULL, NULL);
++	fclose(fp);
++
++	if(!myself->connection->pkey) {
++#endif
++
+ 		logger(LOG_ERR, "Reading RSA private key file `%s' failed: %s",
+ 		       fname, strerror(errno));
+ 		free(fname);
+Index: tinc-1.0.36/src/protocol_auth.c
+===================================================================
+--- tinc-1.0.36.orig/src/protocol_auth.c
++++ tinc-1.0.36/src/protocol_auth.c
+@@ -145,7 +145,11 @@ static uint64_t byte_budget(const EVP_CI
+ bool send_metakey(connection_t *c) {
+ 	bool x;
+ 
++#if OPENSSL_VERSION_NUMBER < 0x30000000L
+ 	int len = RSA_size(c->rsa_key);
++#else
++	int len = EVP_PKEY_size(c->pkey);
++#endif
+ 
+ 	/* Allocate buffers for the meta key */
+ 
+@@ -196,12 +200,38 @@ bool send_metakey(connection_t *c) {
+ 	   with a length equal to that of the modulus of the RSA key.
+ 	 */
+ 
++#if OPENSSL_VERSION_NUMBER < 0x30000000L
+ 	if(RSA_public_encrypt(len, (unsigned char *)c->outkey, (unsigned char *)buffer, c->rsa_key, RSA_NO_PADDING) != len) {
+ 		logger(LOG_ERR, "Error during encryption of meta key for %s (%s): %s",
+ 		       c->name, c->hostname, ERR_error_string(ERR_get_error(), NULL));
+ 		return false;
+ 	}
++#else
++	size_t outlen;
++	EVP_PKEY_CTX *pctx = EVP_PKEY_CTX_new(c->pkey, NULL);
++	if (pctx == NULL) {
++		return false;
++	}
++
++	if (EVP_PKEY_encrypt_init(pctx) <= 0) {
++		EVP_PKEY_CTX_free(pctx);
++		return false;
++	}
+ 
++	if (EVP_PKEY_CTX_set_rsa_padding(pctx, RSA_NO_PADDING) <= 0) {
++		EVP_PKEY_CTX_free(pctx);
++		return false;
++	}
++
++	if(EVP_PKEY_encrypt(pctx, (unsigned char *)buffer, &outlen, (unsigned char *)c->outkey, len) <= 0) {
++		logger(LOG_ERR, "Error during encryption of meta key for %s (%s): %s",
++		       c->name, c->hostname, ERR_error_string(ERR_get_error(), NULL));
++		EVP_PKEY_CTX_free(pctx);
++		return false;
++	}
++
++	EVP_PKEY_CTX_free(pctx);
++#endif
+ 	/* Convert the encrypted random data to a hexadecimal formatted string */
+ 
+ 	bin2hex(buffer, buffer, len);
+@@ -244,7 +274,11 @@ bool metakey_h(connection_t *c) {
+ 		return false;
+ 	}
+ 
++#if OPENSSL_VERSION_NUMBER < 0x30000000L
+ 	len = RSA_size(myself->connection->rsa_key);
++#else
++	len = EVP_PKEY_size(myself->connection->pkey);
++#endif
+ 
+ 	/* Check if the length of the meta key is all right */
+ 
+@@ -273,12 +307,38 @@ bool metakey_h(connection_t *c) {
+ 	}
+ 
+ 	/* Decrypt the meta key */
+-
++#if OPENSSL_VERSION_NUMBER < 0x30000000L
+ 	if(RSA_private_decrypt(len, (unsigned char *)buffer, (unsigned char *)c->inkey, myself->connection->rsa_key, RSA_NO_PADDING) != len) {  /* See challenge() */
+ 		logger(LOG_ERR, "Error during decryption of meta key for %s (%s): %s",
+ 		       c->name, c->hostname, ERR_error_string(ERR_get_error(), NULL));
+ 		return false;
+ 	}
++#else
++	size_t outlen;
++	EVP_PKEY_CTX *pctx = EVP_PKEY_CTX_new(myself->connection->pkey, NULL);
++	if (pctx == NULL) {
++		return false;
++	}
++
++	if (EVP_PKEY_decrypt_init(pctx) <= 0) {
++    	EVP_PKEY_CTX_free(pctx);
++    	return false;
++	}
++
++	if (EVP_PKEY_CTX_set_rsa_padding(pctx, RSA_NO_PADDING) <= 0) {
++		EVP_PKEY_CTX_free(pctx);
++		return false;
++	}
++
++	if (EVP_PKEY_decrypt(pctx, (unsigned char *)c->inkey, &outlen, (unsigned char *)buffer, len) <= 0) {
++		logger(LOG_ERR, "Error during decryption of meta key for %s (%s): %s",
++		       c->name, c->hostname, ERR_error_string(ERR_get_error(), NULL));
++		EVP_PKEY_CTX_free(pctx);
++		return false;
++	}
++
++	EVP_PKEY_CTX_free(pctx);
++#endif
+ 
+ 	ifdebug(SCARY_THINGS) {
+ 		bin2hex(c->inkey, buffer, len);
+@@ -343,7 +403,11 @@ bool metakey_h(connection_t *c) {
+ bool send_challenge(connection_t *c) {
+ 	/* CHECKME: what is most reasonable value for len? */
+ 
++#if OPENSSL_VERSION_NUMBER < 0x30000000L
+ 	int len = RSA_size(c->rsa_key);
++#else
++	int len = EVP_PKEY_size(c->pkey);
++#endif
+ 
+ 	/* Allocate buffers for the challenge */
+ 
+@@ -379,7 +443,11 @@ bool challenge_h(connection_t *c) {
+ 		return false;
+ 	}
+ 
++#if OPENSSL_VERSION_NUMBER < 0x30000000L
+ 	len = RSA_size(myself->connection->rsa_key);
++#else
++	len = EVP_PKEY_size(myself->connection->pkey);
++#endif
+ 
+ 	/* Check if the length of the challenge is all right */
+ 
+@@ -423,6 +491,7 @@ bool send_chal_reply(connection_t *c) {
+ 		abort();
+ 	}
+ 
++#if OPENSSL_VERSION_NUMBER < 0x30000000L
+ 	if(!EVP_DigestInit(ctx, c->indigest)
+ 	                || !EVP_DigestUpdate(ctx, c->mychallenge, RSA_size(myself->connection->rsa_key))
+ 	                || !EVP_DigestFinal(ctx, (unsigned char *)hash, NULL)) {
+@@ -431,6 +500,16 @@ bool send_chal_reply(connection_t *c) {
+ 		       c->name, c->hostname, ERR_error_string(ERR_get_error(), NULL));
+ 		return false;
+ 	}
++#else
++	if(!EVP_DigestInit(ctx, c->indigest)
++	                || !EVP_DigestUpdate(ctx, c->mychallenge, EVP_PKEY_size(myself->connection->pkey))
++	                || !EVP_DigestFinal(ctx, (unsigned char *)hash, NULL)) {
++		EVP_MD_CTX_destroy(ctx);
++		logger(LOG_ERR, "Error during calculation of response for %s (%s): %s",
++		       c->name, c->hostname, ERR_error_string(ERR_get_error(), NULL));
++		return false;
++	}
++#endif
+ 
+ 	EVP_MD_CTX_destroy(ctx);
+ 
+@@ -479,7 +558,11 @@ bool chal_reply_h(connection_t *c) {
+ 	}
+ 
+ 	if(!EVP_DigestInit(ctx, c->outdigest)
++#if OPENSSL_VERSION_NUMBER < 0x30000000L
+ 	                || !EVP_DigestUpdate(ctx, c->hischallenge, RSA_size(c->rsa_key))
++#else
++	                || !EVP_DigestUpdate(ctx, c->hischallenge, EVP_PKEY_get_size(c->pkey))
++#endif
+ 	                || !EVP_DigestFinal(ctx, (unsigned char *)myhash, NULL)) {
+ 		EVP_MD_CTX_destroy(ctx);
+ 		logger(LOG_ERR, "Error during calculation of response from %s (%s): %s",
+Index: tinc-1.0.36/src/tincd.c
+===================================================================
+--- tinc-1.0.36.orig/src/tincd.c
++++ tinc-1.0.36/src/tincd.c
+@@ -420,7 +420,11 @@ void BN_GENCB_free(BN_GENCB *cb) {
+ */
+ static bool keygen(int bits) {
+ 	BIGNUM *e = NULL;
++#if OPENSSL_VERSION_NUMBER < 0x30000000L
+ 	RSA *rsa_key;
++#else
++	EVP_PKEY *pkey;
++#endif
+ 	FILE *f;
+ 	char filename[PATH_MAX];
+ 	BN_GENCB *cb;
+@@ -436,24 +440,56 @@ static bool keygen(int bits) {
+ 
+ 	BN_GENCB_set(cb, indicator, NULL);
+ 
++#if OPENSSL_VERSION_NUMBER < 0x30000000L
+ 	rsa_key = RSA_new();
++#else
++ 	pkey = EVP_PKEY_new();
++#endif
+ 
+ 	if(BN_hex2bn(&e, "10001") == 0) {
+ 		abort();
+ 	}
+ 
++#if OPENSSL_VERSION_NUMBER < 0x30000000L
+ 	if(!rsa_key || !e) {
+ 		abort();
+ 	}
+ 
+ 	result = RSA_generate_key_ex(rsa_key, bits, e, cb);
++#else
++	if(!pkey || !e) {
++	 	abort();
++	}
++
++	EVP_PKEY_CTX *pctx = EVP_PKEY_CTX_new_id(EVP_PKEY_RSA, NULL);
++	if (!pctx) {
++    	return false;
++	}
++
++	if (EVP_PKEY_keygen_init(pctx) <= 0) {
++		EVP_PKEY_CTX_free(pctx);
++		return false;
++	}
++
++	if (EVP_PKEY_CTX_set_rsa_keygen_bits(pctx, bits) <= 0) {
++		EVP_PKEY_CTX_free(pctx);
++		return false;
++	}
++
++	result = EVP_PKEY_keygen(pctx, &pkey);
++	EVP_PKEY_CTX_free(pctx);
++#endif
+ 
+ 	BN_free(e);
+ 	BN_GENCB_free(cb);
+ 
+ 	if(!result) {
+ 		fprintf(stderr, "Error during key generation!\n");
++#if OPENSSL_VERSION_NUMBER < 0x30000000L
+ 		RSA_free(rsa_key);
++#else
++		EVP_PKEY_free(pkey);
++#endif
+ 		return false;
+ 	} else {
+ 		fprintf(stderr, "Done.\n");
+@@ -463,7 +499,11 @@ static bool keygen(int bits) {
+ 	f = ask_and_open(filename, "private RSA key");
+ 
+ 	if(!f) {
++#if OPENSSL_VERSION_NUMBER < 0x30000000L
+ 		RSA_free(rsa_key);
++#else
++		EVP_PKEY_free(pkey);
++#endif
+ 		return false;
+ 	}
+ 
+@@ -473,7 +513,11 @@ static bool keygen(int bits) {
+ #endif
+ 
+ 	fputc('\n', f);
++#if OPENSSL_VERSION_NUMBER < 0x30000000L
+ 	PEM_write_RSAPrivateKey(f, rsa_key, NULL, NULL, 0, NULL, NULL);
++#else
++	PEM_write_PrivateKey(f, pkey, NULL, NULL, 0, NULL, NULL);
++#endif
+ 	fclose(f);
+ 
+ 	char *name = get_name();
+@@ -488,15 +532,27 @@ static bool keygen(int bits) {
+ 	f = ask_and_open(filename, "public RSA key");
+ 
+ 	if(!f) {
++#if OPENSSL_VERSION_NUMBER < 0x30000000L
+ 		RSA_free(rsa_key);
++#else
++		EVP_PKEY_free(pkey);
++#endif
+ 		return false;
+ 	}
+ 
+ 	fputc('\n', f);
++
++#if OPENSSL_VERSION_NUMBER < 0x30000000L
+ 	PEM_write_RSAPublicKey(f, rsa_key);
+ 	fclose(f);
+ 
+ 	RSA_free(rsa_key);
++#else
++	PEM_write_PUBKEY(f, pkey);
++	fclose(f);
++
++	EVP_PKEY_free(pkey);
++#endif
+ 
+ 	return true;
+ }

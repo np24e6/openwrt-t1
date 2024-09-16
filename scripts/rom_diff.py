@@ -1,4 +1,4 @@
-#!/bin/env python3
+#!/usr/bin/env python3
 
 import argparse
 from glob import glob
@@ -131,7 +131,7 @@ def calc_file_width(size_width: int, files: list) -> int:
     try:
         terminal_width = get_terminal_size().columns
     except OSError:
-        return 30
+        return file_width
 
     full_line_width = file_width * 2 + size_width * 3 + 4  # 4 spaces
     if full_line_width > terminal_width:
@@ -257,7 +257,7 @@ def collect_files(root_dir: str) -> str:
 
 
 def collect_ipk_files(root_dir: str):
-    return getoutput(f"find {root_dir} -name '*.ipk' -exec du --all --bytes {{}} \; | perl -p -e 's/^(\d+\s+).*\//\\1/'")
+    return getoutput(f"find {root_dir} -name '*.ipk' -exec du --all --bytes {{}} \\; | perl -p -e 's/^(\\d+\\s+).*\\//\\1/'")
 
 
 def save(args: object, config: callable) -> None:
@@ -385,7 +385,7 @@ if args.target == "force-update":
 if args.target == "update":
     for cmd in [
         f"git submodule update --init {basedir}",
-        f"git -C '{basedir}' checkout $(git config --file=.gitmodules submodule.\"$(git submodule | awk '{{print $2}}')\".branch)",
+        f"git -C '{basedir}' checkout $(git rev-parse --abbrev-ref HEAD) || git -C '{basedir}' checkout $(git config --file=.gitmodules submodule.\"$(git submodule | awk '{{print $2}}')\".branch)",
         f"git -C '{basedir}' pull",
     ]:
         exec_and_print_or_err(cmd)

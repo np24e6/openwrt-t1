@@ -1,0 +1,367 @@
+diff --recursive --unified --new-file --no-dereference upstream/doc/modbus_set_slave.txt src/doc/modbus_set_slave.txt
+--- upstream/doc/modbus_set_slave.txt	2019-07-31 21:17:38.000000000 +0000
++++ src/doc/modbus_set_slave.txt	2023-04-03 12:46:35.000000000 +0000
+@@ -29,8 +29,7 @@
+ serial network. Some not compliant devices or software (such as modpoll) uses
+ the slave ID as unit identifier, that's incorrect (cf page 23 of Modbus
+ Messaging Implementation Guide v1.0b) but without the slave value, the faulty
+-remote device or software drops the requests! The special value
+-`MODBUS_TCP_SLAVE` (0xFF) can be used in TCP mode to restore the default value.
++remote device or software drops the requests!
+ 
+ The broadcast address is `MODBUS_BROADCAST_ADDRESS`. This special value must be
+ use when you want all Modbus devices of the network receive the request.
+diff --recursive --unified --new-file --no-dereference upstream/src/modbus-rtu-private.h src/src/modbus-rtu-private.h
+--- upstream/src/modbus-rtu-private.h	2019-07-31 21:17:38.000000000 +0000
++++ src/src/modbus-rtu-private.h	2023-04-03 12:46:35.000000000 +0000
+@@ -71,6 +71,8 @@
+ #endif
+     /* To handle many slaves on the same link */
+     int confirmation_to_ignore;
++    /* 0 - None, 1 - HW, 2 - SW */
++    int flowcontrol_mode;
+ } modbus_rtu_t;
+ 
+ #endif /* MODBUS_RTU_PRIVATE_H */
+diff --recursive --unified --new-file --no-dereference upstream/src/modbus-rtu.c src/src/modbus-rtu.c
+--- upstream/src/modbus-rtu.c	2019-07-31 21:17:38.000000000 +0000
++++ src/src/modbus-rtu.c	2023-04-03 12:46:35.000000000 +0000
+@@ -92,7 +92,7 @@
+ static int _modbus_set_slave(modbus_t *ctx, int slave)
+ {
+     /* Broadcast address is 0 (MODBUS_BROADCAST_ADDRESS) */
+-    if (slave >= 0 && slave <= 247) {
++    if (slave >= 0 && slave <= 255) {
+         ctx->slave = slave;
+     } else {
+         errno = EINVAL;
+@@ -833,7 +833,22 @@
+     }
+ 
+     /* Software flow control is disabled */
+-    tios.c_iflag &= ~(IXON | IXOFF | IXANY);
++    // tios.c_iflag &= ~(IXON | IXOFF | IXANY);
++
++    switch (ctx_rtu->flowcontrol_mode)
++    {
++    case MODBUS_RTU_FLOW_CTRL_NONE:
++        break;
++    case MODBUS_RTU_FLOW_CTRL_HW:
++        tios.c_cflag |= CRTSCTS;
++        break;
++    case MODBUS_RTU_FLOW_CTRL_SW:
++        tios.c_iflag |= (IXON | IXOFF);
++        break;
++    default:
++        ctx->s = -1;
++        return -1;
++    }
+ 
+     /* C_OFLAG      Output options
+        OPOST        Postprocess output (not set = raw output)
+@@ -1220,7 +1235,7 @@
+ 
+ modbus_t* modbus_new_rtu(const char *device,
+                          int baud, char parity, int data_bit,
+-                         int stop_bit)
++                         int stop_bit, int flow_ctrl)
+ {
+     modbus_t *ctx;
+     modbus_rtu_t *ctx_rtu;
+@@ -1273,6 +1288,7 @@
+     }
+     ctx_rtu->data_bit = data_bit;
+     ctx_rtu->stop_bit = stop_bit;
++    ctx_rtu->flowcontrol_mode = flow_ctrl;
+ 
+ #if HAVE_DECL_TIOCSRS485
+     /* The RS232 mode has been set by default */
+diff --recursive --unified --new-file --no-dereference upstream/src/modbus-rtu.h src/src/modbus-rtu.h
+--- upstream/src/modbus-rtu.h	2019-07-31 21:17:38.000000000 +0000
++++ src/src/modbus-rtu.h	2023-04-03 12:46:35.000000000 +0000
+@@ -16,8 +16,12 @@
+  */
+ #define MODBUS_RTU_MAX_ADU_LENGTH  256
+ 
++#define MODBUS_RTU_FLOW_CTRL_NONE 0
++#define MODBUS_RTU_FLOW_CTRL_HW	  1
++#define MODBUS_RTU_FLOW_CTRL_SW	  2
++
+ MODBUS_API modbus_t* modbus_new_rtu(const char *device, int baud, char parity,
+-                                    int data_bit, int stop_bit);
++                                    int data_bit, int stop_bit, int flow_ctrl);
+ 
+ #define MODBUS_RTU_RS232 0
+ #define MODBUS_RTU_RS485 1
+diff --recursive --unified --new-file --no-dereference upstream/src/modbus-tcp.c src/src/modbus-tcp.c
+--- upstream/src/modbus-tcp.c	2019-07-31 21:17:38.000000000 +0000
++++ src/src/modbus-tcp.c	2023-04-03 12:46:35.000000000 +0000
+@@ -77,11 +77,7 @@
+ static int _modbus_set_slave(modbus_t *ctx, int slave)
+ {
+     /* Broadcast address is 0 (MODBUS_BROADCAST_ADDRESS) */
+-    if (slave >= 0 && slave <= 247) {
+-        ctx->slave = slave;
+-    } else if (slave == MODBUS_TCP_SLAVE) {
+-        /* The special value MODBUS_TCP_SLAVE (0xFF) can be used in TCP mode to
+-         * restore the default value. */
++    if (slave >= 0 && slave <= 255) {
+         ctx->slave = slave;
+     } else {
+         errno = EINVAL;
+@@ -479,7 +475,7 @@
+ /* Listens for any request from one or many modbus masters in TCP */
+ int modbus_tcp_listen(modbus_t *ctx, int nb_connection)
+ {
+-    int new_s;
++    int new_s, rc, on = 1;
+     int enable;
+     int flags;
+     struct sockaddr_in addr;
+@@ -516,6 +512,12 @@
+         return -1;
+     }
+ 
++    rc = ioctl(new_s, FIONBIO, (char *)&on);
++    if (rc < 0) {
++        close(new_s);
++        return -1;
++    }
++
+     memset(&addr, 0, sizeof(addr));
+     addr.sin_family = AF_INET;
+     /* If the modbus port is < to 1024, we need the setuid root. */
+@@ -816,7 +818,7 @@
+     _modbus_init_common(ctx);
+ 
+     /* Could be changed after to reach a remote serial Modbus device */
+-    ctx->slave = MODBUS_TCP_SLAVE;
++    ctx->slave = 0x01;
+ 
+     ctx->backend = &_modbus_tcp_backend;
+ 
+@@ -868,7 +870,7 @@
+     _modbus_init_common(ctx);
+ 
+     /* Could be changed after to reach a remote serial Modbus device */
+-    ctx->slave = MODBUS_TCP_SLAVE;
++    ctx->slave = 0x01;
+ 
+     ctx->backend = &_modbus_tcp_pi_backend;
+ 
+diff --recursive --unified --new-file --no-dereference upstream/src/modbus-tcp.h src/src/modbus-tcp.h
+--- upstream/src/modbus-tcp.h	2019-07-31 21:17:38.000000000 +0000
++++ src/src/modbus-tcp.h	2023-04-03 12:46:35.000000000 +0000
+@@ -32,7 +32,6 @@
+ #endif
+ 
+ #define MODBUS_TCP_DEFAULT_PORT   502
+-#define MODBUS_TCP_SLAVE         0xFF
+ 
+ /* Modbus_Application_Protocol_V1_1b.pdf Chapter 4 Section 1 Page 5
+  * TCP MODBUS ADU = 253 bytes + MBAP (7 bytes) = 260 bytes
+diff --recursive --unified --new-file --no-dereference upstream/src/modbus.c src/src/modbus.c
+--- upstream/src/modbus.c	2019-07-31 21:17:38.000000000 +0000
++++ src/src/modbus.c	2023-04-03 12:46:35.000000000 +0000
+@@ -696,6 +696,52 @@
+     return rsp_length;
+ }
+ 
++int modbus_raw_reply(modbus_t *ctx, const uint8_t *req,
++		int req_length, const uint8_t *raw_rsp,
++		     int raw_rsp_length)
++{
++	int rsp_length;
++	sft_t sft;
++	uint8_t rsp[MAX_MESSAGE_LENGTH] = { 0 };
++
++	if (!ctx) {
++		errno = EINVAL;
++		return -1;
++	}
++
++	sft.slave    = raw_rsp[0];
++	sft.function = raw_rsp[1];
++	sft.t_id     = ctx->backend->prepare_response_tid(req, &req_length);
++	rsp_length   = ctx->backend->build_response_basis(&sft, rsp);
++
++    switch(sft.function) {
++        case MODBUS_FC_READ_COILS:
++        case MODBUS_FC_READ_DISCRETE_INPUTS:
++        case MODBUS_FC_READ_INPUT_REGISTERS:
++        case MODBUS_FC_READ_HOLDING_REGISTERS:
++            if (raw_rsp_length > 2) {
++                /* Copy data after function code */
++                memcpy(rsp + rsp_length, raw_rsp + 2, raw_rsp_length - 2);
++                rsp_length += raw_rsp_length - 2;
++            }
++            break;
++        case MODBUS_FC_WRITE_SINGLE_REGISTER:
++            if (raw_rsp_length > 2) {
++                memcpy(rsp + rsp_length, raw_rsp + 2, raw_rsp_length - 2);
++                rsp_length = req_length;
++            }
++            break;
++        case MODBUS_FC_WRITE_MULTIPLE_REGISTERS:
++            if (raw_rsp_length > 2) {
++                memcpy(rsp + rsp_length, raw_rsp + 2, raw_rsp_length - 2);
++                rsp_length += 4;
++            }
++        break;
++    }
++
++	return send_msg(ctx, rsp, rsp_length);
++}
++
+ /* Send a response to the received request.
+    Analyses the request and constructs a response.
+ 
+@@ -1051,7 +1097,7 @@
+ 
+     rc = send_msg(ctx, req, req_length);
+     if (rc > 0) {
+-        int i, temp, bit;
++        int i;
+         int pos = 0;
+         int offset;
+         int offset_end;
+@@ -1067,14 +1113,7 @@
+         offset = ctx->backend->header_length + 2;
+         offset_end = offset + rc;
+         for (i = offset; i < offset_end; i++) {
+-            /* Shift reg hi_byte to temp */
+-            temp = rsp[i];
+-
+-            for (bit = 0x01; (bit & 0xff) && (pos < nb);) {
+-                dest[pos++] = (temp & bit) ? TRUE : FALSE;
+-                bit = bit << 1;
+-            }
+-
++		dest[pos++] = rsp[i];
+         }
+     }
+ 
+@@ -1141,7 +1180,7 @@
+ 
+ /* Reads the data from a remove device and put that data into an array */
+ static int read_registers(modbus_t *ctx, int function, int addr, int nb,
+-                          uint16_t *dest)
++                          uint8_t *dest)
+ {
+     int rc;
+     int req_length;
+@@ -1175,10 +1214,9 @@
+ 
+         offset = ctx->backend->header_length;
+ 
+-        for (i = 0; i < rc; i++) {
++        for (i = 0; i < rc * 2; i++) {
+             /* shift reg hi_byte to temp OR with lo_byte */
+-            dest[i] = (rsp[offset + 2 + (i << 1)] << 8) |
+-                rsp[offset + 3 + (i << 1)];
++            dest[i] = rsp[offset + 2 + i];
+         }
+     }
+ 
+@@ -1187,7 +1225,7 @@
+ 
+ /* Reads the holding registers of remote device and put the data into an
+    array */
+-int modbus_read_registers(modbus_t *ctx, int addr, int nb, uint16_t *dest)
++int modbus_read_registers(modbus_t *ctx, int addr, int nb, uint8_t *dest)
+ {
+     int status;
+ 
+@@ -1213,7 +1251,7 @@
+ 
+ /* Reads the input registers of remote device and put the data into an array */
+ int modbus_read_input_registers(modbus_t *ctx, int addr, int nb,
+-                                uint16_t *dest)
++                                uint8_t *dest)
+ {
+     int status;
+ 
+@@ -1290,14 +1328,12 @@
+ }
+ 
+ /* Write the bits of the array in the remote device */
+-int modbus_write_bits(modbus_t *ctx, int addr, int nb, const uint8_t *src)
++int modbus_write_bits(modbus_t *ctx, int addr, int nb, const uint16_t *src)
+ {
+     int rc;
+     int i;
+     int byte_count;
+     int req_length;
+-    int bit_check = 0;
+-    int pos = 0;
+     uint8_t req[MAX_MESSAGE_LENGTH];
+ 
+     if (ctx == NULL) {
+@@ -1321,20 +1357,7 @@
+     req[req_length++] = byte_count;
+ 
+     for (i = 0; i < byte_count; i++) {
+-        int bit;
+-
+-        bit = 0x01;
+-        req[req_length] = 0;
+-
+-        while ((bit & 0xFF) && (bit_check++ < nb)) {
+-            if (src[pos++])
+-                req[req_length] |= bit;
+-            else
+-                req[req_length] &=~ bit;
+-
+-            bit = bit << 1;
+-        }
+-        req_length++;
++        req[req_length++] = (uint8_t)src[i];
+     }
+ 
+     rc = send_msg(ctx, req, req_length);
+diff --recursive --unified --new-file --no-dereference upstream/src/modbus.h src/src/modbus.h
+--- upstream/src/modbus.h	2019-07-31 21:17:38.000000000 +0000
++++ src/src/modbus.h	2023-04-03 12:46:35.000000000 +0000
+@@ -205,11 +205,11 @@
+ 
+ MODBUS_API int modbus_read_bits(modbus_t *ctx, int addr, int nb, uint8_t *dest);
+ MODBUS_API int modbus_read_input_bits(modbus_t *ctx, int addr, int nb, uint8_t *dest);
+-MODBUS_API int modbus_read_registers(modbus_t *ctx, int addr, int nb, uint16_t *dest);
+-MODBUS_API int modbus_read_input_registers(modbus_t *ctx, int addr, int nb, uint16_t *dest);
++MODBUS_API int modbus_read_registers(modbus_t *ctx, int addr, int nb, uint8_t *dest);
++MODBUS_API int modbus_read_input_registers(modbus_t *ctx, int addr, int nb, uint8_t *dest);
+ MODBUS_API int modbus_write_bit(modbus_t *ctx, int coil_addr, int status);
+ MODBUS_API int modbus_write_register(modbus_t *ctx, int reg_addr, const uint16_t value);
+-MODBUS_API int modbus_write_bits(modbus_t *ctx, int addr, int nb, const uint8_t *data);
++MODBUS_API int modbus_write_bits(modbus_t *ctx, int addr, int nb, const uint16_t *data);
+ MODBUS_API int modbus_write_registers(modbus_t *ctx, int addr, int nb, const uint16_t *data);
+ MODBUS_API int modbus_mask_write_register(modbus_t *ctx, int addr, uint16_t and_mask, uint16_t or_mask);
+ MODBUS_API int modbus_write_and_read_registers(modbus_t *ctx, int write_addr, int write_nb,
+@@ -237,6 +237,9 @@
+                             int req_length, modbus_mapping_t *mb_mapping);
+ MODBUS_API int modbus_reply_exception(modbus_t *ctx, const uint8_t *req,
+                                       unsigned int exception_code);
++MODBUS_API int modbus_raw_reply(modbus_t *ctx, const uint8_t *req,
++				int req_length, const uint8_t *raw_rsp,
++				int raw_rsp_lenght);
+ 
+ /**
+  * UTILS FUNCTIONS
+@@ -245,12 +248,12 @@
+ #define MODBUS_GET_HIGH_BYTE(data) (((data) >> 8) & 0xFF)
+ #define MODBUS_GET_LOW_BYTE(data) ((data) & 0xFF)
+ #define MODBUS_GET_INT64_FROM_INT16(tab_int16, index) \
+-    (((int64_t)tab_int16[(index)    ] << 48) + \
+-     ((int64_t)tab_int16[(index) + 1] << 32) + \
+-     ((int64_t)tab_int16[(index) + 2] << 16) + \
++    (((int64_t)tab_int16[(index)    ] << 48) | \
++     ((int64_t)tab_int16[(index) + 1] << 32) | \
++     ((int64_t)tab_int16[(index) + 2] << 16) | \
+       (int64_t)tab_int16[(index) + 3])
+-#define MODBUS_GET_INT32_FROM_INT16(tab_int16, index) ((tab_int16[(index)] << 16) + tab_int16[(index) + 1])
+-#define MODBUS_GET_INT16_FROM_INT8(tab_int8, index) ((tab_int8[(index)] << 8) + tab_int8[(index) + 1])
++#define MODBUS_GET_INT32_FROM_INT16(tab_int16, index) ((tab_int16[(index)] << 16) | tab_int16[(index) + 1])
++#define MODBUS_GET_INT16_FROM_INT8(tab_int8, index) ((tab_int8[(index)] << 8) | tab_int8[(index) + 1])
+ #define MODBUS_SET_INT16_TO_INT8(tab_int8, index, value) \
+     do { \
+         tab_int8[(index)] = (value) >> 8;  \

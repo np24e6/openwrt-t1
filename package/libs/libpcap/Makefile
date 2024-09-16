@@ -11,9 +11,6 @@ PKG_NAME:=libpcap
 PKG_VERSION:=1.9.1
 PKG_RELEASE:=3
 
-PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
-PKG_SOURCE_URL:=http://www.us.tcpdump.org/release/ \
-        http://www.tcpdump.org/release/
 PKG_HASH:=635237637c5b619bcceba91900666b64d56ecb7be63f298f601ec786ce087094
 
 PKG_MAINTAINER:=Felix Fietkau <nbd@nbd.name>
@@ -23,6 +20,11 @@ PKG_BUILD_PARALLEL:=1
 
 PKG_LICENSE:=BSD-3-Clause
 PKG_LICENSE_FILES:=LICENSE
+
+PKG_SOURCE_VERSION:=1.9.1
+PKG_SOURCE:=$(PKG_NAME)-$(PKG_SOURCE_VERSION).tar.gz
+PKG_SOURCE_URL:=http://www.tcpdump.org/release/ \
+	http://www.us.tcpdump.org/release/
 
 include $(INCLUDE_DIR)/package.mk
 include $(INCLUDE_DIR)/cmake.mk

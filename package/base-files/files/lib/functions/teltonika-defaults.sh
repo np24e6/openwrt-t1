@@ -2,6 +2,7 @@
 
 . /lib/functions.sh
 . /usr/share/libubox/jshn.sh
+. /lib/functions/mobile.sh
 
 ucidef_add_static_modem_info() {
 	#Parameters: model usb_id sim_count other_params
@@ -12,16 +13,17 @@ ucidef_add_static_modem_info() {
 	model="$1"
 	usb_id="$2"
 
-	[ -n "$3" ] && sim_count="$3"
-
 	json_get_keys count modems
 	[ -n "$count" ] && modem_counter="$(echo "$count" | wc -w)"
+
+	modem_num=$((modem_counter + 1))
 
 	json_select_array "modems"
 		json_add_object
 			json_add_string id "$usb_id"
-			json_add_string num "$((modem_counter + 1))"
+			json_add_string num "$modem_num"
 			json_add_boolean builtin 1
+			sim_count=$(get_simcount_by_modem_num $modem_num)
 			json_add_int simcount "$sim_count"
 
 			for i in "$@"; do
@@ -80,7 +82,13 @@ ucidef_add_serial_capabilities() {
 			done
 			json_select ..
 
-			json_add_string "path" $7
+			json_select_array duplex
+			for n in $7; do
+				json_add_string "" $n
+			done
+			json_select ..
+
+			json_add_string "path" $8
 
 		json_close_object
 	json_select ..
@@ -114,6 +122,7 @@ ucidef_set_hwinfo() {
 	sfp_switch
 	rs232
 	rs485
+	rs232_control
 	console
 	dual_modem
 	m2_modem
@@ -129,6 +138,7 @@ ucidef_set_hwinfo() {
 	soft_port_mirror
 	gigabit_port
 	2_5_gigabit_port
+	custom_usbcfg
 	'
 
 	json_select_object hwinfo
@@ -146,11 +156,9 @@ ucidef_set_hwinfo() {
 }
 
 ucidef_set_esim() {
-	
 	json_select_object hwinfo
 	json_add_boolean "esim" 1
 	json_select ..
-	
 }
 
 ucidef_set_release_version() {

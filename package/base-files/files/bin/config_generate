@@ -1,8 +1,12 @@
 #!/bin/sh
 
 CFG=/etc/board.json
+APN_DB=/usr/share/mobifd/apn.db.gz
 
 . /usr/share/libubox/jshn.sh
+
+# Uncompress APN database on boot
+[ -f "$APN_DB" ] && gzip -dkc "$APN_DB" > /tmp/apn.db
 
 [ -s $CFG ] || /bin/board_detect || exit 1
 
@@ -92,10 +96,14 @@ apply_network_options() {
 	[ -z "$ula" ] && ula=1
 
 	[ -e /proc/sys/net/ipv6 ] && [ "$ula" = 1 ] && {
+		r1=$(dd if=/dev/urandom bs=1 count=1 2>/dev/null | hexdump -e '1/1 "%02x"')
+		r2=$(dd if=/dev/urandom bs=2 count=1 2>/dev/null | hexdump -e '2/1 "%02x"')
+		r3=$(dd if=/dev/urandom bs=2 count=1 2>/dev/null | hexdump -e '2/1 "%02x"')
+
 		uci -q batch <<-EOF
 			delete network.globals
 			set network.globals='globals'
-			set network.globals.ula_prefix='auto'
+			set network.globals.ula_prefix='fd${r1}:${r2}:${r3}::/48'
 		EOF
 	}
 }

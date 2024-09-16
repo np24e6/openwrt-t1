@@ -1,0 +1,30 @@
+Index: backports-6.1.24/drivers/net/wireless/ath/ath10k/wmi.c
+===================================================================
+--- backports-6.1.24.orig/drivers/net/wireless/ath/ath10k/wmi.c	2024-06-12 16:16:30.394920479 +0300
++++ backports-6.1.24/drivers/net/wireless/ath/ath10k/wmi.c	2024-06-12 16:29:21.627373576 +0300
+@@ -6336,6 +6336,10 @@
+ 	case WMI_10_4_PEER_RATECODE_LIST_EVENTID:
+ 	case WMI_10_4_WDS_PEER_EVENTID:
+ 	case WMI_10_4_DEBUG_FATAL_CONDITION_EVENTID:
++	case WMI_10_4_PDEV_CTL_FAILSAFE_CHECK_EVENTID:
++	case WMI_10_4_PEER_TX_PN_RESPONSE_EVENTID:
++	case WMI_10_4_VDEV_DELETE_ALL_PEER_RESP_EVENTID:
++	case WMI_10_4_PDEV_MULTIPLE_VDEV_RESTART_RESP_EVENTID:
+ 		ath10k_dbg(ar, ATH10K_DBG_WMI,
+ 			   "received event id %d not implemented\n", id);
+ 		break;
+Index: backports-6.1.24/drivers/net/wireless/ath/ath10k/wmi.h
+===================================================================
+--- backports-6.1.24.orig/drivers/net/wireless/ath/ath10k/wmi.h	2024-06-12 16:16:30.398920465 +0300
++++ backports-6.1.24/drivers/net/wireless/ath/ath10k/wmi.h	2024-06-12 16:18:27.322465168 +0300
+@@ -1966,6 +1966,10 @@
+ 	WMI_10_4_HOST_SWFDA_EVENTID,
+ 	WMI_10_4_ESP_ESTIMATE_EVENTID,
+ 	WMI_10_4_DFS_STATUS_CHECK_EVENTID,
++	WMI_10_4_PDEV_CTL_FAILSAFE_CHECK_EVENTID,
++	WMI_10_4_PEER_TX_PN_RESPONSE_EVENTID,
++	WMI_10_4_VDEV_DELETE_ALL_PEER_RESP_EVENTID,
++	WMI_10_4_PDEV_MULTIPLE_VDEV_RESTART_RESP_EVENTID,
+ 	WMI_10_4_PDEV_UTF_EVENTID = WMI_10_4_END_EVENTID - 1,
+ };
+ 

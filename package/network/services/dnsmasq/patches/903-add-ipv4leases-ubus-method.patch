@@ -1,0 +1,100 @@
+--- a/src/dnsmasq.h
++++ b/src/dnsmasq.h
+@@ -1545,6 +1545,7 @@ char *host_from_dns(struct in_addr addr)
+ 
+ /* lease.c */
+ #ifdef HAVE_DHCP
++struct dhcp_lease *get_leases();
+ void lease_update_file(time_t now);
+ void lease_update_dns(int force);
+ void lease_init(time_t now);
+--- a/src/lease.c
++++ b/src/lease.c
+@@ -21,6 +21,11 @@
+ static struct dhcp_lease *leases = NULL, *old_leases = NULL;
+ static int dns_dirty, file_dirty, leases_left;
+ 
++struct dhcp_lease *get_leases()
++{
++	return leases;
++}
++
+ static int read_leases(time_t now, FILE *leasestream)
+ {
+   unsigned long ei;
+--- a/src/ubus.c
++++ b/src/ubus.c
+@@ -26,6 +26,9 @@ static int error_logged = 0;
+ static int ubus_handle_metrics(struct ubus_context *ctx, struct ubus_object *obj,
+ 			       struct ubus_request_data *req, const char *method,
+ 			       struct blob_attr *msg);
++static int ubus_handle_ipv4leases(struct ubus_context *ctx, struct ubus_object *obj,
++				struct ubus_request_data *req, const char *method,
++				struct blob_attr *msg);
+ 
+ #ifdef HAVE_CONNTRACK
+ enum {
+@@ -56,6 +59,7 @@ static void ubus_subscribe_cb(struct ubu
+ 
+ static const struct ubus_method ubus_object_methods[] = {
+   UBUS_METHOD_NOARG("metrics", ubus_handle_metrics),
++  UBUS_METHOD_NOARG("ipv4leases", ubus_handle_ipv4leases),
+ #ifdef HAVE_CONNTRACK
+   UBUS_METHOD("set_connmark_allowlist", ubus_handle_set_connmark_allowlist, set_connmark_allowlist_policy),
+ #endif
+@@ -200,6 +204,55 @@ static int ubus_handle_metrics(struct ub
+   return UBUS_STATUS_OK;
+ }
+ 
++static int ubus_handle_ipv4leases(struct ubus_context *ctx, struct ubus_object *obj,
++				struct ubus_request_data *req, const char *method,
++				struct blob_attr *msg)
++{
++	struct dhcp_lease *lease;
++	char ifrn_name[IFNAMSIZ]= { 0 };
++	time_t now = dnsmasq_time();
++
++	struct blob_buf c = { 0 };
++	int status = UBUS_STATUS_OK;
++
++	if (blob_buf_init(&c, 0)) {
++		return UBUS_STATUS_UNKNOWN_ERROR;
++	}
++
++	void *d = blobmsg_open_array(&c, "leases");
++
++	for (lease = get_leases(); lease; lease = lease->next)
++	{
++		void *e = blobmsg_open_table(&c, NULL);
++
++		blobmsg_add_u32(&c, "valid", (lease->expires != 0) ?
++				(uint32_t)difftime(lease->expires, now) : 0);
++
++		blobmsg_add_string(&c, "mac", (lease->hwaddr_type != ARPHRD_ETHER || lease->hwaddr_len == 0) ?
++				"-" : print_mac(daemon->namebuff, lease->hwaddr, lease->hwaddr_len));
++
++		inet_ntop(AF_INET, &lease->addr, daemon->addrbuff, ADDRSTRLEN);
++		blobmsg_add_string(&c, "address", daemon->addrbuff);
++
++		blobmsg_add_string(&c, "hostname", (lease->hostname) ? lease->hostname : "");
++
++		blobmsg_add_string(&c, "device", (if_indextoname(lease->last_interface, ifrn_name)) ?
++				ifrn_name : "");
++
++		blobmsg_close_table(&c, e);
++	}
++
++	blobmsg_close_array(&c, d);
++
++	if (ubus_send_reply(ctx, req, c.head)) {
++		status = UBUS_STATUS_UNKNOWN_ERROR;
++	}
++
++	blob_buf_free(&c);
++
++	return status;
++}
++
+ #ifdef HAVE_CONNTRACK
+ static int ubus_handle_set_connmark_allowlist(struct ubus_context *ctx, struct ubus_object *obj,
+ 					      struct ubus_request_data *req, const char *method,

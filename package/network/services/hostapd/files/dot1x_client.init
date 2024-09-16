@@ -1,0 +1,39 @@
+#!/bin/sh /etc/rc.common
+START=90
+STOP=10
+USE_PROCD=1
+
+active=false
+
+check_enabled() {
+	config_get enabled "$1" "enabled"
+	[ "$enabled" = "1" ] && active=true
+}
+
+start_service() {
+	config_load 'dot1x'
+	config_foreach check_enabled 'client'
+	$active || return
+	procd_open_instance
+	procd_set_param stdout 1
+	procd_set_param command /usr/bin/dot1x_client
+	procd_close_instance
+}
+
+stop_service() {
+	ubus call dot1x_client kill_clients
+	procd_send_signal dot1x_client
+}
+
+reload_service() {
+	if ubus -t 1 wait_for dot1x_client; then
+		ubus call dot1x_client reload
+	else
+		start
+	fi
+}
+
+service_triggers()
+{
+	procd_add_reload_trigger "dot1x" "network"
+}

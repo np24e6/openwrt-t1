@@ -1,0 +1,17 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+migrate_options() {
+    config_get tls_cipher_list "$1" "tls_cipher_list"
+    [ "$tls_cipher_list" = "custom" ] && return
+    config_get cipher "$1" "cipher" ""
+    if [ -n "$cipher" ]; then
+        uci_remove "openvpn" "$1" "data_ciphers"
+        uci_add_list "openvpn" "$1" "data_ciphers" "$cipher"
+    fi
+}
+
+config_load "openvpn"
+config_foreach migrate_options "openvpn"
+uci_commit openvpn

@@ -11,7 +11,8 @@ SERVER_SNAP=""
 ADDRESS_CONF="/tmp/dnsmasq.d${NETWORK:+_}${NETWORK}/address"
 ADDRESS_SNAP=""
 DEFAULT_DNS="8.8.8.8"
-DEFAULT_BLOCKIP="255.255.255.255"
+DEFAULT_BLOCKIPV4="255.255.255.255"
+DEFAULT_BLOCKIPV6="::ffff:ffff:ffff"
 SERVER_IP=""
 
 help() {
@@ -23,7 +24,7 @@ append_file_hosts() {
 	cat "$1" | awk -v IP="$SERVER_IP" -F ";" \
 		'{ if ($2 !~ /!.*/ && length($2) > 0){
 			gsub(/\*/, "") ; print "server=/"$2"/"IP
-		} }' >> $SERVER_CONF
+		} }' >>$SERVER_CONF
 }
 
 append_host() {
@@ -75,7 +76,8 @@ enable_hb() {
 	echo "server=/rms.teltonika.lt/$icmp_host" >>"$SERVER_CONF"
 
 	if [ "$mode" = "whitelist" ]; then
-		echo "address=/#/$DEFAULT_BLOCKIP" >>"$ADDRESS_CONF"
+		echo "address=/#/$DEFAULT_BLOCKIPV4" >>"$ADDRESS_CONF"
+		echo "address=/#/$DEFAULT_BLOCKIPV6" >>"$ADDRESS_CONF"
 	fi
 
 	if [ -e /etc/luci-uploads/cbid.hostblock.config.site_blocking_hosts ]; then
@@ -101,26 +103,28 @@ disable_hb() {
 }
 
 add_dns_redirect() {
-	local cfg
-	cfg=$(uci -q add firewall redirect)
-	uci -q set firewall.$cfg.enabled='0'
-	uci -q set firewall.$cfg.target='DNAT'
-	uci -q set firewall.$cfg.src='lan'
-	uci -q set firewall.$cfg.dest='lan'
-	uci -q set firewall.$cfg.proto='tcp udp'
-	uci -q set firewall.$cfg.name='Redirect_DNS'
-	uci -q set firewall.$cfg.dest_ip='192.168.1.1'
-	uci -q set firewall.$cfg.src_dport='53'
-	uci -q set firewall.$cfg.dest_port='53'
-	uci -q rename firewall.$cfg='REDIR_DNS'
+	local cfg=$(uci -q add firewall redirect)
+	uci -q batch <<-EOF
+		set firewall.$cfg.enabled='0'
+		set firewall.$cfg.target='DNAT'
+		set firewall.$cfg.src='lan'
+		set firewall.$cfg.dest='lan'
+		add_list firewall.$cfg.proto='tcp'
+		add_list firewall.$cfg.proto='udp'
+		set firewall.$cfg.name='Redirect_DNS'
+		set firewall.$cfg.dest_ip='192.168.1.1'
+		set firewall.$cfg.src_dport='53'
+		set firewall.$cfg.dest_port='53'
+		rename firewall.$cfg='REDIR_DNS'
+	EOF
 }
 
 enable_dns_redirect() {
-	local dest_ip rule
+	local dest_ip
 	local zone="lan"
 
-	if [ -n "$NETWORK" ];then
-		if [ "$NETWORK" = "hotspot" ];then
+	if [ -n "$NETWORK" ]; then
+		if [ "$NETWORK" = "hotspot" ]; then
 			dest_ip=$(uci -q get chilli.@chilli[0].uamlisten)
 			zone="hotspot"
 		else
@@ -131,8 +135,7 @@ enable_dns_redirect() {
 	fi
 
 	if [ -n "$dest_ip" ]; then
-		rule=$(uci -q get firewall.REDIR_DNS)
-		if [ "$rule" != "redirect" ]; then
+		if [ "$(uci -q get firewall.REDIR_DNS)" != "redirect" ]; then
 			add_dns_redirect
 		fi
 		uci -q set firewall.REDIR_DNS.enabled=1
@@ -151,6 +154,7 @@ enable_dns_redirect() {
 }
 
 disable_dns_redirect() {
+	[ "$(uci -q get firewall.REDIR_DNS)" != "redirect" ] && return
 	uci -q set firewall.REDIR_DNS.enabled=0
 	uci -q commit firewall
 	reload_firewall
@@ -229,6 +233,8 @@ case "$1" in
 	enable_hb
 	if [ $? -eq 0 ]; then
 		enable_dns_redirect
+	else
+		disable_dns_redirect
 	fi
 	;;
 *)

@@ -3,7 +3,8 @@ include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=data-sender
 
-PKG_SOURCE_VERSION:=1.5
+PKG_SOURCE_VERSION:=1.6
+PKG_VERSION:=2024-06-17
 
 PKG_FIXUP:=autoreconf
 
@@ -17,7 +18,7 @@ define Package/data-sender/Default
 endef
 
 define Package/data-sender-pkg/Default
-  PKG_ROUTER:=$(TLT_PLATFORM_NAME)
+  PKG_ROUTER:=$(call device_shortname)
 endef
 
 define Package/data-sender
@@ -33,43 +34,43 @@ endef
 
 define Package/data-sender-mod-bluetooth
   $(call Package/data-sender/Default)
-  DEPENDS:=data-sender +libsqlite3
+  DEPENDS:=data-sender +libsqlite3 +data-sender-api-mod-bluetooth
   TITLE:=Input plugin for bluetooth data gathering
 endef
 
 define Package/data-sender-mod-modbus
   $(call Package/data-sender/Default)
-  DEPENDS:=data-sender +libsqlite3
+  DEPENDS:=data-sender +libsqlite3 +data-sender-api-mod-modbus
   TITLE:=Input plugin for modbus data gathering
 endef
 
 define Package/data-sender-mod-modbus_alarm
 	$(call Package/data-sender/Default)
-	DEPENDS:=data-sender
+	DEPENDS:=data-sender +data-sender-api-mod-modbus-alarm +libsqlite3
 	TITLE:=Input plugin for modbus alarm gathering
 endef
 
 define Package/data-sender-mod-dnp3
   $(call Package/data-sender/Default)
-  DEPENDS:=data-sender +libsqlite3
+  DEPENDS:=data-sender +libsqlite3 +data-sender-api-mod-dnp3
   TITLE:=Input plugin for DNP3 data gathering
 endef
 
 define Package/data-sender-mod-opcua
   $(call Package/data-sender/Default)
-  DEPENDS:=data-sender +libsqlite3
+  DEPENDS:=data-sender +libsqlite3 +data-sender-api-mod-opcua
   TITLE:=Input plugin for OPC UA data gathering
 endef
 
 define Package/data-sender-mod-mbus
   $(call Package/data-sender/Default)
-  DEPENDS:=data-sender +libsqlite3
+  DEPENDS:=data-sender +libsqlite3 +data-sender-api-mod-mbus
   TITLE:=Input plugin for M-Bus data gathering
 endef
 
 define Package/data-sender-mod-wifiscan
   $(call Package/data-sender/Default)
-  DEPENDS:=data-sender +libsqlite3
+  DEPENDS:=data-sender +libsqlite3 +data-sender-api-mod-wifiscan
   TITLE:=Input plugin for wifi scaner data gathering
 endef
 
@@ -81,7 +82,7 @@ endef
 
 define Package/data-sender-mod-gsm
   $(call Package/data-sender/Default)
-  DEPENDS:=data-sender +libgsm
+  DEPENDS:=data-sender +libgsm +data-sender-api-mod-gsm
   TITLE:=Input plugin for gsm information
 endef
 
@@ -93,7 +94,7 @@ endef
 
 define Package/data-sender-mod-mdcollect
   $(call Package/data-sender/Default)
-  DEPENDS:=data-sender +libgsm +libmdcollect
+  DEPENDS:=data-sender +libgsm +libmdcollect +data-sender-api-mod-mdcollect
   TITLE:=Input plugin for data usage information
 endef
 
@@ -117,13 +118,13 @@ endef
 
 define Package/data-sender-mod-custom
   $(call Package/data-sender/Default)
-  DEPENDS:=data-sender +libblobmsg-json
+  DEPENDS:=data-sender +libblobmsg-json +data-sender-api-mod-format-custom
   TITLE:=Filter plugin for data concatenation
 endef
 
 define Package/data-sender-mod-http
   $(call Package/data-sender/Default)
-  DEPENDS:=data-sender +libcurl
+  DEPENDS:=data-sender +libcurl +data-sender-api-mod-http
   TITLE:=Output plugin for sending data over http
 endef
 
@@ -135,7 +136,7 @@ endef
 
 define Package/data-sender-mod-mqtt
   $(call Package/data-sender/Default)
-  DEPENDS:=data-sender +libmosquitto
+  DEPENDS:=data-sender +libmosquitto +data-sender-api-mod-mqtt-out
   TITLE:=Output plugin for sending data over MQTT
 endef
 
@@ -171,7 +172,7 @@ endef
 
 define Package/data-sender-mod-lua
   $(call Package/data-sender/Default)
-  DEPENDS:=data-sender +liblua
+  DEPENDS:=data-sender +liblua +data-sender-api-mod-lua-in
   TITLE:=LUA input plugin for custom scripts
 endef
 
@@ -207,7 +208,7 @@ endef
 
 define Package/data-sender-mod-ubus
   $(call Package/data-sender/Default)
-  DEPENDS:=data-sender +libubus
+  DEPENDS:=data-sender +libubus +data-sender-api-mod-ubus
   TITLE:=Output plugin for sending data over UBUS
 endef
 
@@ -215,18 +216,18 @@ define Package/data-sender-mod-file
   $(call Package/data-sender/Default)
   DEPENDS:=data-sender
   TITLE:=Output plugin for writing data to a file
-  PKG_ROUTER:=$(TLT_PLATFORM_NAME)
+  PKG_ROUTER:=$(call device_shortname)
 endef
 
 define Package/data-sender-mod-dlms
   $(call Package/data-sender/Default)
-  DEPENDS:=data-sender +libsqlite3
+  DEPENDS:=data-sender +libsqlite3 +data-sender-api-mod-dlms
   TITLE:=Input plugin for M-Bus data gathering
 endef
 
 define Package/data-sender-mod-mqtt_in
   $(call Package/data-sender/Default)
-  DEPENDS:=data-sender +libmosquitto
+  DEPENDS:=data-sender +libmosquitto +data-sender-api-mod-mqtt-in
   TITLE:=Input plugin for subscribing MQTT data
 endef
 
@@ -281,6 +282,10 @@ define BuildPlugin
 	for m in $(2); do \
 		$(CP) $(PKG_INSTALL_DIR)/usr/lib/data_sender/ds_$$$$$$$${m}.so $$(1)/usr/lib/data_sender/ ; \
 	done
+	if [ -n "$(3)" ] && [ -d "$(PKG_BUILD_DIR)/files/modules/$(3)" ]; then \
+		$(INSTALL_DIR) $$(1)/etc/data_sender/modules/$(3) ; \
+		$(CP) $(PKG_BUILD_DIR)/files/modules/$(3)/* $$(1)/etc/data_sender/modules/$(3)/ ; \
+	fi
   endef
   $$(eval $$(call BuildPackage,data-sender-mod-$(1)))
 endef
@@ -310,7 +315,7 @@ $(eval $(call BuildPlugin,smtp,output_smtp))
 $(eval $(call BuildPlugin,nflog,input_nflog))
 $(eval $(call BuildPlugin,eventlog,input_eventlog))
 $(eval $(call BuildPlugin,base,input_base))
-$(eval $(call BuildPlugin,lua,input_lua))
+$(eval $(call BuildPlugin,lua,input_lua,input/lua))
 $(eval $(call BuildPlugin,lua_out,output_lua))
 $(eval $(call BuildPlugin,lua_format,format_lua))
 $(eval $(call BuildPlugin,telegram,output_telegram))

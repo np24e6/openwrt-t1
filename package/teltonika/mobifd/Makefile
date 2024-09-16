@@ -7,9 +7,13 @@ include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=mobifd
 
-PKG_SOURCE_VERSION:=5.2.4
+PKG_SOURCE_VERSION:=6.0.4
 
 PKG_LICENSE:=Teltonika-closed
+
+PKG_CONFIG_DEPENDS += \
+	CONFIG_USE_PROCD \
+	CONFIG_USE_OPENRC
 
 include $(INCLUDE_DIR)/package.mk
 
@@ -49,6 +53,9 @@ define Package/mobifd/install
 	$(CP) $(PKG_BUILD_DIR)/files/defaults/106_operctl $(1)/etc/uci-defaults/etc/106_operctl
 	$(CP) $(PKG_BUILD_DIR)/files/defaults/107_network_service_mode $(1)/etc/uci-defaults/etc/107_network_service_mode
 	$(CP) $(PKG_BUILD_DIR)/files/hotplug/remove_operlist.hotplug $(1)/usr/share/gsm/5-remove-operlist
+
+	$(if $(CONFIG_USE_OPENRC),\
+		$(OPENRC_INSTALL) boot mobifd ./mobifd.openrc $(1))
 endef
 
 define Build/Test

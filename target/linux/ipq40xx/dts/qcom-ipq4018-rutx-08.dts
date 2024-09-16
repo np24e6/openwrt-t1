@@ -31,8 +31,6 @@
 &mnfinfo {
 	/delete-node/ simpin1;
 	/delete-node/ simpin2;
-	/delete-node/ simpin3;
-	/delete-node/ simpin4;
 
 	sim_count {
 		default =  "0";

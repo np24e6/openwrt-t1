@@ -16,8 +16,6 @@ PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_SOURCE_SUBDIR)
 
 PKG_LICENSE:=Teltonika-closed
 
-GPL_INCLUDE_HEADERS:=1
-
 include $(INCLUDE_DIR)/package.mk
 
 define Package/libtlt-logger

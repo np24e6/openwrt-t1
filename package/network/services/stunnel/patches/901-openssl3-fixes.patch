@@ -1,0 +1,465 @@
+diff --git a/src/client.c b/src/client.c
+index 9147ee2..d9b9d8f 100644
+--- a/src/client.c
++++ b/src/client.c
+@@ -657,7 +657,7 @@ NOEXPORT void ssl_start(CLI *c) {
+     print_cipher(c);
+     sess=SSL_get1_session(c->ssl);
+     if(sess) {
+-        X509 *peer_cert=SSL_get_peer_certificate(c->ssl);
++        X509 *peer_cert=SSL_get1_peer_certificate(c->ssl);
+         if(peer_cert) {
+             X509_free(peer_cert);
+         } else { /* no authentication was performed */
+@@ -725,13 +725,7 @@ NOEXPORT void print_tmp_key(SSL *s) {
+ #ifndef OPENSSL_NO_EC
+     case EVP_PKEY_EC:
+         {
+-            EC_KEY *ec=EVP_PKEY_get1_EC_KEY(key);
+-            int nid=EC_GROUP_get_curve_name(EC_KEY_get0_group(ec));
+-            const char *cname=EC_curve_nid2nist(nid);
+-            EC_KEY_free(ec);
+-            if (cname == NULL)
+-                cname=OBJ_nid2sn(nid);
+-            s_log(LOG_INFO, "Peer temporary key: ECDH, %s, %d bits", cname, EVP_PKEY_bits(key));
++            s_log(LOG_INFO, "Peer temporary key: ECDH, %d bits", EVP_PKEY_bits(key));
+         }
+         break;
+ #endif
+@@ -1509,7 +1503,7 @@ char **env_alloc(CLI *c) {
+     }
+ 
+     if(c->ssl) {
+-        peer_cert=SSL_get_peer_certificate(c->ssl);
++        peer_cert=SSL_get1_peer_certificate(c->ssl);
+         if(peer_cert) {
+             name=X509_NAME2text(X509_get_subject_name(peer_cert));
+             env=str_realloc(env, (n+2)*sizeof(char *));
+diff --git a/src/cron.c b/src/cron.c
+index f75408f..352d294 100644
+--- a/src/cron.c
++++ b/src/cron.c
+@@ -58,6 +58,7 @@ NOEXPORT unsigned __stdcall per_day_thread(void *arg);
+ NOEXPORT void per_second_worker(void);
+ NOEXPORT void per_day_worker(void);
+ #ifndef OPENSSL_NO_DH
++#if OPENSSL_VERSION_NUMBER<0x30000000L
+ #if OPENSSL_VERSION_NUMBER>=0x0090800fL
+ NOEXPORT void per_day_dh_param(BN_GENCB *);
+ NOEXPORT BN_GENCB *per_day_bn_gencb(void);
+@@ -66,6 +67,7 @@ NOEXPORT int bn_callback(int, int, BN_GENCB *);
+ NOEXPORT void per_day_dh_param(void);
+ NOEXPORT void dh_callback(int, int, void *);
+ #endif /* OpenSSL 0.9.8 or later */
++#endif
+ #endif /* OPENSSL_NO_DH */
+ #endif /* USE_OS_THREADS */
+ 
+@@ -174,22 +176,28 @@ NOEXPORT void per_day_worker(void) {
+     time_t now, then;
+     int delay;
+ #if !defined(OPENSSL_NO_DH) && OPENSSL_VERSION_NUMBER>=0x0090800fL
++#if OPENSSL_VERSION_NUMBER<0x30000000L
+     BN_GENCB *bn_gencb;
++#endif
+ #endif
+ 
+     s_log(LOG_DEBUG, "Per-day thread initialized");
+ #if !defined(OPENSSL_NO_DH) && OPENSSL_VERSION_NUMBER>=0x0090800fL
++#if OPENSSL_VERSION_NUMBER<0x30000000L
+     bn_gencb=per_day_bn_gencb();
++#endif
+ #endif
+     time(&then);
+     for(;;) {
+         s_log(LOG_INFO, "Executing per-day jobs");
+ #ifndef OPENSSL_NO_DH
++#if OPENSSL_VERSION_NUMBER<0x30000000L
+ #if OPENSSL_VERSION_NUMBER>=0x0090800fL
+         per_day_dh_param(bn_gencb);
+ #else /* OpenSSL older than 0.9.8 */
+         per_day_dh_param();
+ #endif /* OpenSSL 0.9.8 or later */
++#endif
+ #endif /* OPENSSL_NO_DH */
+         time(&now);
+         s_log(LOG_INFO, "Per-day jobs completed in %d seconds", (int)(now-then));
+@@ -213,7 +221,7 @@ NOEXPORT void per_day_worker(void) {
+ }
+ 
+ #ifndef OPENSSL_NO_DH
+-
++#if OPENSSL_VERSION_NUMBER<0x30000000L
+ #if OPENSSL_VERSION_NUMBER>=0x0090800fL
+ NOEXPORT void per_day_dh_param(BN_GENCB *bn_gencb) {
+ #else /* OpenSSL older than 0.9.8 */
+@@ -228,9 +236,9 @@ NOEXPORT void per_day_dh_param(void) {
+     s_log(LOG_NOTICE, "Updating DH parameters");
+ #if OPENSSL_VERSION_NUMBER>=0x0090800fL
+     /* generate 2048-bit DH parameters */
+-    dh=DH_new();
+-    if(!dh) {
+-        sslerror("DH_new");
++    pkey=EVP_PKEY_new();
++    if(!pkey) {
++        sslerror("EVP_PKEY_new");
+         return;
+     }
+     if(!DH_generate_parameters_ex(dh, 2048, 2, bn_gencb)) {
+@@ -256,7 +264,7 @@ NOEXPORT void per_day_dh_param(void) {
+     CRYPTO_THREAD_read_lock(stunnel_locks[LOCK_SECTIONS]);
+     for(opt=service_options.next; opt; opt=opt->next)
+         if(opt->option.dh_temp_params)
+-            SSL_CTX_set_tmp_dh(opt->ctx, dh);
++            SSL_CTX_set0_tmp_dh_pkey(opt->ctx, dh);
+     CRYPTO_THREAD_unlock(stunnel_locks[LOCK_SECTIONS]);
+     s_log(LOG_NOTICE, "DH parameters updated");
+ }
+@@ -300,7 +308,7 @@ NOEXPORT void dh_callback(int p, int n, void *arg) {
+ }
+ 
+ #endif /* OpenSSL 0.9.8 or later */
+-
++#endif
+ #endif /* OPENSSL_NO_DH */
+ 
+ #endif /* USE_OS_THREADS */
+diff --git a/src/ctx.c b/src/ctx.c
+index 8d0e9de..59b3b47 100644
+--- a/src/ctx.c
++++ b/src/ctx.c
+@@ -63,7 +63,7 @@ NOEXPORT int matches_wildcard(const char *, const char *);
+ /* DH/ECDH */
+ #ifndef OPENSSL_NO_DH
+ NOEXPORT int dh_init(SERVICE_OPTIONS *);
+-NOEXPORT DH *dh_read(char *);
++NOEXPORT EVP_PKEY *dh_read(char *);
+ #endif /* OPENSSL_NO_DH */
+ #ifndef OPENSSL_NO_ECDH
+ NOEXPORT int ecdh_init(SERVICE_OPTIONS *);
+@@ -102,7 +102,7 @@ NOEXPORT int decrypt_session_ticket_cb(SSL *, SSL_SESSION *,
+ 
+ #if OPENSSL_VERSION_NUMBER>=0x10000000L
+ NOEXPORT int ssl_tlsext_ticket_key_cb(SSL *, unsigned char *,
+-    unsigned char *, EVP_CIPHER_CTX *, HMAC_CTX *, int);
++    unsigned char *, EVP_CIPHER_CTX *, EVP_MAC_CTX *, int);
+ #endif /* OpenSSL 1.0.0 or later */
+ 
+ /* session callbacks */
+@@ -279,7 +279,12 @@ int context_init(SERVICE_OPTIONS *section) { /* init TLS context */
+         decrypt_session_ticket_cb, NULL);
+ #endif /* OpenSSL 1.1.1 or later */
+ 
+-#if OPENSSL_VERSION_NUMBER>=0x10000000L
++#if OPENSSL_VERSION_NUMBER>=0x30000000L
++    if((section->ticket_key)&&(section->ticket_mac))
++        SSL_CTX_set_tlsext_ticket_key_evp_cb(section->ctx, ssl_tlsext_ticket_key_cb);
++#endif /* OPENSSL_VERSION_NUMBER>=0x30000000L */
++
++#if OPENSSL_VERSION_NUMBER>=0x10000000L && OPENSSL_VERSION_NUMBER<0x30000000L
+     if((section->ticket_key)&&(section->ticket_mac))
+         SSL_CTX_set_tlsext_ticket_key_cb(section->ctx, ssl_tlsext_ticket_key_cb);
+ #endif /* OpenSSL 1.0.0 or later */
+@@ -449,7 +454,7 @@ NOEXPORT STACK_OF(SSL_CIPHER) *SSL_CTX_get_ciphers(const SSL_CTX *ctx) {
+ #endif
+ 
+ NOEXPORT int dh_init(SERVICE_OPTIONS *section) {
+-    DH *dh=NULL;
++    EVP_PKEY *pkey=NULL;
+     int i, n;
+     char description[128];
+     STACK_OF(SSL_CIPHER) *ciphers;
+@@ -485,15 +490,15 @@ NOEXPORT int dh_init(SERVICE_OPTIONS *section) {
+ #ifndef OPENSSL_NO_ENGINE
+     if(!section->engine) /* cert is a file and not an identifier */
+ #endif
+-        dh=dh_read(section->cert);
+-    if(dh) {
+-        SSL_CTX_set_tmp_dh(section->ctx, dh);
+-        s_log(LOG_INFO, "%d-bit DH parameters loaded", 8*DH_size(dh));
+-        DH_free(dh);
++        pkey=dh_read(section->cert);
++    if(pkey) {
++        SSL_CTX_set0_tmp_dh_pkey(section->ctx, pkey);
++        s_log(LOG_INFO, "%d-bit DH parameters loaded", 8*EVP_PKEY_get_size(pkey));
++        EVP_PKEY_free(pkey);
+         return 0; /* OK */
+     }
+     CRYPTO_THREAD_read_lock(stunnel_locks[LOCK_DH]);
+-    SSL_CTX_set_tmp_dh(section->ctx, dh_params);
++    SSL_CTX_set0_tmp_dh_pkey(section->ctx, pkey);
+     CRYPTO_THREAD_unlock(stunnel_locks[LOCK_DH]);
+     dh_temp_params=1; /* generate temporary DH parameters in cron */
+     section->option.dh_temp_params=1; /* update this section in cron */
+@@ -501,8 +506,8 @@ NOEXPORT int dh_init(SERVICE_OPTIONS *section) {
+     return 0; /* OK */
+ }
+ 
+-NOEXPORT DH *dh_read(char *cert) {
+-    DH *dh;
++NOEXPORT EVP_PKEY *dh_read(char *cert) {
++    EVP_PKEY *pkey;
+     BIO *bio;
+ 
+     if(!cert) {
+@@ -514,16 +519,16 @@ NOEXPORT DH *dh_read(char *cert) {
+         sslerror("BIO_new_file");
+         return NULL; /* FAILED */
+     }
+-    dh=PEM_read_bio_DHparams(bio, NULL, NULL, NULL);
++    pkey=PEM_read_bio_PUBKEY(bio, NULL, NULL, NULL);
+     BIO_free(bio);
+-    if(!dh) {
++    if(!pkey) {
+         while(ERR_get_error())
+             ; /* OpenSSL error queue cleanup */
+         s_log(LOG_DEBUG, "Could not load DH parameters from %s", cert);
+         return NULL; /* FAILED */
+     }
+     s_log(LOG_DEBUG, "Using DH parameters from %s", cert);
+-    return dh;
++    return pkey;
+ }
+ 
+ #endif /* OPENSSL_NO_DH */
+@@ -1254,7 +1259,7 @@ NOEXPORT int decrypt_session_ticket_cb(SSL *ssl, SSL_SESSION *sess,
+ 
+ #if OPENSSL_VERSION_NUMBER>=0x10000000L
+ NOEXPORT int ssl_tlsext_ticket_key_cb(SSL *ssl, unsigned char *key_name,
+-        unsigned char *iv, EVP_CIPHER_CTX *ctx, HMAC_CTX *hctx, int enc) {
++        unsigned char *iv, EVP_CIPHER_CTX *ctx, EVP_MAC_CTX *hctx, int enc) {
+     CLI *c;
+     const EVP_CIPHER *cipher;
+     int iv_len;
+@@ -1263,9 +1268,9 @@ NOEXPORT int ssl_tlsext_ticket_key_cb(SSL *ssl, unsigned char *key_name,
+     s_log(LOG_DEBUG, "Session ticket processing callback");
+ 
+     c=SSL_get_ex_data(ssl, index_ssl_cli);
+-    if(!HMAC_Init_ex(hctx, (const unsigned char *)(c->opt->ticket_mac->key_val),
+-        c->opt->ticket_mac->key_len, EVP_sha256(), NULL)) {
+-        s_log(LOG_ERR, "HMAC_Init_ex failed");
++    if(!EVP_MAC_init(hctx, (const unsigned char *)(c->opt->ticket_mac->key_val),
++        (size_t)(c->opt->ticket_mac->key_len), NULL)) {
++        s_log(LOG_ERR, "EVP_MAC_init failed");
+         return -1;
+     }
+     if(c->opt->ticket_key->key_len == 16)
+@@ -1360,7 +1365,7 @@ NOEXPORT void new_chain(CLI *c) {
+         PEM_write_bio_X509(bio, peer_cert);
+     }
+     if(!sk || !c->opt->option.client) {
+-        peer_cert=SSL_get_peer_certificate(c->ssl);
++        peer_cert=SSL_get1_peer_certificate(c->ssl);
+         if(peer_cert) {
+             PEM_write_bio_X509(bio, peer_cert);
+             X509_free(peer_cert);
+@@ -1735,8 +1740,11 @@ void sslerror(const char *txt) { /* OpenSSL error handler */
+     unsigned long err;
+     const char *file;
+     int line;
+-
++	#if OPENSSL_VERSION_NUMBER<0x30000000L
+     err=ERR_get_error_line(&file, &line);
++	#else
++	err=NULL;
++	#endif
+     if(err) {
+         sslerror_queue();
+         sslerror_log(err, file, line, txt);
+@@ -1749,8 +1757,11 @@ NOEXPORT void sslerror_queue(void) { /* recursive dump of the error queue */
+     unsigned long err;
+     const char *file;
+     int line;
+-
+-    err=ERR_get_error_line(&file, &line);
++	#if OPENSSL_VERSION_NUMBER<0x30000000L
++    err=ERR__error_line(&file, &line);
++	#else
++	err=NULL;
++	#endif
+     if(err) {
+         sslerror_queue();
+         sslerror_log(err, file, line, "error queue");
+diff --git a/src/dhparam.c b/src/dhparam.c
+index 4da475a..6ffe753 100644
+--- a/src/dhparam.c
++++ b/src/dhparam.c
+@@ -1,6 +1,7 @@
+ /* dhparam.c: initial DH parameters for stunnel */
+ #include "prototypes.h"
+ #ifndef OPENSSL_NO_DH
++#if OPENSSL_VERSION_NUMBER<0x30000000L
+ #define DN_new DH_new
+ DH *get_dh2048(void) {
+     static unsigned char dhp_2048[] = {
+@@ -46,5 +47,6 @@ DH *get_dh2048(void) {
+     }
+     return dh;
+ }
++#endif
+ #endif /* OPENSSL_NO_DH */
+ /* built for stunnel 5.72 */
+diff --git a/src/ocsp.c b/src/ocsp.c
+index f3d3215..26d8318 100644
+--- a/src/ocsp.c
++++ b/src/ocsp.c
+@@ -573,7 +573,7 @@ cleanup:
+  */
+ NOEXPORT int ocsp_get_response(CLI *c, OCSP_PARAMS *params) {
+     BIO *bio=NULL;
+-    OCSP_REQ_CTX *req_ctx=NULL;
++    OSSL_HTTP_REQ_CTX *req_ctx=NULL;
+     char *host=NULL, *port=NULL, *path=NULL;
+     SOCKADDR_UNION addr;
+     int ssl, ret=0;
+@@ -611,7 +611,7 @@ NOEXPORT int ocsp_get_response(CLI *c, OCSP_PARAMS *params) {
+     req_ctx=OCSP_sendreq_new(bio, path, NULL, -1);
+ #else /* OpenSSL version >= 1.0.0 */
+     /* there is no way to send the Host header with older OpenSSL versions */
+-    req_ctx=OCSP_sendreq_new(bio, path, params->request, -1);
++    req_ctx=OCSP_sendreq_new(bio, path, const OCSP_REQUEST *params->request, -1);
+ #endif /* OpenSSL version 1.0.0 or later */
+     if(!req_ctx) {
+         sslerror("OCSP: OCSP_sendreq_new");
+@@ -619,23 +619,23 @@ NOEXPORT int ocsp_get_response(CLI *c, OCSP_PARAMS *params) {
+     }
+ #if OPENSSL_VERSION_NUMBER>=0x10000000L
+     /* add the HTTP headers */
+-    if(!OCSP_REQ_CTX_add1_header(req_ctx, "Host", host)) {
+-        sslerror("OCSP: OCSP_REQ_CTX_add1_header");
++    if(!OSSL_HTTP_REQ_CTX_add1_header(req_ctx, "Host", host)) {
++        sslerror("OCSP: OSSL_HTTP_REQ_CTX_add1_header");
+         goto cleanup;
+     }
+-    if(!OCSP_REQ_CTX_add1_header(req_ctx, "User-Agent", "stunnel")) {
+-        sslerror("OCSP: OCSP_REQ_CTX_add1_header");
++    if(!OSSL_HTTP_REQ_CTX_add1_header(req_ctx, "User-Agent", "stunnel")) {
++        sslerror("OCSP: OSSL_HTTP_REQ_CTX_add1_header");
+         goto cleanup;
+     }
+     /* add the remaining HTTP headers and the OCSP request body */
+-    if(!OCSP_REQ_CTX_set1_req(req_ctx, params->request)) {
+-        sslerror("OCSP: OCSP_REQ_CTX_set1_req");
++    if(!OSSL_HTTP_REQ_CTX_set1_req(req_ctx, "application/ocsp-request", ASN1_ITEM_rptr(OCSP_REQUEST), (const ASN1_VALUE *)params->request)) {
++        sslerror("OCSP: OSSL_HTTP_REQ_CTX_set1_req");
+         goto cleanup;
+     }
+ #endif /* OpenSSL version 1.0.0 or later */
+ 
+     /* OCSP protocol communication loop */
+-    while(OCSP_sendreq_nbio(&params->response, req_ctx)==-1) {
++    while(OSSL_HTTP_REQ_CTX_nbio(req_ctx)==-1) {
+         s_poll_init(c->fds, 0);
+         s_poll_add(c->fds, c->fd, BIO_should_read(bio), BIO_should_write(bio));
+         switch(s_poll_wait(c->fds, c->opt->timeout_busy, 0)) {
+@@ -663,7 +663,7 @@ NOEXPORT int ocsp_get_response(CLI *c, OCSP_PARAMS *params) {
+ 
+ cleanup:
+     if(req_ctx)
+-        OCSP_REQ_CTX_free(req_ctx);
++        OSSL_HTTP_REQ_CTX_free(req_ctx);
+     if(bio)
+         BIO_free_all(bio);
+     if(c->fd!=INVALID_SOCKET) {
+@@ -808,11 +808,11 @@ NOEXPORT int ocsp_params_append_root_ca(CLI *c, OCSP_PARAMS *params) {
+         goto cleanup;
+     }
+     obj=X509_OBJECT_new();
+-    if(X509_STORE_get_by_subject(store_ctx,
++    if(X509_STORE_CTX_get_by_subject(store_ctx,
+             X509_LU_X509, X509_get_subject_name(cert), obj)>0) {
+         goto success; /* the certificate is already trusted */
+     }
+-    if(X509_STORE_get_by_subject(store_ctx,
++    if(X509_STORE_CTX_get_by_subject(store_ctx,
+             X509_LU_X509, X509_get_issuer_name(cert), obj)<=0) {
+         s_log(LOG_INFO, "OCSP: The root CA certificate was not found");
+         goto cleanup;
+diff --git a/src/protocol.c b/src/protocol.c
+index cfe6d3b..dafdd15 100644
+--- a/src/protocol.c
++++ b/src/protocol.c
+@@ -81,12 +81,14 @@ NOEXPORT void ldap_client_middle(CLI *);
+ 
+ NOEXPORT void connect_server_early(CLI *);
+ NOEXPORT void connect_client_middle(CLI *);
+-#ifndef OPENSSL_NO_MD4
++#ifndef OPENSSL_NO_MD4 
++#if OPENSSL_VERSION_NUMBER<0x30000000L
+ NOEXPORT void ntlm(CLI *);
+ NOEXPORT char *ntlm1(void);
+ NOEXPORT char *ntlm3(char *, char *, char *, char *);
+ NOEXPORT void crypt_DES(DES_cblock, const_DES_cblock, unsigned char[7]);
+ #endif
++#endif
+ NOEXPORT char *base64(int, const char *, int);
+ 
+ NOEXPORT void capwin_server_middle(CLI *);
+@@ -1331,8 +1333,10 @@ NOEXPORT void connect_client_middle(CLI *c) {
+     fd_printf(c, c->remote_fd.fd, "Host: %s", c->opt->protocol_host);
+     if(c->opt->protocol_username && c->opt->protocol_password) {
+         if(!strcasecmp(c->opt->protocol_authentication, "ntlm")) {
+-#ifndef OPENSSL_NO_MD4
++#ifndef OPENSSL_NO_MD4 
++#if OPENSSL_VERSION_NUMBER<0x30000000L
+             ntlm(c);
++#endif
+ #else
+             s_log(LOG_ERR, "NTLM authentication is not available");
+             throw_exception(c, 1);
+@@ -1375,7 +1379,7 @@ NOEXPORT void connect_client_middle(CLI *c) {
+ }
+ 
+ #ifndef OPENSSL_NO_MD4
+-
++#if OPENSSL_VERSION_NUMBER<0x30000000L
+ /*
+  * NTLM code is based on the following documentation:
+  * http://davenport.sourceforge.net/ntlm.html
+@@ -1558,6 +1562,7 @@ NOEXPORT void crypt_DES(DES_cblock dst, const_DES_cblock src,
+         (DES_cblock *)dst, &sched, DES_ENCRYPT);
+ }
+ 
++#endif
+ #endif
+ 
+ NOEXPORT char *base64(int encode, const char *in, int len) {
+diff --git a/src/ssl.c b/src/ssl.c
+index 2b7e506..cd035d2 100644
+--- a/src/ssl.c
++++ b/src/ssl.c
+@@ -205,11 +205,13 @@ int ssl_init(void) {
+         return 1;
+     }
+ #ifndef OPENSSL_NO_DH
++#if OPENSSL_VERSION_NUMBER<0x30000000L
+     dh_params=get_dh2048();
+     if(!dh_params) {
+         s_log(LOG_ERR, "Failed to get default DH parameters");
+         return 1;
+     }
++#endif
+ #endif /* OPENSSL_NO_DH */
+ #ifndef OPENSSL_NO_COMP
+     compression_init();
+@@ -459,19 +461,13 @@ NOEXPORT void compression_list() {
+ NOEXPORT int prng_init(GLOBAL_OPTIONS *global) {
+     int totbytes=0;
+     char filename[256];
+-    const RAND_METHOD *meth=RAND_get_rand_method();
+ 
+     /* skip PRNG initialization when no seeding methods are available */
+-    if(meth==NULL || meth->status==NULL || meth->add==NULL) {
++    if(!RAND_status()) {
+         s_log(LOG_DEBUG, "No PRNG seeding methods");
+         return 0; /* success */
+     }
+ 
+-    if(RAND_status()) {
+-        s_log(LOG_DEBUG, "No PRNG seeding was required");
+-        return 0; /* success */
+-    }
+-
+     /* if they specify a rand file on the command line we
+        assume that they really do want it, so try it first */
+     if(global->rand_file) {

@@ -93,6 +93,12 @@
 				snps,dis_u2_susphy_quirk;
 			};
 		};
+
+		tpm: tpm@2e {
+			compatible = "tcg,tpm_tis_i2c";
+			reg = <0x2e>;
+			status = "okay";
+		};
 	};
 
 	boot: boot_partition {
@@ -168,6 +174,14 @@
 			type = "ascii";
 		};
 
+		sim_cfg {
+			reg = <&config 0x120 0x20>;
+			min-res-len = <0x7>;
+			default = "";
+			type = "simcfg";
+			log;
+		};
+
 		blver {
 			reg = <&boot 0xa0000 0xa>;
 			trailling-data;
@@ -188,20 +202,8 @@
 			default = "";
 		};
 
-		simpin3 {
-			reg = <&config_rw 0x20 0x8>;
-			type = "digit";
-			default = "";
-		};
-
-		simpin4 {
-			reg = <&config_rw 0x30 0x8>;
-			type = "digit";
-			default = "";
-		};
-		
 		sim_count {
-			default =  "4";
+			default =  "2";
 			log;
 		};
 	};

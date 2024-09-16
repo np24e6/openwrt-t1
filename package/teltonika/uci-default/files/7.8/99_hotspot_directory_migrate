@@ -1,0 +1,14 @@
+#!/bin/sh
+. /lib/functions.sh
+
+CONFIG="uhttpd"
+
+config_load "$CONFIG"
+
+if [ "$(config_get "hotspot" "home")" = "/hotspotlogin" ]; then
+    uci_set "uhttpd" "hotspot" "home" "/etc/chilli/hotspotlogin"
+fi
+
+uci_commit "$CONFIG"
+
+exit 0

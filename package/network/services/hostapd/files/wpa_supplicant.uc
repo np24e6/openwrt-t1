@@ -101,6 +101,10 @@ function start_pending(phy_name)
 	let macaddr_list = wpas.data.macaddr_list[phy_name];
 	phydev.macaddr_init(macaddr_list);
 
+	if (!macaddr_list) {
+		phydev.macaddr_next();
+	}
+
 	for (let ifname in phy.data)
 		iface_start(phydev, phy.data[ifname]);
 }

@@ -2,6 +2,6 @@ if PACKAGE_libuci
 
 config UCI_LOG_SUPPORT
 	bool "Enable UCI logging support"
-	default n
+	default y if !BUILD_MINIMAL_IMAGE
 
 endif

@@ -1,0 +1,2 @@
+[ "$ACTION" = "ifup" ] && ubus call dot1x_client reload
+[ "$ACTION" = "ifdown" ] && ubus call dot1x_client reload

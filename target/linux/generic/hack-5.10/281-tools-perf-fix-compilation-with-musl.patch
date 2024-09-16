@@ -1,0 +1,92 @@
+--- a/tools/include/uapi/linux/perf_event.h
++++ b/tools/include/uapi/linux/perf_event.h
+@@ -15,6 +15,10 @@
+ #ifndef _UAPI_LINUX_PERF_EVENT_H
+ #define _UAPI_LINUX_PERF_EVENT_H
+ 
++#ifndef __always_inline
++#define __always_inline	inline
++#endif
++
+ #include <linux/types.h>
+ #include <linux/ioctl.h>
+ #include <asm/byteorder.h>
+--- a/tools/perf/bench/sched-messaging.c
++++ b/tools/perf/bench/sched-messaging.c
+@@ -308,12 +308,12 @@ int bench_sched_messaging(int argc, cons
+ 		printf("# %d groups == %d %s run\n\n",
+ 		       num_groups, num_groups * 2 * num_fds,
+ 		       thread_mode ? "threads" : "processes");
+-		printf(" %14s: %lu.%03lu [sec]\n", "Total time",
++		printf(" %14s: %llu.%03lu [sec]\n", "Total time",
+ 		       diff.tv_sec,
+ 		       (unsigned long) (diff.tv_usec / USEC_PER_MSEC));
+ 		break;
+ 	case BENCH_FORMAT_SIMPLE:
+-		printf("%lu.%03lu\n", diff.tv_sec,
++		printf("%llu.%03lu\n", diff.tv_sec,
+ 		       (unsigned long) (diff.tv_usec / USEC_PER_MSEC));
+ 		break;
+ 	default:
+--- a/tools/perf/bench/sched-pipe.c
++++ b/tools/perf/bench/sched-pipe.c
+@@ -155,7 +155,7 @@ int bench_sched_pipe(int argc, const cha
+ 		result_usec = diff.tv_sec * USEC_PER_SEC;
+ 		result_usec += diff.tv_usec;
+ 
+-		printf(" %14s: %lu.%03lu [sec]\n\n", "Total time",
++		printf(" %14s: %llu.%03lu [sec]\n\n", "Total time",
+ 		       diff.tv_sec,
+ 		       (unsigned long) (diff.tv_usec / USEC_PER_MSEC));
+ 
+@@ -167,7 +167,7 @@ int bench_sched_pipe(int argc, const cha
+ 		break;
+ 
+ 	case BENCH_FORMAT_SIMPLE:
+-		printf("%lu.%03lu\n",
++		printf("%llu.%03lu\n",
+ 		       diff.tv_sec,
+ 		       (unsigned long) (diff.tv_usec / USEC_PER_MSEC));
+ 		break;
+--- a/tools/perf/bench/syscall.c
++++ b/tools/perf/bench/syscall.c
+@@ -53,7 +53,7 @@ int bench_syscall_basic(int argc, const
+ 		result_usec = diff.tv_sec * 1000000;
+ 		result_usec += diff.tv_usec;
+ 
+-		printf(" %14s: %lu.%03lu [sec]\n\n", "Total time",
++		printf(" %14s: %lld.%03lu [sec]\n\n", "Total time",
+ 		       diff.tv_sec,
+ 		       (unsigned long) (diff.tv_usec/1000));
+ 
+@@ -65,7 +65,7 @@ int bench_syscall_basic(int argc, const
+ 		break;
+ 
+ 	case BENCH_FORMAT_SIMPLE:
+-		printf("%lu.%03lu\n",
++		printf("%lld.%03lu\n",
+ 		       diff.tv_sec,
+ 		       (unsigned long) (diff.tv_usec / 1000));
+ 		break;
+--- a/tools/perf/util/header.c
++++ b/tools/perf/util/header.c
+@@ -1621,7 +1621,7 @@ static void print_clock_data(struct feat
+ 	}
+ 
+ 	fprintf(fp, "# clockid: %s (%u)\n", clockid_name(clockid), clockid);
+-	fprintf(fp, "# reference time: %s = %ld.%06d (TOD) = %ld.%09ld (%s)\n",
++	fprintf(fp, "# reference time: %s = %lld.%06d (TOD) = %lld.%09ld (%s)\n",
+ 		    tstr, tod_ns.tv_sec, (int) tod_ns.tv_usec,
+ 		    clockid_ns.tv_sec, clockid_ns.tv_nsec,
+ 		    clockid_name(clockid));
+--- a/tools/perf/util/stat-display.c
++++ b/tools/perf/util/stat-display.c
+@@ -965,7 +965,7 @@ static void print_interval(struct perf_s
+ 	if (config->interval_clear)
+ 		puts(CONSOLE_CLEAR);
+ 
+-	sprintf(prefix, "%6lu.%09lu%s", ts->tv_sec, ts->tv_nsec, config->csv_sep);
++	sprintf(prefix, "%6lld.%09lu%s", ts->tv_sec, ts->tv_nsec, config->csv_sep);
+ 
+ 	if ((num_print_interval == 0 && !config->csv_output) || config->interval_clear) {
+ 		switch (config->aggr_mode) {

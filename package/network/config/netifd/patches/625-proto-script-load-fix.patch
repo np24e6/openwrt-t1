@@ -1,0 +1,20 @@
+--- a/handler.c
++++ b/handler.c
+@@ -163,9 +163,15 @@ netifd_parse_script_handler(const char *
+ 		return;
+ 
+ 	do {
++retry:
+ 		start = fgets(buf, sizeof(buf), f);
+-		if (!start)
+-			continue;
++		if (!start) {
++			if (errno == EINTR) {
++				clearerr(f);
++				goto retry;
++			} else
++				continue;
++		}
+ 
+ 		len = strlen(start);
+ 

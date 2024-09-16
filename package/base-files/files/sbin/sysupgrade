@@ -471,6 +471,19 @@ restore_sme_fstab() {
 	fi
 }
 
+restore_rms_auth_code() {
+	local config="rms_mqtt"
+
+	[ -s "/etc/config/$config" ] || return
+	[ -s "/tmp/new_config_dir/etc/config/$config" ] || return
+
+	local auth_code="$(uci -q get $config.rms_connect_mqtt.auth_code)"
+	uci -c "/tmp/new_config_dir/etc/config" batch <<-EOF
+		set $config.rms_connect_mqtt.auth_code="$auth_code"
+		commit $config
+	EOF
+}
+
 restore_rms_ids() {
 	local opts="rms_id demo_rms_id local_rms_id"
 	for opt_name in $opts; do
@@ -485,19 +498,6 @@ restore_rms_ids() {
 	uci -c "/tmp/new_config_dir/etc/config" commit rms_mqtt
 }
 
-restore_rms_auth_code() {
-	local config="rms_mqtt"
-
-	[ -s "/etc/config/$config" ] || return
-	[ -s "/tmp/new_config_dir/etc/config/$config" ] || return
-
-	local auth_code="$(uci -q get $config.rms_connect_mqtt.auth_code)"
-	uci -c "/tmp/new_config_dir/etc/config" batch <<-EOF
-		set $config.rms_connect_mqtt.auth_code="$auth_code"
-		commit $config
-	EOF
-}
-
 apply_backup() {
 	restore_rms_ids
 	restore_sme_fstab
@@ -507,7 +507,6 @@ apply_backup() {
 	rm -f /tmp/new_config_dir/etc/config/hwinfo /tmp/new_config_dir/etc/inittab 2>/dev/null
 	cp -rf /tmp/new_config_dir/etc/ / 2>/dev/null
 	cp -rf /tmp/new_config_dir/usr/ / 2>/dev/null
-	cp -rf /tmp/new_config_dir/hotspotlogin/ / 2>/dev/null
 	cp -r /rom/etc/uci-defaults/* /etc/uci-defaults/ 2>/dev/null
 	rm -rf /tmp/new_config_dir
 	cp /rom/etc/shadow /rom/etc/passwd /rom/etc/group /tmp/
@@ -541,13 +540,14 @@ clean_tmp_dir() {
 }
 
 if [ -n "$CONF_BACKUP" ]; then
+	profile_path=$(uci_get profiles general path)
 	curr_profile=$(uci_get profiles general profile)
 	tarfile=$(uci_get profiles "$curr_profile" archive)
 	md5file=$(uci_get profiles "$curr_profile" md5file)
 	[ -z "$curr_profile" ] || [ -z "$tarfile" ] || [ -z "$md5file" ] || {
 		echo "Updating profile $curr_profile"
-		/usr/sbin/profile.sh -b "$tarfile"
-		/usr/sbin/profile.sh -m "$md5file"
+		/usr/sbin/profile.sh -b "${profile_path:-"/etc/profiles/"}$tarfile"
+		/usr/sbin/profile.sh -m "${profile_path:-"/etc/profiles/"}$md5file"
 		uci_set profiles "$curr_profile" updated $(date +%s)
 		uci_commit profiles
 	}

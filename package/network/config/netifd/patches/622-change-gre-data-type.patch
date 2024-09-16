@@ -1,0 +1,47 @@
+--- a/system-linux.c
++++ b/system-linux.c
+@@ -3886,7 +3886,8 @@
+ 	uint8_t tos = 0;
+ 	int ret = 0, ttl = 0;
+ 	unsigned encap_limit = 0;
+-
++	char *tmp = NULL;
++	
+ 	nlm = nlmsg_alloc_simple(RTM_NEWLINK, NLM_F_REQUEST | NLM_F_REPLACE | NLM_F_CREATE);
+ 	if (!nlm)
+ 		return -1;
+@@ -3942,13 +3943,18 @@
+ 			blobmsg_data(cur), blobmsg_len(cur));
+ 
+ 		if ((cur = tb_data[GRE_DATA_IKEY])) {
+-			if ((ikey = blobmsg_get_u32(cur)))
++			if ((tmp = blobmsg_get_string(cur))) {
++				ikey = strtoul(tmp, NULL, 0);
+ 				iflags |= GRE_KEY;
++			}
+ 		}
+ 
+ 		if ((cur = tb_data[GRE_DATA_OKEY])) {
+-			if ((okey = blobmsg_get_u32(cur)))
++			if ((tmp = blobmsg_get_string(cur))) {
++				okey = strtoul(tmp, NULL, 0);
+ 				oflags |= GRE_KEY;
++			}
++				
+ 		}
+ 
+ 		if ((cur = tb_data[GRE_DATA_ICSUM])) {
+
+--- a/system.c
++++ b/system.c
+@@ -56,8 +56,8 @@
+ };
+ 
+ static const struct blobmsg_policy gre_data_attrs[__GRE_DATA_ATTR_MAX] = {
+-	[GRE_DATA_IKEY] = { .name = "ikey", .type = BLOBMSG_TYPE_INT32 },
+-	[GRE_DATA_OKEY] = { .name = "okey", .type = BLOBMSG_TYPE_INT32 },
++	[GRE_DATA_IKEY] = { .name = "ikey", .type = BLOBMSG_TYPE_STRING },
++	[GRE_DATA_OKEY] = { .name = "okey", .type = BLOBMSG_TYPE_STRING },
+ 	[GRE_DATA_ICSUM] = { .name = "icsum", .type = BLOBMSG_TYPE_BOOL },
+ 	[GRE_DATA_OCSUM] = { .name = "ocsum", .type = BLOBMSG_TYPE_BOOL },
+ 	[GRE_DATA_ISEQNO] = { .name = "iseqno", .type = BLOBMSG_TYPE_BOOL },

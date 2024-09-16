@@ -37,6 +37,9 @@ define Package/twStreamApp/conffiles
 /etc/config/iottw
 endef
 
+MAKE_FLAGS += \
+	TW_OS_INCLUDE="twLinux-openssl.h" \
+	INCLUDE_DIR=$(STAGING_DIR)/usr/include/libtwCSdk
 
 
 define Package/twStreamApp/install

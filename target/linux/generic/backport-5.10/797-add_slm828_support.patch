@@ -1,6 +1,6 @@
 --- a/drivers/usb/serial/option.c
 +++ b/drivers/usb/serial/option.c
-@@ -1204,6 +1204,10 @@ static const struct usb_device_id option
+@@ -1213,6 +1213,10 @@ static const struct usb_device_id option
  	{ USB_DEVICE_AND_INTERFACE_INFO(MEIGLINK_VENDOR_ID, MEIG_PRODUCT_SLM770_ECM, 0xff, 0xff, 0xff),
  	  .driver_info = NUMEP2 },
  	{ USB_DEVICE_AND_INTERFACE_INFO(MEIGLINK_VENDOR_ID, MEIG_PRODUCT_SLM770_ECM, 0xff, 0, 0) },

@@ -1,0 +1,22 @@
+Index: sstp-client-1.0.19/src/sstp-stream.c
+===================================================================
+--- sstp-client-1.0.19.orig/src/sstp-stream.c
++++ sstp-client-1.0.19/src/sstp-stream.c
+@@ -333,7 +333,7 @@ status_t sstp_get_cert_hash(sstp_stream_
+     memset(hash, 0, hlen);
+ 
+     /* Get the peer certificate */
+-    peer = SSL_get_peer_certificate(ctx->ssl);
++    peer = SSL_get1_peer_certificate(ctx->ssl);
+     if (!peer)
+     {
+         log_err("Failed to get peer certificate");
+@@ -365,7 +365,7 @@ status_t sstp_verify_cert(sstp_stream_st
+     char result[256];
+     
+     /* Get the peer certificate */
+-    peer = SSL_get_peer_certificate(ctx->ssl);
++    peer = SSL_get1_peer_certificate(ctx->ssl);
+     if (!peer)
+     {
+         log_err("Could not get peer certificate");

@@ -1,5 +1,5 @@
-diff --recursive --unified --new-file --no-dereference orig/.gitignore src/.gitignore
---- orig/.gitignore	2016-12-15 17:28:43.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/.gitignore src/.gitignore
+--- upstream/.gitignore	2016-12-15 17:28:43.000000000 +0000
 +++ src/.gitignore	1970-01-01 00:00:00.000000000 +0000
 @@ -1,132 +0,0 @@
 -# Object files
@@ -134,9 +134,9 @@ diff --recursive --unified --new-file --no-dereference orig/.gitignore src/.giti
 -debian/coova-chilli.substvars
 -debian/coova-chilli/
 -debian/files
-diff --recursive --unified --new-file --no-dereference orig/.gitlab-ci.yml src/.gitlab-ci.yml
---- orig/.gitlab-ci.yml	1970-01-01 00:00:00.000000000 +0000
-+++ src/.gitlab-ci.yml	2024-02-20 12:15:38.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/.gitlab-ci.yml src/.gitlab-ci.yml
+--- upstream/.gitlab-ci.yml	1970-01-01 00:00:00.000000000 +0000
++++ src/.gitlab-ci.yml	2024-07-12 09:27:40.000000000 +0000
 @@ -0,0 +1,20 @@
 +include:
 +  - project: teltonika/ci-templates
@@ -158,9 +158,9 @@ diff --recursive --unified --new-file --no-dereference orig/.gitlab-ci.yml src/.
 +  extends: .semgrep_info
 +  needs:
 +    - job: semgrep_errors
-diff --recursive --unified --new-file --no-dereference orig/Makefile.am src/Makefile.am
---- orig/Makefile.am	2016-12-15 17:28:43.000000000 +0000
-+++ src/Makefile.am	2024-02-20 12:15:38.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/Makefile.am src/Makefile.am
+--- upstream/Makefile.am	2016-12-15 17:28:43.000000000 +0000
++++ src/Makefile.am	2024-07-12 09:27:40.000000000 +0000
 @@ -9,3 +9,6 @@
  if WITH_MINIPORTAL
  SUBDIRS += miniportal
@@ -168,9 +168,9 @@ diff --recursive --unified --new-file --no-dereference orig/Makefile.am src/Make
 +#if WITH_UBUS
 +#SUBDIRS += lchilli
 +#endif
-diff --recursive --unified --new-file --no-dereference orig/README.md src/README.md
---- orig/README.md	2016-12-15 17:28:43.000000000 +0000
-+++ src/README.md	2024-02-20 12:15:38.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/README.md src/README.md
+--- upstream/README.md	2016-12-15 17:28:43.000000000 +0000
++++ src/README.md	2024-07-12 09:27:40.000000000 +0000
 @@ -27,3 +27,14 @@
    `make`
  
@@ -186,9 +186,9 @@ diff --recursive --unified --new-file --no-dereference orig/README.md src/README
 +--- | --- | --- | ---
 +chilli | list | `{"ip":"String","mac":"String","sessionid":"String"}` | List sessions. Params: `ip` - ip address (optional), mac - mac address (optional), sessionid - session ID (optional).
 +chilli | logout | `{"ip":"String","mac":"String","sessionid":"String"}` | Logoff active user. Params: `ip` - ip address (optional), mac - mac address (optional), sessionid - session ID (optional). At least one parameter required.
-diff --recursive --unified --new-file --no-dereference orig/changelog src/changelog
---- orig/changelog	1970-01-01 00:00:00.000000000 +0000
-+++ src/changelog	2024-02-20 12:15:38.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/changelog src/changelog
+--- upstream/changelog	1970-01-01 00:00:00.000000000 +0000
++++ src/changelog	2024-07-12 09:27:40.000000000 +0000
 @@ -0,0 +1,9 @@
 +# 2019-12-19
 +	*New
@@ -199,9 +199,9 @@ diff --recursive --unified --new-file --no-dereference orig/changelog src/change
 +		* New session param added "expirationtime"
 +		* TOS requirement added
 +		* Configurable url params added
-diff --recursive --unified --new-file --no-dereference orig/conf/profiles/configs/cloud4wi src/conf/profiles/configs/cloud4wi
---- orig/conf/profiles/configs/cloud4wi	1970-01-01 00:00:00.000000000 +0000
-+++ src/conf/profiles/configs/cloud4wi	2024-02-20 12:15:38.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/conf/profiles/configs/cloud4wi src/conf/profiles/configs/cloud4wi
+--- upstream/conf/profiles/configs/cloud4wi	1970-01-01 00:00:00.000000000 +0000
++++ src/conf/profiles/configs/cloud4wi	2024-07-12 09:27:40.000000000 +0000
 @@ -0,0 +1,33 @@
 +config group
 +	option name 'default'
@@ -236,9 +236,9 @@ diff --recursive --unified --new-file --no-dereference orig/conf/profiles/config
 +	option paramuserurl 'redirect_url'
 +	option param1 'version'
 +	option param1value ''
-diff --recursive --unified --new-file --no-dereference orig/conf/profiles/configs/default src/conf/profiles/configs/default
---- orig/conf/profiles/configs/default	1970-01-01 00:00:00.000000000 +0000
-+++ src/conf/profiles/configs/default	2024-02-20 12:15:38.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/conf/profiles/configs/default src/conf/profiles/configs/default
+--- upstream/conf/profiles/configs/default	1970-01-01 00:00:00.000000000 +0000
++++ src/conf/profiles/configs/default	2024-07-12 09:27:40.000000000 +0000
 @@ -0,0 +1,19 @@
 +config group
 +	option name 'default'
@@ -259,9 +259,9 @@ diff --recursive --unified --new-file --no-dereference orig/conf/profiles/config
 +	option _landingpage 'int'
 +	option _success 'uam'
 +	option _protocol 'http'
-diff --recursive --unified --new-file --no-dereference orig/conf/profiles/configs/hotspotsystems src/conf/profiles/configs/hotspotsystems
---- orig/conf/profiles/configs/hotspotsystems	1970-01-01 00:00:00.000000000 +0000
-+++ src/conf/profiles/configs/hotspotsystems	2024-02-20 12:15:38.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/conf/profiles/configs/hotspotsystems src/conf/profiles/configs/hotspotsystems
+--- upstream/conf/profiles/configs/hotspotsystems	1970-01-01 00:00:00.000000000 +0000
++++ src/conf/profiles/configs/hotspotsystems	2024-07-12 09:27:40.000000000 +0000
 @@ -0,0 +1,26 @@
 +config group
 +	option name 'default'
@@ -289,9 +289,9 @@ diff --recursive --unified --new-file --no-dereference orig/conf/profiles/config
 +	option radiusserver1 'radius.hotspotsystem.com'
 +	option radiusserver2 'radius2.hotspotsystem.com'
 +	option radiussecret 'hotsys123'
-diff --recursive --unified --new-file --no-dereference orig/conf/profiles/configs/purple src/conf/profiles/configs/purple
---- orig/conf/profiles/configs/purple	1970-01-01 00:00:00.000000000 +0000
-+++ src/conf/profiles/configs/purple	2024-02-20 12:15:38.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/conf/profiles/configs/purple src/conf/profiles/configs/purple
+--- upstream/conf/profiles/configs/purple	1970-01-01 00:00:00.000000000 +0000
++++ src/conf/profiles/configs/purple	2024-07-12 09:27:40.000000000 +0000
 @@ -0,0 +1,31 @@
 +config group
 +	option name 'default'
@@ -324,33 +324,33 @@ diff --recursive --unified --new-file --no-dereference orig/conf/profiles/config
 +	option radiussecret '6n8!5ETGb^nd'
 +	option radiusnasid 'guest'
 +	option swapoctets '1'
-diff --recursive --unified --new-file --no-dereference orig/conf/profiles/uamdomains/uamdomainfile_cloud4wi src/conf/profiles/uamdomains/uamdomainfile_cloud4wi
---- orig/conf/profiles/uamdomains/uamdomainfile_cloud4wi	1970-01-01 00:00:00.000000000 +0000
-+++ src/conf/profiles/uamdomains/uamdomainfile_cloud4wi	2024-02-20 12:15:38.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/conf/profiles/uamdomains/uamdomainfile_cloud4wi src/conf/profiles/uamdomains/uamdomainfile_cloud4wi
+--- upstream/conf/profiles/uamdomains/uamdomainfile_cloud4wi	1970-01-01 00:00:00.000000000 +0000
++++ src/conf/profiles/uamdomains/uamdomainfile_cloud4wi	2024-07-12 09:27:40.000000000 +0000
 @@ -0,0 +1,5 @@
 +cloud4wi.com
 +facebook.com
 +facebook.net
 +flinkedin.com
 +licdn.com
-diff --recursive --unified --new-file --no-dereference orig/conf/profiles/uamdomains/uamdomainfile_hs src/conf/profiles/uamdomains/uamdomainfile_hs
---- orig/conf/profiles/uamdomains/uamdomainfile_hs	1970-01-01 00:00:00.000000000 +0000
-+++ src/conf/profiles/uamdomains/uamdomainfile_hs	2024-02-20 12:15:38.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/conf/profiles/uamdomains/uamdomainfile_hs src/conf/profiles/uamdomains/uamdomainfile_hs
+--- upstream/conf/profiles/uamdomains/uamdomainfile_hs	1970-01-01 00:00:00.000000000 +0000
++++ src/conf/profiles/uamdomains/uamdomainfile_hs	2024-07-12 09:27:40.000000000 +0000
 @@ -0,0 +1,2 @@
 +hotspotsystem.com
 +facebook.com
-diff --recursive --unified --new-file --no-dereference orig/conf/profiles/uamdomains/uamdomainfile_purple src/conf/profiles/uamdomains/uamdomainfile_purple
---- orig/conf/profiles/uamdomains/uamdomainfile_purple	1970-01-01 00:00:00.000000000 +0000
-+++ src/conf/profiles/uamdomains/uamdomainfile_purple	2024-02-20 12:15:38.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/conf/profiles/uamdomains/uamdomainfile_purple src/conf/profiles/uamdomains/uamdomainfile_purple
+--- upstream/conf/profiles/uamdomains/uamdomainfile_purple	1970-01-01 00:00:00.000000000 +0000
++++ src/conf/profiles/uamdomains/uamdomainfile_purple	2024-07-12 09:27:40.000000000 +0000
 @@ -0,0 +1,5 @@
 +purpleportal.net
 +venuewifi.com
 +cloudfront.net
 +openweathermap.org
 +stripe.com
-diff --recursive --unified --new-file --no-dereference orig/conf/up.sh.in src/conf/up.sh.in
---- orig/conf/up.sh.in	2016-12-15 17:28:43.000000000 +0000
-+++ src/conf/up.sh.in	2024-02-20 12:15:38.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/conf/up.sh.in src/conf/up.sh.in
+--- upstream/conf/up.sh.in	2016-12-15 17:28:43.000000000 +0000
++++ src/conf/up.sh.in	2024-07-12 09:27:40.000000000 +0000
 @@ -10,97 +10,45 @@
  
  ipt() {
@@ -474,9 +474,9 @@ diff --recursive --unified --new-file --no-dereference orig/conf/up.sh.in src/co
 +
 +# site specific stuff optional
 +[ -e @ETCCHILLI@/ipup.sh ] && . @ETCCHILLI@/ipup.sh
-diff --recursive --unified --new-file --no-dereference orig/configure.ac src/configure.ac
---- orig/configure.ac	2016-12-15 17:28:43.000000000 +0000
-+++ src/configure.ac	2024-02-20 12:15:38.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/configure.ac src/configure.ac
+--- upstream/configure.ac	2016-12-15 17:28:43.000000000 +0000
++++ src/configure.ac	2024-07-12 09:27:40.000000000 +0000
 @@ -154,8 +154,17 @@
     AC_DEFINE(ENABLE_CHILLIQUERY,1,[Define to enable chilli_query])
  fi
@@ -514,6 +514,22 @@ diff --recursive --unified --new-file --no-dereference orig/configure.ac src/con
  AS_IF([test x"$with_cyassl" != xno],
    [AC_CHECK_LIB([cyassl], [CyaSSL_Init],
                [AC_SUBST([LIBSSL], ["-lcyassl"])
+@@ -511,13 +523,13 @@
+ 
+ AS_IF([test x"$with_curl" != xno],
+   [AC_CHECK_LIB([curl], [curl_global_init],
+-              [AC_SUBST([LIBCURL], ["-lcurl -lz -lssl -lcrypto -lcares"])
++              [AC_SUBST([LIBCURL], ["-lcurl -lz -lssl -lcrypto"])
+                AC_DEFINE([USING_CURL], [1],
+                          [Define if you have curl enabled])
+               ],
+               [AC_MSG_FAILURE(
+                  [--with-curl was given, but test for curl failed])],
+-              [-lz -lssl -lcrypto -lcares])])
++              [-lz -lssl -lcrypto])])
+ 
+ AM_CONDITIONAL(WITH_CURL, [test x"$with_curl" != xno])
+ 
 @@ -598,6 +610,24 @@
  
  AM_CONDITIONAL(WITH_CHILLIREDIR, [test x"$enable_chilliredir" = xyes])
@@ -548,9 +564,9 @@ diff --recursive --unified --new-file --no-dereference orig/configure.ac src/con
  		 bstring/Makefile 
  		 conf/Makefile
  		 debian/Makefile
-diff --recursive --unified --new-file --no-dereference orig/doc/attributes src/doc/attributes
---- orig/doc/attributes	2016-12-15 17:28:43.000000000 +0000
-+++ src/doc/attributes	2024-02-20 12:15:38.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/doc/attributes src/doc/attributes
+--- upstream/doc/attributes	2016-12-15 17:28:43.000000000 +0000
++++ src/doc/attributes	2024-07-12 09:27:40.000000000 +0000
 @@ -8,7 +8,7 @@
  Service-Type      :     6 : Integer : X : - : X : - : - : Set to Login (1) for normal authentication requests.  The Access-Accept message from the radius server for configuration management messages must also be set to Administrative-User.
  Framed-IP-Address : 	8 : IPaddr  : X : X : X : - : - : IP address of the user, which is configurable during MAC authentication in the Access-Accept.
@@ -560,9 +576,24 @@ diff --recursive --unified --new-file --no-dereference orig/doc/attributes src/d
  Reply-Message     :    18 : String  : - : X : - : - : - : Reason of reject if present.
  State             :    24 : String  : X : X : - : - : - : Sent to chilli in Access-Accept or Access-Challenge. Used transparently in subsequent Access-Request.
  Class             :    25 : String  : - : X : X : - : - : Copied transparently by chilli from Access-Accept to Accounting-Request.
-diff --recursive --unified --new-file --no-dereference orig/doc/chilli_query.1.in src/doc/chilli_query.1.in
---- orig/doc/chilli_query.1.in	2016-12-15 17:28:43.000000000 +0000
-+++ src/doc/chilli_query.1.in	2024-02-20 12:15:38.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/doc/chilli.conf.5.in src/doc/chilli.conf.5.in
+--- upstream/doc/chilli.conf.5.in	2016-12-15 17:28:43.000000000 +0000
++++ src/doc/chilli.conf.5.in	2024-07-12 09:27:40.000000000 +0000
+@@ -889,11 +889,6 @@
+ .RE
+ 
+ .TP
+-.BI localusers " file"
+-A colon seperated file containing usernames and passwords of locally
+-authenticated users. 
+-
+-.TP
+ .BI postauthproxy " ipaddress"
+ Used with
+ .B postauthproxyport
+diff --recursive --unified --new-file --no-dereference upstream/doc/chilli_query.1.in src/doc/chilli_query.1.in
+--- upstream/doc/chilli_query.1.in	2016-12-15 17:28:43.000000000 +0000
++++ src/doc/chilli_query.1.in	2024-07-12 09:27:40.000000000 +0000
 @@ -115,6 +115,10 @@
  Sets the max output data limit of the session.
  
@@ -574,9 +605,9 @@ diff --recursive --unified --new-file --no-dereference orig/doc/chilli_query.1.i
  .BI maxbwup " <bandwidth>"
  Sets the max up bandwidth of the session.
  
-diff --recursive --unified --new-file --no-dereference orig/json/linkhash.c src/json/linkhash.c
---- orig/json/linkhash.c	2016-12-15 17:28:43.000000000 +0000
-+++ src/json/linkhash.c	2024-02-20 12:15:38.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/json/linkhash.c src/json/linkhash.c
+--- upstream/json/linkhash.c	2016-12-15 17:28:43.000000000 +0000
++++ src/json/linkhash.c	2024-07-12 09:27:40.000000000 +0000
 @@ -52,15 +52,6 @@
  	return 0;
  }
@@ -593,9 +624,9 @@ diff --recursive --unified --new-file --no-dereference orig/json/linkhash.c src/
  static unsigned long lh_ptr_hash(const void *k)
  {
  	/* CAW: refactored to be 64bit nice */
-diff --recursive --unified --new-file --no-dereference orig/json/linkhash.h src/json/linkhash.h
---- orig/json/linkhash.h	2016-12-15 17:28:43.000000000 +0000
-+++ src/json/linkhash.h	2024-02-20 12:15:38.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/json/linkhash.h src/json/linkhash.h
+--- upstream/json/linkhash.h	2016-12-15 17:28:43.000000000 +0000
++++ src/json/linkhash.h	2024-07-12 09:27:40.000000000 +0000
 @@ -294,21 +294,6 @@
  extern int lh_table_length(struct lh_table *t);
  
@@ -618,9 +649,9 @@ diff --recursive --unified --new-file --no-dereference orig/json/linkhash.h src/
   * Resizes the specified table.
   *
   * @param t Pointer to table to resize.
-diff --recursive --unified --new-file --no-dereference orig/src/Makefile.am src/src/Makefile.am
---- orig/src/Makefile.am	2016-12-15 17:28:43.000000000 +0000
-+++ src/src/Makefile.am	2024-02-20 12:15:38.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/src/Makefile.am src/src/Makefile.am
+--- upstream/src/Makefile.am	2016-12-15 17:28:43.000000000 +0000
++++ src/src/Makefile.am	2024-07-12 09:27:40.000000000 +0000
 @@ -12,34 +12,35 @@
  tun.h ippool.h md5.h redir.h dhcp.h iphash.h \
  radius_wispr.h radius_coovachilli.h ssl.h dns.h net.h \
@@ -685,7 +716,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/Makefile.am src/
  libchilli_la_LIBADD += ${LIBSSL}
  LDADD += ${LIBSSL}
  endif
-@@ -93,6 +96,25 @@
+@@ -93,6 +96,31 @@
  endif
  endif
  
@@ -701,6 +732,12 @@ diff --recursive --unified --new-file --no-dereference orig/src/Makefile.am src/
 +chilliinclude_HEADERS += database.h
 +endif
 +
++if WITH_CURL
++libchilli_la_SOURCES += oauth2.c
++chilliinclude_HEADERS += oauth2.h
++LDADD += ${LIBCURL} 
++endif
++
 +if WITH_UBUS
 +chilliinclude_HEADERS += ubus.h
 +libchilli_la_SOURCES += ubus.c
@@ -711,9 +748,29 @@ diff --recursive --unified --new-file --no-dereference orig/src/Makefile.am src/
  if WITH_AVL
  libchilli_la_SOURCES += avl/avl.c avl/avl.h avl/list.h \
  avl/common_types.h avl/container_of.h
-diff --recursive --unified --new-file --no-dereference orig/src/chilli.c src/src/chilli.c
---- orig/src/chilli.c	2016-12-15 17:28:43.000000000 +0000
-+++ src/src/chilli.c	2024-02-20 12:15:38.000000000 +0000
+@@ -131,9 +159,6 @@
+ sbin_PROGRAMS += chilli_proxy
+ chilli_proxy_SOURCES = main-proxy.c 
+ chilli_proxy_LDADD = ${LDADD}
+-if WITH_CURL
+-chilli_proxy_LDADD += ${LIBCURL} 
+-endif
+ endif
+ 
+ if WITH_CHILLIRADSEC
+@@ -153,9 +178,6 @@
+ sbin_PROGRAMS += chilli_redir
+ chilli_redir_SOURCES = main-redir.c 
+ chilli_redir_LDADD = ${LDADD}
+-if WITH_CURL
+-chilli_redir_LDADD += ${LIBCURL} 
+-endif
+ endif
+ 
+ if WITH_NETFILTER_COOVA
+diff --recursive --unified --new-file --no-dereference upstream/src/chilli.c src/src/chilli.c
+--- upstream/src/chilli.c	2016-12-15 17:28:43.000000000 +0000
++++ src/src/chilli.c	2024-07-12 09:27:40.000000000 +0000
 @@ -20,10 +20,13 @@
  
  #include "chilli.h"
@@ -1485,10 +1542,10 @@ diff --recursive --unified --new-file --no-dereference orig/src/chilli.c src/src
  
  #ifdef ENABLE_CHILLIREDIR
      if (redir_pid > 0) {
-diff --recursive --unified --new-file --no-dereference orig/src/chilli.h src/src/chilli.h
---- orig/src/chilli.h	2016-12-15 17:28:43.000000000 +0000
-+++ src/src/chilli.h	2024-02-20 12:15:38.000000000 +0000
-@@ -35,11 +35,28 @@
+diff --recursive --unified --new-file --no-dereference upstream/src/chilli.h src/src/chilli.h
+--- upstream/src/chilli.h	2016-12-15 17:28:43.000000000 +0000
++++ src/src/chilli.h	2024-07-12 09:27:40.000000000 +0000
+@@ -35,11 +35,31 @@
  #include "net.h"
  #include "md5.h"
  #include "dns.h"
@@ -1496,6 +1553,9 @@ diff --recursive --unified --new-file --no-dereference orig/src/chilli.h src/src
 +#include "ubus.h"
 +#ifdef  ENABLE_DATABASE
 +#include "database.h"
++#endif
++#ifdef  USING_CURL
++#include "oauth2.h"
 +#endif
 +#include "users.h"
 +#ifdef ENABLE_GSM
@@ -1517,7 +1577,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/chilli.h src/src
  /*#define XXX_IO_DAEMON 1*/
  
  /* Authtype defs */
-@@ -70,6 +87,8 @@
+@@ -70,6 +90,8 @@
  #define DEBUG_REDIR       8
  #define DEBUG_CONF       16
  
@@ -1526,7 +1586,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/chilli.h src/src
  /* Struct information for each connection */
  struct app_conn_t {
  
-@@ -102,6 +121,11 @@
+@@ -102,6 +124,11 @@
  
    struct session_params s_params;         /* Session parameters */
    struct session_state  s_state;          /* Session state */
@@ -1538,7 +1598,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/chilli.h src/src
  
  #ifdef HAVE_PATRICIA
    patricia_tree_t *ptree;
-@@ -212,6 +236,8 @@
+@@ -212,6 +239,8 @@
  struct app_conn_t * chilli_connect_layer3(struct in_addr *src, struct dhcp_conn_t *conn);
  #endif
  
@@ -1547,7 +1607,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/chilli.h src/src
  int chilli_getconn(struct app_conn_t **conn, uint32_t ip,
  		   uint32_t nasip, uint32_t nasport);
  
-@@ -256,12 +282,24 @@
+@@ -256,12 +285,24 @@
  
  void session_param_defaults(struct session_params *params);
  
@@ -1572,7 +1632,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/chilli.h src/src
  int cmdsock_init();
  
  int cmdsock_port_init();
-@@ -320,6 +358,12 @@
+@@ -320,6 +361,12 @@
  int chilli_getconn_byroute(struct app_conn_t **conn, int idx);
  #endif
  
@@ -1585,9 +1645,9 @@ diff --recursive --unified --new-file --no-dereference orig/src/chilli.h src/src
  uint8_t* chilli_called_station(struct session_state *state);
  
  int chilli_cmd(struct cmdsock_request *req, bstring s, int sock);
-diff --recursive --unified --new-file --no-dereference orig/src/cmdline.ggo src/src/cmdline.ggo
---- orig/src/cmdline.ggo	2016-12-15 17:28:43.000000000 +0000
-+++ src/src/cmdline.ggo	2024-02-20 12:15:38.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/src/cmdline.ggo src/src/cmdline.ggo
+--- upstream/src/cmdline.ggo	2016-12-15 17:28:43.000000000 +0000
++++ src/src/cmdline.ggo	2024-07-12 09:27:40.000000000 +0000
 @@ -166,6 +166,36 @@
  option "defbandwidthmaxdown" - "Default WISPr-Bandwidth-Max-Down if not returned by RADIUS" long default="0" no
  option "defbandwidthmaxup" - "Default WISPr-Bandwidth-Max-Up if not returned by RADIUS" long default="0" no
@@ -1625,7 +1685,29 @@ diff --recursive --unified --new-file --no-dereference orig/src/cmdline.ggo src/
  
  option "bwbucketupsize" - "Define the up-bound 'leaky bucket' size" int default="0" no
  option "bwbucketdnsize" - "Define the down-bound 'leaky bucket' size" int default="0" no
-@@ -295,3 +325,34 @@
+@@ -211,7 +241,12 @@
+ option "swapoctets"    - "Swap the meaning of input/output octets/packets" flag   off
+ option "usestatusfile" - "Use the status file to keep track of sessions" string no
+ option "statusfilesave" - "Aggressively save the status of sessions to status file" flag off
+-option "localusers"    - "File keep 'Local' usernames and passwords" string no
++option "localusers"    - "Enable local users in database" flag   off
++option "oidc"    - "Enable OIDC SSO login" flag   off
++option "oidcforcehttps"    - "Force redirect_uri HTTPS through external redirect" flag   off
++option "oidcdiscoveryurl" - "OIDC Discovery Document URL" string no
++option "oidcclientid" - "OIDC Client ID" string no
++option "oidcclientsecret" - "OIDC Client Secret" string no
+ option "postauthproxy" - "IP of an upstream transparent proxy" string no
+ option "postauthproxyport" - "Port of an upstream transparent proxy" int default="0" no
+ option "postauthproxyssl" - "Send SSL to upstream transparent proxy" flag off
+@@ -267,6 +302,7 @@
+ 
+ option "ipwhitelist" - "Binary IP White List file" string no
+ option "uamdomainfile" - "Load uamdomains (regex) from file" string no
++option "uamblocklist" - "Allow all traffic, use uamdomainfile as a blocklist" flag off
+ 
+ option "layer3" - "Layer3 only" flag off
+ option "ipsrcallowed"  - "List of allowed source IP addresses, for Layer3" string no multiple
+@@ -295,3 +331,34 @@
  option "ipv6mode" - "IPv6 mode is either 6and4 (default), 4to6, or 6to4" string no
  option "ipv6only" - "Enable IPv6-Only" flag off
  
@@ -1660,9 +1742,9 @@ diff --recursive --unified --new-file --no-dereference orig/src/cmdline.ggo src/
 +
 +option "testtime"    - "Disables CLOCK_MONOTONIC and use CLOCK_REALTIME instead" flag   off
 +
-diff --recursive --unified --new-file --no-dereference orig/src/cmdsock.c src/src/cmdsock.c
---- orig/src/cmdsock.c	2016-12-15 17:28:43.000000000 +0000
-+++ src/src/cmdsock.c	2024-02-20 12:15:38.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/src/cmdsock.c src/src/cmdsock.c
+--- upstream/src/cmdsock.c	2016-12-15 17:28:43.000000000 +0000
++++ src/src/cmdsock.c	2024-07-12 09:27:40.000000000 +0000
 @@ -47,7 +47,7 @@
  	cmdsock = -1;
        } else {
@@ -1672,10 +1754,10 @@ diff --recursive --unified --new-file --no-dereference orig/src/cmdsock.c src/sr
  	    syslog(LOG_ERR, "%d could not chown() %s",
                     errno, _options.cmdsocket);
  	  }
-diff --recursive --unified --new-file --no-dereference orig/src/database.c src/src/database.c
---- orig/src/database.c	1970-01-01 00:00:00.000000000 +0000
-+++ src/src/database.c	2024-02-20 12:15:38.000000000 +0000
-@@ -0,0 +1,325 @@
+diff --recursive --unified --new-file --no-dereference upstream/src/database.c src/src/database.c
+--- upstream/src/database.c	1970-01-01 00:00:00.000000000 +0000
++++ src/src/database.c	2024-07-12 09:27:40.000000000 +0000
+@@ -0,0 +1,326 @@
 +#include <inttypes.h>
 +#include "chilli.h"
 +
@@ -1834,6 +1916,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/database.c src/s
 +      "sessionid        VARCHAR(33)," \
 +      "terminate_cause  BIGINT NOT NULL DEFAULT 0," \
 +      "custom           VARCHAR(64)," \
++      "url              VARCHAR(64)," \
 +      "authmode         VARCHAR(64));";
 +    ret = dbexec(db, sql, NULL);
 +
@@ -1856,7 +1939,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/database.c src/s
 +#else
 +			 _options.dhcpif,
 +#endif
-+             s_state.sessionid, conn->s_state.redir.auth_mode);
++             s_state.sessionid, conn->s_state.redir.auth_mode, conn->s_state.redir.userurl);
 +    if (_options.debug)
 +        syslog(LOG_INFO, "[%s] SQL: %s", __FUNCTION__ , sql);
 +
@@ -2001,9 +2084,9 @@ diff --recursive --unified --new-file --no-dereference orig/src/database.c src/s
 +
 +    return ret;
 +}
-diff --recursive --unified --new-file --no-dereference orig/src/database.h src/src/database.h
---- orig/src/database.h	1970-01-01 00:00:00.000000000 +0000
-+++ src/src/database.h	2024-02-20 12:15:38.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/src/database.h src/src/database.h
+--- upstream/src/database.h	1970-01-01 00:00:00.000000000 +0000
++++ src/src/database.h	2024-07-12 09:27:40.000000000 +0000
 @@ -0,0 +1,43 @@
 +//
 +// Created by darius on 19.5.23.
@@ -2020,7 +2103,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/database.h src/s
 +
 +#define TABLE_NAME "statistics"
 +#define INSERT_FMT "INSERT INTO "TABLE_NAME" (start_time, mac, ip, username, session, ifname, sessionid," \
-+        "authmode) VALUES (%"PRId64", '"MAC_FMT"', '%s', '%s', %d, '%s', '%s', '%d');"
++        "authmode, url) VALUES (%"PRId64", '"MAC_FMT"', '%s', '%s', %d, '%s', '%s', '%d', '%s');"
 +#define UPDATE_FMT "UPDATE "TABLE_NAME \
 +                 " SET last_update = %"PRId64", idletime = %"PRId64", sessiontime = %"PRId64", input_octets = %" PRIi64 "," \
 +                 " output_octets = %" PRIi64 ", input_packets = %" PRIi64 ", output_packets = %" PRIi64 ", session = %d," \
@@ -2048,9 +2131,9 @@ diff --recursive --unified --new-file --no-dereference orig/src/database.h src/s
 +int dbcheck_session(struct redir_conn_t *conn);
 +
 +#endif //RUTX_DATABASE_H
-diff --recursive --unified --new-file --no-dereference orig/src/dhcp.c src/src/dhcp.c
---- orig/src/dhcp.c	2016-12-15 17:28:43.000000000 +0000
-+++ src/src/dhcp.c	2024-02-20 12:15:38.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/src/dhcp.c src/src/dhcp.c
+--- upstream/src/dhcp.c	2016-12-15 17:28:43.000000000 +0000
++++ src/src/dhcp.c	2024-07-12 09:27:40.000000000 +0000
 @@ -1073,8 +1073,8 @@
    if (getenv("NFQUEUE_IN") && getenv("NFQUEUE_OUT")) {
      int q1 = 0, q2 = 1;
@@ -2073,6 +2156,24 @@ diff --recursive --unified --new-file --no-dereference orig/src/dhcp.c src/src/d
  int dhcp_reserve_ip(uint8_t *mac, struct in_addr *ip) {
    struct dhcp_conn_t *conn = 0;
  
+@@ -1893,7 +1889,7 @@
+       if (!match && aliasname) {
+ 	match = dhcp_matchDNS(q, aliasname);
+ 	if (match) {
+-	  memcpy(reply, &_options.uamalias.s_addr, 4);
++	  memcpy(reply, &_options.uamlisten.s_addr, 4);
+ 	}
+       }
+ 
+@@ -1925,7 +1921,7 @@
+ 	     * overall picture of on-line status.
+ 	     */
+ 
+-	    memcpy(reply, &_options.uamalias.s_addr, 4);
++	    memcpy(reply, &_options.uamlisten.s_addr, 4);
+ 	    match = 1;
+ 	  }
+ 	}
 @@ -3760,7 +3756,7 @@
     */
    if (!dhcp_hashget(this, &conn, pack_ethh->src)) {
@@ -2108,9 +2209,9 @@ diff --recursive --unified --new-file --no-dereference orig/src/dhcp.c src/src/d
  
    packet.giaddr = 0;
  
-diff --recursive --unified --new-file --no-dereference orig/src/dns.c src/src/dns.c
---- orig/src/dns.c	2016-12-15 17:28:43.000000000 +0000
-+++ src/src/dns.c	2024-02-20 12:15:38.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/src/dns.c src/src/dns.c
+--- upstream/src/dns.c	2016-12-15 17:28:43.000000000 +0000
++++ src/src/dns.c	2024-07-12 09:27:40.000000000 +0000
 @@ -136,7 +136,11 @@
  	     int isReq, int *qmatch, int *modified, int mode) {
  
@@ -2124,7 +2225,18 @@ diff --recursive --unified --new-file --no-dereference orig/src/dns.c src/src/dn
  
    uint8_t *p_pkt = *pktp;
    size_t len = *left;
-@@ -418,6 +422,14 @@
+@@ -410,6 +414,10 @@
+       if (_options.debug)
+         syslog(LOG_DEBUG, "%s(%d): SRV record", __FUNCTION__, __LINE__);
+       break;
++    case 35:
++      if (_options.debug)
++        syslog(LOG_DEBUG, "%s(%d): NAPTR record", __FUNCTION__, __LINE__);
++      break;
+     case 41:
+       if (_options.debug)
+         syslog(LOG_DEBUG, "%s(%d): EDNS OPT pseudorecord", __FUNCTION__, __LINE__);
+@@ -418,6 +426,14 @@
        if (_options.debug)
          syslog(LOG_DEBUG, "%s(%d): NSEC record", __FUNCTION__, __LINE__);
        break;
@@ -2139,9 +2251,9 @@ diff --recursive --unified --new-file --no-dereference orig/src/dns.c src/src/dn
    }
  
    if (antidnstunnel && !required) {
-diff --recursive --unified --new-file --no-dereference orig/src/garden.c src/src/garden.c
---- orig/src/garden.c	2016-12-15 17:28:43.000000000 +0000
-+++ src/src/garden.c	2024-02-20 12:15:38.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/src/garden.c src/src/garden.c
+--- upstream/src/garden.c	2016-12-15 17:28:43.000000000 +0000
++++ src/src/garden.c	2024-07-12 09:27:40.000000000 +0000
 @@ -478,7 +478,7 @@
    if (p3 == NULL)
       return 0;
@@ -2178,9 +2290,24 @@ diff --recursive --unified --new-file --no-dereference orig/src/garden.c src/src
        *t = 0;
      }
  
-diff --recursive --unified --new-file --no-dereference orig/src/gsm.c src/src/gsm.c
---- orig/src/gsm.c	1970-01-01 00:00:00.000000000 +0000
-+++ src/src/gsm.c	2024-02-20 12:15:38.000000000 +0000
+@@ -736,12 +736,12 @@
+         syslog(LOG_DEBUG, "%s(%d): matched DNS name %s", __FUNCTION__, __LINE__, question);
+ #endif
+ 
+-    if (match) return uam_re->neg ? 0 : 1;
++    if (match) return uam_re->neg ? (_options.uamblocklist ? 1 : 0) : (_options.uamblocklist ? 0 : 1);
+ 
+     uam_re = uam_re->next;
+   }
+ 
+-  return -1;
++  return _options.uamblocklist ? 1 : -1;
+ }
+ 
+ #endif
+diff --recursive --unified --new-file --no-dereference upstream/src/gsm.c src/src/gsm.c
+--- upstream/src/gsm.c	1970-01-01 00:00:00.000000000 +0000
++++ src/src/gsm.c	2024-07-12 09:27:40.000000000 +0000
 @@ -0,0 +1,61 @@
 +
 +#ifdef HAVE_SYSLOG_H
@@ -2243,9 +2370,9 @@ diff --recursive --unified --new-file --no-dereference orig/src/gsm.c src/src/gs
 +
 +	exit(0);
 +}
-diff --recursive --unified --new-file --no-dereference orig/src/gsm.h src/src/gsm.h
---- orig/src/gsm.h	1970-01-01 00:00:00.000000000 +0000
-+++ src/src/gsm.h	2024-02-20 12:15:38.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/src/gsm.h src/src/gsm.h
+--- upstream/src/gsm.h	1970-01-01 00:00:00.000000000 +0000
++++ src/src/gsm.h	2024-07-12 09:27:40.000000000 +0000
 @@ -0,0 +1,20 @@
 +
 +#ifndef RUTX_GSM_H
@@ -2267,9 +2394,9 @@ diff --recursive --unified --new-file --no-dereference orig/src/gsm.h src/src/gs
 +
 +#endif //RUTX_GSM_H
 +
-diff --recursive --unified --new-file --no-dereference orig/src/linux/xt_coova.c src/src/linux/xt_coova.c
---- orig/src/linux/xt_coova.c	2016-12-15 17:28:43.000000000 +0000
-+++ src/src/linux/xt_coova.c	2024-02-20 12:15:38.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/src/linux/xt_coova.c src/src/linux/xt_coova.c
+--- upstream/src/linux/xt_coova.c	2016-12-15 17:28:43.000000000 +0000
++++ src/src/linux/xt_coova.c	2024-07-12 09:27:40.000000000 +0000
 @@ -323,7 +323,7 @@
  		goto out;
  	}
@@ -2279,9 +2406,9 @@ diff --recursive --unified --new-file --no-dereference orig/src/linux/xt_coova.c
  	INIT_LIST_HEAD(&t->lru_list);
  	for (i = 0; i < ip_list_hash_size; i++)
  		INIT_LIST_HEAD(&t->iphash[i]);
-diff --recursive --unified --new-file --no-dereference orig/src/main-opt.c src/src/main-opt.c
---- orig/src/main-opt.c	2016-12-15 17:28:43.000000000 +0000
-+++ src/src/main-opt.c	2024-02-20 12:15:38.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/src/main-opt.c src/src/main-opt.c
+--- upstream/src/main-opt.c	2016-12-15 17:28:43.000000000 +0000
++++ src/src/main-opt.c	2024-07-12 09:27:40.000000000 +0000
 @@ -24,6 +24,10 @@
  #include "system.h"
  #include "chilli.h"
@@ -2376,7 +2503,14 @@ diff --recursive --unified --new-file --no-dereference orig/src/main-opt.c src/s
    _options.tcpwin = args_info.tcpwin_arg;
    _options.tcpmss = args_info.tcpmss_arg;
    _options.max_clients = args_info.maxclients_arg;
-@@ -481,6 +540,7 @@
+@@ -477,10 +536,14 @@
+   _options.uamdomain_ttl = args_info.uamdomainttl_arg;
+   _options.seskeepalive = args_info.seskeepalive_flag;
+   _options.uamallowpost = args_info.uamallowpost_flag;
++#ifdef ENABLE_UAMDOMAINFILE
++  _options.uamblocklist = args_info.uamblocklist_flag;
++#endif
+   _options.redir = args_info.redir_flag;
    _options.redirurl = args_info.redirurl_flag;
    _options.statusfilesave = args_info.statusfilesave_flag;
    _options.dhcpnotidle = args_info.dhcpnotidle_flag;
@@ -2384,7 +2518,85 @@ diff --recursive --unified --new-file --no-dereference orig/src/main-opt.c src/s
  #if(_debug_ && !defined(ENABLE_CHILLIREDIR))
    if (_options.redir)
      syslog(LOG_ERR, "chilli_redir not implemented. build with --enable-chilliredir");
-@@ -1205,7 +1265,7 @@
+@@ -757,40 +820,49 @@
+ 	goto end_processing;
+     }
+ 
+-    if (!args_info.uamaliasname_arg ||
+-	strncmp(args_info.uamaliasname_arg, hostname,
+-		strlen(args_info.uamaliasname_arg))) {
+-      if (!(host = gethostbyname(hostname))) {
+-	syslog(LOG_ERR, "Could not resolve IP address of uamserver: %s!",
+-               args_info.uamserver_arg);
++    // local domain should resolve to local ip
++    if (args_info.uamaliasname_arg && args_info.domain_arg) {
++      char full_local_hostname[USERURLSIZE];
++      strncpy(full_local_hostname, args_info.uamaliasname_arg, USERURLSIZE - 1);
++      strncat(full_local_hostname, ".", 1);
++      strncat(full_local_hostname, args_info.domain_arg, USERURLSIZE - strlen(full_local_hostname) - 1);
++      if (strcmp(full_local_hostname, hostname) == 0) {
++        strncpy(hostname, inet_ntoa(_options.uamlisten), USERURLSIZE - 1);
++        hostname[USERURLSIZE - 1] = '\0';
+       }
+-      else {
+-	int j = 0;
+-	pass_through pt;
++    }
+ 
+-	memset(&pt, 0, sizeof(pt));
+-	pt.port = uamserverport;
+-	pt.mask.s_addr = ~0;
+-
+-	while (host->h_addr_list[j] != NULL) {
+-	  if (_options.debug & DEBUG_CONF) {
+-	    syslog(LOG_DEBUG, "Uamserver IP address #%d: %s\n", j,
+-                   inet_ntoa(*(struct in_addr*) host->h_addr_list[j]));
+-	  }
++    if (!(host = gethostbyname(hostname))) {
++syslog(LOG_ERR, "Could not resolve IP address of uamserver: %s!",
++            args_info.uamserver_arg);
++    }
++    else {
++
++int j = 0;
++pass_through pt;
++
++memset(&pt, 0, sizeof(pt));
++pt.port = uamserverport;
++pt.mask.s_addr = ~0;
+ 
+-	  pt.host.s_addr = ((struct in_addr*) host->h_addr_list[j++])->s_addr;
++while (host->h_addr_list[j] != NULL) {
++  if (_options.debug & DEBUG_CONF) {
++    syslog(LOG_DEBUG, "Uamserver IP address #%d: %s\n", j,
++                  inet_ntoa(*(struct in_addr*) host->h_addr_list[j]));
++  }
++
++  pt.host.s_addr = ((struct in_addr*) host->h_addr_list[j++])->s_addr;
+ 
+-	  if (pass_through_add(_options.pass_throughs,
+-			       MAX_PASS_THROUGHS,
+-			       &_options.num_pass_throughs, &pt, 0
++  if (pass_through_add(_options.pass_throughs,
++          MAX_PASS_THROUGHS,
++          &_options.num_pass_throughs, &pt, 0
+ #ifdef HAVE_PATRICIA
+-			       , 0
++          , 0
+ #endif
+-			       ))
+-	    syslog(LOG_ERR, "Too many pass-throughs! skipped %s:%d",
+-                   inet_ntoa(pt.host), pt.port);
+-	}
+-      }
++          ))
++    syslog(LOG_ERR, "Too many pass-throughs! skipped %s:%d",
++                inet_ntoa(pt.host), pt.port);
++}
+     }
+   }
+ 
+@@ -1205,7 +1277,7 @@
  
      syslog(LOG_DEBUG, "Macallowed #%d: %s", numargs, args_info.macallowed_arg[numargs]);
  
@@ -2393,7 +2605,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/main-opt.c src/s
      p1 = p3;
      if ((p2 = strchr(p1, ','))) {
        *p2 = '\0';
-@@ -1317,7 +1377,7 @@
+@@ -1317,7 +1389,7 @@
  	char s[256];
  
  	if (sscanf(args_info.extadmvsa_arg[numargs],
@@ -2402,7 +2614,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/main-opt.c src/s
  	  char *idx = strchr(s, ':');
  	  _options.extadmvsa[numargs].attr_vsa = i[0];
  	  _options.extadmvsa[numargs].attr = i[1];
-@@ -1329,7 +1389,7 @@
+@@ -1329,7 +1401,7 @@
                      idx + 1, sizeof(_options.extadmvsa[numargs].data));
  	  }
  	} else if (sscanf(args_info.extadmvsa_arg[numargs],
@@ -2411,7 +2623,23 @@ diff --recursive --unified --new-file --no-dereference orig/src/main-opt.c src/s
  	  char *idx = strchr(s, ':');
  	  _options.extadmvsa[numargs].attr = i[0];
  	  if (idx) *idx = 0;
-@@ -1409,6 +1469,43 @@
+@@ -1358,7 +1430,14 @@
+   _options.wwwdir = STRDUP(args_info.wwwdir_arg);
+   _options.wwwbin = STRDUP(args_info.wwwbin_arg);
+   _options.uamui = STRDUP(args_info.uamui_arg);
+-  _options.localusers = STRDUP(args_info.localusers_arg);
++  _options.localusers = args_info.localusers_flag;
++#ifdef USING_CURL
++  _options.oidc = args_info.oidc_flag;
++  _options.oidcforcehttps = args_info.oidcforcehttps_flag;
++  _options.oidcdiscoveryurl = STRDUP(args_info.oidcdiscoveryurl_arg);
++  _options.oidcclientid = STRDUP(args_info.oidcclientid_arg);
++  _options.oidcclientsecret = STRDUP(args_info.oidcclientsecret_arg);
++#endif
+   _options.uamurl = STRDUP(args_info.uamserver_arg);
+   _options.uamaaaurl = STRDUP(args_info.uamaaaurl_arg);
+   _options.uamhomepage = STRDUP(args_info.uamhomepage_arg);
+@@ -1409,6 +1488,43 @@
    _options.locationupdate = STRDUP(args_info.locationupdate_arg);
  #endif
    _options.nochallenge = args_info.nochallenge_flag;
@@ -2455,9 +2683,9 @@ diff --recursive --unified --new-file --no-dereference orig/src/main-opt.c src/s
  #ifdef EX_OPT_MAIN
  #include EX_OPT_MAIN
  #endif
-diff --recursive --unified --new-file --no-dereference orig/src/main-proxy.c src/src/main-proxy.c
---- orig/src/main-proxy.c	2016-12-15 17:28:43.000000000 +0000
-+++ src/src/main-proxy.c	2024-02-20 12:15:38.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/src/main-proxy.c src/src/main-proxy.c
+--- upstream/src/main-proxy.c	2016-12-15 17:28:43.000000000 +0000
++++ src/src/main-proxy.c	2024-07-12 09:27:40.000000000 +0000
 @@ -325,7 +325,7 @@
  	    switch(attrs[i].t) {
                case 0: /*integer*/
@@ -2467,9 +2695,9 @@ diff --recursive --unified --new-file --no-dereference orig/src/main-proxy.c src
                    if (v > 0) {
                      radius_addattr(radius, &req->radius_res, attrs[i].a, attrs[i].v, attrs[i].va, v, NULL, 0);
  #if(_debug_)
-diff --recursive --unified --new-file --no-dereference orig/src/main-query.c src/src/main-query.c
---- orig/src/main-query.c	2016-12-15 17:28:43.000000000 +0000
-+++ src/src/main-query.c	2024-02-20 12:15:38.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/src/main-query.c src/src/main-query.c
+--- upstream/src/main-query.c	2016-12-15 17:28:43.000000000 +0000
++++ src/src/main-query.c	2024-07-12 09:27:40.000000000 +0000
 @@ -150,6 +150,11 @@
      sizeof(request.d.sess.params.maxoutputoctets),
      &request.d.sess.params.maxoutputoctets,
@@ -2539,9 +2767,9 @@ diff --recursive --unified --new-file --no-dereference orig/src/main-query.c src
  
              if (request.type != CMDSOCK_ROUTE_GW)
                request.type = CMDSOCK_ROUTE_SET;
-diff --recursive --unified --new-file --no-dereference orig/src/main-redir.c src/src/main-redir.c
---- orig/src/main-redir.c	2016-12-15 17:28:43.000000000 +0000
-+++ src/src/main-redir.c	2024-02-20 12:15:38.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/src/main-redir.c src/src/main-redir.c
+--- upstream/src/main-redir.c	2016-12-15 17:28:43.000000000 +0000
++++ src/src/main-redir.c	2024-07-12 09:27:40.000000000 +0000
 @@ -396,7 +396,7 @@
  	    if (!strncasecmp(hdr, "content-length:", 15)) {
  	      char c = hdr[l];
@@ -2560,9 +2788,9 @@ diff --recursive --unified --new-file --no-dereference orig/src/main-redir.c src
      }
  
      if (conn_setup(&req->conn, httpreq->host, port,
-diff --recursive --unified --new-file --no-dereference orig/src/main-response.c src/src/main-response.c
---- orig/src/main-response.c	2016-12-15 17:28:43.000000000 +0000
-+++ src/src/main-response.c	2024-02-20 12:15:38.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/src/main-response.c src/src/main-response.c
+--- upstream/src/main-response.c	2016-12-15 17:28:43.000000000 +0000
++++ src/src/main-response.c	2024-07-12 09:27:40.000000000 +0000
 @@ -97,7 +97,7 @@
      return usage(argv[0]);
  
@@ -2572,9 +2800,9 @@ diff --recursive --unified --new-file --no-dereference orig/src/main-response.c 
  
    /* challenge - argv 1 */
    if (strlen(argv[idx+1]) >= sizeof(buffer))
-diff --recursive --unified --new-file --no-dereference orig/src/main-rtmon.c src/src/main-rtmon.c
---- orig/src/main-rtmon.c	2016-12-15 17:28:43.000000000 +0000
-+++ src/src/main-rtmon.c	2024-02-20 12:15:38.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/src/main-rtmon.c src/src/main-rtmon.c
+--- upstream/src/main-rtmon.c	2016-12-15 17:28:43.000000000 +0000
++++ src/src/main-rtmon.c	2024-07-12 09:27:40.000000000 +0000
 @@ -70,7 +70,7 @@
      } else if (strcmp(argv[i], "-file")==0) {
        chilli_conf = argv[i+1];
@@ -2584,9 +2812,9 @@ diff --recursive --unified --new-file --no-dereference orig/src/main-rtmon.c src
      }
    }
  
-diff --recursive --unified --new-file --no-dereference orig/src/main.c src/src/main.c
---- orig/src/main.c	2016-12-15 17:28:43.000000000 +0000
-+++ src/src/main.c	2024-02-20 12:15:38.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/src/main.c src/src/main.c
+--- upstream/src/main.c	2016-12-15 17:28:43.000000000 +0000
++++ src/src/main.c	2024-07-12 09:27:40.000000000 +0000
 @@ -83,14 +83,14 @@
  
  #if defined(__linux__)
@@ -2604,10 +2832,77 @@ diff --recursive --unified --new-file --no-dereference orig/src/main.c src/src/m
        perror("ioprio_set");
      }
    }
-diff --recursive --unified --new-file --no-dereference orig/src/ms_chap.c src/src/ms_chap.c
---- orig/src/ms_chap.c	2016-12-15 17:28:43.000000000 +0000
-+++ src/src/ms_chap.c	2024-02-20 12:15:38.000000000 +0000
-@@ -96,18 +96,19 @@
+diff --recursive --unified --new-file --no-dereference upstream/src/md5.h src/src/md5.h
+--- upstream/src/md5.h	2016-12-15 17:28:43.000000000 +0000
++++ src/src/md5.h	2024-07-12 09:27:40.000000000 +0000
+@@ -22,11 +22,22 @@
+ #include "system.h"
+ 
+ #if HAVE_OPENSSL
++#if OPENSSL_VERSION_NUMBER >= 0x30000000L
++#include <openssl/evp.h>
++#else
+ #include <openssl/md5.h>
++#endif
+ 
++#if OPENSSL_VERSION_NUMBER >= 0x30000000L
++#define MD5_CTX EVP_MD_CTX*
++#define MD5Init(context) do { *(context) = EVP_MD_CTX_new(); EVP_DigestInit_ex(*(context), EVP_md5(), NULL); } while(0)
++#define MD5Update(context, data, length) EVP_DigestUpdate(*(context), data, length)
++#define MD5Final(output, context) do { EVP_DigestFinal(*(context), output, NULL); EVP_MD_CTX_free(*(context)); } while(0)
++#else
+ #define MD5Init MD5_Init
+ #define MD5Update MD5_Update
+ #define MD5Final MD5_Final
++#endif
+ 
+ #elif HAVE_CYASSL
+ #include <cyassl/openssl/md5.h>
+diff --recursive --unified --new-file --no-dereference upstream/src/ms_chap.c src/src/ms_chap.c
+--- upstream/src/ms_chap.c	2016-12-15 17:28:43.000000000 +0000
++++ src/src/ms_chap.c	2024-07-12 09:27:40.000000000 +0000
+@@ -41,6 +41,10 @@
+ #include <openssl/md4.h>
+ #include <openssl/md5.h>
+ 
++#if OPENSSL_VERSION_NUMBER >= 0x30000000L
++#include <openssl/evp.h>
++#endif
++
+ /*
+  * Documentation & specifications:
+  *
+@@ -69,6 +73,29 @@
+   u_char UseNT;	/* If 1, ignore the LANMan response field */
+ };
+ 
++#if OPENSSL_VERSION_NUMBER >= 0x30000000L
++static void /* IN 8 octets IN 7 octets OUT 8 octets */
++DesEncrypt(u_char *clear, u_char *key, u_char *cipher)
++{
++  EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
++  const EVP_CIPHER *cipher_type = EVP_des_ecb();
++  int len;
++
++  if (!ctx) {
++    return;
++  }
++
++  if (!EVP_EncryptInit_ex(ctx, cipher_type, NULL, key, NULL) ||
++      !EVP_EncryptUpdate(ctx, cipher, &len, clear, 8) ||
++      !EVP_EncryptFinal_ex(ctx, cipher + len, &len))
++  {
++    EVP_CIPHER_CTX_free(ctx);
++    return;
++  }
++
++  EVP_CIPHER_CTX_free(ctx);
++}
++#else
+ static u_char
+ Get7Bits(u_char *input, int startBit)
+ {
+@@ -96,22 +123,30 @@
    des_key[6] = Get7Bits(key, 42);
    des_key[7] = Get7Bits(key, 49);
  
@@ -2631,11 +2926,290 @@ diff --recursive --unified --new-file --no-dereference orig/src/ms_chap.c src/sr
 +	DES_ecb_encrypt((DES_cblock *)clear, (DES_cblock *)cipher,
 +			&key_schedule, 1);
  }
++#endif
  
  #define LENGTH 20
-diff --recursive --unified --new-file --no-dereference orig/src/mssl/httpsClient.c src/src/mssl/httpsClient.c
---- orig/src/mssl/httpsClient.c	2016-12-15 17:28:43.000000000 +0000
-+++ src/src/mssl/httpsClient.c	2024-02-20 12:15:38.000000000 +0000
+-static u_char *SHA1_End(SHA_CTX *ctx, u_char *buf)
++static u_char *SHA1_End(
++#if OPENSSL_VERSION_NUMBER >= 0x30000000L
++  EVP_MD_CTX *ctx,
++#else
++  SHA_CTX *ctx,
++#endif
++  u_char *buf)
+ {
+   int i;
+   unsigned char digest[LENGTH];
+@@ -123,7 +158,11 @@
+   if (!buf)
+     return 0;
+ 
++#if OPENSSL_VERSION_NUMBER >= 0x30000000L
++  EVP_DigestFinal(ctx, digest, NULL);
++#else
+   SHA1_Final(digest, ctx);
++#endif
+ 
+   for (i = 0; i < LENGTH; i++) {
+     buf[i+i] = hex[digest[i] >> 4];
+@@ -167,15 +206,22 @@
+ {
+   if (!Password) return;
+   else {
+-    MD4_CTX MD4context;
+-
+     u_char *uniPassword = to_unicode(Password);
+ 
+     len *= 2;
+ 
++#if OPENSSL_VERSION_NUMBER >= 0x30000000L
++    EVP_MD_CTX *ctx = EVP_MD_CTX_new();
++    EVP_DigestInit(ctx, EVP_md4());
++    EVP_DigestUpdate(ctx, uniPassword, len);
++    EVP_DigestFinal(ctx, hash, NULL);
++    EVP_MD_CTX_free(ctx);
++#else
++    MD4_CTX MD4context;
+     MD4_Init(&MD4context);
+     MD4_Update(&MD4context, uniPassword, len);
+     MD4_Final(hash, &MD4context);
++#endif
+ 
+     free(uniPassword);
+   }
+@@ -184,18 +230,24 @@
+ void
+ HashNtPasswordHash(u_char *hash, u_char *hashhash)
+ {
++#if OPENSSL_VERSION_NUMBER >= 0x30000000L
++  EVP_MD_CTX *ctx = EVP_MD_CTX_new();
++  EVP_DigestInit(ctx, EVP_md4());
++  EVP_DigestUpdate(ctx, hash, 16);
++  EVP_DigestFinal(ctx, hashhash, NULL);
++  EVP_MD_CTX_free(ctx);
++#else
+   MD4_CTX MD4context;
+-
+   MD4_Init(&MD4context);
+   MD4_Update(&MD4context, hash, 16);
+   MD4_Final(hashhash, &MD4context);
++#endif
+ }
+ 
+ void
+ ChallengeHash(u_char *PeerChallenge, u_char *AuthenticatorChallenge,
+               u_char *UserName, int UserNameLen, u_char *Challenge)
+ {
+-  SHA_CTX Context;
+   u_char Digest[SHA_DIGEST_LENGTH];
+   u_char *Name;
+ 
+@@ -205,6 +257,16 @@
+   else
+     Name++;
+ 
++#if OPENSSL_VERSION_NUMBER >= 0x30000000L
++  EVP_MD_CTX *ctx = EVP_MD_CTX_new();
++  EVP_DigestInit(ctx, EVP_sha1());
++  EVP_DigestUpdate(ctx, PeerChallenge, 16);
++  EVP_DigestUpdate(ctx, AuthenticatorChallenge, 16);
++  EVP_DigestUpdate(ctx, Name, strlen((char *)Name));
++  EVP_DigestFinal(ctx, Digest, NULL);
++  EVP_MD_CTX_free(ctx);
++#else
++  SHA_CTX Context;
+   SHA1_Init(&Context);
+ 
+   SHA1_Update(&Context, PeerChallenge, 16);
+@@ -212,6 +274,7 @@
+   SHA1_Update(&Context, Name, strlen((char *)Name));
+ 
+   SHA1_Final(Digest, &Context);
++#endif
+   memcpy(Challenge, Digest, 8);
+ }
+ 
+@@ -236,7 +299,6 @@
+                               u_char *AuthenticatorChallenge, u_char *UserName,
+                               int UserNameLen, u_char *AuthenticatorResponse)
+ {
+-  SHA_CTX Context;
+   u_char PasswordHash[16];
+   u_char PasswordHashHash[16];
+   u_char Challenge[8];
+@@ -268,18 +330,37 @@
+    */
+   HashNtPasswordHash(PasswordHash, PasswordHashHash);
+ 
++#if OPENSSL_VERSION_NUMBER >= 0x30000000L
++  EVP_MD_CTX *ctx = EVP_MD_CTX_new();
++  EVP_DigestInit(ctx, EVP_sha1());
++  EVP_DigestUpdate(ctx, PasswordHashHash, 16);
++  EVP_DigestUpdate(ctx, NTResponse, 24);
++  EVP_DigestUpdate(ctx, Magic1, 39);
++  EVP_DigestFinal(ctx, Digest, NULL);
++  EVP_MD_CTX_free(ctx);
++#else
++  SHA_CTX Context;
+   SHA1_Init(&Context);
+   SHA1_Update(&Context, PasswordHashHash, 16);
+   SHA1_Update(&Context, NTResponse, 24);
+   SHA1_Update(&Context, Magic1, 39);
+   SHA1_Final(Digest, &Context);
++#endif
+ 
+   ChallengeHash(PeerChallenge, AuthenticatorChallenge, UserName, UserNameLen, Challenge);
+ 
++#if OPENSSL_VERSION_NUMBER >= 0x30000000L
++  ctx = EVP_MD_CTX_new();
++  EVP_DigestInit(ctx, EVP_sha1());
++  EVP_DigestUpdate(ctx, Digest, 20);
++  EVP_DigestUpdate(ctx, Challenge, 8);
++  EVP_DigestUpdate(ctx, Magic2, 41);
++#else
+   SHA1_Init(&Context);
+   SHA1_Update(&Context, Digest, 20);
+   SHA1_Update(&Context, Challenge, 8);
+   SHA1_Update(&Context, Magic2, 41);
++#endif
+ 
+   /*
+    * Encode the value of 'Digest' as "S=" followed by
+@@ -290,7 +371,12 @@
+    */
+   AuthenticatorResponse[0] = 'S';
+   AuthenticatorResponse[1] = '=';
++#if OPENSSL_VERSION_NUMBER >= 0x30000000L
++  SHA1_End(ctx, AuthenticatorResponse + 2);
++  EVP_MD_CTX_free(ctx);
++#else
+   SHA1_End(&Context, AuthenticatorResponse + 2);
++#endif
+ 
+   for (i=2; i<42; i++)
+     AuthenticatorResponse[i] = toupper(AuthenticatorResponse[i]);
+@@ -299,18 +385,28 @@
+ void
+ GetMasterKey(char *PasswordHashHash, char *NTResponse, char *MasterKey)
+ {
+-  SHA_CTX Context;
+   u_char Digest[SHA_DIGEST_LENGTH];
+   static u_char Magic1[27] =
+       {0x54, 0x68, 0x69, 0x73, 0x20, 0x69, 0x73, 0x20, 0x74,
+        0x68, 0x65, 0x20, 0x4d, 0x50, 0x50, 0x45, 0x20, 0x4d,
+        0x61, 0x73, 0x74, 0x65, 0x72, 0x20, 0x4b, 0x65, 0x79};
+ 
++#if OPENSSL_VERSION_NUMBER >= 0x30000000L
++  EVP_MD_CTX *ctx = EVP_MD_CTX_new();
++  EVP_DigestInit(ctx, EVP_sha1());
++  EVP_DigestUpdate(ctx, PasswordHashHash, 16);
++  EVP_DigestUpdate(ctx, NTResponse, 24);
++  EVP_DigestUpdate(ctx, Magic1, 27);
++  EVP_DigestFinal(ctx, Digest, NULL);
++  EVP_MD_CTX_free(ctx);
++#else
++  SHA_CTX Context;
+   SHA1_Init(&Context);
+   SHA1_Update(&Context, PasswordHashHash, 16);
+   SHA1_Update(&Context, NTResponse, 24);
+   SHA1_Update(&Context, Magic1, 27);
+   SHA1_Final(Digest, &Context);
++#endif
+   memcpy(MasterKey, Digest, 16);
+ }
+ 
+@@ -319,7 +415,6 @@
+                      int IsSend, int IsServer)
+ {
+   u_char Digest[SHA_DIGEST_LENGTH];
+-  SHA_CTX Context;
+   u_char *s;
+ 
+   static u_char Magic2[84] =
+@@ -358,12 +453,24 @@
+     }
+   }
+ 
++#if OPENSSL_VERSION_NUMBER >= 0x30000000L
++  EVP_MD_CTX *ctx = EVP_MD_CTX_new();
++  EVP_DigestInit(ctx, EVP_sha1());
++  EVP_DigestUpdate(ctx, MasterKey, 16);
++  EVP_DigestUpdate(ctx, SHA1_Pad1, 40);
++  EVP_DigestUpdate(ctx, s, 84);
++  EVP_DigestUpdate(ctx, SHA1_Pad2, 40);
++  EVP_DigestFinal(ctx, Digest, NULL);
++  EVP_MD_CTX_free(ctx);
++#else
++  SHA_CTX Context;
+   SHA1_Init(&Context);
+   SHA1_Update(&Context, MasterKey, 16);
+   SHA1_Update(&Context, SHA1_Pad1, 40);
+   SHA1_Update(&Context, s, 84);
+   SHA1_Update(&Context, SHA1_Pad2, 40);
+   SHA1_Final(Digest, &Context);
++#endif
+ 
+   memcpy(SessionKey, Digest, SessionKeyLength);
+ }
+@@ -372,15 +479,26 @@
+ GetNewKeyFromSHA(char *StartKey, char *SessionKey, long SessionKeyLength,
+                  char *InterimKey)
+ {
+-  SHA_CTX Context;
+   u_char Digest[SHA_DIGEST_LENGTH];
+ 
++#if OPENSSL_VERSION_NUMBER >= 0x30000000L
++  EVP_MD_CTX *ctx = EVP_MD_CTX_new();
++  EVP_DigestInit(ctx, EVP_sha1());
++  EVP_DigestUpdate(ctx, StartKey, SessionKeyLength);
++  EVP_DigestUpdate(ctx, SHA1_Pad1, 40);
++  EVP_DigestUpdate(ctx, SessionKey, SessionKeyLength);
++  EVP_DigestUpdate(ctx, SHA1_Pad2, 40);
++  EVP_DigestFinal(ctx, Digest, NULL);
++  EVP_MD_CTX_free(ctx);
++#else
++  SHA_CTX Context;
+   SHA1_Init(&Context);
+   SHA1_Update(&Context, StartKey, SessionKeyLength);
+   SHA1_Update(&Context, SHA1_Pad1, 40);
+   SHA1_Update(&Context, SessionKey, SessionKeyLength);
+   SHA1_Update(&Context, SHA1_Pad2, 40);
+   SHA1_Final(Digest, &Context);
++#endif
+ 
+   memcpy(InterimKey, Digest, SessionKeyLength);
+ }
+@@ -390,15 +508,26 @@
+ Get_Key(char *InitialSessionKey, char *CurrentSessionKey,
+         int LengthOfDesiredKey)
+ {
+-  SHA_CTX Context;
+   u_char Digest[SHA_DIGEST_LENGTH];
+ 
++#if OPENSSL_VERSION_NUMBER >= 0x30000000L
++  EVP_MD_CTX *ctx = EVP_MD_CTX_new();
++  EVP_DigestInit(ctx, EVP_sha1());
++  EVP_DigestUpdate(ctx, InitialSessionKey, LengthOfDesiredKey);
++  EVP_DigestUpdate(ctx, SHA1_Pad1, 40);
++  EVP_DigestUpdate(ctx, CurrentSessionKey, LengthOfDesiredKey);
++  EVP_DigestUpdate(ctx, SHA1_Pad2, 40);
++  EVP_DigestFinal(ctx, Digest, NULL);
++  EVP_MD_CTX_free(ctx);
++#else
++  SHA_CTX Context;
+   SHA1_Init(&Context);
+   SHA1_Update(&Context, InitialSessionKey, LengthOfDesiredKey);
+   SHA1_Update(&Context, SHA1_Pad1, 40);
+   SHA1_Update(&Context, CurrentSessionKey, LengthOfDesiredKey);
+   SHA1_Update(&Context, SHA1_Pad2, 40);
+   SHA1_Final(Digest, &Context);
++#endif
+ 
+   memcpy(CurrentSessionKey, Digest, LengthOfDesiredKey);
+ }
+diff --recursive --unified --new-file --no-dereference upstream/src/mssl/httpsClient.c src/src/mssl/httpsClient.c
+--- upstream/src/mssl/httpsClient.c	2016-12-15 17:28:43.000000000 +0000
++++ src/src/mssl/httpsClient.c	2024-07-12 09:27:40.000000000 +0000
 @@ -156,7 +156,7 @@
  	  err_exit("Out of memory");
  	break;
@@ -2645,9 +3219,9 @@ diff --recursive --unified --new-file --no-dereference orig/src/mssl/httpsClient
  	  err_exit("Bogus port specified");
  	break;
        case 's':
-diff --recursive --unified --new-file --no-dereference orig/src/net.c src/src/net.c
---- orig/src/net.c	2016-12-15 17:28:43.000000000 +0000
-+++ src/src/net.c	2024-02-20 12:15:38.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/src/net.c src/src/net.c
+--- upstream/src/net.c	2016-12-15 17:28:43.000000000 +0000
++++ src/src/net.c	2024-07-12 09:27:40.000000000 +0000
 @@ -939,7 +939,8 @@
    if (len < 0) {
      switch (errno) {
@@ -2669,9 +3243,9 @@ diff --recursive --unified --new-file --no-dereference orig/src/net.c src/src/ne
      return -1;
    }
  
-diff --recursive --unified --new-file --no-dereference orig/src/net.h src/src/net.h
---- orig/src/net.h	2016-12-15 17:28:43.000000000 +0000
-+++ src/src/net.h	2024-02-20 12:15:38.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/src/net.h src/src/net.h
+--- upstream/src/net.h	2016-12-15 17:28:43.000000000 +0000
++++ src/src/net.h	2024-07-12 09:27:40.000000000 +0000
 @@ -177,6 +177,7 @@
    struct pollfd pfds[MAX_SELECT];
  #endif
@@ -2696,10 +3270,925 @@ diff --recursive --unified --new-file --no-dereference orig/src/net.h src/src/ne
    select_ctx *sctx;
  
    uint8_t flags;
-diff --recursive --unified --new-file --no-dereference orig/src/options.c src/src/options.c
---- orig/src/options.c	2016-12-15 17:28:43.000000000 +0000
-+++ src/src/options.c	2024-02-20 12:15:38.000000000 +0000
-@@ -371,6 +371,29 @@
+diff --recursive --unified --new-file --no-dereference upstream/src/oauth2.c src/src/oauth2.c
+--- upstream/src/oauth2.c	1970-01-01 00:00:00.000000000 +0000
++++ src/src/oauth2.c	2024-07-12 09:27:40.000000000 +0000
+@@ -0,0 +1,828 @@
++#include <inttypes.h>
++#include "chilli.h"
++#include <curl/curl.h>
++#include <json-c/json.h>
++#include <openssl/rsa.h>
++#include <openssl/sha.h>
++#include <openssl/bn.h>
++#include <openssl/evp.h>
++#include <openssl/core_names.h>
++#include <openssl/param_build.h>
++
++static int base64url_decode(const char *src, unsigned char *dest, size_t dest_len)
++{
++	size_t len	    = strlen(src);
++	size_t max_temp_len = len + 3;
++	char *temp	    = calloc(max_temp_len + 1, sizeof(char));
++	strncpy(temp, src, max_temp_len);
++
++	for (size_t i = 0; i < len; i++) {
++		if (temp[i] == '-') {
++			temp[i] = '+';
++		} else if (temp[i] == '_') {
++			temp[i] = '/';
++		}
++	}
++
++	size_t padding_len = 4 - (len % 4);
++	if (padding_len < 4) {
++		memset(temp + len, '=', padding_len);
++		len += padding_len;
++	}
++	temp[len] = '\0';
++
++	int ret = b64_decode(temp, dest, dest_len);
++	free(temp);
++	return ret;
++}
++
++static size_t write_callback(void *contents, size_t size, size_t nmemb, void *resp)
++{
++	size_t realsize		  = size * nmemb;
++	struct memory_struct *mem = (struct memory_struct *)resp;
++
++	size_t new_size = mem->size + realsize + 1;
++	mem->memory	= realloc(mem->memory, new_size + 1024);
++	if (mem->memory == NULL) {
++		free(mem->memory);
++		return OAUTH2_OK;
++	}
++
++	memcpy(&(mem->memory[mem->size]), contents, realsize);
++	mem->size += realsize;
++	mem->memory[mem->size] = 0;
++
++	return realsize;
++}
++
++static int oauth2_get_jwk_by_kid(_oauth2_session *session, const char *kid)
++{
++	CURL *curl;
++	CURLcode res;
++	long http_code;
++	char *url		   = session->jwks_uri;
++	struct memory_struct chunk = { 0 };
++
++	if (!url || url[0] == '\0') {
++		return OAUTH2_ERR;
++	}
++
++	curl_global_init(CURL_GLOBAL_ALL);
++	curl = curl_easy_init();
++	if (!curl) {
++		return OAUTH2_ERR;
++	}
++
++	curl_easy_setopt(curl, CURLOPT_URL, url);
++	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_callback);
++	curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&chunk);
++	res = curl_easy_perform(curl);
++	if (res != CURLE_OK) {
++		curl_easy_cleanup(curl);
++		curl_global_cleanup();
++		free(chunk.memory);
++		return OAUTH2_ERR;
++	}
++
++	curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
++	if (http_code != 200) {
++		curl_easy_cleanup(curl);
++		curl_global_cleanup();
++		free(chunk.memory);
++		return OAUTH2_ERR;
++	}
++
++	curl_easy_cleanup(curl);
++	curl_global_cleanup();
++
++	struct json_object *root_obj = json_tokener_parse(chunk.memory);
++	if (root_obj == NULL) {
++		free(chunk.memory);
++		return OAUTH2_ERR;
++	}
++
++	struct json_object *keys_obj;
++	if (!json_object_object_get_ex(root_obj, "keys", &keys_obj)) {
++		json_object_put(root_obj);
++		free(chunk.memory);
++		return OAUTH2_ERR;
++	}
++
++	int keys_len		    = json_object_array_length(keys_obj);
++	struct json_object *key_obj = NULL;
++	const char *key_kid	    = NULL;
++	struct json_object *n_obj   = NULL;
++	struct json_object *e_obj   = NULL;
++
++	for (int i = 0; i < keys_len; i++) {
++		key_obj = json_object_array_get_idx(keys_obj, i);
++		if (json_object_object_get_ex(key_obj, "kid", &n_obj))
++			key_kid = json_object_get_string(n_obj);
++
++		if (key_kid != NULL && !strcmp(kid, key_kid))
++			break;
++
++		key_obj = NULL;
++		key_kid = NULL;
++	}
++
++	if (key_obj != NULL && json_object_object_get_ex(key_obj, "n", &n_obj) &&
++	    json_object_object_get_ex(key_obj, "e", &e_obj)) {
++		const char *n_value = json_object_get_string(n_obj);
++		const char *e_value = json_object_get_string(e_obj);
++
++		session->jwks_n = strdup(n_value);
++		session->jwks_e = strdup(e_value);
++
++		json_object_put(root_obj);
++		free(chunk.memory);
++		return OAUTH2_OK;
++	}
++
++	json_object_put(root_obj);
++	free(chunk.memory);
++	return OAUTH2_ERR;
++}
++
++static int verify_jwt_alg_rs(const EVP_MD *sha_alg, _oauth2_session *session, char *header, char *payload,
++			     unsigned char *decoded_signature, int decoded_signature_len)
++{
++	OSSL_PARAM_BLD *bld;
++	OSSL_PARAM *params = NULL;
++	EVP_PKEY *pkey	   = NULL;
++
++	unsigned char decoded_n[4096];
++	int n_len = base64url_decode(session->jwks_n, decoded_n, sizeof(decoded_n));
++
++	unsigned char decoded_e[4096];
++	int e_len = base64url_decode(session->jwks_e, decoded_e, sizeof(decoded_e));
++
++	BIGNUM *bn_n = BN_bin2bn(decoded_n, n_len, NULL);
++	BIGNUM *bn_e = BN_bin2bn(decoded_e, e_len, NULL);
++	if (!bn_n || !bn_e) {
++		BN_free(bn_n);
++		BN_free(bn_e);
++		return OAUTH2_ERR;
++	}
++
++	bld = OSSL_PARAM_BLD_new();
++	if (bld && OSSL_PARAM_BLD_push_BN(bld, OSSL_PKEY_PARAM_RSA_N, bn_n) &&
++	    OSSL_PARAM_BLD_push_BN(bld, OSSL_PKEY_PARAM_RSA_E, bn_e)) {
++		params = OSSL_PARAM_BLD_to_param(bld);
++	}
++	OSSL_PARAM_BLD_free(bld);
++	BN_free(bn_n);
++	BN_free(bn_e);
++
++	EVP_PKEY_CTX *ctx = EVP_PKEY_CTX_new_from_name(NULL, "RSA", NULL);
++	if (!params || !ctx || EVP_PKEY_fromdata_init(ctx) <= 0 ||
++	    EVP_PKEY_fromdata(ctx, &pkey, EVP_PKEY_PUBLIC_KEY, params) <= 0) {
++		EVP_PKEY_CTX_free(ctx);
++		OSSL_PARAM_free(params);
++		return OAUTH2_ERR;
++	}
++
++	EVP_PKEY_CTX_free(ctx);
++	OSSL_PARAM_free(params);
++
++	EVP_MD_CTX *ctx_md = EVP_MD_CTX_new();
++	if (!ctx_md) {
++		EVP_PKEY_free(pkey);
++		return OAUTH2_ERR;
++	}
++
++	if (!EVP_VerifyInit_ex(ctx_md, sha_alg, NULL) || !EVP_VerifyUpdate(ctx_md, header, strlen(header)) ||
++	    !EVP_VerifyUpdate(ctx_md, ".", 1) || !EVP_VerifyUpdate(ctx_md, payload, strlen(payload))) {
++		EVP_MD_CTX_free(ctx_md);
++		EVP_PKEY_free(pkey);
++		return OAUTH2_ERR;
++	}
++
++	int ret = OAUTH2_ERR;
++	if (EVP_VerifyFinal(ctx_md, decoded_signature, decoded_signature_len, pkey) == 1) {
++		ret = OAUTH2_OK;
++	}
++
++	EVP_MD_CTX_free(ctx_md);
++	EVP_PKEY_free(pkey);
++	return ret;
++}
++
++static int verify_jwt_alg(_oauth2_session *session, const char *alg, const char *kid, char *header,
++			  char *payload, unsigned char *decoded_signature, int decoded_signature_len)
++{
++	if (oauth2_get_jwk_by_kid(session, kid) != OAUTH2_OK) {
++		return OAUTH2_ERR;
++	}
++
++	if (alg && !strcmp(alg, "RS256")) {
++		return verify_jwt_alg_rs(EVP_sha256(), session, header, payload, decoded_signature,
++				     decoded_signature_len);
++	}
++	if (alg && !strcmp(alg, "RS384")) {
++		return verify_jwt_alg_rs(EVP_sha384(), session, header, payload, decoded_signature,
++				     decoded_signature_len);
++	}
++	if (alg && !strcmp(alg, "RS512")) {
++		return verify_jwt_alg_rs(EVP_sha512(), session, header, payload, decoded_signature,
++				     decoded_signature_len);
++	}
++	return OAUTH2_ERR;
++}
++
++static int validate_jwt_token(_oauth2_session *session)
++{
++	int ret	     = OAUTH2_ERR;
++	char *header = NULL, *payload = NULL, *signature = NULL;
++	char *token_copy = strdup(session->id_token);
++
++	char *saveptr = NULL;
++	header	      = strtok_r(token_copy, ".", &saveptr);
++	payload	      = strtok_r(NULL, ".", &saveptr);
++	signature     = strtok_r(NULL, ".", &saveptr);
++
++	unsigned char *decoded_header	 = calloc(strlen(header) * 2, sizeof(unsigned char));
++	unsigned char *decoded_payload	 = calloc(strlen(payload) * 2, sizeof(unsigned char));
++	unsigned char *decoded_signature = calloc(strlen(signature) * 2, sizeof(unsigned char));
++	if (!decoded_header || !decoded_payload || !decoded_signature) {
++		goto clean;
++	}
++
++	int decoded_header_len = base64url_decode(header, decoded_header, strlen(header) * 2);
++	if (decoded_header_len < 0) {
++		goto clean;
++	}
++
++	int decoded_payload_len = base64url_decode(payload, decoded_payload, strlen(payload) * 2);
++	if (decoded_payload_len < 0) {
++		goto clean;
++	}
++
++	int decoded_signature_len = base64url_decode(signature, decoded_signature, strlen(signature) * 2);
++	if (decoded_signature_len < 0) {
++		goto clean;
++	}
++
++	json_object *header_json  = json_tokener_parse((const char *)decoded_header);
++	json_object *payload_json = json_tokener_parse((const char *)decoded_payload);
++	if (!header_json || !payload_json) {
++		goto clean;
++	}
++
++	json_object *iss_obj;
++	if (!json_object_object_get_ex(payload_json, "iss", &iss_obj) ||
++	    strcmp(json_object_get_string(iss_obj), session->issuer) != 0) {
++		goto clean;
++	}
++
++	json_object *aud_obj;
++	if (!json_object_object_get_ex(payload_json, "aud", &aud_obj) ||
++	    strcmp(json_object_get_string(aud_obj), session->client_id) != 0) {
++		goto clean;
++	}
++
++	json_object *exp_obj;
++	if (json_object_object_get_ex(payload_json, "exp", &exp_obj)) {
++		time_t current_time = time(NULL);
++		uint64_t exp_time   = json_object_get_int64(exp_obj);
++		if (exp_time < (uint64_t)current_time) {
++			goto clean;
++		}
++	} else {
++		goto clean;
++	}
++
++	json_object *username_obj;
++	if (json_object_object_get_ex(payload_json, "preferred_username", &username_obj)) {
++		const char *username = json_object_get_string(username_obj);
++		if (username && username[0] != '\0') {
++			session->username = strdup(username);
++		}
++	}
++
++	const char *alg = NULL;
++	json_object *alg_obj;
++	if (json_object_object_get_ex(header_json, "alg", &alg_obj)) {
++		alg = json_object_get_string(alg_obj);
++	} else {
++		goto clean;
++	}
++
++	const char *kid = NULL;
++	json_object *kid_obj;
++	if (json_object_object_get_ex(header_json, "kid", &kid_obj)) {
++		kid = json_object_get_string(kid_obj);
++	} else {
++		goto clean;
++	}
++
++	ret = verify_jwt_alg(session, alg, kid, header, payload, decoded_signature, decoded_signature_len);
++
++clean:
++	free(token_copy);
++	free(decoded_header);
++	free(decoded_payload);
++	free(decoded_signature);
++	return ret;
++}
++
++void oauth2_init_session(_oauth2_session *session)
++{
++	session->response_type		= NULL;
++	session->oidc_endpoint		= NULL;
++	session->client_id		= NULL;
++	session->client_secret		= NULL;
++	session->redirect_uri		= NULL;
++	session->scope			= NULL;
++	session->state			= NULL;
++	session->code			= NULL;
++	session->token_endpoint		= NULL;
++	session->authorization_endpoint = NULL;
++	session->userinfo_endpoint	= NULL;
++	session->jwks_uri		= NULL;
++	session->authorization_url	= NULL;
++	session->id_token		= NULL;
++	session->access_token		= NULL;
++	session->username		= NULL;
++	session->issuer			= NULL;
++	session->jwks_n			= NULL;
++	session->jwks_e			= NULL;
++	session->token_type		= OAUTH2_TOKEN_UNKNOWN;
++}
++
++static void oauth2_set_str_parameter(_oauth2_session *session, unsigned int option, char *value)
++{
++	switch (option) {
++	case OAUTH2_OPT_OIDC_ENDPOINT:
++		session->oidc_endpoint = strdup(value);
++		break;
++	case OAUTH2_OPT_CLIENT_ID:
++		session->client_id = strdup(value);
++		break;
++	case OAUTH2_OPT_CLIENT_SECRET:
++		session->client_secret = strdup(value);
++		break;
++	case OAUTH2_OPT_REDIRECT_URI:
++		session->redirect_uri = strdup(value);
++		break;
++	case OAUTH2_OPT_SCOPE:
++		session->scope = strdup(value);
++		break;
++	case OAUTH2_OPT_STATE:
++		session->state = strdup(value);
++		break;
++	case OAUTH2_OPT_CODE:
++		session->code = strdup(value);
++		break;
++	default:
++		break;
++	}
++}
++
++static void oauth2_set_int_parameter(_oauth2_session *session, unsigned int option, unsigned int value)
++{
++	switch (option) {
++	case OAUTH2_OPT_RESPONSE_TYPE: {
++		switch (value) {
++		case OAUTH2_RESPONSE_TYPE_CODE:
++			session->response_type = "code";
++			break;
++		default:
++			break;
++		}
++		break;
++	}
++	default:
++		break;
++	}
++}
++
++static int oauth2_add_session_tokens(_oauth2_session *session, const char *id_token, const char *access_token,
++				     const char *token_type)
++{
++	int ret = OAUTH2_OK;
++	if (!session->id_token && id_token && id_token[0] != '\0') {
++		session->id_token = strdup(id_token);
++		ret		  = validate_jwt_token(session);
++	}
++
++	if (!session->access_token && access_token && access_token[0] != '\0') {
++		session->access_token = strdup(access_token);
++	}
++
++	if (token_type && !strcmp(token_type, "Bearer")) {
++		session->token_type = OAUTH2_TOKEN_BEARER;
++	} else {
++		session->token_type = OAUTH2_TOKEN_UNKNOWN;
++	}
++
++	return ret;
++}
++
++void oauth2_set_parameter_list(_oauth2_session *session, ...)
++{
++	va_list args;
++	va_start(args, session);
++
++	unsigned int option = 0;
++	while ((option = va_arg(args, unsigned int)) != OAUTH2_OPT_NONE) {
++		switch (option) {
++		case OAUTH2_OPT_OIDC_ENDPOINT:
++		case OAUTH2_OPT_CLIENT_ID:
++		case OAUTH2_OPT_CLIENT_SECRET:
++		case OAUTH2_OPT_REDIRECT_URI:
++		case OAUTH2_OPT_STATE:
++		case OAUTH2_OPT_SCOPE:
++		case OAUTH2_OPT_CODE: {
++			char *value = va_arg(args, char *);
++			oauth2_set_str_parameter(session, option, value);
++			break;
++		}
++		case OAUTH2_OPT_RESPONSE_TYPE: {
++			unsigned int value = va_arg(args, unsigned int);
++			oauth2_set_int_parameter(session, option, value);
++			break;
++		}
++		default:
++			break;
++		}
++	}
++
++	va_end(args);
++}
++
++int oauth2_get_openid_config(_oauth2_session *session)
++{
++	CURL *curl;
++	CURLcode res;
++	long http_code;
++	char *url		   = session->oidc_endpoint;
++	struct memory_struct chunk = { 0 };
++
++	if (!url || url[0] == '\0') {
++		return OAUTH2_ERR;
++	}
++
++	if (session->token_endpoint || session->authorization_endpoint || session->jwks_uri ||
++	    session->userinfo_endpoint) {
++		return OAUTH2_ERR;
++	}
++
++	curl_global_init(CURL_GLOBAL_ALL);
++	curl = curl_easy_init();
++	if (!curl) {
++		return OAUTH2_ERR;
++	}
++
++	curl_easy_setopt(curl, CURLOPT_URL, url);
++	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_callback);
++	curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&chunk);
++	res = curl_easy_perform(curl);
++	if (res != CURLE_OK) {
++		if (_options.debug)
++			syslog(LOG_DEBUG, "%s(%d): Failed to get response from oauth2 openid endpoint",
++			       __FUNCTION__, __LINE__);
++		curl_easy_cleanup(curl);
++		curl_global_cleanup();
++		free(chunk.memory);
++		return OAUTH2_ERR;
++	}
++
++	curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
++	if (http_code != 200) {
++		if (_options.debug)
++			syslog(LOG_DEBUG, "%s(%d): Incorrect response gotten from oauth2 openid endpoint: %s",
++			       __FUNCTION__, __LINE__, chunk.memory);
++		curl_easy_cleanup(curl);
++		curl_global_cleanup();
++		free(chunk.memory);
++		return OAUTH2_ERR;
++	}
++
++	curl_easy_cleanup(curl);
++	curl_global_cleanup();
++
++	struct json_object *root_obj, *token_endpoint_obj, *authorization_endpoint_obj, *jwks_uri_obj,
++		*userinfo_endpoint_obj, *issuer_obj;
++	root_obj = json_tokener_parse(chunk.memory);
++	if (root_obj == NULL) {
++		free(chunk.memory);
++		return OAUTH2_ERR;
++	}
++
++	json_object_object_get_ex(root_obj, "token_endpoint", &token_endpoint_obj);
++	json_object_object_get_ex(root_obj, "authorization_endpoint", &authorization_endpoint_obj);
++	json_object_object_get_ex(root_obj, "jwks_uri", &jwks_uri_obj);
++	json_object_object_get_ex(root_obj, "userinfo_endpoint", &userinfo_endpoint_obj);
++	json_object_object_get_ex(root_obj, "issuer", &issuer_obj);
++
++	if (!token_endpoint_obj || !authorization_endpoint_obj || !jwks_uri_obj || !userinfo_endpoint_obj ||
++	    !issuer_obj) {
++		json_object_put(root_obj);
++		free(chunk.memory);
++		return OAUTH2_ERR;
++	}
++
++	const char *token_endpoint	   = json_object_get_string(token_endpoint_obj);
++	const char *authorization_endpoint = json_object_get_string(authorization_endpoint_obj);
++	const char *jwks_uri		   = json_object_get_string(jwks_uri_obj);
++	const char *userinfo_endpoint	   = json_object_get_string(userinfo_endpoint_obj);
++	const char *issuer		   = json_object_get_string(issuer_obj);
++
++	if (!token_endpoint || !authorization_endpoint || !jwks_uri || !userinfo_endpoint || !issuer) {
++		json_object_put(root_obj);
++		free(chunk.memory);
++		return OAUTH2_ERR;
++	}
++
++	session->token_endpoint		= strdup(token_endpoint);
++	session->authorization_endpoint = strdup(authorization_endpoint);
++	session->jwks_uri		= strdup(jwks_uri);
++	session->userinfo_endpoint	= strdup(userinfo_endpoint);
++	session->issuer			= strdup(issuer);
++
++	json_object_put(root_obj);
++	free(chunk.memory);
++
++	return OAUTH2_OK;
++}
++
++int oauth2_build_authorization_url(_oauth2_session *session)
++{
++	if (!session->authorization_endpoint || !session->client_id || !session->redirect_uri ||
++	    !session->scope || !session->response_type || !session->state) {
++		return OAUTH2_ERR;
++	}
++	if (session->authorization_url) {
++		free(session->authorization_url);
++		session->authorization_url = NULL;
++	}
++
++	int result = asprintf(&session->authorization_url,
++			      "%s?client_id=%s&redirect_uri=%s&scope=%s&response_type=%s&state=%s",
++			      session->authorization_endpoint, session->client_id, session->redirect_uri,
++			      session->scope, session->response_type, session->state);
++	if (result == -1) {
++		return OAUTH2_ERR;
++	}
++
++	return OAUTH2_OK;
++}
++
++int oauth2_exchange_token(_oauth2_session *session)
++{
++	CURL *curl;
++	CURLcode res;
++	long http_code;
++	char *url		   = session->token_endpoint;
++	struct memory_struct chunk = { 0 };
++	char *post_data = NULL;
++	char *auth_header = NULL;
++
++	if (!url || url[0] == '\0') {
++		return OAUTH2_ERR;
++	}
++
++	if (!session->code || !session->redirect_uri || !session->client_secret || !session->client_id ||
++	    !session->response_type || (session->response_type && strcmp(session->response_type, "code"))) {
++		return OAUTH2_ERR;
++	}
++
++	curl_global_init(CURL_GLOBAL_ALL);
++	curl = curl_easy_init();
++	if (!curl) {
++		return OAUTH2_ERR;
++	}
++
++	asprintf(&post_data, "grant_type=authorization_code&client_id=%s&client_secret=%s&redirect_uri=%s&code=%s",
++		 session->client_id, session->client_secret, session->redirect_uri, session->code);
++
++	curl_easy_setopt(curl, CURLOPT_URL, url);
++	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_callback);
++	curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&chunk);
++	curl_easy_setopt(curl, CURLOPT_POSTFIELDS, post_data);
++	curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, (long)strlen(post_data));
++
++	asprintf(&auth_header, "%s:%s", session->client_id, session->client_secret);
++	curl_easy_setopt(curl, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
++	curl_easy_setopt(curl, CURLOPT_USERPWD, auth_header);
++
++	struct curl_slist *headers = NULL;
++	headers = curl_slist_append(headers, "Content-Type: application/x-www-form-urlencoded");
++	headers = curl_slist_append(headers, "Accept: application/json");
++	curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
++
++	res = curl_easy_perform(curl);
++	free(post_data);
++	free(auth_header);
++
++	if (res != CURLE_OK) {
++		if (_options.debug)
++			syslog(LOG_DEBUG, "%s(%d): Failed to get response from oauth2 token endpoint",
++			       __FUNCTION__, __LINE__);
++		curl_easy_cleanup(curl);
++		curl_global_cleanup();
++		curl_slist_free_all(headers);
++		free(chunk.memory);
++		return OAUTH2_ERR;
++	}
++
++	curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
++	if (http_code != 200 && http_code != 201) {
++		if (_options.debug)
++			syslog(LOG_DEBUG, "%s(%d): Incorrect response gotten from oauth2 token endpoint: %s",
++			       __FUNCTION__, __LINE__, chunk.memory);
++		curl_easy_cleanup(curl);
++		curl_global_cleanup();
++		curl_slist_free_all(headers);
++		free(chunk.memory);
++		return OAUTH2_ERR;
++	}
++
++	curl_easy_cleanup(curl);
++	curl_global_cleanup();
++	curl_slist_free_all(headers);
++
++	struct json_object *root_obj, *access_token_obj, *id_token_obj, *token_type_obj;
++	root_obj = json_tokener_parse(chunk.memory);
++	if (root_obj == NULL) {
++		free(chunk.memory);
++		return OAUTH2_ERR;
++	}
++
++	json_object_object_get_ex(root_obj, "access_token", &access_token_obj);
++	json_object_object_get_ex(root_obj, "id_token", &id_token_obj);
++	json_object_object_get_ex(root_obj, "token_type", &token_type_obj);
++
++	const char *access_token = access_token_obj ? json_object_get_string(access_token_obj) : NULL;
++	const char *id_token	 = id_token_obj ? json_object_get_string(id_token_obj) : NULL;
++	const char *token_type	 = token_type_obj ? json_object_get_string(token_type_obj) : NULL;
++
++	if (oauth2_add_session_tokens(session, id_token, access_token, token_type) != OAUTH2_OK) {
++		if (_options.debug)
++			syslog(LOG_DEBUG, "%s(%d): Failed to get session tokens", __FUNCTION__, __LINE__);
++		json_object_put(root_obj);
++		free(chunk.memory);
++		return OAUTH2_ERR;
++	}
++
++	json_object_put(root_obj);
++	free(chunk.memory);
++
++	if (!access_token && !id_token && !token_type) {
++		if (_options.debug)
++			syslog(LOG_DEBUG, "%s(%d): Failed to get either access_token, id_token or token_type",
++			       __FUNCTION__, __LINE__);
++		return OAUTH2_ERR;
++	}
++
++	return OAUTH2_OK;
++}
++
++int oauth2_get_userinfo(_oauth2_session *session)
++{
++	CURL *curl;
++	CURLcode res;
++	long http_code;
++	char *url		   = session->userinfo_endpoint;
++	struct memory_struct chunk = { 0 };
++
++	if (!url || url[0] == '\0' || !session->access_token || session->token_type != OAUTH2_TOKEN_BEARER) {
++		return OAUTH2_ERR;
++	}
++
++	curl_global_init(CURL_GLOBAL_ALL);
++	curl = curl_easy_init();
++	if (!curl) {
++		return OAUTH2_ERR;
++	}
++
++	curl_easy_setopt(curl, CURLOPT_URL, url);
++	struct curl_slist *headers = NULL;
++	char *bearer_header;
++	asprintf(&bearer_header, "Authorization: Bearer %s", session->access_token);
++	headers = curl_slist_append(headers, bearer_header);
++	curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
++	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_callback);
++	curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&chunk);
++	res = curl_easy_perform(curl);
++	free(bearer_header);
++
++	if (res != CURLE_OK) {
++		if (_options.debug)
++			syslog(LOG_DEBUG, "%s(%d): Failed to get response from oauth2 userinfo endpoint",
++			       __FUNCTION__, __LINE__);
++		curl_easy_cleanup(curl);
++		curl_global_cleanup();
++		curl_slist_free_all(headers);
++		free(chunk.memory);
++		return OAUTH2_ERR;
++	}
++
++	curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
++	if (http_code != 200) {
++		if (_options.debug)
++			syslog(LOG_DEBUG, "%s(%d): Incorrect response gotten from oauth2 userinfo endpoint: %s",
++			       __FUNCTION__, __LINE__, chunk.memory);
++		curl_easy_cleanup(curl);
++		curl_global_cleanup();
++		curl_slist_free_all(headers);
++		free(chunk.memory);
++		return OAUTH2_ERR;
++	}
++
++	curl_easy_cleanup(curl);
++	curl_global_cleanup();
++	curl_slist_free_all(headers);
++
++	struct json_object *root_obj, *email_obj, *username_obj, *name_obj;
++	root_obj = json_tokener_parse(chunk.memory);
++	if (root_obj == NULL) {
++		free(chunk.memory);
++		return OAUTH2_ERR;
++	}
++
++	// prefered username is in JWT token for Microsoft,
++	// other providers may handle usernames differently
++	if (!session->username) {
++		json_object_object_get_ex(root_obj, "email", &email_obj);
++		json_object_object_get_ex(root_obj, "username", &username_obj);
++		json_object_object_get_ex(root_obj, "name", &name_obj);
++
++		const char *email    = email_obj ? json_object_get_string(email_obj) : NULL;
++		const char *username = username_obj ? json_object_get_string(username_obj) : NULL;
++		const char *name     = name_obj ? json_object_get_string(name_obj) : NULL;
++
++		if (email) {
++			session->username = strdup(email);
++		} else if (username) {
++			session->username = strdup(username);
++		} else if (name) {
++			session->username = strdup(name);
++		}
++	}
++
++	json_object_put(root_obj);
++	free(chunk.memory);
++
++	return OAUTH2_OK;
++}
++
++void oauth2_clean_session(_oauth2_session *session)
++{
++	if (session->oidc_endpoint != NULL) {
++		free(session->oidc_endpoint);
++	}
++	if (session->client_id != NULL) {
++		free(session->client_id);
++	}
++	if (session->client_secret != NULL) {
++		free(session->client_secret);
++	}
++	if (session->redirect_uri != NULL) {
++		free(session->redirect_uri);
++	}
++	if (session->scope != NULL) {
++		free(session->scope);
++	}
++	if (session->state != NULL) {
++		free(session->state);
++	}
++	if (session->code != NULL) {
++		free(session->code);
++	}
++	if (session->token_endpoint != NULL) {
++		free(session->token_endpoint);
++	}
++	if (session->authorization_endpoint != NULL) {
++		free(session->authorization_endpoint);
++	}
++	if (session->userinfo_endpoint != NULL) {
++		free(session->userinfo_endpoint);
++	}
++	if (session->jwks_uri != NULL) {
++		free(session->jwks_uri);
++	}
++	if (session->authorization_url != NULL) {
++		free(session->authorization_url);
++	}
++	if (session->id_token != NULL) {
++		free(session->id_token);
++	}
++	if (session->access_token != NULL) {
++		free(session->access_token);
++	}
++	if (session->username != NULL) {
++		free(session->username);
++	}
++	if (session->issuer != NULL) {
++		free(session->issuer);
++	}
++	if (session->jwks_n != NULL) {
++		free(session->jwks_n);
++	}
++	if (session->jwks_e != NULL) {
++		free(session->jwks_e);
++	}
++	oauth2_init_session(session);
++}
+diff --recursive --unified --new-file --no-dereference upstream/src/oauth2.h src/src/oauth2.h
+--- upstream/src/oauth2.h	1970-01-01 00:00:00.000000000 +0000
++++ src/src/oauth2.h	2024-07-12 09:27:40.000000000 +0000
+@@ -0,0 +1,58 @@
++#ifndef OAUTH2_H
++#define OAUTH2_H
++
++#define OAUTH2_OK 0
++#define OAUTH2_ERR 1
++
++#define OAUTH2_OPT_NONE		 0
++#define OAUTH2_OPT_RESPONSE_TYPE 1
++#define OAUTH2_OPT_OIDC_ENDPOINT 2
++#define OAUTH2_OPT_CLIENT_ID	 3
++#define OAUTH2_OPT_CLIENT_SECRET 4
++#define OAUTH2_OPT_REDIRECT_URI	 5
++#define OAUTH2_OPT_SCOPE	 6
++#define OAUTH2_OPT_STATE	 7
++#define OAUTH2_OPT_CODE		 8
++
++#define OAUTH2_RESPONSE_TYPE_CODE 1
++
++#define OAUTH2_TOKEN_UNKNOWN 0
++#define OAUTH2_TOKEN_BEARER 1
++
++struct memory_struct {
++	char *memory;
++	size_t size;
++};
++
++typedef struct {
++	char *response_type;
++	char *oidc_endpoint;
++	char *token_endpoint;
++	char *authorization_endpoint;
++	char *userinfo_endpoint;
++	char *authorization_url;
++	char *jwks_uri;
++	char *jwks_n;
++	char *jwks_e;
++	char *client_id;
++	char *client_secret;
++	char *redirect_uri;
++	char *scope;
++	char *state;
++	char *code;
++	char *access_token;
++	char *id_token;
++	char *username;
++	char *issuer;
++	unsigned int token_type;
++} _oauth2_session;
++
++void oauth2_init_session(_oauth2_session *session);
++void oauth2_set_parameter_list(_oauth2_session *session, ...);
++int oauth2_get_openid_config(_oauth2_session *session);
++int oauth2_build_authorization_url(_oauth2_session *session);
++int oauth2_exchange_token(_oauth2_session *session);
++int oauth2_get_userinfo(_oauth2_session *session);
++void oauth2_clean_session(_oauth2_session *session);
++
++#endif //OAUTH2_H
+diff --recursive --unified --new-file --no-dereference upstream/src/options.c src/src/options.c
+--- upstream/src/options.c	2016-12-15 17:28:43.000000000 +0000
++++ src/src/options.c	2024-07-12 09:27:40.000000000 +0000
+@@ -311,6 +311,12 @@
+   if (!option_s_l(bt, &o.macsuffix)) return 0;
+   if (!option_s_l(bt, &o.macpasswd)) return 0;
+ 
++#ifdef USING_CURL
++  if (!option_s_l(bt, &o.oidcdiscoveryurl)) return 0;
++  if (!option_s_l(bt, &o.oidcclientid)) return 0;
++  if (!option_s_l(bt, &o.oidcclientsecret)) return 0;
++#endif
++
+   if (!option_s_l(bt, &o.uamsecret)) return 0;
+   if (!option_s_l(bt, &o.uamurl)) return 0;
+   if (!option_s_l(bt, &o.uamaaaurl)) return 0;
+@@ -320,7 +326,6 @@
+   if (!option_s_l(bt, &o.wwwdir)) return 0;
+   if (!option_s_l(bt, &o.wwwbin)) return 0;
+   if (!option_s_l(bt, &o.uamui)) return 0;
+-  if (!option_s_l(bt, &o.localusers)) return 0;
+ #ifdef HAVE_SSL
+   if (!option_s_l(bt, &o.sslkeyfile)) return 0;
+   if (!option_s_l(bt, &o.sslkeypass)) return 0;
+@@ -371,6 +376,29 @@
        return 0;
    }
  
@@ -2729,7 +4218,28 @@ diff --recursive --unified --new-file --no-dereference orig/src/options.c src/sr
  #ifdef EX_OPTIONS_LOAD
  #include EX_OPTIONS_LOAD
  #endif
-@@ -571,6 +594,28 @@
+@@ -511,6 +539,12 @@
+   if (!option_s_s(bt, &o.macsuffix)) return 0;
+   if (!option_s_s(bt, &o.macpasswd)) return 0;
+ 
++#ifdef USING_CURL
++  if (!option_s_s(bt, &o.oidcdiscoveryurl)) return 0;
++  if (!option_s_s(bt, &o.oidcclientid)) return 0;
++  if (!option_s_s(bt, &o.oidcclientsecret)) return 0;
++#endif
++
+   if (!option_s_s(bt, &o.uamsecret)) return 0;
+   if (!option_s_s(bt, &o.uamurl)) return 0;
+   if (!option_s_s(bt, &o.uamaaaurl)) return 0;
+@@ -520,7 +554,6 @@
+   if (!option_s_s(bt, &o.wwwdir)) return 0;
+   if (!option_s_s(bt, &o.wwwbin)) return 0;
+   if (!option_s_s(bt, &o.uamui)) return 0;
+-  if (!option_s_s(bt, &o.localusers)) return 0;
+ #ifdef HAVE_SSL
+   if (!option_s_s(bt, &o.sslkeyfile)) return 0;
+   if (!option_s_s(bt, &o.sslkeypass)) return 0;
+@@ -571,6 +604,28 @@
        return 0;
    }
  
@@ -2758,9 +4268,9 @@ diff --recursive --unified --new-file --no-dereference orig/src/options.c src/sr
  #ifdef EX_OPTIONS_SAVE
  #include EX_OPTIONS_SAVE
  #endif
-diff --recursive --unified --new-file --no-dereference orig/src/options.h src/src/options.h
---- orig/src/options.h	2016-12-15 17:28:43.000000000 +0000
-+++ src/src/options.h	2024-02-20 12:15:38.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/src/options.h src/src/options.h
+--- upstream/src/options.h	2016-12-15 17:28:43.000000000 +0000
++++ src/src/options.h	2024-07-12 09:27:40.000000000 +0000
 @@ -188,6 +188,8 @@
    uint16_t forcedns2_port;        /* Port to force DNS to */
  #endif
@@ -2815,7 +4325,33 @@ diff --recursive --unified --new-file --no-dereference orig/src/options.h src/sr
  
    uint32_t challengetimeout;
    uint32_t challengetimeout2;
-@@ -426,6 +459,37 @@
+@@ -363,7 +396,16 @@
+   char *wwwdir;
+   char *wwwbin;
+   char *uamui;
+-  char *localusers;
++  uint8_t localusers:1;
++
++#ifdef USING_CURL
++  /* OIDC configuration */
++  uint8_t oidc:1;
++  uint8_t oidcforcehttps:1;
++  char* oidcdiscoveryurl;
++  char* oidcclientid;
++  char* oidcclientsecret;
++#endif
+ 
+   /* Admin RADIUS Authentication & Configuration */
+   char *adminuser;
+@@ -388,6 +430,7 @@
+ 
+ #ifdef ENABLE_UAMDOMAINFILE
+   char *uamdomainfile;
++  uint8_t uamblocklist:1;
+ #endif
+ 
+   /* Command-Socket */
+@@ -426,6 +469,37 @@
    char *moddir;
  #endif
  
@@ -2853,9 +4389,9 @@ diff --recursive --unified --new-file --no-dereference orig/src/options.h src/sr
    char * _data; /* actual data buffer for loaded options */
  };
  
-diff --recursive --unified --new-file --no-dereference orig/src/passwd_md5crypt.c src/src/passwd_md5crypt.c
---- orig/src/passwd_md5crypt.c	1970-01-01 00:00:00.000000000 +0000
-+++ src/src/passwd_md5crypt.c	2024-02-20 12:15:38.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/src/passwd_md5crypt.c src/src/passwd_md5crypt.c
+--- upstream/src/passwd_md5crypt.c	1970-01-01 00:00:00.000000000 +0000
++++ src/src/passwd_md5crypt.c	2024-07-12 09:27:40.000000000 +0000
 @@ -0,0 +1,293 @@
 +#include "chilli.h"
 +#include <assert.h>
@@ -3150,9 +4686,9 @@ diff --recursive --unified --new-file --no-dereference orig/src/passwd_md5crypt.
 +// 	free(salt);
 +// 	return NULL;
 +// }
-diff --recursive --unified --new-file --no-dereference orig/src/passwd_md5crypt.h src/src/passwd_md5crypt.h
---- orig/src/passwd_md5crypt.h	1970-01-01 00:00:00.000000000 +0000
-+++ src/src/passwd_md5crypt.h	2024-02-20 12:15:38.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/src/passwd_md5crypt.h src/src/passwd_md5crypt.h
+--- upstream/src/passwd_md5crypt.h	1970-01-01 00:00:00.000000000 +0000
++++ src/src/passwd_md5crypt.h	2024-07-12 09:27:40.000000000 +0000
 @@ -0,0 +1,11 @@
 +#ifndef PASSWD_MD5CRYPT_H__
 +#define PASSWD_MD5CRYPT_H__
@@ -3165,9 +4701,9 @@ diff --recursive --unified --new-file --no-dereference orig/src/passwd_md5crypt.
 +// char *extract_salt(char *hash);
 +
 +#endif /* passwd_md5crypt.h */
-diff --recursive --unified --new-file --no-dereference orig/src/passwd_shacrypt.c src/src/passwd_shacrypt.c
---- orig/src/passwd_shacrypt.c	1970-01-01 00:00:00.000000000 +0000
-+++ src/src/passwd_shacrypt.c	2024-02-20 12:15:38.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/src/passwd_shacrypt.c src/src/passwd_shacrypt.c
+--- upstream/src/passwd_shacrypt.c	1970-01-01 00:00:00.000000000 +0000
++++ src/src/passwd_shacrypt.c	2024-07-12 09:27:40.000000000 +0000
 @@ -0,0 +1,406 @@
 +#include <assert.h>
 +#include <openssl/rand.h>
@@ -3575,9 +5111,9 @@ diff --recursive --unified --new-file --no-dereference orig/src/passwd_shacrypt.
 +	free(hash_id);
 +	return hash_type;
 +}
-diff --recursive --unified --new-file --no-dereference orig/src/passwd_shacrypt.h src/src/passwd_shacrypt.h
---- orig/src/passwd_shacrypt.h	1970-01-01 00:00:00.000000000 +0000
-+++ src/src/passwd_shacrypt.h	2024-02-20 12:15:38.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/src/passwd_shacrypt.h src/src/passwd_shacrypt.h
+--- upstream/src/passwd_shacrypt.h	1970-01-01 00:00:00.000000000 +0000
++++ src/src/passwd_shacrypt.h	2024-07-12 09:27:40.000000000 +0000
 @@ -0,0 +1,18 @@
 +#ifndef PASSWD_SHA512CRYPT_H__
 +#define PASSWD_SHA512CRYPT_H__
@@ -3597,9 +5133,9 @@ diff --recursive --unified --new-file --no-dereference orig/src/passwd_shacrypt.
 +hash_type get_hash_type(char *hash);
 +
 +#endif /* passwd_sha512crypt.h */
-diff --recursive --unified --new-file --no-dereference orig/src/patricia.c src/src/patricia.c
---- orig/src/patricia.c	2016-12-15 17:28:43.000000000 +0000
-+++ src/src/patricia.c	2024-02-20 12:15:38.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/src/patricia.c src/src/patricia.c
+--- upstream/src/patricia.c	2016-12-15 17:28:43.000000000 +0000
++++ src/src/patricia.c	2024-07-12 09:27:40.000000000 +0000
 @@ -264,7 +264,7 @@
  #endif /* HAVE_IPV6 */
  
@@ -3609,9 +5145,9 @@ diff --recursive --unified --new-file --no-dereference orig/src/patricia.c src/s
      /* *cp = '\0'; */
      /* copy the string to save. Avoid destroying the string */
      assert (cp - string < MAXLINE);
-diff --recursive --unified --new-file --no-dereference orig/src/radius.h src/src/radius.h
---- orig/src/radius.h	2016-12-15 17:28:43.000000000 +0000
-+++ src/src/radius.h	2024-02-20 12:15:38.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/src/radius.h src/src/radius.h
+--- upstream/src/radius.h	2016-12-15 17:28:43.000000000 +0000
++++ src/src/radius.h	2024-07-12 09:27:40.000000000 +0000
 @@ -202,9 +202,9 @@
    struct in_addr addr0;
    struct in_addr addr1;
@@ -3648,9 +5184,9 @@ diff --recursive --unified --new-file --no-dereference orig/src/radius.h src/src
    int debug;                     /* Print debug messages */
  
    int (*cb_ind)       (struct radius_t *radius, struct radius_packet_t *pack,
-diff --recursive --unified --new-file --no-dereference orig/src/radius_coovachilli.h src/src/radius_coovachilli.h
---- orig/src/radius_coovachilli.h	2016-12-15 17:28:43.000000000 +0000
-+++ src/src/radius_coovachilli.h	2024-02-20 12:15:38.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/src/radius_coovachilli.h src/src/radius_coovachilli.h
+--- upstream/src/radius_coovachilli.h	2016-12-15 17:28:43.000000000 +0000
++++ src/src/radius_coovachilli.h	2024-07-12 09:27:40.000000000 +0000
 @@ -84,6 +84,7 @@
  #define RADIUS_ATTR_COOVACHILLI_OTHER_OUTPUT_OCTETS       85 /* integer */
  #define RADIUS_ATTR_COOVACHILLI_OTHER_INPUT_GIGAWORDS     86 /* integer */
@@ -3666,10 +5202,10 @@ diff --recursive --unified --new-file --no-dereference orig/src/radius_coovachil
 +#define RADIUS_VALUE_COOVACHILLI_SESSION_USER_EXPIRED	          18
  
  #endif	/* !_RADIUS_COOVACHILLI_H */
-diff --recursive --unified --new-file --no-dereference orig/src/redir.c src/src/redir.c
---- orig/src/redir.c	2016-12-15 17:28:43.000000000 +0000
-+++ src/src/redir.c	2024-02-20 12:15:38.000000000 +0000
-@@ -18,10 +18,12 @@
+diff --recursive --unified --new-file --no-dereference upstream/src/redir.c src/src/redir.c
+--- upstream/src/redir.c	2016-12-15 17:28:43.000000000 +0000
++++ src/src/redir.c	2024-07-12 09:27:40.000000000 +0000
+@@ -18,21 +18,24 @@
   *
   */
  
@@ -3682,7 +5218,11 @@ diff --recursive --unified --new-file --no-dereference orig/src/redir.c src/src/
  #endif
  #ifdef ENABLE_EWTAPI
  #include "ewt.h"
-@@ -32,7 +34,7 @@
+ #endif
+ #include "json/json.h"
++#include <uci.h>
+ 
+ static int optionsdebug = 0; /* TODO: Should be changed to instance */
  
  static int termstate = REDIR_TERM_INIT;    /* When we were terminated */
  
@@ -3691,7 +5231,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/redir.c src/src/
      "<H1>CoovaChilli " VERSION "</H1>"
      "<p>Copyright 2002-2005 Mondru AB</p>"
      "<p>Copyright 2006-2012 David Bird (Coova Technologies)</p>"
-@@ -202,16 +204,6 @@
+@@ -202,16 +205,6 @@
    bcatcstr(s, "P3P: CP=\"IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT\"\r\n");
  }
  
@@ -3708,7 +5248,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/redir.c src/src/
  /* Encode src as urlencoded and place null terminated result in dst */
  int redir_urlencode(bstring src, bstring dst) {
    char x[3];
-@@ -412,21 +404,22 @@
+@@ -412,21 +405,22 @@
  }
  
  static void bstring_buildurl(bstring str, struct redir_conn_t *conn,
@@ -3737,7 +5277,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/redir.c src/src/
      bconcat(str, bt);
      bassigncstr(bt,"");
    }
-@@ -440,28 +433,68 @@
+@@ -440,28 +434,68 @@
        sessiontime = timenow - starttime;
  
        bcatcstr(str, amp);
@@ -3811,7 +5351,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/redir.c src/src/
    if (_options.nasmac)
      bassigncstr(bt, _options.nasmac);
    else
-@@ -488,7 +521,8 @@
+@@ -488,7 +522,8 @@
  
    if (hismac) {
      bcatcstr(str, amp);
@@ -3821,7 +5361,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/redir.c src/src/
      bassignformat(bt, "%.2X-%.2X-%.2X-%.2X-%.2X-%.2X",
  		  hismac[0], hismac[1],
  		  hismac[2], hismac[3],
-@@ -499,7 +533,7 @@
+@@ -499,7 +534,7 @@
  
    if (hisip) {
      bcatcstr(str, amp);
@@ -3830,7 +5370,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/redir.c src/src/
      bconcat(str, bt);
    }
  
-@@ -521,12 +555,38 @@
+@@ -521,12 +556,45 @@
  
    if (_options.radiusnasid) {
      bcatcstr(str, amp);
@@ -3851,7 +5391,14 @@ diff --recursive --unified --new-file --no-dereference orig/src/redir.c src/src/
 +      bcatcstr(str, amp);
 +      bcatcstr(str, "macpass=1");
 +    }
-+    
++
++#ifdef USING_CURL
++    if (_options.oidc) {
++      bcatcstr(str, amp);
++      bcatcstr(str, "oidc=1");
++    }
++#endif
++
 +    if (_options.registerusers) {
 +        bcatcstr(str, amp);
 +        bcatcstr(str, "signup=1"); 
@@ -3870,7 +5417,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/redir.c src/src/
  #ifdef ENABLE_IEEE8021Q
    if (_options.ieee8021q && conn->s_state.tag8021q) {
      bcatcstr(str, amp);
-@@ -580,8 +640,8 @@
+@@ -580,8 +648,8 @@
    }
  
    if (conn->s_state.sessionid[0]) {
@@ -3881,7 +5428,32 @@ diff --recursive --unified --new-file --no-dereference orig/src/redir.c src/src/
      bassigncstr(bt, conn->s_state.sessionid);
      redir_urlencode(bt, bt2);
      bconcat(str, bt2);
-@@ -620,13 +680,23 @@
+@@ -597,13 +665,19 @@
+     bcatcstr(str, amp);
+     bcatcstr(str, "ssl=");
+     if (_options.uamaliasname && _options.domain) {
+-      bassignformat(bt, "https://%s.%s:%d/",
+-                    _options.uamaliasname,
+-                    _options.domain,
+-                    _options.uamuiport);
++      if (_options.redirssl) {
++        bassignformat(bt, "https://%s.%s/",
++              _options.uamaliasname,
++              _options.domain);
++      } else {
++        bassignformat(bt, "https://%s.%s:%d/",
++              _options.uamaliasname,
++              _options.domain,
++              _options.uamuiport);
++      }
+     } else {
+       bassignformat(bt, "https://%s:%d/",
+-                    inet_ntoa(_options.uamalias),
++                    inet_ntoa(_options.uamlisten),
+                     _options.uamuiport);
+     }
+     redir_urlencode(bt, bt2);
+@@ -620,13 +694,23 @@
    }
  
    if (userurl) {
@@ -3907,7 +5479,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/redir.c src/src/
    if (redir->secret && *redir->secret) {
      /* take the md5 of the url+uamsecret as a checksum */
      redir_md_param(str, redir->secret, amp);
-@@ -680,8 +750,8 @@
+@@ -680,8 +764,8 @@
  
          bcatcstr(b, "<State>1</State>\r\n");
  
@@ -3918,7 +5490,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/redir.c src/src/
          bconcat(b, bt);
  
          bassignformat(bt, "<SessionTime>%d</SessionTime>\r\n",
-@@ -717,6 +787,10 @@
+@@ -717,6 +801,10 @@
          bassignformat(bt, "<MaxTotalOctets>%d</MaxTotalOctets>\r\n",
                        conn->s_params.maxtotaloctets);
          bconcat(b, bt);
@@ -3929,7 +5501,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/redir.c src/src/
        }
        else {
          bcatcstr(b, "<State>0</State>\r\n");
-@@ -733,7 +807,10 @@
+@@ -733,7 +821,10 @@
      case REDIR_FAILED_MTU:
      case REDIR_FAILED_TIMEOUT:
      case REDIR_FAILED_REJECT:
@@ -3940,7 +5512,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/redir.c src/src/
        if (reply) {
          bassignformat(bt, "<ReplyMessage>%s</ReplyMessage>\r\n", reply);
          bconcat(b, bt);
-@@ -760,7 +837,12 @@
+@@ -760,7 +851,15 @@
  
      case REDIR_REQERROR:
        break;
@@ -3950,11 +5522,14 @@ diff --recursive --unified --new-file --no-dereference orig/src/redir.c src/src/
 +    case REDIR_SMSSIGNUP_ALREADY:
 +    case REDIR_SMSSIGNUP_SMS_FAIL:
 +    case REDIR_SIGNUP_SUCCESS:
++#ifdef USING_CURL
++    case REDIR_SSO_FAILED:
++#endif
 +    	break;
      default:
        syslog(LOG_ERR, "redir_wispr1_reply: Unhandled response code in switch: %d", res);
    }
-@@ -779,9 +861,6 @@
+@@ -779,9 +878,6 @@
  			 char* reply, char* redirurl, bstring b) {
    bstring bt = bfromcstr("");;
  
@@ -3964,7 +5539,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/redir.c src/src/
    bcatcstr(b,
  	   "<!--\r\n"
  	   "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n"
-@@ -816,10 +895,12 @@
+@@ -816,10 +912,12 @@
          bconcat(b, bt);
        }
  
@@ -3979,7 +5554,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/redir.c src/src/
        bconcat(b, bt);
  
        bassignformat(bt, "<AbortLoginURL>http://%s:%d/abort</AbortLoginURL>\r\n",
-@@ -860,7 +941,10 @@
+@@ -860,7 +958,10 @@
      case REDIR_ERROR_PROTOCOL:
      case REDIR_FAILED_MTU:
      case REDIR_FAILED_TIMEOUT:
@@ -3990,7 +5565,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/redir.c src/src/
        bcatcstr(b,
                 "<AuthenticationPollReply>\r\n"
                 "<MessageType>140</MessageType>\r\n" /* response to authentication notification */
-@@ -953,6 +1037,26 @@
+@@ -953,6 +1054,29 @@
      case REDIR_REQERROR:
        break;
  
@@ -3999,6 +5574,9 @@ diff --recursive --unified --new-file --no-dereference orig/src/redir.c src/src/
 +    case REDIR_SMSSIGNUP_ALREADY:
 +    case REDIR_SMSSIGNUP_SMS_FAIL:
 +    case REDIR_SIGNUP_SUCCESS:
++#ifdef USING_CURL
++    case REDIR_SSO_FAILED:
++#endif
 +    	break;
 +    case REDIR_FAILED_USER_DUPLICATE:
 +      bcatcstr(b,
@@ -4017,7 +5595,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/redir.c src/src/
      default:
        syslog(LOG_ERR, "redir_wispr1_reply: Unhandled response code in switch: %d", res);
    }
-@@ -990,9 +1094,6 @@
+@@ -990,9 +1114,6 @@
    bstring bt = bfromcstr("");
    char eap64str [MAX_EAP_LEN*2];
  
@@ -4027,7 +5605,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/redir.c src/src/
    bcatcstr(b,
  	   "<!--\r\n"
  	   "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n"
-@@ -1037,10 +1138,12 @@
+@@ -1037,10 +1158,12 @@
          bconcat(b, bt);
        }
  
@@ -4042,7 +5620,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/redir.c src/src/
        bconcat(b, bt);
  
        bassignformat(bt, "<AbortLoginURL>http://%s:%d/abort</AbortLoginURL>\r\n",
-@@ -1134,7 +1237,10 @@
+@@ -1134,7 +1257,10 @@
        write_authentication_msg_footer(conn,b);
        break;
  
@@ -4053,7 +5631,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/redir.c src/src/
        write_authentication_msg_header(conn,b);
  
        bcatcstr(b,
-@@ -1166,10 +1272,12 @@
+@@ -1166,10 +1292,12 @@
            syslog(LOG_DEBUG, "%s(%d): Base64 encoding of radius eap message failed", __FUNCTION__, __LINE__);
        }
  
@@ -4068,7 +5646,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/redir.c src/src/
        bconcat(b, bt);
  
        bcatcstr(b, "</EAPAuthenticationReply>\r\n");
-@@ -1259,6 +1367,22 @@
+@@ -1259,6 +1387,25 @@
      case REDIR_REQERROR:
        break;
  
@@ -4077,6 +5655,9 @@ diff --recursive --unified --new-file --no-dereference orig/src/redir.c src/src/
 +    case REDIR_SMSSIGNUP_ALREADY:
 +    case REDIR_SMSSIGNUP_SMS_FAIL:
 +    case REDIR_SIGNUP_SUCCESS:
++#ifdef USING_CURL
++    case REDIR_SSO_FAILED:
++#endif
 +    	break;
 +    case REDIR_FAILED_USER_DUPLICATE:
 +      write_authentication_msg_header(conn,b);
@@ -4091,7 +5672,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/redir.c src/src/
      default:
        syslog(LOG_ERR, "redir_wispr1_reply: Unhandled response code in switch: %d", res);
    }
-@@ -1300,6 +1424,8 @@
+@@ -1300,6 +1447,8 @@
        break;
  
      case REDIR_FAILED_REJECT:
@@ -4100,7 +5681,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/redir.c src/src/
      case REDIR_FAILED_OTHER:
        flg |= FLG_chlg;
        flg |= FLG_redir;
-@@ -1423,7 +1549,7 @@
+@@ -1423,7 +1572,7 @@
  #endif
  
  static void redir_buildurl(struct redir_conn_t *conn, bstring str,
@@ -4109,7 +5690,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/redir.c src/src/
  			   long int timeleft, char* hexchal, char* uid,
  			   char* userurl, char* reply, char* redirurl,
  			   uint8_t *hismac, struct in_addr *hisip) {
-@@ -1500,7 +1626,7 @@
+@@ -1500,7 +1649,7 @@
  		char* userurl, char* reply, char* redirurl,
  		uint8_t *hismac, struct in_addr *hisip, char *qs) {
  
@@ -4118,7 +5699,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/redir.c src/src/
    bstring buffer;
  
    switch (res) {
-@@ -1508,7 +1634,7 @@
+@@ -1508,7 +1657,7 @@
        resp = "already";
        break;
      case REDIR_FAILED_REJECT:
@@ -4127,7 +5708,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/redir.c src/src/
        break;
      case REDIR_FAILED_TIMEOUT:
        resp = "failed&reason=timeout";
-@@ -1516,10 +1642,19 @@
+@@ -1516,10 +1665,19 @@
      case REDIR_FAILED_MTU:
        resp = "failed&reason=mtu";
        break;
@@ -4147,7 +5728,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/redir.c src/src/
      case REDIR_REQERROR:
        resp = "failed";
        break;
-@@ -1530,7 +1665,7 @@
+@@ -1530,7 +1688,7 @@
        resp = "logoff";
        break;
      case REDIR_NOTYET:
@@ -4156,7 +5737,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/redir.c src/src/
        break;
      case REDIR_SPLASH:
        resp = "splash";
-@@ -1550,6 +1685,48 @@
+@@ -1550,6 +1708,56 @@
      case REDIR_CHALLENGE:
        resp = "challenge";
        break;
@@ -4193,6 +5774,14 @@ diff --recursive --unified --new-file --no-dereference orig/src/redir.c src/src/
 +    case REDIR_TRIALLOGIN_FAILED:
 +      resp = "failed&reason=trial_fail";
 +      break;
++#ifdef USING_CURL
++    case REDIR_SSO_DENIED:
++      resp = "failed&reason=sso_denied";
++      break;
++    case REDIR_SSO_FAILED:
++      resp = "failed&reason=sso_fail";
++      break;
++#endif
 +    case REDIR_TRIAL_FAILED_DATA:
 +      resp = "failed&reason=data_limit_trial";
 +          break;
@@ -4205,7 +5794,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/redir.c src/src/
      default:
        syslog(LOG_ERR, "Unknown res in switch");
        return -1;
-@@ -1577,12 +1754,10 @@
+@@ -1577,12 +1785,10 @@
        bcatcstr(buffer, "Location: ");
  
        if (url) {
@@ -4222,7 +5811,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/redir.c src/src/
          bt = bfromcstralloc(1024,"");
          redir_buildurl(conn, bt, redir, resp, timeleft, hexchal,
                         uid, userurl, reply, redirurl, hismac, hisip);
-@@ -2171,6 +2346,12 @@
+@@ -2171,6 +2377,18 @@
  	  conn->type = REDIR_LOGIN;
  	else if ((!strcmp(path, "logoff")) || (!strcmp(path, "logout")))
  	  conn->type = REDIR_LOGOUT;
@@ -4232,10 +5821,16 @@ diff --recursive --unified --new-file --no-dereference orig/src/redir.c src/src/
 +      conn->type = REDIR_SIGNUP;
 +    else if ((!strcmp(path, "smssignup")) || (!strcmp(path, "smsregister")))
 +      conn->type = REDIR_SMSSIGNUP;
++#ifdef USING_CURL
++    else if (!strcmp(path, "ssologin"))
++      { conn->type = REDIR_SSOLOGIN; }
++    else if (!strcmp(path, "ssocallback"))
++      conn->type = REDIR_SSOCALLBACK;
++#endif
  	else if (!strncmp(path, "www/", 4) && strlen(path) > 4)
  	  conn->type = REDIR_WWW;
  	else if (!strcmp(path, "status"))
-@@ -2234,7 +2415,16 @@
+@@ -2234,7 +2452,16 @@
  	  p = buffer + 15;
  	  while (*p && isspace((int) *p)) p++;
  	  len = strlen(p);
@@ -4253,7 +5848,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/redir.c src/src/
  #if(_debug_ > 1)
            if (_options.debug)
              syslog(LOG_DEBUG, "%s(%d): Content-Length: %s", __FUNCTION__, __LINE__, p);
-@@ -2280,7 +2470,7 @@
+@@ -2280,7 +2507,7 @@
        for (i = 0; i < (int)(buflen - linelen); i++)
  	buffer[i] = buffer[(int)linelen + i];
  
@@ -4262,7 +5857,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/redir.c src/src/
        buflen -= linelen;
      }
  
-@@ -2317,6 +2507,18 @@
+@@ -2317,6 +2544,18 @@
          if (!redir_getparam(redir, httpreq->qs, "lang", bt))
            bstrtocstr(bt, conn->lang, sizeof(conn->lang));
  
@@ -4281,7 +5876,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/redir.c src/src/
          if (redir_getparam(redir, httpreq->qs, "username", bt)) {
            syslog(LOG_ERR, "No username found in login request");
            conn->response = REDIR_ERROR_PROTOCOL;
-@@ -2324,8 +2526,7 @@
+@@ -2324,8 +2563,7 @@
            return -1;
          }
  
@@ -4291,7 +5886,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/redir.c src/src/
  
          if (_options.debug)
            syslog(LOG_DEBUG, "%s(%d): -->> Setting username=[%s]", __FUNCTION__, __LINE__, conn->s_state.redir.username);
-@@ -2376,11 +2577,16 @@
+@@ -2376,11 +2614,16 @@
                            conn->authdata.v.chapmsg.password,
                            RADIUS_CHAPSIZE);
  
@@ -4312,7 +5907,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/redir.c src/src/
          else if (!redir_getparam(redir, httpreq->qs, "password", bt)) {
            conn->authdata.type = REDIR_AUTH_PAP;
            if (_options.nochallenge) {
-@@ -2471,7 +2677,102 @@
+@@ -2471,7 +2714,171 @@
          bdestroy(bt);
        }
        break;
@@ -4330,7 +5925,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/redir.c src/src/
 +        if (redir_getparam(redir, httpreq->qs, "email", bt)) {
 +          if (_options.debug)
 +            syslog(LOG_ERR, "No email found in signup request");
- 
++
 +          conn->response = REDIR_SIGNUP_FAILED;
 +          bdestroy(bt);
 +          return -1;
@@ -4412,36 +6007,160 @@ diff --recursive --unified --new-file --no-dereference orig/src/redir.c src/src/
 +      bdestroy(bt);
 +    }
 +    break;
++#ifdef USING_CURL
++    case REDIR_SSOCALLBACK:
++      {
++        if (!_options.oidc || !_options.oidcdiscoveryurl || !_options.oidcclientid || !_options.oidcclientsecret) {
++          syslog(LOG_ERR, "SSO Login not allowed");
++          conn->response = REDIR_SSO_DENIED;
++          return 0;
++        }
++
++        char state[128];
++        bstring bt = bfromcstr("");
++        if (redir_getparam(redir, httpreq->qs, "state", bt)){
++          if (_options.debug)
++            syslog(LOG_ERR, "No state found in SSO callback");
++
++          conn->response = REDIR_SSO_FAILED;
++          bdestroy(bt);
++          return 0;
++        }
++        bstrtocstr(bt, state, sizeof(state));
++
++        char chal_buffer[64];
++        redir_chartohex(conn->s_state.redir.uamchal, chal_buffer, REDIR_MD5LEN);
++        if(strncmp(state, chal_buffer, sizeof(state))) {
++          if (_options.debug)
++            syslog(LOG_ERR, "Invalid state in SSO callback");
++
++          conn->response = REDIR_SSO_FAILED;
++          bdestroy(bt);
++          return 0;
++        }
++
++        if (redir_getparam(redir, httpreq->qs, "code", bt)){
++          if (_options.debug)
++            syslog(LOG_ERR, "No code found in SSO callback");
++
++          conn->response = REDIR_SSO_FAILED;
++          bdestroy(bt);
++          return 0;
++        }
++
++        bstrtocstr(bt, conn->s_state.redir.code, sizeof(conn->s_state.redir.code));
++		    bdestroy(bt);
++      }
++      break;
++    case REDIR_SSOLOGIN:
++      {
++        if (!_options.oidc || !_options.oidcdiscoveryurl || !_options.oidcclientid || !_options.oidcclientsecret) {
++          syslog(LOG_ERR, "SSO Login not allowed");
++          conn->response = REDIR_SSO_DENIED;
++          return 0;
++        }
+ 
++        bstring bt = bfromcstr("");
++        if (_options.tos) {
++          if (redir_getparam(redir, httpreq->qs, "agreetos", bt)){
++            if (_options.debug)
++              syslog(LOG_ERR, "No agreetos found in login request");
++
++            conn->response = REDIR_FAILED_TOS;
++            bdestroy(bt);
++            return 0;
++          }
++          conn->s_state.redir.tos = 1;
++        }
++        bdestroy(bt);
++      }
++      break;
++#endif
      case REDIR_WWW:
        {
          bstring bt = bfromcstr(path+4);
-@@ -2961,32 +3262,229 @@
+@@ -2961,32 +3368,245 @@
    return 0;
  }
  
 -int is_local_user(struct redir_t *redir, struct redir_conn_t *conn) {
 -  uint8_t user_password[RADIUS_PWSIZE+1];
 -  uint8_t chap_challenge[REDIR_MD5LEN];
-+void session_param_local(struct session_params *params, char *line) {
-+  uint64_t timeout = 0, dw = 0, up = 0, dw_bandwidth = 0, up_bandwidth =0;
-+  uint32_t idle = 0;
-+  int period = 0, start = 0;
-+//"$timeout:$idle:$dw_max:$up_max:$dw_bwidth:$upl_bwidth:$period:$start"
-+  sscanf(line, "%lld:%d:%lld:%lld:%lld:%lld:%d:%d",
-+         &timeout, &idle, &dw, &up, &dw_bandwidth, &up_bandwidth, &period, &start);
-+  if (_options.debug)
-+    syslog(LOG_INFO, "line %s, timeout - %" PRIu64 ", idel - %d, dw - %" PRIu64 ", up - %" PRIu64 "," \
-+          " bdw - %" PRIu64 ", bup - %" PRIu64 ", period - %d, start - %d",
-+          line, timeout, idle, dw, up, dw_bandwidth, up_bandwidth, period, start);
+-  char u[256]; char p[256];
+-  size_t usernamelen, sz=1024;
+-  ssize_t len;
+-  int match=0;
+-  char *line=0;
+-  MD5_CTX context;
+-  FILE *f;
++void session_param_from_config(struct session_params *params, const char *group_name) {
++  struct uci_context *uci = uci_alloc_context();
++  if (!uci) {
++      return;
++  }
 +
-+  params->sessiontimeout = timeout ? timeout : 0;
-+  params->idletimeout = idle ? idle : 0;
-+  params->maxinputoctets = dw ? dw : 0;
-+  params->maxoutputoctets = up ? up : 0;
-+  params->bandwidthmaxdown = dw_bandwidth ? dw_bandwidth : 0;
-+  params->bandwidthmaxup = up_bandwidth ? up_bandwidth : 0;
-+  params->period = period ? period : 3;
-+  params->start = start ? start : 1;
++  struct uci_package *package = NULL;
++  if (uci_load(uci, CHILLI_CONFIG, &package)) {
++      uci_free_context(uci);
++      return;
++  }
++
++  struct uci_element *e = NULL;
++  uci_foreach_element(&package->sections, e) {
++      struct uci_section *s = uci_to_section(e);
++
++      if (!s || strcmp(s->type, "group") != 0)
++          continue;
++
++      const char *name = uci_lookup_option_string(uci, s, "name");
++      if (name != NULL && strcmp(name, group_name) == 0) {
++          const char *timeout = uci_lookup_option_string(uci, s, "defsessiontimeout");
++          const char *idle = uci_lookup_option_string(uci, s, "defidletimeout");
++          const char *dw = uci_lookup_option_string(uci, s, "downloadlimit");
++          const char *up = uci_lookup_option_string(uci, s, "uploadlimit");
++          const char *dw_bandwidth = uci_lookup_option_string(uci, s, "downloadbandwidth");
++          const char *up_bandwidth = uci_lookup_option_string(uci, s, "uploadbandwidth");
++          const char *period = uci_lookup_option_string(uci, s, "period");
++
++          params->sessiontimeout = (timeout != NULL) ? strtoll(timeout, NULL, 10) : 0;
++          params->idletimeout = (idle != NULL) ? strtol(idle, NULL, 10) : 0;
++          params->maxinputoctets = (dw != NULL) ? strtoll(dw, NULL, 10) : 0;
++          params->maxoutputoctets = (up != NULL) ? strtoll(up, NULL, 10) : 0;
++          params->bandwidthmaxdown = (dw_bandwidth != NULL) ? strtoll(dw_bandwidth, NULL, 10) : 0;
++          params->bandwidthmaxup = (up_bandwidth != NULL) ? strtoll(up_bandwidth, NULL, 10) : 0;
++          params->period = (period != NULL) ? strtol(period, NULL, 10) : 3;
++
++          const char *start = NULL;
++          switch (params->period) {
++          case 3:
++            start = uci_lookup_option_string(uci, s, "day");
++            break;
++          case 2:
++            start = uci_lookup_option_string(uci, s, "weekday");
++            break;
++          case 1:
++            start = uci_lookup_option_string(uci, s, "hour");
++            break;
++          }
++          params->start = (start != NULL) ? strtol(start, NULL, 10) : 1;
++
++          uci_unload(uci, package);
++          uci_free_context(uci);
++          return;
++      }
++  }
++
++  params->sessiontimeout = 0;
++  params->idletimeout = 0;
++  params->maxinputoctets = 0;
++  params->maxoutputoctets = 0;
++  params->bandwidthmaxdown = 0;
++  params->bandwidthmaxup = 0;
++  params->period = 3;
++  params->start = 1;
++
++  uci_unload(uci, package);
++  uci_free_context(uci);
 +}
 +
 +int auth_chap(struct redir_conn_t *conn, MD5_CTX *context, uint8_t *chap_challenge,
@@ -4506,137 +6225,100 @@ diff --recursive --unified --new-file --no-dereference orig/src/redir.c src/src/
 +int authenticator(struct redir_t *redir, struct redir_conn_t *conn, MD5_CTX *context,
 +			  uint8_t *user_password, uint8_t *chap_challenge)
 +{
-+  FILE *f;
++  char username_escaped[REDIR_USERNAMESIZE + 1];
 +  int match = ACCESS_DENIED;
-+  char *line = 0;
-   char u[256]; char p[256];
--  size_t usernamelen, sz=1024;
-   ssize_t len;
--  int match=0;
--  char *line=0;
--  MD5_CTX context;
--  FILE *f;
--
++	struct str_luser user;
++  sqlite3 *db;
+ 
 -  if (!_options.localusers) return 0;
-+  size_t usernamelen, sz=1024;
++  if (!_options.usersdbpath)
++    return ACCESS_DENIED;
  
    if (_options.debug)
 -    syslog(LOG_DEBUG, "%s(%d): checking %s for user %s", __FUNCTION__, __LINE__, _options.localusers, conn->s_state.redir.username);
 +    syslog(LOG_INFO, "%s(%d): checking %s for user %s", __FUNCTION__, __LINE__,
-+      _options.localusers, conn->s_state.redir.username);
++      _options.usersdbpath, conn->s_state.redir.username);
  
-   if (!(f = fopen(_options.localusers, "r"))) {
+-  if (!(f = fopen(_options.localusers, "r"))) {
 -    syslog(LOG_ERR, "%s: fopen() failed opening %s!", strerror(errno), _options.localusers);
 -    return 0;
-+    syslog(LOG_INFO, "%s: fopen() failed opening %s!", strerror(errno), _options.localusers);
++  if (!(db = sqlopen(_options.usersdbpath))) {
++    syslog(LOG_INFO, "%s: sqlopen() failed opening %s!", strerror(errno), _options.usersdbpath);
 +    return ACCESS_DENIED;
-   }
- 
-+  if (_options.debug)
-+    syslog(LOG_INFO, "%s(%d): looking for %s", __FUNCTION__, __LINE__, conn->s_state.redir.username);
-+  usernamelen = strlen(conn->s_state.redir.username);
-+
-+  line=(char*)malloc(sz);
-+  while ((len = getline(&line, &sz, f)) > 0) {
-+    if (len > 3 && len < sizeof(u) && line[0] != '#') {
-+      char *pl=line,  /* pointer to current line */
-+        *pu=u,     /* pointer to username     */
-+        *pp=p;     /* pointer to password     */
-+
-+      /* username until the first ':' */
-+      while (*pl && *pl != ':')	*pu++ = *pl++;
-+
-+      /* skip over ':' otherwise error */
-+      if (*pl == ':') pl++;
-+      else {
-+        syslog(LOG_INFO, "not a valid localusers line: %s", line);
-+        continue;
-+      }
-+
-+      /* password until the next ':' */
-+      while (*pl && *pl != ':' && *pl != '\n') *pp++ = *pl++;
-+
-+      *pu = 0; /* null terminate */
-+      *pp = 0;
-+
-+      if (usernamelen == strlen(u) &&
-+          !strncmp(conn->s_state.redir.username, u, usernamelen)) {
-+
-+        if (_options.debug)
-+          syslog(LOG_INFO, "%s(%d): found %s, checking password", __FUNCTION__, __LINE__, u);
-+
-+        if (conn->authdata.type == REDIR_AUTH_PAP) {
-+#ifdef HAVE_OPENSSL
-+          char *salt = extract_salt(p);
-+          char *plain_password = strndup((char *)user_password, sizeof(p));
-+          if (salt) {
-+            user_password = (uint8_t *)hash_sha512_with_salt(plain_password, salt);
-+
-+            if (!user_password) {
-+              syslog(LOG_INFO,
-+                "%s(%d): failed to compute password hash for user %s",
-+                __FUNCTION__, __LINE__, u);
-+              // When hashing fails, make sure password check fails too
-+              user_password = (uint8_t *)strdup("");
-+            }
-+
-+            // Check for hash match, if hashes do not match, try again with MD5 hash
-+            if (strncmp((char *)user_password, p, sizeof(p))) {
-+              user_password = (uint8_t *)hash_md5_with_salt(plain_password, salt);
-+              if (!user_password) {
-+                syslog(LOG_INFO,
-+                  "%s(%d): failed to compute password hash for user %s",
-+                  __FUNCTION__, __LINE__, u);
-+                // When hashing fails, make sure password check fails too
-+                user_password = (uint8_t *)strdup("");
-+              }
-+            }
-+          }
-+#endif
-+                // Check for password math from UCI config
-+          if (!strncmp((char *)user_password, p, sizeof(p))) {
-+#ifdef HAVE_OPENSSL
-+            if (get_hash_type(p) == HASH_MD5) {
-+              // If stored password is MD5 hash, rehash it to SHA-512 using the plain password
-+              uint8_t *user_password_rehashed = (uint8_t *)hash_sha512(plain_password);
-+              usr_update_user_pwd_uci(u, p, (char *)user_password_rehashed);
-+              free(user_password_rehashed);
-+            }
-+#endif
-+            match = ACCESS_ACCEPTED;
-+          }
-+
-+#ifdef HAVE_OPENSSL
-+          // If salt is not NULL that means that user_password was changed to point to newly allocated memory and we need to free it.
-+          if (salt) {
-+            free(user_password);
-+            free(salt);
-+          }
-+          free(plain_password);
-+#endif
-+        }
-+        else if (conn->authdata.type == REDIR_AUTH_CHAP) {
-+          match = auth_chap(conn, context, chap_challenge, user_password, p);
-+        }
-+
-+				if (match == ACCESS_ACCEPTED) {
-+				  conn->s_state.redir.auth_mode = AUTH_LOCAL_USER;
-+                  if (*pl == ':') pl++; //Skip ':'
-+                    session_param_local(&conn->s_params, pl);
-+                }
-+
-+        break;
-+      }
-+    }
 +  }
 +
++  escape_cstr(conn->s_state.redir.username, username_escaped);
++  if (_options.debug)
++    syslog(LOG_INFO, "%s(%d): looking for %s", __FUNCTION__, __LINE__, conn->s_state.redir.username);
++
++  if (!lusr_get_user(db, &user, username_escaped) &&
++	    !strncmp(user.username, username_escaped, USER_USERNAMENAMESIZE)) {
++
++    if (conn->authdata.type == REDIR_AUTH_PAP) {
++#ifdef HAVE_OPENSSL
++    char *salt = extract_salt(user.password);
++    char *plain_password = strndup((char *)user_password, sizeof(user.password));
++
++    if (salt) {
++      user_password	 = (uint8_t *)hash_sha512_with_salt(plain_password, salt);
++
++      if (!user_password) {
++        syslog(LOG_INFO, "%s(%d): failed to compute password hash for user %s",
++          __FUNCTION__, __LINE__, user.username);
++        // When hashing fails, make sure password check fails too
++        user_password = (uint8_t *)strdup("");
++      }
++
++      // Check for hash match, if hashes do not match, try again with MD5 hash
++      if (strncmp((char *)user_password, user.password, sizeof(user.password))) {
++        user_password = (uint8_t *)hash_md5_with_salt(plain_password, salt);
++        if (!user_password) {
++          syslog(LOG_INFO, "%s(%d): failed to compute password hash for user %s",
++            __FUNCTION__, __LINE__, user.username);
++          // When hashing fails, make sure password check fails too
++          user_password = (uint8_t *)strdup("");
++        }
++      }
++}
++#endif
++      if (!strncmp((char *)user_password, user.password, sizeof(user.password))) {
++#ifdef HAVE_OPENSSL
++        // Update password hash on the database
++        if(get_hash_type(user.password) == HASH_MD5) {
++          syslog(LOG_INFO, "%s(%d): updating user MD5 hash to SHA-512",
++            __FUNCTION__, __LINE__);
++          // If stored password is MD5 hash, rehash it to SHA-512 using the plain password
++          lusr_update_user_pwd(db, &user, username_escaped, plain_password);
++        }
++#endif
++        match = ACCESS_ACCEPTED;
++      }
++
++#ifdef HAVE_OPENSSL
++      // If salt is not NULL that means that user_password was changed to point to newly allocated memory and we need to free it.
++      if (salt) {
++        free(user_password);
++        free(salt);
++      }
++      free(plain_password);
++#endif
++    }
++    else if (conn->authdata.type == REDIR_AUTH_CHAP) {
++      match = auth_chap(conn, context, chap_challenge, user_password, user.password);
++    }
++
++    if (match == ACCESS_ACCEPTED) {
++      conn->s_state.redir.auth_mode = AUTH_LOCAL_USER;
++      session_param_from_config(&conn->s_params, user.group);
++    }
+   }
+ 
 +  if (_options.debug)
 +    syslog(LOG_DEBUG, "%s(%d): user %s %s", __FUNCTION__, __LINE__,
 +      conn->s_state.redir.username,
 +      match ? "found" : "not found");
 +
-+  fclose(f);
-+  free(line);
++  sqlclose(db);
 +
 +  return match;
 +}
@@ -4659,7 +6341,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/redir.c src/src/
    }/**/
  
    if (redir->secret && *redir->secret) {
-@@ -3003,7 +3501,7 @@
+@@ -3003,7 +3623,7 @@
      char buffer[64];
      redir_chartohex(chap_challenge, buffer, REDIR_MD5LEN);
      if (_options.debug)
@@ -4668,7 +6350,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/redir.c src/src/
    }/**/
  
    switch (conn->authdata.type){
-@@ -3019,87 +3517,275 @@
+@@ -3019,86 +3639,351 @@
              user_password[m] =
                  conn->authdata.v.papmsg.password[m] ^ chap_challenge[n];
        }
@@ -4724,19 +6406,10 @@ diff --recursive --unified --new-file --no-dereference orig/src/redir.c src/src/
 +		}
 +	}
 +#endif
- 
--  if (_options.debug)
--    syslog(LOG_DEBUG, "%s(%d): looking for %s", __FUNCTION__, __LINE__, conn->s_state.redir.username);
--  usernamelen = strlen(conn->s_state.redir.username);
++
 +  return match;
 +}
- 
--  line=(char*)malloc(sz);
--  while ((len = getline(&line, &sz, f)) > 0) {
--    if (len > 3 && len < sizeof(u) && line[0] != '#') {
--      char *pl=line,  /* pointer to current line */
--          *pu=u,     /* pointer to username     */
--          *pp=p;     /* pointer to password     */
++
 +int dynamic_user_authenticator(struct redir_t *redir, struct redir_conn_t *conn,
 +		MD5_CTX *context, uint8_t *user_password, uint8_t *chap_challenge)
 +{
@@ -4744,70 +6417,49 @@ diff --recursive --unified --new-file --no-dereference orig/src/redir.c src/src/
 +  int match = ACCESS_DENIED;
 +	struct str_user user;
 +  sqlite3 *db;
++
++  if (!_options.usersdbpath)
++    return ACCESS_DENIED;
+ 
+   if (_options.debug)
+-    syslog(LOG_DEBUG, "%s(%d): looking for %s", __FUNCTION__, __LINE__, conn->s_state.redir.username);
+-  usernamelen = strlen(conn->s_state.redir.username);
++    syslog(LOG_INFO, "%s(%d): checking %s for user %s", __FUNCTION__, __LINE__,
++      _options.usersdbpath, conn->s_state.redir.username);
+ 
+-  line=(char*)malloc(sz);
+-  while ((len = getline(&line, &sz, f)) > 0) {
+-    if (len > 3 && len < sizeof(u) && line[0] != '#') {
+-      char *pl=line,  /* pointer to current line */
+-          *pu=u,     /* pointer to username     */
+-          *pp=p;     /* pointer to password     */
++  if (!(db = sqlopen(_options.usersdbpath))) {
++    syslog(LOG_INFO, "%s: sqlopen() failed opening %s!", strerror(errno), _options.usersdbpath);
++    return ACCESS_DENIED;
++  }
  
 -      /* username until the first ':' */
 -      while (*pl && *pl != ':')	*pu++ = *pl++;
-+  if (!_options.usersdbpath)
-+    return ACCESS_DENIED;
++  escape_cstr(conn->s_state.redir.username, email_escaped);
++  if (_options.debug)
++    syslog(LOG_INFO, "%s(%d): looking for %s", __FUNCTION__, __LINE__, conn->s_state.redir.username);
  
 -      /* skip over ':' otherwise error */
 -      if (*pl == ':') pl++;
 -      else {
 -	syslog(LOG_WARNING, "not a valid localusers line: %s", line);
 -	continue;
--      }
-+  if (_options.debug)
-+    syslog(LOG_INFO, "%s(%d): checking %s for user %s", __FUNCTION__, __LINE__,
-+      _options.usersdbpath, conn->s_state.redir.username);
- 
--      /* password until the next ':' */
--      while (*pl && *pl != ':' && *pl != '\n') *pp++ = *pl++;
-+  if (!(db = sqlopen(_options.usersdbpath))) {
-+    syslog(LOG_INFO, "%s: sqlopen() failed opening %s!", strerror(errno), _options.usersdbpath);
-+    return ACCESS_DENIED;
-+  }
- 
--      *pu = 0; /* null terminate */
--      *pp = 0;
-+  escape_cstr(conn->s_state.redir.username, email_escaped);
-+  if (_options.debug)
-+    syslog(LOG_INFO, "%s(%d): looking for %s", __FUNCTION__, __LINE__, conn->s_state.redir.username);
- 
--      if (usernamelen == strlen(u) &&
--	  !strncmp(conn->s_state.redir.username, u, usernamelen)) {
 +  if (!usr_get_user(db, &user, email_escaped) &&
 +	    !strncmp(user.email, email_escaped, USER_EMAILSIZE)) {
- 
--        if (_options.debug)
--          syslog(LOG_DEBUG, "%s(%d): found %s, checking password", __FUNCTION__, __LINE__, u);
++
 +    if (conn->authdata.type == REDIR_AUTH_PAP) {
 +#ifdef HAVE_OPENSSL
 +    char *salt = extract_salt(user.password);
 +    char *plain_password = strndup((char *)user_password, sizeof(user.password));
- 
--	if (conn->authdata.type == REDIR_AUTH_PAP) {
--	  if (!strcmp((char*)user_password, p))
--	    match = 1;
--	}
--	else if (conn->authdata.type == REDIR_AUTH_CHAP) {
--	  uint8_t tmp[REDIR_MD5LEN];
--	  MD5Init(&context);
--	  MD5Update(&context, (uint8_t*)&conn->authdata.v.chapmsg.identity, 1);
--	  MD5Update(&context, (uint8_t*)p, strlen(p));
--	  MD5Update(&context, chap_challenge, REDIR_MD5LEN);
--	  MD5Final(tmp, &context);
--
--	  if (!memcmp(user_password, tmp,  REDIR_MD5LEN))
--	    match = 1;
--	  else {
--            if (_options.debug)
--              syslog(LOG_DEBUG, "%s(%d): bad password for %s", __FUNCTION__, __LINE__, u);
--	  }
--	}
++
 +    if (salt) {
 +      user_password	 = (uint8_t *)hash_sha512_with_salt(plain_password, salt);
- 
--	break;
++
 +      if (!user_password) {
 +        syslog(LOG_INFO, "%s(%d): failed to compute password hash for user %s",
 +          __FUNCTION__, __LINE__, user.username);
@@ -4852,28 +6504,35 @@ diff --recursive --unified --new-file --no-dereference orig/src/redir.c src/src/
 +    else if (conn->authdata.type == REDIR_AUTH_CHAP) {
 +      match = auth_chap(conn, context, chap_challenge, user_password, user.password);
 +    }
-+
+ 
+-      /* password until the next ':' */
+-      while (*pl && *pl != ':' && *pl != '\n') *pp++ = *pl++;
 +    if (match == ACCESS_ACCEPTED) {
 +      conn->s_state.redir.user_time = user.user_time;
 +      conn->s_state.redir.auth_mode = AUTH_DYN_USER;
 +      session_params_dyn(&conn->s_params);
 +      strlcpy(conn->s_state.redir.username, user.email, USER_EMAILSIZE);
-     }
-   }
++    }
++  }
  
-   if (_options.debug)
-     syslog(LOG_DEBUG, "%s(%d): user %s %s", __FUNCTION__, __LINE__,
--           conn->s_state.redir.username,
--           match ? "found" : "not found");
+-      *pu = 0; /* null terminate */
+-      *pp = 0;
++  if (_options.debug)
++    syslog(LOG_DEBUG, "%s(%d): user %s %s", __FUNCTION__, __LINE__,
 +      conn->s_state.redir.username, match ? "found" : "not found");
-+
+ 
+-      if (usernamelen == strlen(u) &&
+-	  !strncmp(conn->s_state.redir.username, u, usernamelen)) {
 +  sqlclose(db);
  
--  fclose(f);
--  free(line);
-   return match;
- }
+-        if (_options.debug)
+-          syslog(LOG_DEBUG, "%s(%d): found %s, checking password", __FUNCTION__, __LINE__, u);
++  return match;
++}
  
+-	if (conn->authdata.type == REDIR_AUTH_PAP) {
+-	  if (!strcmp((char*)user_password, p))
+-	    match = 1;
 +int sms_user_authenticator(struct redir_t *redir, struct redir_conn_t *conn,
 +						   MD5_CTX *context, uint8_t *user_password, uint8_t *chap_challenge) {
 +	char user_pass_escaped[RADIUS_PWSIZE + 1];
@@ -4891,7 +6550,21 @@ diff --recursive --unified --new-file --no-dereference orig/src/redir.c src/src/
 +	if (!(db = sqlopen(_options.usersdbpath))) {
 +		syslog(LOG_INFO, "%s: sqlopen() failed opening %s!", strerror(errno), _options.usersdbpath);
 +		return ACCESS_DENIED;
-+	}
+ 	}
+-	else if (conn->authdata.type == REDIR_AUTH_CHAP) {
+-	  uint8_t tmp[REDIR_MD5LEN];
+-	  MD5Init(&context);
+-	  MD5Update(&context, (uint8_t*)&conn->authdata.v.chapmsg.identity, 1);
+-	  MD5Update(&context, (uint8_t*)p, strlen(p));
+-	  MD5Update(&context, chap_challenge, REDIR_MD5LEN);
+-	  MD5Final(tmp, &context);
+-
+-	  if (!memcmp(user_password, tmp,  REDIR_MD5LEN))
+-	    match = 1;
+-	  else {
+-            if (_options.debug)
+-              syslog(LOG_DEBUG, "%s(%d): bad password for %s", __FUNCTION__, __LINE__, u);
+-	  }
 +  
 +	user_password[USER_RAND_PASSWORD_LEN] = 0;
 +	escape_cstr((char *) user_password, user_pass_escaped);
@@ -4931,8 +6604,9 @@ diff --recursive --unified --new-file --no-dereference orig/src/redir.c src/src/
 +        usr_update_sms_user(db, &user, user.phone, conn->hismac, timestamp, NULL);
 +      }
 +    }
-+	}
-+
+ 	}
+ 
+-	break;
 +	if (_options.debug)
 +		syslog(LOG_DEBUG, "%s(%d): user %s %s", __FUNCTION__, __LINE__,
 +			   conn->s_state.redir.username, match ? "found" : "not found");
@@ -4992,11 +6666,94 @@ diff --recursive --unified --new-file --no-dereference orig/src/redir.c src/src/
 +  return ACCESS_ACCEPTED;
 +}
 +
++#ifdef USING_CURL
++int sso_user_authenticator(struct redir_conn_t *conn) {
++  char callback_url[256];
++  _oauth2_session oauth2_session = { 0 };
 +
++  if (_options.uamuissl && _options.uamuiport) {
++    if (_options.uamaliasname && _options.domain) {
++      if (_options.redirssl) {
++        sprintf(callback_url, "https://%s.%s/ssocallback",
++              _options.uamaliasname,
++              _options.domain);
++      } else {
++        sprintf(callback_url, "https://%s.%s:%d/ssocallback",
++              _options.uamaliasname,
++              _options.domain,
++              _options.uamuiport);
+       }
++    } else {
++      sprintf(callback_url, "https://%s:%d/ssocallback", inet_ntoa(_options.uamlisten), _options.uamuiport);
+     }
++  } else if (_options.uamaliasname && _options.domain) {
++    sprintf(callback_url, "http://%s.%s/ssocallback",
++                  _options.uamaliasname,
++                  _options.domain);
++  } else {
++    sprintf(callback_url, "%shttp://%s:%d/ssocallback", _options.oidcforcehttps ? "https://redirectmeto.com/" : "",
++      inet_ntoa(_options.uamlisten), _options.uamport);
+   }
+ 
+-  if (_options.debug)
+-    syslog(LOG_DEBUG, "%s(%d): user %s %s", __FUNCTION__, __LINE__,
+-           conn->s_state.redir.username,
+-           match ? "found" : "not found");
++  oauth2_set_parameter_list(&oauth2_session,
++    OAUTH2_OPT_RESPONSE_TYPE, OAUTH2_RESPONSE_TYPE_CODE,
++    OAUTH2_OPT_OIDC_ENDPOINT, _options.oidcdiscoveryurl,
++    OAUTH2_OPT_CLIENT_ID, _options.oidcclientid,
++    OAUTH2_OPT_CLIENT_SECRET, _options.oidcclientsecret,
++    OAUTH2_OPT_REDIRECT_URI, callback_url,
++    OAUTH2_OPT_CODE, conn->s_state.redir.code,
++    OAUTH2_OPT_NONE);
++
++  if (oauth2_get_openid_config(&oauth2_session) != OAUTH2_OK) {
++   if (_options.debug)
++      syslog(LOG_DEBUG, "%s(%d): Failed get oauth2 openid configuration",
++             __FUNCTION__, __LINE__);
++    return ACCESS_DENIED;
++  }
+ 
+-  fclose(f);
+-  free(line);
+-  return match;
++  if (oauth2_exchange_token(&oauth2_session) != OAUTH2_OK) {
++    if (_options.debug)
++      syslog(LOG_DEBUG, "%s(%d): Failed to validate oauth2 code exchange",
++             __FUNCTION__, __LINE__);
++    return ACCESS_DENIED;
++  }
++
++  if (oauth2_get_userinfo(&oauth2_session) != OAUTH2_OK) {
++    if (_options.debug)
++      syslog(LOG_DEBUG, "%s(%d): Failed to get oauth2 user information",
++             __FUNCTION__, __LINE__);
++    if (!oauth2_session.username || oauth2_session.username[0] == '\0')
++      return ACCESS_DENIED;
++  }
++
++  if (oauth2_session.username && oauth2_session.username[0] != '\0') {
++    strlcpy(conn->s_state.redir.username, oauth2_session.username, USERNAMESIZE);
++  } else {
++    char username[USER_USERNAMENAMESIZE + 1];
++    if (usr_random_hex(username, USER_RAND_USERNAME_LEN)) {
++      return ACCESS_DENIED;
++    }
++    strlcpy(conn->s_state.redir.username, username, USERNAMESIZE);
++  }
++
++  conn->s_state.redir.auth_mode = AUTH_SSO_USER;
++  session_params_dyn(&conn->s_params);
++
++  oauth2_clean_session(&oauth2_session);
++  return ACCESS_ACCEPTED;
+ }
++#endif
+ 
  /* redir_accept() does the following:
     1) forks a child process
-    2) Accepts the tcp connection
-@@ -3345,7 +4031,7 @@
+@@ -3345,7 +4230,7 @@
  
    /* We are forked when the redir_request is null */
    int forked = (rreq == 0);
@@ -5005,7 +6762,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/redir.c src/src/
  
  
    memset(&httpreq,0,sizeof(httpreq));
-@@ -3397,6 +4083,7 @@
+@@ -3397,6 +4282,7 @@
    memset(hexchal, 0, sizeof(hexchal));
    memset(&conn, 0, sizeof(conn));
    memset(&msg, 0, sizeof(msg));
@@ -5013,7 +6770,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/redir.c src/src/
  
    socket.fd[0] = infd;
    socket.fd[1] = outfd;
-@@ -3561,8 +4248,8 @@
+@@ -3561,8 +4447,8 @@
                                  || isWPAD
  #endif
                                  )) {
@@ -5024,7 +6781,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/redir.c src/src/
            size_t namelen = strlen(filename);
            int parse = 0;
  
-@@ -3582,7 +4269,7 @@
+@@ -3582,7 +4468,7 @@
              } else
  #endif
              {
@@ -5033,7 +6790,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/redir.c src/src/
                int cnt = 0;
                for (p=filename; *p; p++) {
                  if (*p == '.' || *p == '_'|| *p == '-' || *p == '/') {
-@@ -3889,6 +4576,15 @@
+@@ -3889,6 +4775,15 @@
  
    /* default hexchal for use in replies */
    redir_chartohex(conn.s_state.redir.uamchal, hexchal, REDIR_MD5LEN);
@@ -5049,7 +6806,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/redir.c src/src/
  
    switch (conn.type) {
  
-@@ -3897,21 +4593,17 @@
+@@ -3897,21 +4792,17 @@
  
        /* Was client was already logged on? */
        if (state == 1) {
@@ -5074,7 +6831,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/redir.c src/src/
                        &conn.hisip, httpreq.qs);
  
            return redir_main_exit(&socket, forked, rreq);
-@@ -3920,11 +4612,11 @@
+@@ -3920,11 +4811,11 @@
  
        /* Did the challenge expire? */
        if (_options.challengetimeout2 &&
@@ -5090,7 +6847,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/redir.c src/src/
  
          redir_memcopy(REDIR_CHALLENGE);
          redir_msg_send(REDIR_MSG_OPT_REDIR);
-@@ -3936,74 +4628,204 @@
+@@ -3936,74 +4827,204 @@
          return redir_main_exit(&socket, forked, rreq);
        }
  
@@ -5272,7 +7029,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/redir.c src/src/
 +
 +        if (_options.debug)
 +          syslog(LOG_DEBUG, "%s(%d): handling Access-Reject", __FUNCTION__, __LINE__);
- 
++
 +        if (!hasnexturl) {
 +          if (_options.challengetimeout)
 +            redir_memcopy(REDIR_CHALLENGE);
@@ -5308,7 +7065,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/redir.c src/src/
 +        } else {
 +          if (_options.debug)
 +            syslog(LOG_DEBUG, "%s(%d): redir_accept: already logged on", __FUNCTION__, __LINE__);
-+
+ 
 +          redir_reply(redir, &socket, &conn, REDIR_ALREADY, NULL, 0,
 +                      NULL, NULL, conn.s_state.redir.userurl, NULL,
 +                      (char *) conn.s_params.url, conn.hismac,
@@ -5342,7 +7099,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/redir.c src/src/
          conn.s_params.flags &= ~REQUIRE_UAM_SPLASH;
  
          if (reauth) {
-@@ -4015,18 +4837,28 @@
+@@ -4015,18 +5036,28 @@
          if (_options.debug)
            syslog(LOG_DEBUG, "%s(%d): handling Access-Accept", __FUNCTION__, __LINE__);
  
@@ -5373,7 +7130,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/redir.c src/src/
          int hasnexturl = (strlen((char *)conn.s_params.url) > 5);
  
          if (_options.debug)
-@@ -4034,9 +4866,9 @@
+@@ -4034,9 +5065,9 @@
  
          if (!hasnexturl) {
            if (_options.challengetimeout)
@@ -5385,7 +7142,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/redir.c src/src/
          }
  
          redir_reply(redir, &socket, &conn, conn.response,
-@@ -4148,6 +4980,40 @@
+@@ -4148,6 +5179,316 @@
          return redir_main_exit(&socket, forked, rreq);
        }
  
@@ -5423,10 +7180,286 @@ diff --recursive --unified --new-file --no-dereference orig/src/redir.c src/src/
 +
 +			return redir_main_exit(&socket, forked, rreq);
 +		}
++#ifdef USING_CURL
++    case REDIR_SSOCALLBACK:
++      {
++        char reauth = 0;
++
++        /* Was client was already logged on? */
++        if (state == 1) {
++          if (splash) {
++            if (_options.debug)
++              syslog(LOG_DEBUG, "%s(%d): redir_accept: SPLASH reauth", __FUNCTION__, __LINE__);
++            reauth = 1;
++          } else {
++            if (_options.debug)
++              syslog(LOG_DEBUG, "%s(%d): redir_accept: already logged on", __FUNCTION__, __LINE__);
++
++            redir_reply(redir, &socket, &conn, REDIR_ALREADY, NULL, 0,
++                        NULL, NULL, conn.s_state.redir.userurl, NULL,
++                        (char *) conn.s_params.url, conn.hismac,
++                        &conn.hisip, httpreq.qs);
++
++            return redir_main_exit(&socket, forked, rreq);
++          }
++        }
++
++        /* Did the challenge expire? */
++        if (_options.challengetimeout2 &&
++          (conn.s_state.uamtime + _options.challengetimeout2) <
++          mainclock_now()) {
++          if (_options.debug)
++              syslog(LOG_DEBUG, "%s(%d): redir_accept: challenge expired: %ld : %ld", __FUNCTION__, __LINE__,
++                    (long) conn.s_state.uamtime, (long) mainclock_now());
++
++          redir_memcopy(REDIR_CHALLENGE);
++          redir_msg_send(REDIR_MSG_OPT_REDIR);
++
++          redir_reply(redir, &socket, &conn, REDIR_FAILED_OTHER, NULL,
++                      0, hexchal, NULL, NULL, NULL,
++                      0, conn.hismac, &conn.hisip, httpreq.qs);
++
++          return redir_main_exit(&socket, forked, rreq);
++        }
++
++        if (_options.oidc) {
++          if (sso_user_authenticator(&conn)) {
++            conn.response = REDIR_SUCCESS;
++  #ifdef ENABLE_DATABASE
++            if (conn.s_params.maxinputoctets || conn.s_params.maxoutputoctets ||
++                    conn.s_params.sessiontimeout) {
++              switch (dbcheck_session(&conn)){
++                case ACCESS_DENIED_DATA:
++                  conn.response = REDIR_FAILED_DATA;
++                  break;
++                case ACCESS_DENIED_TIME:
++                  conn.response = REDIR_FAILED_TIME;
++                  break;
++              }
++            }
++  #endif
++          } else {
++            conn.response = REDIR_SSO_FAILED;
++            mac_block_invoke("push_mac", &conn);
++          }
++        } else {
++          conn.response = REDIR_SSO_DENIED;
++        }
++
++        if (conn.response == REDIR_SUCCESS) { /* Accept-Accept */
++          mac_block_invoke("unblock_mac", &conn);
++          conn.s_params.flags &= ~REQUIRE_UAM_SPLASH;
++
++          if (reauth) {
++            conn.s_params.flags |= IS_UAM_REAUTH;
++          }
++
++          msg.mtype = REDIR_LOGIN;
++
++          if (_options.debug)
++            syslog(LOG_DEBUG, "%s(%d): handling Access-Accept", __FUNCTION__, __LINE__);
++
++          bstring successurl;
++          successurl = bfromcstralloc(1024,"");
++          if (_options.successuserurl)
++            bcatcstr(successurl, conn.s_state.redir.userurl);
++          else if (_options.successurlcustom)
++            bcatcstr(successurl, _options.successurlcustom);
++          else
++            successurl = NULL;
++
++          redir_reply(redir, &socket, &conn, REDIR_SUCCESS, successurl,
++                      conn.s_params.sessiontimeout, NULL,
++                      conn.s_state.redir.username,
++                      conn.s_state.redir.userurl, conn.reply,
++                      (char *)conn.s_params.url,
++                      conn.hismac, &conn.hisip, httpreq.qs);
++          bdestroy(successurl);
++
++          /* set params and redir data */
++          redir_msg_send(REDIR_MSG_OPT_REDIR | REDIR_MSG_OPT_PARAMS);
++
++        } else { /* Access-Reject */
++          int hasnexturl = (strlen((char *)conn.s_params.url) > 5);
++
++          if (_options.debug)
++            syslog(LOG_DEBUG, "%s(%d): handling Access-Reject", __FUNCTION__, __LINE__);
++
++          if (!hasnexturl) {
++            if (_options.challengetimeout)
++            redir_memcopy(REDIR_CHALLENGE);
++          } else {
++            msg.mtype = REDIR_SSO_FAILED;
++          }
++
++          redir_reply(redir, &socket, &conn, conn.response,
++                      NULL,
++                      0, hexchal, NULL, conn.s_state.redir.userurl, conn.reply,
++                      (char *)conn.s_params.url, conn.hismac,
++                      &conn.hisip, httpreq.qs);
++
++          /* set params, redir data, and reset session-id */
++          redir_msg_send(REDIR_MSG_OPT_REDIR | REDIR_MSG_OPT_PARAMS |
++                        (conn.response == REDIR_CHALLENGE ? 0 : REDIR_MSG_NSESSIONID));
++        }
++
++        if (_options.debug)
++          syslog(LOG_DEBUG, "%s(%d): -->> Msg userurl=[%s]\n", __FUNCTION__, __LINE__, conn.s_state.redir.userurl);
++        return redir_main_exit(&socket, forked, rreq);
++      }
++    case REDIR_SSOLOGIN:
++      {
++        if (!_options.oidc || !_options.oidcdiscoveryurl || !_options.oidcclientid ||
++            !_options.oidcclientsecret || (_options.tos && conn.response == REDIR_FAILED_TOS)) {
++          int hasnexturl = (strlen((char *)conn.s_params.url) > 5);
++
++          if (_options.debug)
++            syslog(LOG_DEBUG, "%s(%d): handling Access-Reject", __FUNCTION__, __LINE__);
++
++          if (!hasnexturl) {
++            if (_options.challengetimeout)
++            redir_memcopy(REDIR_CHALLENGE);
++          } else {
++            msg.mtype = REDIR_SSO_FAILED;
++          }
++
++          redir_reply(redir, &socket, &conn, conn.response,
++                      NULL,
++                      0, hexchal, NULL, conn.s_state.redir.userurl, conn.reply,
++                      (char *)conn.s_params.url, conn.hismac,
++                      &conn.hisip, httpreq.qs);
++
++          /* set params, redir data, and reset session-id */
++          redir_msg_send(REDIR_MSG_OPT_REDIR | REDIR_MSG_OPT_PARAMS |
++                        (conn.response == REDIR_CHALLENGE ? 0 : REDIR_MSG_NSESSIONID));
++
++          if (_options.debug)
++            syslog(LOG_DEBUG, "%s(%d): -->> Msg userurl=[%s]\n", __FUNCTION__, __LINE__, conn.s_state.redir.userurl);
++          return redir_main_exit(&socket, forked, rreq);
++        }
++
++        if (state == 1 && !splash) {
++          if (_options.debug)
++            syslog(LOG_DEBUG, "%s(%d): redir_accept: already logged on", __FUNCTION__, __LINE__);
++
++          redir_reply(redir, &socket, &conn, REDIR_ALREADY, NULL, 0,
++                      NULL, NULL, conn.s_state.redir.userurl, NULL,
++                      (char *) conn.s_params.url, conn.hismac,
++                      &conn.hisip, httpreq.qs);
++
++          return redir_main_exit(&socket, forked, rreq);
++        }
++
++        /* Did the challenge expire? */
++        if (_options.challengetimeout2 &&
++          (conn.s_state.uamtime + _options.challengetimeout2) <
++          mainclock_now()) {
++          if (_options.debug)
++              syslog(LOG_DEBUG, "%s(%d): redir_accept: challenge expired: %ld : %ld", __FUNCTION__, __LINE__,
++                    (long) conn.s_state.uamtime, (long) mainclock_now());
++
++          redir_memcopy(REDIR_CHALLENGE);
++          redir_msg_send(REDIR_MSG_OPT_REDIR);
++
++          redir_reply(redir, &socket, &conn, REDIR_FAILED_OTHER, NULL,
++                      0, hexchal, NULL, NULL, NULL,
++                      0, conn.hismac, &conn.hisip, httpreq.qs);
++
++          return redir_main_exit(&socket, forked, rreq);
++        }
++
++        char callback_url[256];
++        char chal_buffer[64];
++        _oauth2_session oauth2_session = { 0 };
++
++        if (_options.uamuissl && _options.uamuiport) {
++          if (_options.uamaliasname && _options.domain) {
++            if (_options.redirssl) {
++              sprintf(callback_url, "https://%s.%s/ssocallback",
++                    _options.uamaliasname,
++                    _options.domain);
++            } else {
++              sprintf(callback_url, "https://%s.%s:%d/ssocallback",
++                    _options.uamaliasname,
++                    _options.domain,
++                    _options.uamuiport);
++            }
++          } else {
++            sprintf(callback_url, "https://%s:%d/ssocallback", inet_ntoa(_options.uamlisten), _options.uamuiport);
++          }
++        } else if (_options.uamaliasname && _options.domain) {
++          sprintf(callback_url, "http://%s.%s/ssocallback",
++                        _options.uamaliasname,
++                        _options.domain);
++        } else {
++          sprintf(callback_url, "%shttp://%s:%d/ssocallback", _options.oidcforcehttps ? "https://redirectmeto.com/" : "",
++            inet_ntoa(_options.uamlisten), _options.uamport);
++        }
++
++        redir_chartohex(conn.s_state.redir.uamchal, chal_buffer, REDIR_MD5LEN);
++
++        oauth2_set_parameter_list(&oauth2_session,
++          OAUTH2_OPT_RESPONSE_TYPE, OAUTH2_RESPONSE_TYPE_CODE,
++          OAUTH2_OPT_OIDC_ENDPOINT, _options.oidcdiscoveryurl,
++          OAUTH2_OPT_CLIENT_ID, _options.oidcclientid,
++          OAUTH2_OPT_CLIENT_SECRET, _options.oidcclientsecret,
++          OAUTH2_OPT_REDIRECT_URI, callback_url,
++          OAUTH2_OPT_SCOPE, "openid email profile",
++          OAUTH2_OPT_STATE, chal_buffer,
++          OAUTH2_OPT_NONE);
++
++        if (oauth2_get_openid_config(&oauth2_session) != OAUTH2_OK ||
++            oauth2_build_authorization_url(&oauth2_session) != OAUTH2_OK) {
++          oauth2_clean_session(&oauth2_session);
++          snprintf(buffer, bufsize, "HTTP/1.0 403 Forbidden\r\n\r\n");
++          redir_write(&socket, buffer, strlen(buffer));
++          return redir_main_exit(&socket, forked, rreq);
++        }
++
++        bstring buffer1 = bfromcstralloc(1024, "");
++        if (!buffer1) {
++          syslog(LOG_ERR, "%s: bfromcstralloc() memory allocation error.", __FUNCTION__);
++          return -1;
++        }
++
++        redir_http(buffer1, "302 Moved Temporarily");
++        bcatcstr(buffer1, "Location: ");
++
++        bconcat(buffer1, bfromcstr(oauth2_session.authorization_url));
++
++        bcatcstr(buffer1, "\r\nContent-Type: text/html; charset=UTF-8\r\n");
++
++        bstring bbody1 = bfromcstralloc(512, "<HTML><BODY><H2>Browser error!</H2>"
++                    "Browser does not support redirects!</BODY>\r\n");
++
++        bcatcstr(bbody1, "\r\n</HTML>\r\n");
++
++        bstring bt1 = bfromcstralloc(128, "");
++        bassignformat(bt1, "Content-Length: %d\r\n", blength(bbody1));
++        bconcat(buffer1, bt1);
++
++        bcatcstr(buffer1, "\r\n"); /* end of headers */
++        bconcat(buffer1, bbody1);
++
++        bdestroy(bbody1);
++        bdestroy(bt1);
++
++        if (redir_write(&socket, (char *)buffer1->data, buffer1->slen) < 0) {
++          syslog(LOG_ERR, "%s: redir_write()", strerror(errno));
++          bdestroy(buffer1);
++          oauth2_clean_session(&oauth2_session);
++          return -1;
++        }
++        bdestroy(buffer1);
++        oauth2_clean_session(&oauth2_session);
++
++        return redir_main_exit(&socket, forked, rreq);
++      }
++#endif
      case REDIR_MSDOWNLOAD:
        snprintf(buffer, bufsize, "HTTP/1.0 403 Forbidden\r\n\r\n");
        redir_write(&socket, buffer, strlen(buffer));
-@@ -4314,11 +5180,8 @@
+@@ -4314,11 +5655,8 @@
      redir_memcopy(REDIR_CHALLENGE);
      redir_msg_send(REDIR_MSG_OPT_REDIR);
    }
@@ -5440,20 +7473,22 @@ diff --recursive --unified --new-file --no-dereference orig/src/redir.c src/src/
  
  #if(_debug_ > 1)
    if (_options.debug)
-diff --recursive --unified --new-file --no-dereference orig/src/redir.h src/src/redir.h
---- orig/src/redir.h	2016-12-15 17:28:43.000000000 +0000
-+++ src/src/redir.h	2024-02-20 12:15:38.000000000 +0000
-@@ -45,6 +45,9 @@
+diff --recursive --unified --new-file --no-dereference upstream/src/redir.h src/src/redir.h
+--- upstream/src/redir.h	2016-12-15 17:28:43.000000000 +0000
++++ src/src/redir.h	2024-07-12 09:27:40.000000000 +0000
+@@ -45,6 +45,11 @@
  #define REDIR_SPLASH          8
  #define REDIR_MACREAUTH       9
  #define REDIR_REQERROR       10  /* Used internally when the HTTP request parsing created an error */
 +#define REDIR_SIGNUP		11
 +#define REDIR_SMSSIGNUP		12
 +#define REDIR_TRIAL			13
++#define REDIR_SSOLOGIN     14
++#define REDIR_SSOCALLBACK 15
  
  #define REDIR_WWW            20
  #ifdef ENABLE_EWTAPI
-@@ -70,6 +73,23 @@
+@@ -70,6 +75,25 @@
  #define REDIR_FAILED_NOROUTE 60 /* Reply to /logon - no route for NAI */
  #define REDIR_ERROR_PROTOCOL 61 /* Reply to /logon - the client software is not matching the protocol (e.g. WISPr 1.0 or WISPr 2.0) */
  #define REDIR_CHALLENGE      62 /* Reply to /logon - if Radius challenge received in EAP authentication */
@@ -5474,10 +7509,12 @@ diff --recursive --unified --new-file --no-dereference orig/src/redir.h src/src/
 +#define REDIR_TRIAL_FAILED_DATA	 77 /* Reply to /trial if data limit reached */
 +#define REDIR_TRIAL_FAILED_TIME	 78 /* Reply to /trial if time limit reached */
 +#define REDIR_FAILED_USER_DUPLICATE	 79 /* Reply to /logon if user duplicates with other */
++#define REDIR_SSO_DENIED 80 /* Reply to /ssocallback - method not allowed */
++#define REDIR_SSO_FAILED 81 /* Reply to /ssocallback - login failed */
  
  /* If more than one format flag is set, it indicates that Coova advertises several
     protocols that can be used by the client. Once the client has choosen which protocol
-@@ -92,6 +112,18 @@
+@@ -92,6 +116,19 @@
  #define REDIR_MSG_OPT_PARAMS  2
  #define REDIR_MSG_NSESSIONID  4
  
@@ -5492,11 +7529,12 @@ diff --recursive --unified --new-file --no-dereference orig/src/redir.h src/src/
 +#define AUTH_SMS_USER 2
 +#define AUTH_MAC_USER 3
 +#define AUTH_TRIAL_USER 4
++#define AUTH_SSO_USER 5
 +
  struct eapmsg_t {
    uint16_t len;
    uint8_t data[MAX_EAP_LEN];
-@@ -156,6 +188,10 @@
+@@ -156,6 +193,10 @@
     */
    struct session_params s_params;
    struct session_state s_state;
@@ -5507,7 +7545,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/redir.h src/src/
  } __attribute__((packed));
  
  /* HTTP request parsing context */
-@@ -243,7 +279,7 @@
+@@ -243,7 +284,7 @@
    int uiport;
  #endif
  
@@ -5516,9 +7554,9 @@ diff --recursive --unified --new-file --no-dereference orig/src/redir.h src/src/
  
    char *url;
    char *homepage;
-diff --recursive --unified --new-file --no-dereference orig/src/session.c src/src/session.c
---- orig/src/session.c	2016-12-15 17:28:43.000000000 +0000
-+++ src/src/session.c	2024-02-20 12:15:38.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/src/session.c src/src/session.c
+--- upstream/src/session.c	2016-12-15 17:28:43.000000000 +0000
++++ src/src/session.c	2024-07-12 09:27:40.000000000 +0000
 @@ -68,16 +68,16 @@
    bcatcstr(json,"\",\"userName\":\"");
    bcatcstr(json,state->redir.username);
@@ -5552,9 +7590,9 @@ diff --recursive --unified --new-file --no-dereference orig/src/session.c src/sr
  
    bdestroy(tmp);
    return 0;
-diff --recursive --unified --new-file --no-dereference orig/src/session.h src/src/session.h
---- orig/src/session.h	2016-12-15 17:28:43.000000000 +0000
-+++ src/src/session.h	2024-02-20 12:15:38.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/src/session.h src/src/session.h
+--- upstream/src/session.h	2016-12-15 17:28:43.000000000 +0000
++++ src/src/session.h	2024-07-12 09:27:40.000000000 +0000
 @@ -25,7 +25,6 @@
  #include "garden.h"
  
@@ -5584,13 +7622,16 @@ diff --recursive --unified --new-file --no-dereference orig/src/session.h src/sr
  
  #define REQUIRE_UAM_AUTH   (1<<0)
  #define REQUIRE_UAM_SPLASH (1<<1)
-@@ -74,27 +83,23 @@
+@@ -74,27 +83,26 @@
  
    char username[REDIR_USERNAMESIZE];
    char userurl[REDIR_USERURLSIZE];
 +  char phone[64];
 +  char email[128];
 +  char signup_password[128];
++#ifdef USING_CURL
++  char code[4096];
++#endif
  
    uint8_t uamchal[REDIR_MD5LEN];
  
@@ -5620,7 +7661,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/session.h src/sr
  #ifdef ENABLE_USERAGENT
    char useragent[REDIR_USERAGENTSIZE];
  #endif
-@@ -113,6 +118,15 @@
+@@ -113,6 +121,15 @@
    size_t vsalen;
  #endif
  
@@ -5636,7 +7677,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/session.h src/sr
  } __attribute__((packed));
  
  struct session_state {
-@@ -133,16 +147,21 @@
+@@ -133,16 +150,21 @@
  
    struct timespec last_bw_time;
  
@@ -5658,7 +7699,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/session.h src/sr
  
  #ifdef ENABLE_GARDENACCOUNTING
    char garden_sessionid[REDIR_SESSIONID_LEN];
-@@ -198,5 +217,14 @@
+@@ -198,5 +220,14 @@
  #endif
  
  } __attribute__((packed));
@@ -5673,9 +7714,9 @@ diff --recursive --unified --new-file --no-dereference orig/src/session.h src/sr
 +#endif
  
  #endif
-diff --recursive --unified --new-file --no-dereference orig/src/sqlite.c src/src/sqlite.c
---- orig/src/sqlite.c	1970-01-01 00:00:00.000000000 +0000
-+++ src/src/sqlite.c	2024-02-20 12:15:38.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/src/sqlite.c src/src/sqlite.c
+--- upstream/src/sqlite.c	1970-01-01 00:00:00.000000000 +0000
++++ src/src/sqlite.c	2024-07-12 09:27:40.000000000 +0000
 @@ -0,0 +1,73 @@
 +
 +#include "sqlite.h"
@@ -5750,9 +7791,9 @@ diff --recursive --unified --new-file --no-dereference orig/src/sqlite.c src/src
 +
 +    return (count == 0) ? SQL_FAIL : SQL_SUCCESS;
 +}
-diff --recursive --unified --new-file --no-dereference orig/src/sqlite.h src/src/sqlite.h
---- orig/src/sqlite.h	1970-01-01 00:00:00.000000000 +0000
-+++ src/src/sqlite.h	2024-02-20 12:15:38.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/src/sqlite.h src/src/sqlite.h
+--- upstream/src/sqlite.h	1970-01-01 00:00:00.000000000 +0000
++++ src/src/sqlite.h	2024-07-12 09:27:40.000000000 +0000
 @@ -0,0 +1,19 @@
 +//
 +// Created by darius on 19.5.23.
@@ -5773,9 +7814,81 @@ diff --recursive --unified --new-file --no-dereference orig/src/sqlite.h src/src
 +int sqltable_exists(sqlite3 *db, char *table_name);
 +
 +#endif //RUTX_SQLITE_H
-diff --recursive --unified --new-file --no-dereference orig/src/statusfile.c src/src/statusfile.c
---- orig/src/statusfile.c	2016-12-15 17:28:43.000000000 +0000
-+++ src/src/statusfile.c	2024-02-20 12:15:38.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/src/ssl.c src/src/ssl.c
+--- upstream/src/ssl.c	2016-12-15 17:28:43.000000000 +0000
++++ src/src/ssl.c	2024-07-12 09:27:40.000000000 +0000
+@@ -35,11 +35,13 @@
+     if (openssl_init == 0) {
+       openssl_init = 1;
+ #ifdef HAVE_OPENSSL
++#if OPENSSL_VERSION_NUMBER < 0x10100000L
+       if (_options.debug) {
+ 	SSL_load_error_strings();
+       }
+       SSL_library_init();
+       OpenSSL_add_all_algorithms();
++#endif
+ #else
+       matrixSslOpen();
+       syslog(LOG_DEBUG, "%s(%d): MatrixSslOpen()", __FUNCTION__, __LINE__);
+@@ -55,11 +57,13 @@
+     if (openssl_init == 0) {
+       openssl_init = 1;
+ #ifdef HAVE_OPENSSL
++#if OPENSSL_VERSION_NUMBER < 0x10100000L
+       if (_options.debug) {
+ 	SSL_load_error_strings();
+       }
+       SSL_library_init();
+       OpenSSL_add_all_algorithms();
++#endif
+ #else
+       matrixSslOpen();
+       syslog(LOG_DEBUG, "%s(%d): MatrixSslOpen()", __FUNCTION__, __LINE__);
+@@ -132,7 +136,7 @@
+   if (_options.sslciphers) {
+     SSL_CTX_set_cipher_list(env->ctx, _options.sslciphers);
+   }
+-#ifdef HAVE_OPENSSL_ENGINE
++#ifndef OPENSSL_NO_ENGINE
+   if (engine) {
+  retry:
+     if ((env->engine = ENGINE_by_id(engine)) == NULL) {
+@@ -315,7 +319,11 @@
+     } else {
+ 
+ #ifdef HAVE_OPENSSL_ENGINE
++#if OPENSSL_VERSION_NUMBER >= 0x30000000L
++      X509 *peer_cert = SSL_get1_peer_certificate(c->con);
++#else
+       X509 *peer_cert = SSL_get_peer_certificate(c->con);
++#endif
+ 
+       if (peer_cert) {
+ 	char subj[1024];
+@@ -609,7 +617,7 @@
+ #endif
+ #ifdef HAVE_OPENSSL
+   if (env->ctx) SSL_CTX_free(env->ctx);
+-#ifdef HAVE_OPENSSL_ENGINE
++#ifndef OPENSSL_NO_ENGINE
+   if (env->engine) ENGINE_free(env->engine);
+ #endif
+ #endif
+diff --recursive --unified --new-file --no-dereference upstream/src/ssl.h src/src/ssl.h
+--- upstream/src/ssl.h	2016-12-15 17:28:43.000000000 +0000
++++ src/src/ssl.h	2024-07-12 09:27:40.000000000 +0000
+@@ -41,6 +41,7 @@
+ #include <openssl/ssl.h>
+ #include <openssl/pem.h>
+ #include <openssl/engine.h>
++#include <openssl/err.h>
+ #elif HAVE_CYASSL
+ #include <stdio.h>
+ #include <stdlib.h>
+diff --recursive --unified --new-file --no-dereference upstream/src/statusfile.c src/src/statusfile.c
+--- upstream/src/statusfile.c	2016-12-15 17:28:43.000000000 +0000
++++ src/src/statusfile.c	2024-07-12 09:27:40.000000000 +0000
 @@ -324,7 +324,7 @@
    file = fopen(filedest, "w");
    if (!file) { syslog(LOG_ERR, "%s: could not open file %s", strerror(errno), filedest); return -1; }
@@ -5809,9 +7922,9 @@ diff --recursive --unified --new-file --no-dereference orig/src/statusfile.c src
  	      appconn->s_params.sessiontimeout,
  	      appconn->s_params.sessionterminatetime);
      }
-diff --recursive --unified --new-file --no-dereference orig/src/ubus.c src/src/ubus.c
---- orig/src/ubus.c	1970-01-01 00:00:00.000000000 +0000
-+++ src/src/ubus.c	2024-02-20 12:15:38.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/src/ubus.c src/src/ubus.c
+--- upstream/src/ubus.c	1970-01-01 00:00:00.000000000 +0000
++++ src/src/ubus.c	2024-07-12 09:27:40.000000000 +0000
 @@ -0,0 +1,544 @@
 +
 +#include "chilli.h"
@@ -6358,9 +8471,9 @@ diff --recursive --unified --new-file --no-dereference orig/src/ubus.c src/src/u
 +	blob_buf_free(&b);
 +}
 \ No newline at end of file
-diff --recursive --unified --new-file --no-dereference orig/src/ubus.h src/src/ubus.h
---- orig/src/ubus.h	1970-01-01 00:00:00.000000000 +0000
-+++ src/src/ubus.h	2024-02-20 12:15:38.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/src/ubus.h src/src/ubus.h
+--- upstream/src/ubus.h	1970-01-01 00:00:00.000000000 +0000
++++ src/src/ubus.h	2024-07-12 09:27:40.000000000 +0000
 @@ -0,0 +1,27 @@
 +
 +#ifndef _CHILLI_UBUS_H
@@ -6389,10 +8502,10 @@ diff --recursive --unified --new-file --no-dereference orig/src/ubus.h src/src/u
 +                        struct dhcp_conn_t *dhcpconn);
 +
 +#endif //_CHILLI_UBUS_H
-diff --recursive --unified --new-file --no-dereference orig/src/users.c src/src/users.c
---- orig/src/users.c	1970-01-01 00:00:00.000000000 +0000
-+++ src/src/users.c	2024-02-20 12:15:38.000000000 +0000
-@@ -0,0 +1,615 @@
+diff --recursive --unified --new-file --no-dereference upstream/src/users.c src/src/users.c
+--- upstream/src/users.c	1970-01-01 00:00:00.000000000 +0000
++++ src/src/users.c	2024-07-12 09:27:40.000000000 +0000
+@@ -0,0 +1,688 @@
 +#include "chilli.h"
 +#include <uci.h>
 +#include <libtlt_uci.h>
@@ -6530,10 +8643,26 @@ diff --recursive --unified --new-file --no-dereference orig/src/users.c src/src/
 +	return SQL_SUCCESS;
 +}
 +
++int _lusr_select_callback(void *str_user, int argc, char **argv, char **azColName)
++{
++	struct str_luser *p_str_user = (struct str_luser *)str_user;
++
++	if (argc > 0) {
++		strncpy(p_str_user->username, argv[COL_LUSER_NAME], USER_USERNAMENAMESIZE);
++		p_str_user->username[USER_USERNAMENAMESIZE] = 0;
++		strncpy(p_str_user->password, argv[COL_LUSER_PASS], USER_PASSWORDSIZE);
++		p_str_user->password[USER_PASSWORDSIZE] = 0;
++		strncpy(p_str_user->group, argv[COL_LUSER_GROUP], USER_GROUPSIZE);
++		p_str_user->group[USER_GROUPSIZE] = 0;
++	}
++
++	return SQL_SUCCESS;
++}
++
 +int usr_user_expired(sqlite3 *db, char *email, uint8_t *mac)
 +{
 +	int ret = USER_RET_SUCCESS;
-+	char *sql;
++	char *sql = 0;
 +	sqlite3_stmt *stmt;
 +
 +	asprintf(&sql, SELECT_NOT_EXPIRED_EMAIL_FMT, "users", email, MAC_ARG(mac));
@@ -6561,8 +8690,8 @@ diff --recursive --unified --new-file --no-dereference orig/src/users.c src/src/
 +
 +int usr_get_user(sqlite3 *db, struct str_user *user, char *email)
 +{
-+	int ret;
-+	char *sql;
++	int ret = 0;
++	char *sql = 0;
 +	char *err = 0;
 +
 +	asprintf(&sql, SELECT_USER_FMT, email);
@@ -6583,14 +8712,38 @@ diff --recursive --unified --new-file --no-dereference orig/src/users.c src/src/
 +	return SQL_SUCCESS;
 +}
 +
++int lusr_get_user(sqlite3 *db, struct str_luser *user, char *username)
++{
++	int ret = 0;
++	char *sql = 0;
++	char *err = 0;
++
++	asprintf(&sql, SELECT_LUSER_FMT, username);
++	if (_options.debug)
++		syslog(LOG_INFO, "[%s] SQL: %s", __FUNCTION__, sql);
++
++	ret = sqlite3_exec(db, sql, _lusr_select_callback, user, &err);
++	if (ret) {
++		syslog(LOG_INFO, "[%s] SQL error: %s\n", __FUNCTION__, err);
++		sqlite3_free(err);
++		free(sql);
++
++		return SQL_FAIL;
++	}
++
++	free(sql);
++
++	return SQL_SUCCESS;
++}
++
 +int usr_update_user_pwd(sqlite3 *db, struct str_user *user, char *email, char *new_passw)
 +{
 +#ifndef HAVE_OPENSSL
 +	return SQL_FAIL;
 +#endif
 +	char *new_passw_hash = hash_sha512(new_passw);
-+	int ret;
-+	char *sql;
++	int ret = 0;
++	char *sql = 0;
 +	char *err = 0;
 +
 +	asprintf(&sql, UPDATE_USR_PWD, new_passw_hash, email);
@@ -6613,72 +8766,34 @@ diff --recursive --unified --new-file --no-dereference orig/src/users.c src/src/
 +	return SQL_SUCCESS;
 +}
 +
-+int ubus_uci_reload()
++int lusr_update_user_pwd(sqlite3 *db, struct str_luser *user, char *username, char *new_passw)
 +{
-+	int ret		= USER_RET_SUCCESS;
-+	uint32_t uci_id = 0;
-+	struct ubus_context *ctx;
++#ifndef HAVE_OPENSSL
++	return SQL_FAIL;
++#endif
++	char *new_passw_hash = hash_sha512(new_passw);
++	int ret = 0;
++	char *sql = 0;
++	char *err = 0;
 +
-+	ctx = ubus_connect(NULL);
-+	if (!ctx) {
-+		syslog(LOG_INFO, "[%s] failed to connect to ubus\n", __FUNCTION__);
-+		return USER_RET_ERROR;
++	asprintf(&sql, UPDATE_LUSER_PWD, new_passw_hash, username);
++	if (_options.debug)
++		syslog(LOG_INFO, "[%s] SQL: %s", __FUNCTION__, sql);
++
++	ret = sqlite3_exec(db, sql, _lusr_select_callback, user, &err);
++	if (ret) {
++		syslog(LOG_INFO, "[%s] SQL error: %s\n", __FUNCTION__, err);
++		sqlite3_free(err);
++		free(sql);
++		free(new_passw_hash);
++
++		return SQL_FAIL;
 +	}
 +
-+	if (ubus_lookup_id(ctx, "uci", &uci_id) ||
-+	    ubus_invoke(ctx, uci_id, "reload_config", NULL, NULL, NULL, 3000)) {
-+		syslog(LOG_INFO, "[%s] ubus request failed\n", __FUNCTION__);
-+		ret = USER_RET_ERROR;
-+	}
++	free(sql);
++	free(new_passw_hash);
 +
-+	ubus_free(ctx);
-+	return ret;
-+}
-+
-+int usr_update_user_pwd_uci(char username[256], char password[256], char *new_password)
-+{
-+	struct uci_context *uci = uci_alloc_context();
-+	if (!uci) {
-+		return 1;
-+	}
-+
-+	struct uci_package *uci_chilli = NULL;
-+	if (uci_load(uci, "chilli", &uci_chilli)) {
-+		uci_cleanup(uci);
-+		return 1;
-+	}
-+
-+	struct uci_element *e = NULL;
-+	uci_foreach_element (&uci_chilli->sections, e) {
-+		struct uci_section *s = uci_to_section(e);
-+		if (!s->type || strcmp(s->type, "user")) {
-+			continue;
-+		}
-+
-+		char *username_uci = ucix_get_option(uci, "chilli", s->e.name, "username");
-+		if (!username_uci) {
-+			continue;
-+		}
-+
-+		char *password_uci = ucix_get_option(uci, "chilli", s->e.name, "password");
-+		if (!password_uci) {
-+			continue;
-+		}
-+
-+		if (!strncmp(username_uci, username, strlen(username)) &&
-+		    !strncmp(password_uci, password, strlen(password))) {
-+			ucix_add_option(uci, "chilli", s->e.name, "password", new_password);
-+		}
-+
-+		free(username_uci);
-+		free(password_uci);
-+	}
-+
-+	ucix_commit(uci, "chilli");
-+	uci_cleanup(uci);
-+	ubus_uci_reload();
-+
-+	return 0;
++	return SQL_SUCCESS;
 +}
 +
 +int usr_add_user(struct redir_conn_t *conn)
@@ -6735,6 +8850,28 @@ diff --recursive --unified --new-file --no-dereference orig/src/users.c src/src/
 +	return ret;
 +}
 +
++static int lusr_add_user(sqlite3 *db, const char *username, const char *password, const char *group)
++{
++	int ret = 0;
++	char *sql = 0;
++	char *err = 0;
++
++	asprintf(&sql, INSERT_LUSER_FMT, username, password, group);
++	if (_options.debug)
++		syslog(LOG_INFO, "[%s] SQL: %s", __FUNCTION__, sql);
++
++	ret = sqlite3_exec(db, sql, 0, 0, &err);
++	if (ret) {
++		syslog(LOG_INFO, "[%s] SQL error: %s\n", __FUNCTION__, err);
++		sqlite3_free(err);
++		free(sql);
++		return SQL_FAIL;
++	}
++
++	free(sql);
++	return SQL_SUCCESS;
++}
++
 +int _sms_select_callback(void *str_user, int argc, char **argv, char **azColName)
 +{
 +	struct str_sms_user *p_str_user = (struct str_sms_user *)str_user;
@@ -6758,8 +8895,8 @@ diff --recursive --unified --new-file --no-dereference orig/src/users.c src/src/
 +
 +int usr_get_sms_user(sqlite3 *db, struct str_sms_user *user, char *password)
 +{
-+	int ret;
-+	char *sql;
++	int ret = 0;
++	char *sql = 0;
 +	char *err = 0;
 +
 +	asprintf(&sql, SELECT_SMS_USER_FMT, password);
@@ -6783,7 +8920,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/users.c src/src/
 +int usr_sms_user_exists(sqlite3 *db, char *phone, uint8_t *mac)
 +{
 +	int ret = USER_RET_ERROR;
-+	char *sql;
++	char *sql = 0;
 +	sqlite3_stmt *stmt;
 +
 +	if (phone != NULL && mac != NULL)
@@ -6977,7 +9114,56 @@ diff --recursive --unified --new-file --no-dereference orig/src/users.c src/src/
 +	return 0;
 +}
 +
-+int alter_table_add_column(sqlite3 *db, const char *table_name, const char *column_definition)
++static int migrate_localusers(sqlite3 *db)
++{
++	struct uci_context *uci = uci_alloc_context();
++	if (!uci) {
++		return 1;
++	}
++
++	struct uci_package *uci_chilli = NULL;
++	if (uci_load(uci, CHILLI_CONFIG, &uci_chilli)) {
++		uci_free_context(uci);
++		return 1;
++	}
++
++	struct uci_element *e = NULL;
++	struct uci_element *tmp = NULL;
++	uci_foreach_element_safe (&uci_chilli->sections, e, tmp) {
++		struct uci_section *s = uci_to_section(e);
++		if (!s->type || strcmp(s->type, "user")) {
++			continue;
++		}
++
++		const char *username_uci = uci_lookup_option_string(uci, s, "username");
++		if (!username_uci) {
++			continue;
++		}
++
++		const char *password_uci = uci_lookup_option_string(uci, s, "password");
++		if (!password_uci) {
++			continue;
++		}
++
++		const char *group_uci = uci_lookup_option_string(uci, s, "group");
++		lusr_add_user(db, username_uci, password_uci, !group_uci ? "default" : group_uci);
++
++		struct uci_ptr ptr = {
++			.target	 = UCI_TYPE_SECTION,
++			.package = uci_chilli->e.name,
++			.section = s->e.name,
++		};
++		uci_delete(uci, &ptr);
++		uci_save(uci, ptr.p);
++	}
++
++	uci_commit(uci, &uci_chilli, false);
++	uci_unload(uci, uci_chilli);
++	uci_free_context(uci);
++	return 0;
++}
++
++static int alter_table_add_column(sqlite3 *db, const char *table_name, const char *column_definition)
 +{
 +	int ret		= USER_RET_ERROR;
 +	char *sql_alter = NULL;
@@ -7001,17 +9187,17 @@ diff --recursive --unified --new-file --no-dereference orig/src/users.c src/src/
 +	if (!_options.usersdbpath || !(db = sqlopen(_options.usersdbpath)))
 +		return ret;
 +
-+	if ((ret = alter_table_add_column(db, "sms_users", "used TIMESTAMP DEFAULT 0 NOT NULL")) !=
-+	    USER_RET_SUCCESS)
-+		return ret;
++	ret = alter_table_add_column(db, "sms_users", "used TIMESTAMP DEFAULT 0 NOT NULL");
++	ret = sqlite3_exec(db, CREATE_LUSER_TABLE, 0, 0, 0);
++	ret = migrate_localusers(db);
 +
 +	sqlclose(db);
 +	return ret;
 +}
-diff --recursive --unified --new-file --no-dereference orig/src/users.h src/src/users.h
---- orig/src/users.h	1970-01-01 00:00:00.000000000 +0000
-+++ src/src/users.h	2024-02-20 12:15:38.000000000 +0000
-@@ -0,0 +1,143 @@
+diff --recursive --unified --new-file --no-dereference upstream/src/users.h src/src/users.h
+--- upstream/src/users.h	1970-01-01 00:00:00.000000000 +0000
++++ src/src/users.h	2024-07-12 09:27:40.000000000 +0000
+@@ -0,0 +1,178 @@
 +
 +#ifndef RUTX_USERS_H
 +#define RUTX_USERS_H
@@ -7024,6 +9210,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/users.h src/src/
 +#define USER_PASSWORDSIZE     128
 +#define USER_PHONESIZE	      64
 +#define USER_EMAILSIZE	      128
++#define USER_GROUPSIZE	      128
 +
 +#define USER_RAND_USERNAME_LEN 16
 +#define USER_RAND_PASSWORD_LEN 6
@@ -7034,6 +9221,8 @@ diff --recursive --unified --new-file --no-dereference orig/src/users.h src/src/
 +#define USER_RET_SMS_ERR 3
 +
 +#define USER_MAX_MESSAGE_SIZE 128
++
++#define CHILLI_CONFIG "chilli"
 +
 +enum {
 +	COL_SMS_USER_ID = 0,
@@ -7058,6 +9247,8 @@ diff --recursive --unified --new-file --no-dereference orig/src/users.h src/src/
 +	COL_USER_EXPIRATION,
 +	COL_USER_TIME,
 +};
++
++enum { COL_LUSER_ID = 0, COL_LUSER_NAME, COL_LUSER_PASS, COL_LUSER_GROUP };
 +
 +#define INSERT_SMS_USERS_FMT                                                                                 \
 +	"INSERT INTO sms_users (username, password, mac, phone,"                                             \
@@ -7120,6 +9311,26 @@ diff --recursive --unified --new-file --no-dereference orig/src/users.h src/src/
 +
 +#define MSG_FMT "Password - %s, expiration time - %s"
 +
++#define CREATE_LUSER_TABLE                                                                                   \
++	"CREATE TABLE IF NOT EXISTS local_users ("                                                           \
++	"id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,"                                              \
++	"username TEXT NOT NULL UNIQUE,"                                                                     \
++	"password TEXT NOT NULL,"                                                                            \
++	"user_group TEXT NOT NULL"                                                                           \
++	");"
++
++#define SELECT_LUSER_FMT                                                                                     \
++	"SELECT * FROM local_users "                                                                         \
++	"WHERE username = '%s'" LIMIT_FMT ";"
++
++#define UPDATE_LUSER_PWD                                                                                     \
++	"UPDATE local_users SET password='%s' \
++			WHERE username = '%s';"
++
++#define INSERT_LUSER_FMT                                                                                     \
++	"INSERT INTO local_users (username, password, user_group"                                            \
++	") VALUES ('%s', '%s', '%s');"
++
 +struct str_sms_user {
 +	char username[USER_RAND_USERNAME_LEN + 1];
 +	char password[USER_RAND_PASSWORD_LEN + 1];
@@ -7138,9 +9349,14 @@ diff --recursive --unified --new-file --no-dereference orig/src/users.h src/src/
 +	uint32_t user_time;
 +};
 +
++struct str_luser {
++	char username[USER_USERNAMENAMESIZE + 1];
++	char password[USER_PASSWORDSIZE + 1];
++	char group[USER_GROUPSIZE + 1];
++};
++
 +int usr_get_user(sqlite3 *db, struct str_user *user, char *email);
 +int usr_update_user_pwd(sqlite3 *db, struct str_user *user, char *email, char *new_passw);
-+int usr_update_user_pwd_uci(char username[256], char passw[256], char *new_passw);
 +int usr_add_user(struct redir_conn_t *conn);
 +
 +int usr_get_sms_user(sqlite3 *db, struct str_sms_user *user, char *password);
@@ -7152,12 +9368,17 @@ diff --recursive --unified --new-file --no-dereference orig/src/users.h src/src/
 +int usr_rm_user(uint8_t *mac);
 +int usr_rm_sms_user(uint8_t *mac);
 +
++int lusr_get_user(sqlite3 *db, struct str_luser *user, char *username);
++int lusr_update_user_pwd(sqlite3 *db, struct str_luser *user, char *username, char *new_passw);
++
++int usr_random_hex(char *dst, size_t size);
++
 +int alter_tables();
 +
 +#endif //RUTX_USERS_H
-diff --recursive --unified --new-file --no-dereference orig/src/util.c src/src/util.c
---- orig/src/util.c	2016-12-15 17:28:43.000000000 +0000
-+++ src/src/util.c	2024-02-20 12:15:38.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/src/util.c src/src/util.c
+--- upstream/src/util.c	2016-12-15 17:28:43.000000000 +0000
++++ src/src/util.c	2024-07-12 09:27:40.000000000 +0000
 @@ -117,6 +117,54 @@
    return 0;
  }

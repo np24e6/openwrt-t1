@@ -1,0 +1,26 @@
+--- a/options.c
++++ b/options.c
+@@ -223,6 +223,7 @@ fw3_parse_limit(void *ptr, const char *v
+ 		while (isspace(*++val));
+ 	}
+ 
++	errno = 0;
+ 	n = strtol(val, &e, 10);
+ 
+ 	if (errno == ERANGE || errno == EINVAL)
+@@ -463,6 +464,7 @@ fw3_parse_port(void *ptr, const char *va
+ 		while (isspace(*++val));
+ 	}
+ 
++	errno = 0;
+ 	n = strtoul(val, &p, 10);
+ 
+ 	if (errno == ERANGE || errno == EINVAL)
+@@ -473,6 +475,7 @@ fw3_parse_port(void *ptr, const char *va
+ 
+ 	if (*p)
+ 	{
++		errno = 0;
+ 		m = strtoul(++p, NULL, 10);
+ 
+ 		if (errno == ERANGE || errno == EINVAL || m < n)

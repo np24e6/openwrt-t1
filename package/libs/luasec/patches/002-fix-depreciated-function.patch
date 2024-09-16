@@ -1,0 +1,29 @@
+--- a/src/ssl.c
++++ b/src/ssl.c
+@@ -387,7 +387,7 @@
+   ctx->L = L;
+   err = handshake(ssl);
+   if (ctx->dh_param) {
+-    DH_free(ctx->dh_param);
++    EVP_PKEY_free(ctx->dh_param);
+     ctx->dh_param = NULL;
+   }
+   if (ctx->alpn) {
+@@ -500,7 +500,7 @@
+     return 2;
+   }
+   if (n == 0) {
+-    cert = SSL_get_peer_certificate(ssl->ssl);
++    cert = SSL_get0_peer_certificate(ssl->ssl);
+     if (cert)
+       lsec_pushx509(L, cert);
+     else
+@@ -543,7 +543,7 @@
+   }
+   lua_newtable(L);
+   if (SSL_is_server(ssl->ssl)) {
+-    lsec_pushx509(L, SSL_get_peer_certificate(ssl->ssl));
++    lsec_pushx509(L, SSL_get0_peer_certificate(ssl->ssl));
+     lua_rawseti(L, -2, idx++);
+   }
+   certs = SSL_get_peer_cert_chain(ssl->ssl);

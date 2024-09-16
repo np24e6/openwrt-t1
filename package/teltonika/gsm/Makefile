@@ -7,11 +7,13 @@ include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=gsm
 
-PKG_SOURCE_VERSION:=1.4.2.2
+PKG_SOURCE_VERSION:=1.5.0.1
 
 PKG_LICENSE:=Teltonika-closed
 
-GPL_INCLUDE_HEADERS:=1
+PKG_CONFIG_DEPENDS += \
+	CONFIG_USE_PROCD \
+	CONFIG_USE_OPENRC
 
 include $(INCLUDE_DIR)/package.mk
 
@@ -19,7 +21,7 @@ define Package/gsmd
 	SECTION:=net
 	CATEGORY:=Network
 	TITLE:=Simple server to route AT commands to modem
-	DEPENDS:= +libusb-1.0 +libubus +libubox +libuci +libblobmsg-json +modems +kmod-usb-serial-option
+	DEPENDS:= +libusb-1.0 +libubus +libubox +libuci +libblobmsg-json +modems +kmod-usb-serial-option +libmnfinfo
 endef
 
 define Package/gsmctl
@@ -110,6 +112,9 @@ define Package/gsmd/install
 		$(INSTALL_BIN) $(PKG_BUILD_DIR)/files/validate_cefs.hotplug $(1)/usr/share/gsm/5-validate-cefs; \
 	fi;
 	$(INSTALL_CONF) /dev/null $(1)/etc/config/simcard
+
+	$(if $(CONFIG_USE_OPENRC),\
+		$(OPENRC_INSTALL) boot gsmd ./gsmd.openrc $(1))
 endef
 
 define Package/gsmctl/install

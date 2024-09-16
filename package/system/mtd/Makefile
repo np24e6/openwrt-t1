@@ -14,8 +14,8 @@ PKG_RELEASE:=26
 PKG_BUILD_DIR := $(KERNEL_BUILD_DIR)/$(PKG_NAME)
 STAMP_PREPARED := $(STAMP_PREPARED)_$(call confvar,CONFIG_MTD_REDBOOT_PARTS)
 
-PKG_LICENSE:=GPL-2.0+
-PKG_LICENSE_FILES:=
+PKG_LICENSE:=GPL-2.0-only
+PKG_LICENSE_FILES:=mtd.c
 
 PKG_ORIGIN_URL:=https://github.com/openwrt/openwrt/tree/openwrt-21.02/package/system/mtd
 

@@ -1,0 +1,30 @@
+From 5080681b7dd696a90534b2ef275e45c194d35e98 Mon Sep 17 00:00:00 2001
+From: Joris Vaisvila <joris.vaisvila@teltonika.lt>
+Date: Tue, 30 Apr 2024 14:30:42 +0300
+Subject: [PATCH] fixed RSA key not being disabled when not found
+
+---
+ svr-runopts.c | 7 ++++++-
+ 1 file changed, 6 insertions(+), 1 deletion(-)
+
+diff --git a/svr-runopts.c b/svr-runopts.c
+index 7bc6c2e..135f8c4 100644
+--- a/svr-runopts.c
++++ b/svr-runopts.c
+@@ -628,7 +628,12 @@ void load_all_hostkeys() {
+ 
+ #if DROPBEAR_RSA
+ 	if (!svr_opts.delay_hostkey && !svr_opts.hostkey->rsakey) {
+-		disablekey(DROPBEAR_SIGNKEY_RSA);
++#if DROPBEAR_RSA_SHA1
++		disablekey(DROPBEAR_SIGNATURE_RSA_SHA1);
++#endif
++#if DROPBEAR_RSA_SHA256
++		disablekey(DROPBEAR_SIGNATURE_RSA_SHA256);
++#endif
+ 	} else {
+ 		any_keys = 1;
+ 	}
+-- 
+2.44.0
+

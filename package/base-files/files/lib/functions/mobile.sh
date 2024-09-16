@@ -46,6 +46,49 @@ handle_retry() {
 	fi
 }
 
+# finds esim_profile where status is 1 and returns index of that profile
+# returns 0 if not and esim or no active esim profile
+get_active_esim_profile_index() {
+	local modem="$1"
+	local esim_profiles
+	local esim_profile_index
+	local esim_profile_status
+	local is_esim
+
+	object=$(find_mdm_mobifd_obj $modem)
+	[ -z "$object" ] && echo "Can't find modem $modem gsm object" && return
+
+	# todo: once rpcd esim support is added, use that instead of mobifd
+	esim_profiles="$(ubus call mobifd.$object list_esim_profiles)"
+	[ -z "$esim_profiles" ] && echo "-1" && return
+
+	json_load "$esim_profiles"
+
+	# check if is_esim is true
+	json_get_var is_esim is_esim
+	[ "$is_esim" != "1" ] && echo "0" && return
+
+	#find esim_profile with status 1
+	json_select profiles
+	json_get_keys profiles
+	for profile in $profiles; do
+		json_select "$profile"
+		json_get_var esim_profile_status status
+		json_select ..
+		[ "$esim_profile_status" = "1" ] && {
+			esim_profile_index="$profile"
+			#convert to 0 based index
+			esim_profile_index=$((esim_profile_index-1))
+			echo "$esim_profile_index"
+			return
+		}
+	done
+
+	[ -z "$esim_profile_index" ] && logger -t "mobile.sh" "No active esim profile"
+
+	echo "-1"
+}
+
 gsm_soft_reset() {
 	local modem_id="$1"
 	local mdm_ubus_obj
@@ -107,12 +150,6 @@ qmi_error_handle() {
 			sleep 10
 			gsm_soft_reset "$modem_id"
 		}
-		return 1
-	}
-
-	echo "$error" | grep -qi "Policy Mismatch" && {
-		logger -t "mobile.sh" "Policy Mismatch. Resetting mobile network..."
-		gsm_soft_reset "$modem_id"
 		return 1
 	}
 
@@ -188,7 +225,7 @@ setup_bridge_v4() {
 	json_add_string interface "${interface}_4"
 	[ -n "$zone" ] && {
 		json_add_string zone "$zone"
-		iptables -A forwarding_${zone}_rule -m comment --comment "!fw3: Mobile bridge" -j zone_lan_dest_ACCEPT
+		iptables -w -A forwarding_${zone}_rule -m comment --comment "!fw3: Mobile bridge" -j zone_lan_dest_ACCEPT
 	}
 	ubus call network.interface set_data "$(json_dump)"
 
@@ -230,7 +267,7 @@ setup_bridge_v4() {
 		ip neigh add "$bridge_ipaddr" dev br-lan lladdr "$mac"
 	}
 
-	iptables -A postrouting_rule -m comment --comment "Bridge mode" -o "$dev" -j ACCEPT -tnat
+	iptables -w -A postrouting_rule -m comment --comment "Bridge mode" -o "$dev" -j ACCEPT -tnat
 
 	config_load network
 	config_foreach get_passthrough_interfaces interface
@@ -320,7 +357,6 @@ setup_dhcp_v4() {
 	json_add_boolean ismobile "1"
 	[ -n "$ip4table" ] && json_add_string ip4table "$ip4table"
 	proto_add_dynamic_defaults
-	[ -n "$zone" ] && json_add_string zone "$zone"
 	ubus call network add_dynamic "$(json_dump)"
 }
 
@@ -336,7 +372,6 @@ setup_dhcp_v6() {
 	proto_add_dynamic_defaults
 	# RFC 7278: Extend an IPv6 /64 Prefix to LAN
 	json_add_string extendprefix 1
-	[ -n "$zone" ] && json_add_string zone "$zone"
 	ubus call network add_dynamic "$(json_dump)"
 }
 
@@ -345,26 +380,26 @@ setup_static_v6() {
 	echo "Setting up $dev V6 static"
 	echo "$parameters6"
 
-        local custom="$(uci get network.${interface}.dns)"
+		local custom="$(uci get network.${interface}.dns)"
 
 	[[ "$dev" = "rmnet_data"* ]] && { ## TRB5 uses qmicli - different format
 		ip6_with_prefix="$(echo "$parameters6" | sed -n "s_.*IPv6 address: \([0-9a-f:]*\)_\1_p")"
 		ip_6="${ip6_with_prefix%/*}"
 		[[ -z "$custom" ]] && {
-                        dns1_6="$(echo "$parameters6" | sed -n "s_.*IPv6 primary DNS: \([0-9a-f:]*\)_\1_p")"
-		        dns2_6="$(echo "$parameters6" | sed -n "s_.*IPv6 secondary DNS: \([0-9a-f:]*\)_\1_p")"
-                }
-	} || {
+			dns1_6="$(echo "$parameters6" | sed -n "s_.*IPv6 primary DNS: \([0-9a-f:]*\)_\1_p")"
+			dns2_6="$(echo "$parameters6" | sed -n "s_.*IPv6 secondary DNS: \([0-9a-f:]*\)_\1_p")"
+		}
+		} || {
 		json_load "$parameters6"
 		json_select "ipv6"
 		json_get_var ip_6 ip
 		json_get_var ip_prefix_length ip-prefix-length
 		ip_6="${ip_6%/*}"
 		ip6_with_prefix="$ip_6/$ip_prefix_length"
-                [[ -z "$custom" ]] && {
-                        json_get_var dns1_6 dns1
-                        json_get_var dns2_6 dns2
-                }
+			[[ -z "$custom" ]] && {
+				json_get_var dns1_6 dns1
+				json_get_var dns2_6 dns2
+			}
 		json_get_var ip_pre_len ip-prefix-length
 	}
 
@@ -426,8 +461,17 @@ get_config_sim() {
 	config_load network
 	config_get sim "$1" "sim" "1"
 	[ -z "$sim" ] && logger -t "mobile.sh" "sim option not found in config. Taking default: $DEFAULT_SIM" \
-	              && sim="$DEFAULT_SIM"
+				  && sim="$DEFAULT_SIM"
 	echo "$sim"
+}
+
+get_config_esim() {
+	local esim
+	local DEFAULT_ESIM="0"
+	config_load network
+	config_get esim "$1" "esim_profile" "0"
+	[ -z "$esim" ] && esim="$DEFAULT_ESIM"
+	echo "$esim"
 }
 
 notify_mtu_diff(){
@@ -488,4 +532,103 @@ restart_dsa_interfaces(){
 
 get_braddr_var() {
 	grep -o "$1:[^ ]*" "/var/run/${2}_braddr" 2>/dev/null | cut -d':' -f2
+}
+
+get_simcount_by_modem_num() {
+	local modem_num="$1"
+	local simcount=0
+
+	for sim in $(seq 3); do
+		sim_cfg="$(mnf_info -C $sim 2> /dev/null)"
+		# Find the amount of matches to the modem_num
+		if [ -n "$sim_cfg" ] && [ "${sim_cfg:1:1}" = "$modem_num" ]; then
+			simcount=$((simcount + 1))
+		fi
+	done
+
+	echo $simcount
+}
+
+get_active_sim() {
+	local interface="$1"
+	local old_cb="$2"
+	local gsm_modem="$3"
+	local active_sim="0"
+
+	json_set_namespace gobinet old_cb
+	json_load "$(ubus call $gsm_modem get_sim_slot)"
+	json_get_var active_sim index
+	json_set_namespace $old_cb
+
+	echo "$active_sim"
+}
+
+get_deny_roaming() {
+	local active_sim="$1"
+	local modem="$2"
+	local esim_profile="$3"
+
+	deny_roaming="0"
+
+	deny_roaming_parse() {
+		local section="$1"
+		local mdm
+		local esim_prof
+		local position
+		config_get position "$section" position
+		config_get mdm "$section" modem
+		config_get esim_prof "$section" esim_profile "0"
+
+		[ "$modem" = "$mdm" ] && \
+		[ "$position" = "$active_sim" ] && \
+		[ "$esim_prof" = "$esim_profile" ] && {
+			config_get deny_roaming "$section" deny_roaming "0"
+		}
+	}
+
+	config_load simcard
+	config_foreach deny_roaming_parse "sim"
+
+	echo "$deny_roaming"
+}
+
+verify_active_sim() {
+	local sim="$1"
+	local active_sim="$2"
+	local interface="$3"
+
+	[ -z "$sim" ] && sim=$(get_config_sim "$interface")
+
+# 	Restart if check failed
+	if [ "$active_sim" -lt 1 ] || [ "$active_sim" -gt 4 ]; then
+		echo "Bad active sim: $active_sim."
+		return 1
+	fi
+
+# check if current sim and interface also if current esim match as well
+	[ "$active_sim" = "$sim" ] || {
+		echo "Active sim: $active_sim. \
+		This interface uses different simcard: $sim."
+		proto_notify_error "$interface" WRONG_SIM
+		proto_block_restart "$interface"
+		return 1
+	}
+
+	return 0
+}
+
+verify_active_esim() {
+	local esim_profile="$1"
+	local interface="$2"
+
+	config_esim_profile=$(get_config_esim "$interface")
+
+	[ "$esim_profile" = "$config_esim_profile" ] || {
+		echo "This interface uses different esim profile: $config_esim_profile."
+		proto_notify_error "$interface" WRONG_ESIM
+		proto_block_restart "$interface"
+		return 1
+	}
+
+	return 0
 }

@@ -1,0 +1,66 @@
+[
+  {
+    "name": "TAP",
+    "devices": ["TAP100", "TAP200"]
+  },
+  {
+    "name": "ATRM",
+    "devices": ["ATRM50"]
+  },
+  {
+    "name": "RUTX",
+    "devices": ["RUTX12", "RUTX08", "RUTX14", "RUTX09", "RUTX50", "RUTX10", "RUTXR1", "RUTX11"]
+  },
+  {
+    "name": "OTD",
+    "devices": ["OTD140", "OTD500"]
+  },
+  {
+    "name": "RUTM",
+    "devices": ["RUTM08", "RUTM51", "RUTM50", "RUTM11", "RUTM10", "RUTM09", "RUTM52"]
+  },
+  {
+    "name": "RUT2M",
+    "devices": ["RUT200", "RUT241", "RUT260"]
+  },
+  {
+    "name": "RUT9M",
+    "devices": ["RUT901", "RUT951", "RUT956", "RUT906"]
+  },
+  {
+    "name": "RUTC",
+    "devices": ["RUTC50"]
+  },
+  {
+    "name": "RUT14X",
+    "devices": ["RUT140", "RUT142"]
+  },
+  {
+    "name": "RUT30X",
+    "devices": ["RUT300", "RUT301"]
+  },
+  {
+    "name": "RUT36X",
+    "devices": ["RUT360", "RUT361"]
+  },
+  {
+    "name": "TCR1",
+    "devices": ["TCR100"]
+  },
+  {
+    "name": "TRB1",
+    "devices": ["TRB140", "TRB141", "TRB142", "TRB143", "TRB145", "TRB160"]
+  },
+  {
+    "name": "TRB2",
+    "devices": ["TRB245", "TRB255"]
+  },
+  {
+    "name": "TRB5",
+    "devices": ["TRB500", "TRB501"]
+  },
+  {
+    "name": "TRB2M",
+    "devices": ["TRB256", "TRB246"]
+  }
+]

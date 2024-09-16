@@ -27,12 +27,13 @@
  	[
 --- a/runopts.h
 +++ b/runopts.h
-@@ -125,6 +125,10 @@ typedef struct svr_runopts {
+@@ -125,6 +125,11 @@ typedef struct svr_runopts {
  
  	char * forced_command;
  
 +#if DROPBEAR_SVR_UBUS_PAM_AUTH
 +	int ubus_pam_auth;
++	int ubus_pam_auth_external;
 +#endif //DROPBEAR_SVR_UBUS_PAM_AUTH
 +
  #if DROPBEAR_PLUGIN 
@@ -54,8 +55,8 @@
  					AUTH_METHOD_PASSWORD_LEN) == 0) {
 +#if DROPBEAR_SVR_UBUS_PAM_AUTH
 +			if (svr_opts.ubus_pam_auth) {
-+				svr_auth_ubus_pam(valid_user);
-+				
++				svr_auth_ubus_pam(valid_user, svr_opts.ubus_pam_auth_external);
++
 +				goto out;
 +			}
 +#endif //DROPBEAR_SVR_UBUS_PAM_AUTH
@@ -73,13 +74,13 @@
  				strncmp(methodname, AUTH_METHOD_PASSWORD,
  					AUTH_METHOD_PASSWORD_LEN) == 0) {
  			svr_auth_pam(valid_user);
-+			
++
  			goto out;
  		}
  	}
 --- a/svr-authpam.c
 +++ b/svr-authpam.c
-@@ -296,3 +296,107 @@ cleanup:
+@@ -296,3 +296,129 @@ cleanup:
  }
  
  #endif /* DROPBEAR_SVR_PAM_AUTH */
@@ -92,59 +93,70 @@
 +
 +enum {
 +	PAM_AUTH_ACCESS,
++	PAM_AUTH_PRIVILEGE,
 +	__PAM_AUTH_MAX
++};
++
++struct auth_cb_data {
++	bool access;
++	int privilege;
 +};
 +
 +static const struct blobmsg_policy pam_auth_policy[__PAM_AUTH_MAX] = {
 +	[PAM_AUTH_ACCESS] = { "access", BLOBMSG_TYPE_BOOL },
++	[PAM_AUTH_PRIVILEGE] = { "privilege", BLOBMSG_TYPE_INT32 },
 +};
 +
 +
 +static void auth_cb(struct ubus_request *req, int type, struct blob_attr *msg)
 +{
 +	(void)type;
-+	
-+	bool *access = (bool *) req->priv;
++
++	struct auth_cb_data *data = (struct auth_cb_data *)req->priv;
 +	struct blob_attr *tb[__PAM_AUTH_MAX];
 +
 +	blobmsg_parse(pam_auth_policy, __PAM_AUTH_MAX, tb, blob_data(msg),
 +			blob_len(msg));
 +
 +	if (tb[PAM_AUTH_ACCESS]) {
-+		*access = blobmsg_get_bool(tb[PAM_AUTH_ACCESS]);
++		data->access = blobmsg_get_bool(tb[PAM_AUTH_ACCESS]);
++	}
++
++	if (tb[PAM_AUTH_PRIVILEGE]) {
++		data->privilege = blobmsg_get_u32(tb[PAM_AUTH_PRIVILEGE]);
 +	}
 +}
 +
-+void svr_auth_ubus_pam(int valid_user)
++void svr_auth_ubus_pam(int valid_user, int external_auth)
 +{
 +	struct ubus_context *ctx = ubus_connect(NULL);
 +	static struct blob_buf b = { 0 };
 +	uint32_t id       = 0;
-+	bool access       = 0;
++	struct auth_cb_data data = {0};
 +	unsigned int changepw;
 +	char * password = NULL;
 +	unsigned int passwordlen;
-+	
++
 +	/* check if client wants to change password */
 +	changepw = buf_getbool(ses.payload);
 +	if (changepw) {
 +		/* not implemented by this server */
 +		send_msg_userauth_failure(0, 1);
-+		
++
 +		goto cleanup;
 +	}
-+	
++
 +	password = buf_getstring(ses.payload, &passwordlen);
 +	if (!password) {
 +		send_msg_userauth_failure(0, 1);
-+		
++
 +		goto cleanup;
 +	}
-+		
-+	if (!valid_user || ubus_lookup_id(ctx, "pam", &id)) {
++
++	if ((!valid_user && !external_auth) || ubus_lookup_id(ctx, "pam", &id)) {
 +		dropbear_log(LOG_WARNING, "Failed to lookup UBUS object 'pam'");
 +		send_msg_userauth_failure(0, 1);
-+		
++
 +		goto cleanup;
 +	}
 +
@@ -153,34 +165,45 @@
 +	blobmsg_add_string(&b, "password", password);
 +	blobmsg_add_string(&b, "rhost", svr_ses.remotehost);
 +	blobmsg_add_string(&b, "service", "sshd");
-+	if (ubus_invoke(ctx, id, "auth", b.head, auth_cb, &access, UBUS_TIMEOUT)) {
++	if (ubus_invoke(ctx, id, "auth", b.head, auth_cb, &data, UBUS_TIMEOUT)) {
 +		dropbear_log(LOG_WARNING, "UBUS authentication error.");
 +		send_msg_userauth_failure(0, 1);
-+		
++
 +		goto full_cleanup;
 +	}
-+	
-+	if (!access) {
++
++	if (!data.access || (external_auth && data.privilege && data.privilege != external_auth)) {
 +		dropbear_log(LOG_WARNING, "Bad UBUS PAM password attempt for '%s' from %s",
-+				ses.authstate.pw_name,
++				ses.authstate.username,
 +				svr_ses.addrstring);
 +		send_msg_userauth_failure(0, 1);
-+		
++
 +		goto full_cleanup;
 +	}
-+	
++
++	if (external_auth && data.privilege && data.privilege == external_auth) {
++		fill_passwd("root");
++	} else if (!valid_user) {
++		dropbear_log(LOG_WARNING, "Bad UBUS PAM password attempt for '%s' from %s",
++				ses.authstate.username,
++				svr_ses.addrstring);
++		send_msg_userauth_failure(0, 1);
++
++		goto full_cleanup;
++	}
++
 +	send_msg_userauth_success();
 +	/* successful authentication */
 +	dropbear_log(LOG_NOTICE, "PAM password auth succeeded for '%s' from %s",
-+			ses.authstate.pw_name,
++			ses.authstate.username,
 +			svr_ses.addrstring);
-+	
++
 +full_cleanup:
 +	blob_buf_free(&b);
-+	
++
 +cleanup:
 +	ubus_free(ctx);
-+	
++
 +	if (password != NULL) {
 +		m_burn(password, passwordlen);
 +		m_free(password);
@@ -189,28 +212,31 @@
 +#endif /* DROPBEAR_SVR_UBUS_PAM_AUTH */
 --- a/svr-runopts.c
 +++ b/svr-runopts.c
-@@ -102,6 +102,9 @@ static void printhelp(const char * progn
+@@ -102,6 +102,10 @@ static void printhelp(const char * progn
  					"-W <receive_window_buffer> (default %d, larger may be faster, max 1MB)\n"
  					"-K <keepalive>  (0 is never, default %d, in seconds)\n"
  					"-I <idle_timeout>  (0 is never, default %d, in seconds)\n"
 +#if DROPBEAR_SVR_UBUS_PAM_AUTH
 +					"-M		Enable UBUS PAM authentication\n"
++					"-X	<privilege_lvl>	Set privilege level for PAM without local users (resolves to root)\n"
 +#endif //DROPBEAR_SVR_UBUS_PAM_AUTH
  #if DROPBEAR_PLUGIN
                                          "-A <authplugin>[,<options>]\n"
                                          "               Enable external public key auth through <authplugin>\n"
-@@ -195,6 +198,10 @@ void svr_getopts(int argc, char ** argv)
- #if DROPBEAR_SVR_REMOTETCPFWD
+@@ -196,6 +200,12 @@ void svr_getopts(int argc, char ** argv)
  	opts.listen_fwd_all = 0;
  #endif
-+	
-+#if DROPBEAR_SVR_UBUS_PAM_AUTH
-+	svr_opts.ubus_pam_auth = 0;
-+#endif
  
++#if DROPBEAR_SVR_UBUS_PAM_AUTH
++	char* pam_auth_external_arg = NULL;
++	svr_opts.ubus_pam_auth = 0;
++	svr_opts.ubus_pam_auth_external = 0;
++#endif
++
  	for (i = 1; i < (unsigned int)argc; i++) {
  		if (argv[i][0] != '-' || argv[i][1] == '\0')
-@@ -296,6 +303,12 @@ void svr_getopts(int argc, char ** argv)
+ 			dropbear_exit("Invalid argument: %s", argv[i]);
+@@ -296,6 +306,15 @@ void svr_getopts(int argc, char ** argv)
                                          next = &pubkey_plugin;
                                          break;
  #endif
@@ -219,17 +245,83 @@
 +				case 'M':
 +					svr_opts.ubus_pam_auth = 1;
 +					break;
++				case 'X':
++					next = &pam_auth_external_arg;
++					break;
 +#endif //DROPBEAR_SVR_UBUS_PAM_AUTH
  #if DEBUG_TRACE
  				case 'v':
  					debug_trace = 1;
+@@ -413,6 +432,16 @@ void svr_getopts(int argc, char ** argv)
+ 		opts.idle_timeout_secs = val;
+ 	}
+ 
++#if DROPBEAR_SVR_UBUS_PAM_AUTH
++	if (pam_auth_external_arg) {
++		unsigned int val;
++		if (m_str_to_uint(pam_auth_external_arg, &val) == DROPBEAR_FAILURE) {
++			dropbear_exit("Bad argument '%s'", pam_auth_external_arg);
++		}
++		svr_opts.ubus_pam_auth_external = val;
++	}
++#endif
++
+ 	if (svr_opts.forced_command) {
+ 		dropbear_log(LOG_INFO, "Forced command set to '%s'", svr_opts.forced_command);
+ 	}
 --- a/auth.h
 +++ b/auth.h
 @@ -40,6 +40,7 @@ void send_msg_userauth_banner(const buff
  void svr_auth_password(int valid_user);
  void svr_auth_pubkey(int valid_user);
  void svr_auth_pam(int valid_user);
-+void svr_auth_ubus_pam(int valid_user);
++void svr_auth_ubus_pam(int valid_user, int external_auth);
  
  #if DROPBEAR_SVR_PUBKEY_OPTIONS_BUILT
  int svr_pubkey_allows_agentfwd(void);
+--- a/svr-chansession.c
++++ b/svr-chansession.c
+@@ -282,7 +282,7 @@ static int newchansess(struct Channel *c
+ static struct logininfo* 
+ chansess_login_alloc(const struct ChanSess *chansess) {
+ 	struct logininfo * li;
+-	li = login_alloc_entry(chansess->pid, ses.authstate.username,
++	li = login_alloc_entry(chansess->pid, ses.authstate.pw_name,
+ 			svr_ses.remotehost, chansess->tty);
+ 	return li;
+ }
+@@ -708,10 +708,10 @@ static int sessioncommand(struct Channel
+ #if LOG_COMMANDS
+ 	if (chansess->cmd) {
+ 		dropbear_log(LOG_INFO, "User %s executing '%s'", 
+-						ses.authstate.pw_name, chansess->cmd);
++						ses.authstate.username, chansess->cmd);
+ 	} else {
+ 		dropbear_log(LOG_INFO, "User %s executing login shell", 
+-						ses.authstate.pw_name);
++						ses.authstate.username);
+ 	}
+ #endif
+ 
+@@ -977,8 +977,8 @@ static void execchild(const void *user_d
+ #endif
+ 
+ 	/* set env vars */
+-	addnewvar("USER", ses.authstate.pw_name);
+-	addnewvar("LOGNAME", ses.authstate.pw_name);
++	addnewvar("USER", ses.authstate.username);
++	addnewvar("LOGNAME", ses.authstate.username);
+ 	addnewvar("HOME", ses.authstate.pw_dir);
+ 	addnewvar("SHELL", get_user_shell());
+ 	addnewvar("PATH", DEFAULT_PATH);
+--- a/svr-session.c
++++ b/svr-session.c
+@@ -235,7 +235,7 @@ void svr_dropbear_exit(int exitcode, con
+ 		/* user has authenticated */
+ 		snprintf(fullmsg, sizeof(fullmsg),
+ 				"Exit (%s)%s: %s", 
+-				ses.authstate.pw_name, fromaddr, exitmsg);
++				ses.authstate.username, fromaddr, exitmsg);
+ 	} else if (ses.authstate.pw_name) {
+ 		/* we have a potential user */
+ 		snprintf(fullmsg, sizeof(fullmsg), 

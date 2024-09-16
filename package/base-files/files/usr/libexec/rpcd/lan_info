@@ -1,0 +1,65 @@
+#!/bin/sh
+
+. /lib/functions.sh
+. /usr/share/libubox/jshn.sh
+
+get_lan_interface_info() {
+	local iface="$1"
+
+	config_get area_type "$iface" area_type ""
+
+	[ "$area_type" = "lan" ] || return
+
+	config_get ipaddr "$iface" ipaddr ""
+	config_get netmask "$iface" netmask ""
+	config_get device "$iface" device ""
+	config_get ip6addr "$iface" ip6addr ""
+
+	json_add_object
+
+	json_add_string "name" "$iface"
+
+	[ -n "$device" ] && {
+		json_add_string "device" "$device"
+	}
+
+	[ -n "$ipaddr" ] && {
+		json_add_string "ipaddr" "$ipaddr"
+	}
+
+	[ -n "$netmask" ] && {
+		json_add_string "netmask" "$netmask"
+	}
+
+	[ -n "$ip6addr" ] && {
+		json_add_string "ip6addr" "$ip6addr"
+	}
+
+	json_close_object
+
+}
+
+main() {
+	case "$1" in
+	list)
+		json_init
+		json_add_object "get"
+		json_close_object
+		json_dump
+		;;
+	call)
+		case "$2" in
+		get)
+			json_init
+			json_add_array interfaces
+			config_load network
+			config_foreach get_lan_interface_info interface
+			json_close_array
+			json_dump
+			;;
+		esac
+		;;
+	esac
+}
+
+main "$@"

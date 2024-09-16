@@ -1,0 +1,9 @@
+#!/sbin/openrc-run
+
+command="/sbin/urngd"
+command_background="yes"
+pidfile="/run/${RC_SVCNAME}.pid"
+
+depend() {
+	before boot
+}

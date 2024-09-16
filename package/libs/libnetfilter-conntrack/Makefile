@@ -11,8 +11,6 @@ PKG_NAME:=libnetfilter_conntrack
 PKG_VERSION:=1.0.8
 PKG_RELEASE:=1
 
-PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.bz2
-PKG_SOURCE_URL:=https://www.netfilter.org/projects/libnetfilter_conntrack/files
 PKG_HASH:=0cd13be008923528687af6c6b860f35392d49251c04ee0648282d36b1faec1cf
 
 PKG_MAINTAINER:=Jo-Philipp Wich <jo@mein.io>
@@ -21,6 +19,10 @@ PKG_LICENSE_FILES:=COPYING
 
 PKG_INSTALL:=1
 PKG_BUILD_PARALLEL:=1
+
+PKG_SOURCE_VERSION:=1.0.8
+PKG_SOURCE:=$(PKG_NAME)-$(PKG_SOURCE_VERSION).tar.bz2
+PKG_SOURCE_URL:=https://www.netfilter.org/projects/libnetfilter_conntrack/files
 
 include $(INCLUDE_DIR)/package.mk
 

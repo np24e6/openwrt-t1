@@ -30,6 +30,26 @@ append_bool() {
 	[ "$val" = 1 ] && procd_append_param command "$opt"
 }
 
+sign_certificate() {
+    local crt_req="$1"
+    local crt="$2"
+    local ca="/etc/uhttpd-ca.crt"
+    local ca_key="/etc/uhttpd-ca.key"
+
+
+    if [ ! -e "$ca" ]; then
+        local macaddr="$(mnf_info -m)"
+        local ip_addr="$(uci get network.lan.ipaddr)"
+        $OPENSSL_BIN req -x509 -nodes \
+            -subj "/CN=ca" \
+            -newkey rsa:2048 -keyout "${ca_key}" -out "${ca}" -days 3650 &>/dev/null
+    fi
+    local extfile="$(mktemp)"
+    echo -e "extendedKeyUsage=serverAuth\nsubjectAltName=DNS:Teltonika${macaddr},IP:${ip_addr}" > "$extfile"
+    $OPENSSL_BIN x509 -req -in "${crt_req}" -CA "${ca}" -CAkey "${ca_key}" -out "${crt}" -days 3650 -extfile "$extfile" &>/dev/null
+    rm -f "$extfile" "${crt_req}"
+}
+
 generate_keys() {
 	local cfg="$1"
 	local crt="$2"
@@ -49,14 +69,11 @@ generate_keys() {
 	local UNIQUEID=$(dd if=/dev/urandom bs=1 count=4 2>/dev/null | hexdump -e '1/1 "%02x"')
 	[ "$key_type" = "ec" ] && KEY_OPTS="ec -pkeyopt ec_paramgen_curve:${ec_curve:-P-256}"
 	[ -x "$OPENSSL_BIN" ] && {
-		local macaddr="$(mnf_info -m)"
-		$OPENSSL_BIN req -x509 -sha256 -outform der -nodes \
-			-days ${days:-730} -newkey ${KEY_OPTS} -keyout "${key}.new" -out "${crt}.new" \
-			-subj /C="${country:-ZZ}"/ST="${state:-Somewhere}"/L="${location:-Unknown}"/O="${commonname:-OpenWrt}$UNIQUEID"/CN="${commonname:-OpenWrt}" \
-			-addext "subjectAltName=DNS:Teltonika${macaddr}" &>/dev/null
+		$OPENSSL_BIN req -nodes \
+			-subj "/C=${country:-ZZ}/ST=${state:-Somewhere}/L=${location:-Unknown}/O=${commonname:-OpenWrt}$UNIQUEID/CN=${commonname:-OpenWrt}" \
+			-newkey $KEY_OPTS -keyout "${key}" -out "${crt}.req" &>/dev/null
+		sign_certificate "${crt}.req" "${crt}"
 		sync
-		mv "${key}.new" "${key}"
-		mv "${crt}.new" "${crt}"
 	}
 }
 
@@ -169,4 +186,5 @@ start_service() {
 stop_service() {
 	[ -h "/etc/hotplug.d/iface/91-trigger-vuci-routes-reload" ] && rm /etc/hotplug.d/iface/91-trigger-vuci-routes-reload &>/dev/null
 	[ -h "/etc/hotplug.d/net/91-trigger-vuci-routes-reload" ] && rm /etc/hotplug.d/net/91-trigger-vuci-routes-reload &>/dev/null
+	[ -n "$(pgrep subscribe.lua)" ] && killall subscribe.lua
 }

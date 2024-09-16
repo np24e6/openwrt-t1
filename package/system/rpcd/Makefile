@@ -10,20 +10,23 @@ include $(TOPDIR)/rules.mk
 PKG_NAME:=rpcd
 PKG_RELEASE:=1
 
-PKG_SOURCE_PROTO:=git
-PKG_SOURCE_URL=$(PROJECT_GIT)/project/rpcd.git
 PKG_SOURCE_DATE:=2021-03-11
-PKG_SOURCE_VERSION:=ccb75178cf6a726896729c6904bd623636aa0b29
 PKG_MAINTAINER:=Jo-Philipp Wich <jo@mein.io>
-PKG_MIRROR_HASH:=87b1839275c209f9767057d6da5272cae973a064767fa28f380a37fb65e2e643
 
 PKG_LICENSE:=ISC
-PKG_LICENSE_FILES:=
+PKG_LICENSE_FILES:=main.c
 
 PKG_BUILD_PARALLEL:=1
 PKG_ASLR_PIE_REGULAR:=1
 
-PKG_CONFIG_DEPENDS:= CONFIG_RPCD_PAM
+PKG_CONFIG_DEPENDS += \
+	CONFIG_RPCD_PAM \
+	CONFIG_USE_PROCD \
+	CONFIG_USE_OPENRC
+
+PKG_SOURCE_PROTO:=git
+PKG_SOURCE_URL=$(PROJECT_GIT)/project/rpcd.git
+PKG_SOURCE_VERSION:=ccb75178cf6a726896729c6904bd623636aa0b29
 
 include $(INCLUDE_DIR)/package.mk
 include $(INCLUDE_DIR)/cmake.mk
@@ -72,25 +75,28 @@ define Package/rpcd/install
 	$(INSTALL_DIR) $(1)/etc/config
 	$(INSTALL_CONF) ./files/rpcd.config $(1)/etc/config/rpcd
 	if [ $(CONFIG_WIFI_SUPPORT) ]; then \
-		$(SED) "s@%%WIRELESS_CHANNEL_ANALYSIS%%@list read 'status/wireless/channel_analysis'@g" \
+		$(SED) "s@%%WIRELESS_CHANNEL_ANALYSIS_ACL%%@list read '!status/wireless/channel_analysis*'@g" \
 			$(1)/etc/config/rpcd; \
 	else \
-		$(SED) "/%%WIRELESS_CHANNEL_ANALYSIS%%/d" $(1)/etc/config/rpcd; \
+		$(SED) "/%%WIRELESS_CHANNEL_ANALYSIS_ACL%%/d" $(1)/etc/config/rpcd; \
 	fi
 
 	if [ $(TLT_PLATFORM_RUTX) ]; then \
-		$(SED) "s@%%USER_SCRIPTS_HOTSPOT%%@list read 'services/hotspot/general/userscripts'@g" \
+		$(SED) "s@%%USER_SCRIPTS_HOTSPOT_ACL%%@list read '!services/hotspot/general/userscripts*'@g" \
 			$(1)/etc/config/rpcd; \
 	else \
-		$(SED) "/%%USER_SCRIPTS_HOTSPOT%%/d" $(1)/etc/config/rpcd; \
+		$(SED) "/%%USER_SCRIPTS_HOTSPOT_ACL%%/d" $(1)/etc/config/rpcd; \
 	fi
 
 	if [ $(CONFIG_MOBILE_SUPPORT) ]; then \
-		$(SED) "s@%%MOBILE_UTILS_SMS_SEND%%@list read 'services/mobile_utilities/sms_messages/send'@g" \
+		$(SED) "s@%%MOBILE_UTILS_SMS_SEND_ACL%%@list read '!services/mobile_utilities/sms_messages/send*'@g" \
 			$(1)/etc/config/rpcd; \
 	else \
-		$(SED) "/%%MOBILE_UTILS_SMS_SEND%%/d" $(1)/etc/config/rpcd; \
+		$(SED) "/%%MOBILE_UTILS_SMS_SEND_ACL%%/d" $(1)/etc/config/rpcd; \
 	fi
+
+	$(if $(CONFIG_USE_OPENRC),\
+		$(OPENRC_INSTALL) boot rpcd ./files/rpcd.openrc $(1))
 endef
 
 

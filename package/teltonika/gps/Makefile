@@ -6,16 +6,14 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=gps
-PKG_VERSION:=2024-05-07
+PKG_VERSION:=2024-07-06
 PKG_RELEASE:=1
 
-PKG_SOURCE_VERSION:=7.7.2
+PKG_SOURCE_VERSION:=7.8-1
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_SOURCE_VERSION)-$(PKG_VERSION)
 PKG_SOURCE:=$(PKG_SOURCE_SUBDIR).tar.gz
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_SOURCE_SUBDIR)
 PKG_LICENSE:=Teltonika-closed
-
-GPL_INCLUDE_HEADERS:=1
 
 include $(INCLUDE_DIR)/package.mk
 
@@ -23,7 +21,7 @@ define Package/gpsd
 	SECTION:=base
 	CATEGORY:=Base system
 	TITLE:=Deamon providing gps related functionality.
-	DEPENDS:=+lsqlite3 +libpthread +libuci +libtlt_uci +liblog +libubus +liburc +libgsm +zlib +libcurl +IO_SUPPORT:iomand +libmnfinfo
+	DEPENDS:=+libsqlite3 +libpthread +libuci +libtlt_uci +liblog +libubus +liburc +libgsm +zlib +libcurl +libboardjson +IO_SUPPORT:iomand +libmnfinfo
 endef
 
 define Package/gpsctl
@@ -44,7 +42,7 @@ define Package/libgps
 	SECTION:=libs
 	CATEGORY:=Libraries
 	TITLE:=Library for communication with the gpsd daemon.
-	DEPENDS:=+libubus
+	DEPENDS:=+libubus +libsqlite3
 endef
 
 define Package/avl
@@ -80,7 +78,6 @@ define Package/gpsd/install
 	$(INSTALL_DIR) $(1)/usr/sbin $(1)/etc/config $(1)/etc/init.d $(1)/etc/hotplug.d/usb
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/gpsd/gpsd $(1)/usr/sbin/gpsd
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/files/gpsd.init $(1)/etc/init.d/gpsd
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/files/06_gpsd.sh $(1)/etc/hotplug.d/usb/06_gpsd
 
 	if [ $(TLT_PLATFORM_RUTX) ] || [ $(TLT_PLATFORM_RUTM) ] || [ $(TLT_PLATFORM_RUTC) ]; then \
 		$(INSTALL_CONF) $(PKG_BUILD_DIR)/files/gps_RUTX.conf $(1)/etc/config/gps; \

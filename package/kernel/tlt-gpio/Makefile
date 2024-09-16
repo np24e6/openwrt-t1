@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2008-2012 OpenWrt.org
+# Copyright (C) 2024 Teltonika-Networks
 #
 # This is free software, licensed under the GNU General Public License v2.
 # See /LICENSE for more information.
@@ -10,7 +10,8 @@ include $(INCLUDE_DIR)/kernel.mk
 
 PKG_NAME:=tlt-gpio
 PKG_RELEASE:=1
-PKG_LICENSE:=GPL-2.0
+PKG_LICENSE:=GPL-2.0-only
+PKG_LICENSE_FILES:=LICENSE/GPL-2.0
 
 include $(INCLUDE_DIR)/package.mk
 

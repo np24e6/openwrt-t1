@@ -43,23 +43,9 @@ proto_sstp_setup() {
 	}
 
 	json_get_vars username password pppd_options sstp_options log_level ipv6 defaultroute peerdns
-	if [ "$ipv6" = 1 ]; then
-		ipv6=1
-	else
-		ipv6=""
-	fi
-	if [ "$defaultroute" = 0 ]; then
-		defaultroute=""
-	else
-		defaultroute=1
-	fi
-
-	if [ "$peerdns" = 0 ]; then
-		peerdns=""
-	else
-		peerdns=1
-	fi
-
+	[ "$ipv6" != 1 ] && ipv6=""
+	[ "$defaultroute" != 1 ] && defaultroute=""
+	[ "$peerdns" = 0 ] && peerdns="" || peerdns=1
 	[ -n "$mtu" ] || json_get_var mtu mtu
 	[ -n "$log_level" ] || log_level=0
 

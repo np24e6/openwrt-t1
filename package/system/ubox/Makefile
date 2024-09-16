@@ -3,17 +3,21 @@ include $(TOPDIR)/rules.mk
 PKG_NAME:=ubox
 PKG_RELEASE:=5
 
-PKG_SOURCE_PROTO:=git
-PKG_SOURCE_URL=$(PROJECT_GIT)/project/ubox.git
 PKG_SOURCE_DATE:=2020-10-25
-PKG_SOURCE_VERSION:=9ef886819dd48303d8ced4cdbc9afbf32682535c
-PKG_MIRROR_HASH:=e2d93b798b91de98cb003f7b3be97d3d8a2413c8612b527d096c86ac5365cbdd
 CMAKE_INSTALL:=1
 
-PKG_LICENSE:=GPL-2.0
-PKG_LICENSE_FILES:=
+PKG_LICENSE:=LGPL-2.0-only GPL-2.0-or-later
+PKG_LICENSE_FILES:=kmodloader.c getrandom.c
 
 PKG_MAINTAINER:=John Crispin <john@phrozen.org>
+
+PKG_CONFIG_DEPENDS += \
+	CONFIG_USE_PROCD \
+	CONFIG_USE_OPENRC
+
+PKG_SOURCE_PROTO:=git
+PKG_SOURCE_URL=$(PROJECT_GIT)/project/ubox.git
+PKG_SOURCE_VERSION:=9ef886819dd48303d8ced4cdbc9afbf32682535c
 
 include $(INCLUDE_DIR)/package.mk
 include $(INCLUDE_DIR)/cmake.mk
@@ -62,6 +66,12 @@ define Package/logd/install
 
 	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/{logd,logread} $(1)/sbin/
 	$(INSTALL_BIN) ./files/log.init $(1)/etc/init.d/log
+
+	$(if $(CONFIG_USE_OPENRC),\
+		$(OPENRC_INSTALL) sysinit logd ./files/logd.openrc $(1); \
+		$(OPENRC_INSTALL) sysinit logread ./files/logread.openrc $(1); \
+		$(RM) $(1)/etc/init.d/log \
+	)
 endef
 
 $(eval $(call BuildPackage,ubox))

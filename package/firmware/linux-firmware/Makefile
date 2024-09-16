@@ -10,15 +10,18 @@ include $(TOPDIR)/rules.mk
 PKG_NAME:=linux-firmware
 PKG_VERSION:=20230804
 PKG_RELEASE:=1
-PKG_LICENSE:=GPL-2.0
+PKG_LICENSE:=Redistributable
+PKG_LICENSE_FILES:=Whence.md
 
-PKG_SOURCE_URL:=@KERNEL/linux/kernel/firmware
-PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.xz
 PKG_HASH:=88d46c543847ee3b03404d4941d91c92974690ee1f6fdcbee9cef3e5f97db688
 
 PKG_MAINTAINER:=Felix Fietkau <nbd@nbd.name>
 
 SCAN_DEPS = *.mk
+
+PKG_SOURCE_VERSION:=20230804
+PKG_SOURCE:=$(PKG_NAME)-$(PKG_SOURCE_VERSION).tar.xz
+PKG_SOURCE_URL:=@KERNEL/linux/kernel/firmware
 
 include $(INCLUDE_DIR)/package.mk
 

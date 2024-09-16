@@ -11,14 +11,16 @@ PKG_NAME:=libpam
 PKG_VERSION:=1.6.0
 PKG_RELEASE:=2
 
-PKG_SOURCE:=Linux-PAM-$(PKG_VERSION).tar.xz
-PKG_SOURCE_URL:=https://github.com/linux-pam/linux-pam/releases/download/v$(PKG_VERSION)
+PKG_SOURCE_VERSION:=1.6.0
+PKG_SOURCE:=Linux-PAM-$(PKG_SOURCE_VERSION).tar.xz
+PKG_SOURCE_URL:=https://github.com/linux-pam/linux-pam/releases/download/v$(PKG_SOURCE_VERSION)
+
 PKG_HASH:=fff4a34e5bbee77e2e8f1992f27631e2329bcbf8a0563ddeb5c3389b4e3169ad
 PKG_BUILD_DIR:=$(BUILD_DIR)/Linux-PAM-$(PKG_VERSION)
 
 PKG_MAINTAINER:=Nikos Mavrogiannopoulos <n.mavrogiannopoulos@gmail.com>
-PKG_LICENSE:=BSD-3c GPL
-PKG_LICENSE_FILES:=COPYING Copyright
+PKG_LICENSE:=BSD-3-Clause
+PKG_LICENSE_FILES:=COPYING
 PKG_CPE_ID:=cpe:/a:kernel:linux-pam
 
 PKG_FIXUP:=autoreconf

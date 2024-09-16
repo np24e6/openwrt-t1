@@ -1,55 +1,21 @@
-# 2024-06-18 00.07.07.3
+No changesNo changes# 2024-05-03 00.07.06.11
 
 ### New
 
-* API: added TRB160 documentation (ID: 18564)
-* RUTOS: added support for RUT260 hardware version 3 (ID: 18186)
-
-### Fix
-
-* FOTA: fixed config when upgrading from older firmware with keep settings (ID: 18653)
-* WebUI: fixed port advertisement change (ID: 18840)
-* FRR: patched CVE-2024-31950 and CVE-2024-31951 vulnerabilities (ID: 17644)
-* USB: fixed windows usb to ethernet detection for TRB1601 device (ID: 18407)
-
-# 2024-06-10 00.07.07.2
+* WebUI: added 'starting' status when interface is just enabled (ID: 16576)
 
 ### Improvements
 
-* Zerotier: added backup WAN interface blacklisting if WAN failover is enabled (ID: 17069)
-* Network: improved software routing performance when under stateless bidirectional RFC2544 tests for all routers (ID: 17501)
-* SSH: removed weak SSH algorithms (ID: 17682)
-* Mobile: improved parsing of multiple 5G bands on the RG520N modem (ID: 17700)
-* Telnet: changed telnet to an installable package (ID: 18282)
-* Upgrade: improved procd-watchdog handling during firmware upgrade process (ID: 18302)
-* Mobile: improved communication stability with eSIM (ID: 17293)
-* SNMP: added bruteforce attack prevention when using SNMP v3 user (ID: 18187)
-* L2TP: improved l2tp reconnect attempt logic (ID: 18302)
-* Wireless: removed unnecessary information from system logs (ID: 18470)
-* System: improved failsafe boot protection during firmware upgrades on RUTM devices (ID: 18323)
+* Dnsmasq: updated to version 2.89 (ID: 17817)
+* Certificates: updated Root CA certificates (ID: 17780)
 
 ### Fix
 
-* Uboot: fixed firmware recovery update via uboot on Windows for rut3x, trb2x, tap100, rut14x, tcr1x, rut9m, rut2m, rut206 devices (ID: 18461)
-* IP Block: fixed blocking of UDP traffic (ID: 18187)
-* Mobile: fixed forced apn configuration (ID: 18350)
-* Serial: improved recovery from serial connection loss after modem reboot on TRB1 family devices (ID: 17979)
-* FRR: patched CVE-2024-31948 vulnerability (ID: 17642)
-* FRR: patched CVE-2023-46752 and CVE-2023-46753 vulnerabilities for RUT300, TRB2XX devices (ID: 18374)
-* Mobile: fixed a SIM detection issue on some devices from RUTM family and RUT361 (ID: 18182)
-* Ledman: fixed WiFi LED indication when WiFi configuration is changed (ID: 17894)
-* DMVPN: fixed duplicate NHRP map entries creation (ID: 17758)
-* Serial: fixed kernel panic when "full-duplex" mode for RS485 is quickly switched on and off for TRB145 (ID: 17627)
-* Wireless: fixed connection issues after disabling encryption for RUTX family devices (ID: 17646)
-* Hotspot: fixed walled garden changes to take effect after save, added walled garden to backup (ID: 17646)
-* GPS: fixed outages on RUTX50 (ID: 16709)
-* HNAT: fixed cases of unintended forwarding when LAN and WAN subnets overlap on RUTX devices (ID: 18021)
-* HNAT: fixed instances of device misrouting packets to wired LAN when 'Hardware Flow Offloading' was enabled on RUTX devices (ID: 18322)
-* Backup: fixed backup validation for RUT200 devices (ID: 17947)
-* BGP: fixed instance migration issues (ID: 18515)
-* OpenVPN: added fixes for the insecure tls-cert-profile option usage (ID: 18594)
-* Sysupgrade: prevent reboot before update completes (ID: 18626)
-* ETH driver: fixed connection loss after changing of IP address for TRB500 devices (ID: 18605)
+* WebUI: fixed 'unknown' status being displayed for disabled interfaces initially (ID: 16576)
+* Firewall: fixed higher amounts of custom firewall rules not saving (ID: 17153)
+* WebUI: fixed network and multiwan interface metric sorting synchronization issue (ID: 16582)
+* WebUI: fixed mobile connection reload when changing DHCP server settings (ID: 17742)
+* Events Log: fixed log.db hangs on rare occasions (ID: 17468)
 
 # 2024-04-29 00.07.07.1
 
@@ -337,6 +303,7 @@
 * Telnet: fixed segmentation fault during concurrent connections (ID: 15942)
 * SSTP: fixed route adding when default route is enabled (ID: 17004)
 * Wireless: patched CVE-2023-7042 (ID: 15986)
+* Network: fix flow control settings (ID: 17616)
 * Mobile: added SIM state reset after GPIO SIM slot changed (ID: 17268)
 * SNMP: fixed VLAN OID naming (ID: 15611)
 * Wireless: fixed scanning issue when connected via the same network for RUT14X, RUT2M, RUT361, RUT9M devices (ID: 16526)
@@ -401,6 +368,41 @@
 * WebUI: fixed GPS HTTPS hostname API validation (ID: 16543)
 * DLMS Client: fixed memory leak (ID: 16124)
 * Hotspot: fixed malformed DNS messages in logs (ID: 16767)
+
+# 2024-04-02 00.07.06.10
+
+### Fix
+
+* Ledman: fixed memleak (ID: 17538)
+
+# 2024-03-27 00.07.06.9
+
+### Fix
+
+* API: fixed issue when device becomes unreachable after port based VLAN creation (ID: 17472)
+* Stm32flasher: fixed issue when STM32 firmware flashing fails (ID: 17483)
+
+# 2024-03-21 00.07.06.8
+
+### New
+
+* Mobile: added support for RG520N-EB module (ID: 17119)
+* WebUI: added eSIM support (ID: 16427)
+* SMS Utilities: added eSIM handling rules to RUT901 devices (ID: 16427)
+
+### Improvements
+
+* IPSec: disabled libgmp in favor of openssl (ID: 16692)
+* System: improved firmware validation messages (ID: 17260)
+* IPSec: updated Strongswan to 5.9.6 (ID: 17179)
+
+### Fix
+
+* IPSec: increased charon load timeout (ID: 17179)
+* Interfaces: fixed error when trying to save static WAN interface (ID: 16894)
+* Ledman: fixed signal strenght leds indication for RUT2 and RUT9 family devices (ID: 16908)
+* Mobile: fixed an issue where RMS was reporting incorrect signal values with SLM750 modems (ID: 16967)
+* IPSec: fixed loading of large private keys (ID: 17179)
 
 # 2024-02-26 00.07.06.6
 

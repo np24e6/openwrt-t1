@@ -12,7 +12,7 @@ config zone '2'
 	option forward 'ACCEPT'
 
 config redirect '3'
-	option proto 'udp'
+	list proto 'udp'
 	option name 'Redirect_hostname'
 	option target 'DNAT'
 	option src 'lan'

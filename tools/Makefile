@@ -8,6 +8,8 @@
 #
 curdir:=tools
 
+ifeq ($(BUILD_SKIP_TOOLS),)
+
 # subdirectories to descend into
 tools-y :=
 
@@ -20,6 +22,9 @@ endif
 ifneq ($(CONFIG_SDK)$(CONFIG_PACKAGE_kmod-b43)$(CONFIG_PACKAGE_b43legacy-firmware)$(CONFIG_BRCMSMAC_USE_FW_FROM_WL),)
   BUILD_B43_TOOLS = y
 endif
+ifneq ($(CONFIG_TARGET_mdm9x07)$(CONFIG_TARGET_sdxprairie)$(CONFIG_TARGET_sdxlemur)$(CONFIG_TARGET_sdxnightjar),)
+  BUILD_TOOLS = y
+endif
 
 tools-y += autoconf autoconf-archive automake bc bison cmake dosfstools
 tools-y += e2fsprogs fakeroot findutils firmware-utils flex gengetopt upx
@@ -30,7 +35,7 @@ tools-$(BUILD_B43_TOOLS) += b43-tools
 tools-$(BUILD_ISL) += isl
 tools-$(BUILD_TOOLCHAIN) += expat gmp mpc mpfr
 tools-$(CONFIG_TARGET_apm821xx)$(CONFIG_TARGET_gemini) += genext2fs
-tools-$(CONFIG_TARGET_mdm9x07)$(CONFIG_TARGET_sdxprairie)$(CONFIG_TARGET_sdxlemur)$(CONFIG_TARGET_sdxnightjar) += mkbootimg dtbtool
+tools-$(BUILD_TOOLS) += mkbootimg dtbtool
 tools-$(CONFIG_TARGET_mxs) += elftosb sdimage
 tools-$(CONFIG_TARGET_tegra) += cbootimage cbootimage-configs
 tools-$(CONFIG_USES_MINOR) += kernel2minor
@@ -152,6 +157,13 @@ $(curdir)/ := .config prereq
 
 $(curdir)/install: $(curdir)/compile
 
+tools_enabled = $(foreach tool,$(sort $(tools-y) $(tools-)),$(if $(filter $(tool),$(tools-y)),y,n))
+$(eval $(call stampfile,$(curdir),tools,compile,,_$(subst $(space),,$(tools_enabled)),$(STAGING_DIR_HOST)))
+$(eval $(call stampfile,$(curdir),tools,check,$(TMP_DIR)/.build,,$(STAGING_DIR_HOST)))
+$(eval $(call subdir,$(curdir)))
+
+endif # BUILD_SKIP_TOOLS
+
 GPL_TOOLS_DIR:=$(GPL_BUILD_DIR)/tools
 
 $(curdir)/gpl:
@@ -163,8 +175,3 @@ $(curdir)/gpl:
 		mkdir -p "$(GPL_TOOLS_DIR)/$${tool}"; \
 		$(MAKE) -C "tools/$${tool}" gpl 1="$(GPL_TOOLS_DIR)/$${tool}"; \
 	); done
-
-tools_enabled = $(foreach tool,$(sort $(tools-y) $(tools-)),$(if $(filter $(tool),$(tools-y)),y,n))
-$(eval $(call stampfile,$(curdir),tools,compile,,_$(subst $(space),,$(tools_enabled)),$(STAGING_DIR_HOST)))
-$(eval $(call stampfile,$(curdir),tools,check,$(TMP_DIR)/.build,,$(STAGING_DIR_HOST)))
-$(eval $(call subdir,$(curdir)))

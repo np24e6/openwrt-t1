@@ -1,3 +1,0 @@
-version=3
-
-https://github.com/jeroennijhof/pam_tacplus/tags .*/v?(\d[\d\.]+)\.tar\.gz

@@ -1,8 +1,8 @@
 #!/bin/sh
 
-pkg-config.real \
---keep-system-cflags \
---keep-system-libs \
---define-variable=prefix="${STAGING_PREFIX}" \
---define-variable=exec_prefix="${STAGING_PREFIX}" \
---define-variable=bindir="${STAGING_PREFIX}/bin" "$@"
+LD_LIBRARY_PATH="/lib:/usr/lib:${STAGING_DIR_HOST}/lib:${STAGING_DIR_HOSTPKG}/lib" pkg-config.real \
+        --keep-system-cflags \
+        --keep-system-libs \
+        --define-variable=prefix="${STAGING_PREFIX}" \
+        --define-variable=exec_prefix="${STAGING_PREFIX}" \
+        --define-variable=bindir="${STAGING_PREFIX}/bin" "$@"

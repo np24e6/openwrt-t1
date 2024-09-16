@@ -5,10 +5,11 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=modems
+PKG_VERSION:=3.5
 
-PKG_SOURCE_VERSION:=3.4
 
-PKG_LICENSE:=GPL-2.0
+
+PKG_LICENSE:=GPL-2.0-only
 
 include $(INCLUDE_DIR)/package.mk
 
@@ -18,7 +19,8 @@ define Package/modems
 	TITLE:=3G/4G modem list
 endef
 
-
+define Build/Compile
+endef
 
 define Package/modems/install
 	$(INSTALL_DIR) $(1)/lib/network/wwan/

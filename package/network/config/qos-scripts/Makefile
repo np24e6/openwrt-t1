@@ -10,7 +10,7 @@ include $(TOPDIR)/rules.mk
 PKG_NAME:=qos-scripts
 PKG_VERSION:=1.3.1
 PKG_RELEASE:=$(AUTORELEASE)
-PKG_LICENSE:=GPL-2.0
+PKG_LICENSE:=GPL-2.0-only
 
 PKG_ORIGIN_URL:=https://github.com/openwrt/openwrt/tree/openwrt-21.02/package/network/config/qos-scripts
 

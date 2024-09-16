@@ -7,7 +7,7 @@ include $(INCLUDE_DIR)/download.mk
 include $(INCLUDE_DIR)/os-version.mk
 
 PKG_NAME:=libbrand
-PKG_VERSION:=2024-03-07
+PKG_VERSION:=2020-01-06
 PKG_RELEASE:=1
 
 PKG_SOURCE_VERSION:=1.1

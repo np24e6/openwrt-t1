@@ -6,8 +6,8 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=opcua_client
-PKG_VERSION:=2024-04-04
-PKG_SOURCE_VERSION:=7.7-1
+PKG_VERSION:=2024-06-25
+PKG_SOURCE_VERSION:=7.8
 PKG_LICENSE:=Teltonika-closed
 
 include $(INCLUDE_DIR)/package.mk

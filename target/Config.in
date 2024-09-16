@@ -132,6 +132,9 @@ config HAS_SINGLE_ETH_PORT
 config HAS_IO
 	bool
 
+config HAS_DOT1X_CLIENT
+	bool
+
 config HAS_POWER_CONTROL
 	bool
 
@@ -177,7 +180,7 @@ config GATEWAY_DEVICE
 
 config 64MB_RAM
 	bool
-	
+
 config SW_OFFLOAD
 	bool
 
@@ -185,6 +188,9 @@ config HW_OFFLOAD
 	bool
 
 config MODEM_RESET_QUIRK
+	bool
+
+config BROKEN_SIM_IDLE_PROTECTION
 	bool
 
 # Architecture selection

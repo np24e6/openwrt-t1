@@ -1,0 +1,61 @@
+#!/sbin/openrc-run
+
+command="/sbin/netifd"
+command_background="yes"
+pidfile="/run/${RC_SVCNAME}.pid"
+supervisor=supervise-daemon
+respawn_delay=1
+respawn_max=0
+
+. /lib/functions.sh
+
+depend() {
+	need ubusd
+	after firewall
+}
+
+init_switch() {
+	setup_switch() { return 0; }
+
+	include /lib/network
+	setup_switch
+}
+
+compare_lan_dhcp_states() {
+	check_network_states() { return 1; }
+	include /lib/network
+
+	check_network_states "$1" && return 0
+
+	return 1
+}
+
+set_port_link() {
+	setup_port_links() { return 0; }
+
+	include /lib/network
+	setup_port_links "$1"
+}
+
+start_pre() {
+	init_switch
+
+	compare_lan_dhcp_states "init"
+	set_port_link "reset"
+}
+
+reload() {
+	local rv=0
+	local reset=""
+
+	compare_lan_dhcp_states && {
+			init_switch
+			reset="reset"
+	}
+
+	set_port_link "$reset"
+
+	[ -x /sbin/wifi ] && /sbin/wifi reload_legacy
+	ubus call network reload || rv=1
+	[ -x /sbin/wifi ] && /sbin/wifi kick_clients
+}

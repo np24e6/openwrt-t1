@@ -3,6 +3,7 @@ include $(TOPDIR)/rules.mk
 PKG_NAME:=urandom-seed
 PKG_RELEASE:=3
 PKG_LICENSE:=GPL-2.0-only
+PKG_LICENSE_FILES:=LICENSES/GPL-2.0
 
 PKG_ORIGIN_URL:=https://github.com/openwrt/openwrt/tree/openwrt-21.02/package/system/urandom-seed
 

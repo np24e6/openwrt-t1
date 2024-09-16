@@ -11,15 +11,18 @@ PKG_VERSION:=8.4.2
 PKG_RELEASE:=1
 PKG_SOURCE_DATE:=2023-02-17
 
-PKG_SOURCE:=$(PKG_NAME)-$(PKG_SOURCE_DATE).tar.gz
+PKG_SOURCE_PROTO:=git
+PKG_SOURCE_URL:=https://github.com/FRRouting/frr.git
 PKG_SOURCE_VERSION:=410d78b7a4f2c8b4d4c3736c6d6cdb710287ca80
-PKG_SOURCE_URL:=https://codeload.github.com/FRRouting/frr/tar.gz/$(PKG_SOURCE_VERSION)?
+
+PKG_SOURCE:=$(PKG_NAME)-$(PKG_SOURCE_DATE).tar.gz
+PKG_LICENSE_FILES:=COPYING COPYING-LGPLv2.1
 
 PKG_HASH:=1334b050ea3d4144efeb7bdfe9c6976ebc91744810c5d8a7381a53fac2877ea9
 PKG_MAINTAINER:=Lucian Cristian <lucian.cristian@gmail.com>
 
-PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-$(PKG_SOURCE_VERSION)
-HOST_BUILD_DIR:=$(BUILD_DIR_HOST)/$(PKG_NAME)-$(PKG_SOURCE_VERSION)
+PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-$(PKG_VERSION)
+HOST_BUILD_DIR:=$(BUILD_DIR_HOST)/$(PKG_NAME)-$(PKG_VERSION)
 
 PKG_LICENSE:=GPL-2.0-only LGPL-2.1-only
 
@@ -60,7 +63,7 @@ PKG_BUILD_FLAGS:=lto
 PKG_INSTALL:=1
 
 PKG_BUILD_DEPENDS:=frr/host
-HOST_BUILD_DEPENDS:=python3/host elfutils/host
+HOST_BUILD_DEPENDS:=elfutils/host
 
 include $(INCLUDE_DIR)/package.mk
 include $(INCLUDE_DIR)/host-build.mk
@@ -220,11 +223,13 @@ define BuildDaemon
     define Package/frr-$(1)/install
 		$(INSTALL_DIR) $$(1)/usr/sbin
 		$(INSTALL_DIR) $$(1)/etc/config
-		$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/$(1) $$(1)/usr/sbin/; \
 		if [ "$(1)" == "nhrp" ]; then \
-		$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/nhrpd $$(1)/usr/sbin/; \
-		$(INSTALL_DIR) $$(1)/usr/lib; \
-		$(CP) $(PKG_INSTALL_DIR)/usr/lib/libfrrcares.so* $$(1)/usr/lib/; fi
+			$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/nhrpd $$(1)/usr/sbin/; \
+			$(INSTALL_DIR) $$(1)/usr/lib; \
+			$(CP) $(PKG_INSTALL_DIR)/usr/lib/libfrrcares.so* $$(1)/usr/lib/; \
+		else \
+			$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/$(1) $$(1)/usr/sbin/; \
+		fi
 		config_name="$(1)"; \
 		config_name="$$$$$$$${config_name::-1}"; \
 		config_name="$$$$$$$${config_name/nhr/nhrp}"; \
@@ -248,11 +253,12 @@ HOST_CONFIGURE_ARGS+= \
 
 define Host/Install
 	$(INSTALL_DIR) $(STAGING_DIR_HOSTPKG)/bin
-	$(INSTALL_BIN) $(HOST_BUILD_DIR)/lib/clippy $(STAGING_DIR_HOSTPKG)/bin/
+	$(INSTALL_BIN) $(HOST_BUILD_DIR)/lib/clippy $(STAGING_DIR_HOSTPKG)/bin/clippy
+	$(INSTALL_BIN) files/clippy.sh $(STAGING_DIR_HOSTPKG)/bin/clippy.sh
 endef
 
 CONFIGURE_ARGS+= \
-	--with-clippy=$(STAGING_DIR_HOSTPKG)/bin/clippy \
+	--with-clippy=$(STAGING_DIR_HOSTPKG)/bin/clippy.sh \
 	--prefix=/usr \
 	--enable-shared \
 	--disable-static \

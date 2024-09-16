@@ -11,10 +11,12 @@ PKG_NAME:=libevent2
 PKG_VERSION:=2.1.12
 PKG_RELEASE:=1
 
-PKG_SOURCE:=libevent-$(PKG_VERSION)-stable.tar.gz
-PKG_SOURCE_URL:=https://github.com/libevent/libevent/releases/download/release-$(PKG_VERSION)-stable
 PKG_HASH:=92e6de1be9ec176428fd2367677e61ceffc2ee1cb119035037a27d346b0403bb
 PKG_BUILD_DIR:=$(BUILD_DIR)/libevent-$(PKG_VERSION)-stable
+
+PKG_SOURCE_VERSION:=2.1.12
+PKG_SOURCE:=libevent-$(PKG_SOURCE_VERSION)-stable.tar.gz
+PKG_SOURCE_URL:=https://github.com/libevent/libevent/releases/download/release-$(PKG_SOURCE_VERSION)-stable
 
 PKG_MAINTAINER:=Jo-Philipp Wich <jo@mein.io>
 PKG_LICENSE:=BSD-3-Clause

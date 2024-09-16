@@ -11,8 +11,6 @@ PKG_NAME:=libgpiod
 PKG_VERSION:=1.6.3
 PKG_RELEASE:=1
 
-PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.xz
-PKG_SOURCE_URL:=@KERNEL/software/libs/libgpiod/
 PKG_HASH:=841be9d788f00bab08ef22c4be5c39866f0e46cb100a3ae49ed816ac9c5dddc7
 
 PKG_MAINTAINER:=Michael Heimpold <mhei@heimpold.de>
@@ -21,6 +19,10 @@ PKG_LICENSE_FILES:=COPYING
 
 PKG_INSTALL:=1
 PKG_BUILD_PARALLEL:=1
+
+PKG_SOURCE_VERSION:=1.6.3
+PKG_SOURCE:=$(PKG_NAME)-$(PKG_SOURCE_VERSION).tar.xz
+PKG_SOURCE_URL:=@KERNEL/software/libs/libgpiod
 
 include $(INCLUDE_DIR)/package.mk
 
@@ -33,7 +35,7 @@ define Package/libgpiod
   CATEGORY:=Libraries
   URL:=https://git.kernel.org/pub/scm/libs/libgpiod/libgpiod.git
   TITLE:=Library for interacting with Linux's GPIO character device
-  DEPENDS:=+kmod-tlt-gpio
+  DEPENDS:=+!TARGET_x86_64:kmod-tlt-gpio
 endef
 
 define Package/libgpiod/description

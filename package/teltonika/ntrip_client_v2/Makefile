@@ -1,15 +1,20 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=ntrip_client_v2
-PKG_VERSION:=2024-04-02
+PKG_VERSION:=2024-06-25
 
-PKG_SOURCE_VERSION:=7.7
+PKG_SOURCE_PROTO:=git
+PKG_SOURCE_VERSION:=647cae59ee687216180a475d38fdf32ba90a1a25
+PKG_SOURCE_URL:=https://github.com/hail-linda/pi_ublox-ntrip.git
+
 
 PKG_LICENSE:=Apache-2.0
+PKG_LICENSE_FILES:=LICENSE NOTICE
 
 CMAKE_INSTALL:=1
 
 include $(INCLUDE_DIR)/package.mk
+include $(INCLUDE_DIR)/cmake.mk
 
 define Package/$(PKG_NAME)
 	SECTION:=net
@@ -31,7 +36,6 @@ endif
 define Package/$(PKG_NAME)/conffiles
 /etc/config/rs_ntrip
 endef
-
 
 define Package/$(PKG_NAME)/install
 	$(INSTALL_DIR) $(1)/usr/sbin $(1)/etc/init.d $(1)/etc/config

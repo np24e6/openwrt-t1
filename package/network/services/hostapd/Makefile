@@ -7,14 +7,15 @@ include $(TOPDIR)/rules.mk
 PKG_NAME:=hostapd
 PKG_RELEASE:=4
 
-PKG_SOURCE_URL:=http://w1.fi/hostap.git
 PKG_SOURCE_PROTO:=git
-PKG_SOURCE_DATE:=2023-09-08
 PKG_SOURCE_VERSION:=e5ccbfc69ecf297590341ae8b461edba9d8e964c
-PKG_MIRROR_HASH:=fcc6550f46c7f8bbdbf71e63f8f699b9a0878565ad1b90a17855f5ec21283b8f
+PKG_SOURCE_URL:=https://w1.fi/hostap.git
+
+PKG_SOURCE_DATE:=2023-09-08
 
 PKG_MAINTAINER:=Felix Fietkau <nbd@nbd.name>
 PKG_LICENSE:=BSD-3-Clause
+PKG_LICENSE_FILES:=COPYING
 PKG_CPE_ID:=cpe:/a:w1.fi:hostapd
 
 PKG_BUILD_PARALLEL:=1
@@ -416,6 +417,7 @@ TARGET_CPPFLAGS := \
 	$(TARGET_CPPFLAGS) \
 	-DCONFIG_LIBNL20 \
 	-D_GNU_SOURCE \
+	$(if $(CONFIG_DSA_SUPPORT),,-DCONFIG_NO_LINUX_PACKET_SOCKET_WAR) \
 	$(if $(CONFIG_WPA_MSG_MIN_PRIORITY),-DCONFIG_MSG_MIN_PRIORITY=$(CONFIG_WPA_MSG_MIN_PRIORITY))
 
 TARGET_LDFLAGS += -lubox -lubus -llog -lblobmsg_json -lucode
@@ -507,16 +509,19 @@ define Install/supplicant
 endef
 
 define Package/hostapd-common/install
-	$(INSTALL_DIR) $(1)/etc/capabilities $(1)/etc/rc.button $(1)/etc/hotplug.d/ieee80211 $(1)/etc/init.d $(1)/lib/netifd  $(1)/usr/share/acl.d $(1)/usr/share/hostap
+	$(INSTALL_DIR) $(1)/etc/capabilities $(1)/etc/rc.button $(1)/etc/hotplug.d/ieee80211 $(1)/etc/init.d $(1)/lib/netifd  $(1)/usr/share/acl.d $(1)/usr/share/hostap $(1)/etc/hotplug.d/iface
 	$(INSTALL_BIN) ./files/dhcp-get-server.sh $(1)/lib/netifd/dhcp-get-server.sh
-	$(INSTALL_DATA) ./files/hostapd.sh $(1)/lib/netifd/hostapd.sh
 	$(INSTALL_BIN) ./files/wpad.init $(1)/etc/init.d/wpad
+	$(if $(CONFIG_DOT1X_CLIENT_SUPPORT), \
+		$(INSTALL_DIR) $(1)/usr/bin $(1)/etc/uci-defaults/; \
+		$(if $(CONFIG_DSA_SUPPORT), , $(INSTALL_BIN) ./files/dot1x-client.hotplug $(1)/etc/hotplug.d/iface/96-dot1x-client ;) \
+		$(INSTALL_BIN) ./files/dot1x_client.lua $(1)/usr/bin/dot1x_client; \
+		$(INSTALL_BIN) ./files/dot1x_client.init $(1)/etc/init.d/dot1x_client; \
+		$(INSTALL_BIN) ./files/defaults/dot1x_client $(1)/etc/uci-defaults/99_dot1x_client)
 	$(if $(CONFIG_WPS_SUPPORT),\
 		$(INSTALL_BIN) ./files/wps-hotplug.sh $(1)/etc/rc.button/wps)
 	$(INSTALL_DATA) ./files/wpad_acl.json $(1)/usr/share/acl.d
 	$(INSTALL_DATA) ./files/wpad.json $(1)/etc/capabilities
-	$(INSTALL_DATA) ./files/common.uc $(1)/usr/share/hostap/
-	$(INSTALL_DATA) ./files/wdev.uc $(1)/usr/share/hostap/
 endef
 
 define Package/hostapd/install

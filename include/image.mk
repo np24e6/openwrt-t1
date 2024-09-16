@@ -339,15 +339,75 @@ $(KDIR)/root.%: kernel_prepare
 	$(call Image/mkfs/$(word 1,$(target_params)),$(target_params))
 
 DEVICE_HARDWARE_VARS = \
+  HARDWARE/System_Characteristics/CPU \
+  HARDWARE/System_Characteristics/RAM \
+  HARDWARE/System_Characteristics/Flash_Storage \
+  HARDWARE/Wireless/Wireless_mode \
+  HARDWARE/Wireless/WIFI_users \
   HARDWARE/Ethernet/Port \
   HARDWARE/Ethernet/Speed \
   HARDWARE/Ethernet/Standard \
-  HARDWARE/Ethernet/WAN \
-  HARDWARE/Ethernet/WAN/Port \
-  HARDWARE/Ethernet/WAN/Standard \
-  HARDWARE/Ethernet/LAN \
-  HARDWARE/Ethernet/LAN/Port \
-  HARDWARE/Ethernet/LAN/Standard
+  HARDWARE/WAN/Port \
+  HARDWARE/WAN/Speed \
+  HARDWARE/WAN/Standard \
+  HARDWARE/LAN/Port \
+  HARDWARE/LAN/Speed \
+  HARDWARE/LAN/Standard \
+  HARDWARE/PoE_In/PoE_ports \
+  HARDWARE/PoE_In/PoE_standards \
+  HARDWARE/PoE_Out/PoE_ports \
+  HARDWARE/PoE_Out/PoE_standards \
+  HARDWARE/PoE_Out/PoE_Max_Power_per_Port_(at_PSE) \
+  HARDWARE/Power/Connector \
+  HARDWARE/Power/Input_voltage_range \
+  HARDWARE/Power/PoE_Standards \
+  HARDWARE/Power/Power_consumption \
+  HARDWARE/Input_Output/Input \
+  HARDWARE/Input_Output/Output \
+  HARDWARE/Serial/RS232 \
+  HARDWARE/Serial/RS485 \
+  HARDWARE/Serial/Serial_functions \
+  HARDWARE/SD_card/Physical_size \
+  HARDWARE/SD_card/Applications \
+  HARDWARE/SD_card/Capacity \
+  HARDWARE/SD_card/Storage_formats \
+  HARDWARE/USB/Data_rate \
+  HARDWARE/USB/Applications \
+  HARDWARE/USB/External_devices \
+  HARDWARE/USB/Storage_formats \
+  HARDWARE/Physical_Interfaces/Ethernet \
+  HARDWARE/Physical_Interfaces/IO \
+  HARDWARE/Physical_Interfaces/Status_leds \
+  HARDWARE/Physical_Interfaces/SIM \
+  HARDWARE/Physical_Interfaces/Power \
+  HARDWARE/Physical_Interfaces/Input_output \
+  HARDWARE/Physical_Interfaces/Atennas \
+  HARDWARE/Physical_Interfaces/Antennas_specifications \
+  HARDWARE/Physical_Interfaces/USB \
+  HARDWARE/Physical_Interfaces/RS232 \
+  HARDWARE/Physical_Interfaces/RS485 \
+  HARDWARE/Physical_Interfaces/Reset \
+  HARDWARE/Physical_Specification/Casing_material \
+  HARDWARE/Physical_Specification/Dimensions \
+  HARDWARE/Physical_Specification/Weight \
+  HARDWARE/Physical_Specification/Mounting_options \
+  HARDWARE/Operating_Enviroment/Operating_Temperature \
+  HARDWARE/Operating_Enviroment/Operating_Humidity \
+  HARDWARE/Operating_Enviroment/Ingress_Protenction_Rating \
+  HARDWARE/Regulatory_&_Type_Approvals/Regulatory \
+  HARDWARE/Regulatory_&_Type_Approvals/Operator \
+  HARDWARE/EMC_Emissions_&_Immunity/Standards \
+  HARDWARE/EMC_Emissions_&_Immunity/ESD \
+  HARDWARE/EMC_Emissions_&_Immunity/Radiated_Immunity \
+  HARDWARE/EMC_Emissions_&_Immunity/EFT \
+  HARDWARE/EMC_Emissions_&_Immunity/Surge_Immunity_(AC_Mains_Power_Port) \
+  HARDWARE/EMC_Emissions_&_Immunity/CS \
+  HARDWARE/EMC_Emissions_&_Immunity/DIP \
+  HARDWARE/RF/Standards \
+  HARDWARE/Safety/Standards \
+  HARDWARE/Safety_(Ordinary_Locations)/Standards \
+  HARDWARE/Safety_(Hazardous_Locations)/Standards \
+  HARDWARE/Safety_(Hazardous_Locations)/Hazardous_Environments
 
 define Device/InitProfile
   PROFILES := $(PROFILE)

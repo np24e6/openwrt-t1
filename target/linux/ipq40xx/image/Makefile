@@ -2,15 +2,15 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/image.mk
 
 define Build/UbootFw
-	$(CP) ./uboot_fw/ $(STAGING_DIR_HOST)/
-	if [ -e $(STAGING_DIR_HOST)/uboot_fw/tz.mbn ]; then \
-		$(SED) 's~file\.ubi~$@~g' $(STAGING_DIR_HOST)/uboot_fw/norplusnand-flash.conf; \
-		$(SED) 's~file\.elf~$(BIN_DIR)/openwrt-ipq40xx-u-boot-stripped.elf~g'  $(STAGING_DIR_HOST)/uboot_fw/norplusnand-flash.conf; \
-		python $(TOPDIR)/target/linux/ipq40xx/image/uboot_fw/pack.py -t norplusnand -B -F boardconfig_premium_tlt -o $@ $(STAGING_DIR_HOST)/uboot_fw; \
+	$(CP) ./uboot_fw/ $(TMP_DIR)/
+	if [ -e $(TMP_DIR)/uboot_fw/tz.mbn ]; then \
+		$(SED) 's~file\.ubi~$@~g' $(TMP_DIR)/uboot_fw/norplusnand-flash.conf; \
+		$(SED) 's~file\.elf~$(BIN_DIR)/openwrt-ipq40xx-u-boot-stripped.elf~g'  $(TMP_DIR)/uboot_fw/norplusnand-flash.conf; \
+		python $(TOPDIR)/target/linux/ipq40xx/image/uboot_fw/pack.py -t norplusnand -B -F boardconfig_premium_tlt -o $@ $(TMP_DIR)/uboot_fw; \
 	else \
-		$(SED) 's~file\.ubi~$@~g' $(STAGING_DIR_HOST)/uboot_fw/norplusnand-apps-flash.conf; \
-		$(SED) 's~file\.elf~$(BIN_DIR)/openwrt-ipq40xx-u-boot-stripped.elf~g'  $(STAGING_DIR_HOST)/uboot_fw/norplusnand-apps-flash.conf; \
-		python $(TOPDIR)/target/linux/ipq40xx/image/uboot_fw/pack.py -t norplusnand -B -F appsboardconfig_premium_tlt -o $@ $(STAGING_DIR_HOST)/uboot_fw; \
+		$(SED) 's~file\.ubi~$@~g' $(TMP_DIR)/uboot_fw/norplusnand-apps-flash.conf; \
+		$(SED) 's~file\.elf~$(BIN_DIR)/openwrt-ipq40xx-u-boot-stripped.elf~g'  $(TMP_DIR)/uboot_fw/norplusnand-apps-flash.conf; \
+		python $(TOPDIR)/target/linux/ipq40xx/image/uboot_fw/pack.py -t norplusnand -B -F appsboardconfig_premium_tlt -o $@ $(TMP_DIR)/uboot_fw; \
 	fi
 endef
 
@@ -35,7 +35,7 @@ define Device/teltonika_rutx
 	PAGESIZE := 2048
 	FILESYSTEMS := squashfs
 	DEVICE_FEATURES := usb-port gps serial modbus io wifi bt dualsim \
-			port-mirror ntrip hw-offload mobile
+			port-mirror ntrip hw-offload mobile dot1x-client
 	GPL_PREFIX := GPL
 	# Default common packages for RUTX series
 	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

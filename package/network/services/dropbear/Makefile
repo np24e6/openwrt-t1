@@ -11,7 +11,9 @@ PKG_NAME:=dropbear
 PKG_VERSION:=2020.81
 PKG_RELEASE:=2
 
-PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.bz2
+PKG_SOURCE_VERSION:=2020.81
+PKG_SOURCE:=$(PKG_NAME)-$(PKG_SOURCE_VERSION).tar.bz2
+
 PKG_SOURCE_URL:= \
 	http://matt.ucc.asn.au/dropbear/releases/ \
 	https://dropbear.nl/mirror/releases/
@@ -33,7 +35,7 @@ PKG_CONFIG_DEPENDS:= \
 	CONFIG_DROPBEAR_ED25519 CONFIG_DROPBEAR_CHACHA20POLY1305 \
 	CONFIG_DROPBEAR_UTMP CONFIG_DROPBEAR_PUTUTLINE \
 	CONFIG_DROPBEAR_DBCLIENT CONFIG_DROPBEAR_SCP CONFIG_DROPBEAR_ASKPASS \
-	CONFIG_DROPBEAR_SHA1
+	CONFIG_USE_PROCD CONFIG_USE_OPENRC CONFIG_DROPBEAR_SHA1
 
 include $(INCLUDE_DIR)/package.mk
 
@@ -205,6 +207,9 @@ define Package/dropbear/install
 	$(INSTALL_DATA) ./files/dropbear.failsafe $(1)/lib/preinit/99_10_failsafe_dropbear
 	$(if $(CONFIG_DROPBEAR_ED25519),touch $(1)/etc/dropbear/dropbear_ed25519_host_key)
 	$(if $(CONFIG_DROPBEAR_ECC),touch $(1)/etc/dropbear/dropbear_ecdsa_host_key)
+
+	$(if $(CONFIG_USE_OPENRC), \
+		$(OPENRC_INSTALL) boot dropbear ./files/dropbear.openrc $(1))
 endef
 
 define Package/dropbearconvert/install

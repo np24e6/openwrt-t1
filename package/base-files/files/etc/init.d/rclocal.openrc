@@ -1,0 +1,12 @@
+#!/sbin/openrc-run
+
+depend() {
+	before done
+}
+
+start() {
+	# process user commands
+	[ -f /etc/rc.local ] && {
+		sh /etc/rc.local
+	}
+}

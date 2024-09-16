@@ -1,14 +1,18 @@
 #
-# Copyright (C) 2023 Teltonika-Networks
+# Copyright (C) 2024 Teltonika-Networks
 #
 
 PKG_VUCI_BUILD_DIR := $(if $(findstring feeds/vuci,$(shell pwd)),$(GPL_BUILD_DIR)/package/feeds/vuci/$(shell basename $$(pwd)),)
 PKG_NORMAL_BUILD_DIR := $(GPL_BUILD_DIR)/$(subst $(TOPDIR)/,,$(shell pwd))
 PKG_GPL_BUILD_DIR ?= $(if $(PKG_VUCI_BUILD_DIR),$(PKG_VUCI_BUILD_DIR),$(PKG_NORMAL_BUILD_DIR))
 
+IS_TLT_LIC := $(findstring Teltonika-,$(PKG_LICENSE))
+IS_NDA_SRC := $(findstring Teltonika-nda-source,$(PKG_LICENSE))
+
 define gpl_clear_install
 	[ -e "$(1)/Makefile" ] && \
 		sed -i '/^define Build\/InstallGPL/,/^endef/d' "$(1)/Makefile" || true
+	find $(1) -iname ".gitlab*" -delete || true
 endef
 
 define gpl_clear_vars
@@ -19,7 +23,6 @@ define gpl_clear_vars
 		sed -i "/^PKG_MIRROR_HASH:=/d" "$(1)/Makefile"; \
 		sed -i "/^PKG_SOURCE_PROTO:=/d" "$(1)/Makefile"; \
 		sed -i "/^PKG_SOURCE_URL/d" "$(1)/Makefile"; \
-		sed -i "/^PKG_MIRROR_HASH:=/d" "$(1)/Makefile"; \
 	)
 endef
 
@@ -31,23 +34,21 @@ define gpl_install_mixed
 			$(if $(PKG_SOURCE_URL), \
 				printf "'$(PKG_SOURCE_URL)' '%s/Makefile'\0" "$$(a=$(CURDIR) && echo $${a#$(TOPDIR)/})" >>"$(TOPDIR)/tmp/SOURCE_URLs" && \
 				sed -i'' -E \
-					-e '/ *PKG_SOURCE_URL *[:?]?=.*$$/d' \
-					-e "s#PKG_UPSTREAM_URL( *[:?]?=.*$$)#PKG_SOURCE_URL\1#" \
+					-e '/[\t ]*PKG_SOURCE.*[:?]?=.*$$/d' \
+					-e "s#^[\t ]*PKG_UPSTREAM_(SOURCE_)?#PKG_SOURCE_#gm" \
 					"$(1)/Makefile"; \
 			, \
 				sed -i'' -E \
-					-e '/ *PKG_UPSTREAM_URL *[:?]?=.*$$/d' \
+					-e '/[\t ]*(PKG_SOURCE|PKG_UPSTREAM).*[:?]?=.*$$/d' \
 					"$(1)/Makefile"; \
 			) \
-			sed -i'' -E -e '/ *PKG_UPSTREAM_FILE *[:?]?=.*$$/d' "$(1)/Makefile"; \
 		, \
 			$(if $(findstring $(TLT_GIT),$(PKG_SOURCE_URL)), \
 				mkdir -p "$(1)/src"; \
-				tar xf "$(TOPDIR)/dl/$(PKG_SOURCE)" --strip-components=1 -C "$(1)/src"; \
-				sed --in-place='' --regexp-extended \
-					--expression="/^ *PKG_SOURCE_PROTO *[:?]?=/d" \
-					--expression="/^ *PKG_MIRROR_HASH *[:?]?=/d" \
-					--expression="/^ *PKG_SOURCE_URL *[:?]?=/d" \
+				tar xf "$(DL_DIR)/$(PKG_SOURCE)" --strip-components=$(if $(STRIP_COMPONENTS),$(STRIP_COMPONENTS),1) -C "$(1)/src" ||\
+					unzip -q -d "$(1)/src" $(DL_DIR)/$(PKG_SOURCE); \
+				sed -i'' -E \
+					-e "/^[\t ]*(PKG_SOURCE_PROTO|PKG_MIRROR_HASH|PKG_SOURCE_URL)[\t ]*[:?]?=/d" \
 					"$(1)/Makefile"; \
 			) \
 		) \
@@ -106,54 +107,80 @@ define gpl_scan_deps
 	)
 endef
 
+download_upstream:
+
+ifdef PKG_UPSTREAM_URL
+include $(INCLUDE_DIR)/unpack-upstream.mk
+$(eval $(call Download/upstream))
+endif
+
 define gpl_install_orig_w_patch
-	$(eval URL_FILE:=$(PKG_UPSTREAM_URL))
-	$(eval HASH:=skip)
-	$(eval FILE:=$(PKG_UPSTREAM_FILE))
 	rm -fr "$(1)/src"
 
-	$(eval OLD_TLT_GIT:=$(TLT_GIT))
-	$(eval TLT_GIT:=)
-	$(call DownloadMethod/$(call dl_method,$(PKG_UPSTREAM_URL),))
-	$(eval TLT_GIT:=$(OLD_TLT_GIT))
+	# include upstream code into SDK if it's a subdir of another repo, or if it's hosted on Teltonika servers
+	$(if $(PKG_UPSTREAM_SOURCE_SUBDIR)$(findstring $(TLT_GIT),$(PKG_UPSTREAM_URL)), \
+		$(eval UPSTREAM_TO_LOCAL_SRC:=1) \
+	)
 
 	$(eval OLD_PKG_UPSTREAM_URL:=$(PKG_UPSTREAM_URL))
 	$(eval PKG_UPSTREAM_URL:=)
+	$(eval OLD_PKG_SOURCE_URL:=$(PKG_SOURCE_URL))
+	$(if $(PKG_SOURCE_URL),$(eval PKG_SOURCE_URL:=$(PKG_SOURCE_URL) $(TLT_GIT)))
 	$(call gpl_install_mixed,$(1))
+	$(eval PKG_SOURCE_URL:=$(OLD_PKG_SOURCE_URL))
 	$(eval PKG_UPSTREAM_URL:=$(OLD_PKG_UPSTREAM_URL))
-	$(eval STRIP_COMPONENTS?=1)
-	$(eval STRIP_COMPONENTS:=$(STRIP_COMPONENTS))
+	$(eval PKG_UPSTREAM_SOURCE_DIR:=$(1)/upstream)
+
+	mkdir -p "$(PKG_UPSTREAM_SOURCE_DIR)"
+	$(call UPSTREAM_UNPACK_CMD,$(PKG_UPSTREAM_SOURCE_DIR))
 
 (\
-	mkdir -p "$(1)/orig"; \
-	cd "$(1)/orig"; \
-	case $(PKG_UPSTREAM_FILE) in \
-	*.tar.bz2|*.tbz2)	tar xjf "$(DL_DIR)/$(PKG_UPSTREAM_FILE)" --strip-components=$(STRIP_COMPONENTS)	;; \
-	*.tar.gz|*.tgz)		tar xzf "$(DL_DIR)/$(PKG_UPSTREAM_FILE)" --strip-components=$(STRIP_COMPONENTS)	;; \
-	*.bz2)			bunzip2 "$(DL_DIR)/$(PKG_UPSTREAM_FILE)"	;; \
-	*.rar)			unrar x "$(DL_DIR)/$(PKG_UPSTREAM_FILE)"	;; \
-	*.gz)			gunzip "$(DL_DIR)/$(PKG_UPSTREAM_FILE)"		;; \
-	*.tar)			tar xf "$(DL_DIR)/$(PKG_UPSTREAM_FILE)"		;; \
-	*.zip)			unzip "$(DL_DIR)/$(PKG_UPSTREAM_FILE)"		;; \
-	*.Z)			uncompress "$(DL_DIR)/$(PKG_UPSTREAM_FILE)"	;; \
-	*.7z)			7z x "$(DL_DIR)/$(PKG_UPSTREAM_FILE)"		;; \
-	esac; \
+	check_size() { \
+		[[ "$$(du -bs "$$1" | awk '{print $$1}')" -lt 512 ]] && printf 'Error: %s of $(1) is empty!\n' "$$1" >&2 && exit 3; \
+	}; \
 	cd "$(1)"; \
-	diff_txt="$$(diff --recursive --unified --new-file --no-dereference orig/ src/)"; \
-	[ -n "$$diff_txt" ] && { \
+	check_size upstream; \
+	check_size src; \
+	diff_txt="$$(diff --recursive --unified --new-file --no-dereference upstream/ src/)"; \
+	[ -z "$$diff_txt" ] || { \
 		mkdir -p "$(1)/patches"; \
 		echo "$$diff_txt" >"$(1)/patches/000_tlt.patch"; \
-		rm -fr "$(1)/src" && mv "$(1)/orig" "$(1)/src"; \
+		rm -fr "$(1)/src"; \
+		mv "$(PKG_UPSTREAM_SOURCE_DIR)" "$(1)/src"; \
 	}; \
-	rm -fr "$(1)/orig"; \
+	rm -fr "$(PKG_UPSTREAM_SOURCE_DIR)" $(if $(UPSTREAM_TO_LOCAL_SRC),,"$(1)/src"); \
 )
-endef
-
-define gpl_install_def
-	$(if $(findstring $(GPL_INCLUDE_SRC),1), \
-		$(call gpl_install_mixed,$(1)) \
+	$(if $(UPSTREAM_TO_LOCAL_SRC), \
+		sed -i'' -E \
+			-e '/[\t ]*(PKG_SOURCE|PKG_UPSTREAM|PKG_BUILD_DIR|HOST_BUILD_DIR).*[:?]?=.*$$/d' \
+			"$(1)/Makefile"; \
 	, \
-		$(error Build/InstallGPL section is not defined! Please fix the package) \
+		$(if $(PKG_SOURCE_URL), \
+			printf "'$(PKG_SOURCE_URL)' '%s/Makefile'\0" "$$(a=$(CURDIR) && echo $${a#$(TOPDIR)/})" >>"$(TOPDIR)/tmp/SOURCE_URLs"; \
+		) \
+		sed -i'' -E \
+			-e '/[\t ]*PKG_SOURCE_(VERSION|URL|PROTO|URL_FILE)[\t ]*[:?]?=.*$$/d' \
+			$(if $(PKG_UPSTREAM_BUILD_DIR), \
+				-e '/[\t ]*PKG_BUILD_DIR[\t ]*[:?]?=.*$$/d' \
+				-e "s#PKG_UPSTREAM_BUILD_DIR#PKG_BUILD_DIR#gm" \
+			) \
+			$(if $(HOST_UPSTREAM_BUILD_DIR), \
+				-e '/[\t ]*HOST_BUILD_DIR[\t ]*[:?]?=.*$$/d' \
+				-e "s#HOST_UPSTREAM_BUILD_DIR#HOST_BUILD_DIR#gm" \
+			) \
+			$(if $(PKG_UPSTREAM_URL_FILE), \
+				-e '/[\t ]*PKG_SOURCE[\t ]*[:?]?=.*$$/d' \
+				-e "s#PKG_UPSTREAM_URL_FILE#PKG_SOURCE#gm" \
+			) \
+			$(if $(PKG_UPSTREAM_HASH), \
+				-e '/[\t ]*PKG_HASH[\t ]*[:?]?=.*$$/d' \
+				-e "s#PKG_UPSTREAM_HASH#PKG_HASH#gm" \
+			) \
+			-e "s#PKG_UPSTREAM_(SOURCE_)?#PKG_SOURCE_#gm" \
+			"$(1)/Makefile"; \
+	)
+	$(if $(findstring feeds,$(2)), \
+		TOPDIR="$(GPL_BUILD_DIR)" "$(GPL_BUILD_DIR)/scripts/feeds" install "$$(basename "$(1)")"; \
 	)
 endef
 
@@ -168,22 +195,22 @@ endef
 
 define Build/InstallGPL/Default
 	$(eval current_dir:=$(shell pwd))
-	$(if $(findstring package/teltonika,$(current_dir)), \
-		$(if $(and $(findstring $(GPL_INCLUDE_SRC),1),$(strip $(PKG_UPSTREAM_URL))), \
-			$(call gpl_install_orig_w_patch,$(1)) \
+	$(if $(IS_TLT_LIC), \
+		$(if $(and $(IS_NDA_SRC),$(CONFIG_GPL_INCLUDE_WEB_SOURCES)), \
+			$(call gpl_install_mixed,$(1)) \
 		, \
-			$(call gpl_install_def,$(1)) \
+			$(error Build/InstallGPL section is not defined! Please fix the package.) \
 		) \
 	, \
-		$(if $(findstring feeds/vuci,$(current_dir)), \
-			$(if $(CONFIG_GPL_INCLUDE_WEB_SOURCES), \
-				$(call gpl_install_mixed,$(1)) \
-			, \
-				$(call gpl_install_def,$(1)) \
-			) \
+		$(if $(strip $(PKG_UPSTREAM_URL)), \
+			$(call gpl_install_orig_w_patch,$(1),$(current_dir)) \
 		, \
 			$(if $(findstring feeds,$(current_dir)), \
-				$(call gpl_install_feeds,$(1)) \
+				$(if $(findstring feeds/vuci,$(current_dir)), \
+					$(call gpl_install_mixed,$(1)) \
+				, \
+					$(call gpl_install_feeds,$(1)) \
+				) \
 			, \
 				$(call gpl_install_mixed,$(1)) \
 			) \
@@ -199,23 +226,15 @@ $(GPL_BUILD_DIR)/package:
 	find "$(TOPDIR)/package" -maxdepth 1 -type f -exec cp "{}" "$@" \;
 	cp -rf "$(TOPDIR)/feeds" "$(GPL_BUILD_DIR)"
 
-gpl-install: $(GPL_BUILD_DIR)/package
-	$(if $(findstring $(GPL_INCLUDE_SRC),1), \
-		$(call Build/InstallGPL,$(PKG_GPL_BUILD_DIR)) \
-	, \
-		$(if $(findstring package/teltonika,$(shell pwd)), \
-			$(call gpl_install_closed,$(PKG_GPL_BUILD_DIR)) \
+gpl-install: $(GPL_BUILD_DIR)/package download_upstream
+	$(if $(IS_TLT_LIC), \
+		$(if $(and $(IS_NDA_SRC),$(CONFIG_GPL_INCLUDE_WEB_SOURCES)), \
+			$(call Build/InstallGPL,$(PKG_GPL_BUILD_DIR)) \
 		, \
-			$(if $(findstring feeds/vuci,$(shell pwd)), \
-				$(if $(CONFIG_GPL_INCLUDE_WEB_SOURCES), \
-					$(call Build/InstallGPL,$(PKG_GPL_BUILD_DIR)) \
-				, \
-					$(call gpl_install_closed,$(PKG_GPL_BUILD_DIR)) \
-				) \
-			, \
-				$(call Build/InstallGPL,$(PKG_GPL_BUILD_DIR)) \
-			) \
+			$(call gpl_install_closed,$(PKG_GPL_BUILD_DIR)) \
 		) \
+	, \
+		$(call Build/InstallGPL,$(PKG_GPL_BUILD_DIR)) \
 	)
 	$(call gpl_scan_deps)
 	$(call gpl_clear_install,$(PKG_GPL_BUILD_DIR))

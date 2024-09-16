@@ -1,0 +1,41 @@
+--- a/files/usr/share/15-mwan3
++++ b/files/usr/share/15-mwan3
+@@ -113,15 +113,28 @@ esac
+ mwan3_flush_conntrack "$IFNAME" "$ACTION"
+ 
+ flush_conntrack() {
+-	local enabled
++	ipsec_enabled
+ 	local conn_name="${1%_*}"
+ 
+-	config_get enabled "$conn_name" enabled 0
++	config_get ipsec_enabled "$conn_name" enabled 0
+ 	[ "$MWAN3_STARTUP" != "init" ] && [ "$enabled" = "1" ] || return 0
+ 	echo f > /proc/net/nf_conntrack
+ 	ipsec down "${conn_name}-${1}"
+ }
+ 
++
++ipsec_routes() {
++	[ "$ipsec_enabled" = "1" ] || return 0
++	local wan_device="$(cat /var/run/mwan3/active_wan)"
++	mwan3_get_true_iface "wan_device" "$wan_device"
++	network_get_device "wan_device" "$wan_device"
++	local curr="$(ip route show default dev $wan_device)"
++	local curr_default="$(ip route show default metric 0)"
++
++	[ -n "$curr_default" ] && ip route del $curr_default
++	ip route add dev "$wan_device" $curr metric 0
++}
++
+ flush_conntrack_openvpn() {
+ 	local enabled proto found_tcp=0 found_udp=0 section
+ 	section="$1"
+@@ -138,6 +151,7 @@ flush_conntrack_openvpn() {
+ 
+ config_load ipsec
+ config_foreach flush_conntrack connection
++ipsec_routes
+ config_load openvpn
+ config_foreach flush_conntrack_openvpn openvpn
+ config_load mwan3

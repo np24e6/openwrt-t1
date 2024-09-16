@@ -25,7 +25,7 @@ DEFAULT_PACKAGES:=\
 ifneq ($(CONFIG_SELINUX),)
 DEFAULT_PACKAGES+=busybox-selinux procd-selinux
 else
-DEFAULT_PACKAGES+=busybox procd
+DEFAULT_PACKAGES+=busybox
 endif
 
 # For the basic set
@@ -40,7 +40,11 @@ DEFAULT_PACKAGES.basic:=\
 	uclient-fetch \
 	urandom-seed \
 	urngd \
-	dnsmasq
+	dnsmasq \
+	fwcert \
+	uci-default \
+	troubleshoot \
+	kmod-gpio-button-hotplug
 
 # For nas targets
 DEFAULT_PACKAGES.nas:=\

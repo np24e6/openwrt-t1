@@ -10,17 +10,18 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=c-ares
 PKG_VERSION:=1.19.1
-PKG_RELEASE:=1
+PKG_RELEASE:=2
 
-PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
-PKG_SOURCE_URL:=https://c-ares.org/download
 PKG_HASH:=321700399b72ed0e037d0074c629e7741f6b2ec2dda92956abe3e9671d3e268e
 
 PKG_LICENSE:=MIT
 PKG_LICENSE_FILES:=LICENSE.md
 PKG_CPE_ID:=cpe:/a:c-ares_project:c-ares
-
 CMAKE_INSTALL:=1
+
+PKG_SOURCE_VERSION:=1.19.1
+PKG_SOURCE:=$(PKG_NAME)-$(PKG_SOURCE_VERSION).tar.gz
+PKG_SOURCE_URL:=https://c-ares.org/download
 
 include $(INCLUDE_DIR)/package.mk
 include $(INCLUDE_DIR)/cmake.mk

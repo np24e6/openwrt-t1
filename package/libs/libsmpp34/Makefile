@@ -6,15 +6,16 @@ PKG_VERSION:=1.14.1
 PKG_RELEASE:=1
 
 PKG_SOURCE_PROTO:=git
-PKG_SOURCE_URL=https://gitea.osmocom.org/cellular-infrastructure/libsmpp34.git
-PKG_SOURCE_DATE:=2021-02-23
 PKG_SOURCE_VERSION:=09726c1cb1ce191cb2f5a848c3feda0f57755951
-PKG_MIRROR_HASH:=08d0bffc7b3f66caa70922d175aefb06b438d6fc58b4993c03ab908923ff3acd
+PKG_SOURCE_URL=https://gitea.osmocom.org/cellular-infrastructure/libsmpp34.git
+
+PKG_SOURCE_DATE:=2021-02-23
 
 PKG_FIXUP:=autoreconf
 
 PKG_INSTALL:=1
-PKG_LICENSE:=LGPLv2.1
+PKG_LICENSE:=LGPL-2.1-or-later
+PKG_LICENSE_FILES:=COPYING
 
 include $(INCLUDE_DIR)/package.mk
 

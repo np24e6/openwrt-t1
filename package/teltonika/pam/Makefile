@@ -3,10 +3,10 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=pam
-PKG_VERSION:=2024-03-07
-PKG_RELEASE:=2
+PKG_VERSION:=2024-06-20
+PKG_RELEASE:=1
 
-PKG_SOURCE_VERSION:=1.0
+PKG_SOURCE_VERSION:=1.1
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_SOURCE_VERSION)-$(PKG_VERSION)
 PKG_SOURCE:=$(PKG_SOURCE_SUBDIR).tar.gz
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_SOURCE_SUBDIR)
@@ -45,16 +45,23 @@ define Package/pam/prerm
 	[ -z "$${IPKG_INSTROOT}" ] || exit 0
 	. /lib/functions.sh
 	
-	clean_rpcd() {
+	clean_rpcd_login() {
 		uci_set "rpcd" "$$1" "auth_type" "shadow"
+	}
+
+	clean_rpcd() {
+		uci_remove "rpcd" "$$1" "pam_all_users" 2> /dev/null
+		uci_remove "rpcd" "$$1" "pam_default_group" 2> /dev/null
 	}
 	
 	clean_dropbear() {
 		uci_remove "dropbear" "$$1" "pam" 2> /dev/null
+		uci_remove "dropbear" "$$1" "pam_privilege_lvl" 2> /dev/null
 	}
 	
 	config_load "rpcd"
-	config_foreach clean_rpcd "login"
+	config_foreach clean_rpcd_login "login"
+	config_foreach clean_rpcd "rpcd"
 	uci_commit "rpcd"
 	
 	config_load "dropbear"

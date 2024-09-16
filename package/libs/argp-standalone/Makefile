@@ -16,10 +16,11 @@ PKG_SOURCE_URL:=http://www.lysator.liu.se/~nisse/misc/
 PKG_HASH:=dec79694da1319acd2238ce95df57f3680fea2482096e483323fddf3d818d8be
 PKG_MAINTAINER:=Ted Hess <thess@kitschensync.net>
 
-PKG_LICENSE:=LGPL-2.1
-PKG_LICENSE:=Makefile.am
+PKG_LICENSE:=LGPL-2.1-or-later
+PKG_LICENSE_FILES:=argp.h
 
 include $(INCLUDE_DIR)/package.mk
+include $(INCLUDE_DIR)/host-build.mk
 
 define Package/argp-standalone
   SECTION:=libs
@@ -35,6 +36,16 @@ endef
 MAKE_FLAGS += \
 	CFLAGS="$(TARGET_CFLAGS) $(FPIC)"
 
+HOST_CFLAGS += -fPIC
+
+define Host/Install
+	$(INSTALL_DIR) $(STAGING_DIR_HOST)/include
+	$(CP)   $(HOST_BUILD_DIR)/argp.h \
+	$(STAGING_DIR_HOST)/include/
+	$(INSTALL_DIR) $(1)/lib
+	$(CP)   $(HOST_BUILD_DIR)/libargp.a \
+		$(STAGING_DIR_HOST)/lib/
+endef
 
 define Build/InstallDev
 	$(INSTALL_DIR) $(1)/usr/include
@@ -45,4 +56,5 @@ define Build/InstallDev
 		$(1)/usr/lib/
 endef
 
+$(eval $(call HostBuild))
 $(eval $(call BuildPackage,argp-standalone))

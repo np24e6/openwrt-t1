@@ -7,7 +7,7 @@ include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=post_get
 
-PKG_SOURCE_VERSION:=1.4
+PKG_SOURCE_VERSION:=1.5
 
 PKG_LICENSE:=Teltonika-closed
 

@@ -9,26 +9,23 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=coova-chilli
-PKG_VERSION:=2024-03-06
+PKG_VERSION:=2024-07-12
 PKG_MAINTAINER:=Jaehoon You <teslamint@gmail.com>
 PKG_LICENSE:=GPL-2.0-or-later
 PKG_LICENSE_FILES:=COPYING
 PKG_RELEASE:=1
 
-PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
-PKG_SOURCE_VERSION:=2.13
+PKG_SOURCE_VERSION:=1.4
+PKG_SOURCE_URL:=https://codeload.github.com/coova/coova-chilli/tar.gz/refs/tags/$(PKG_SOURCE_VERSION)?
+PKG_SOURCE:=coova-chilli-$(PKG_SOURCE_VERSION).tar.gz
+PKG_HASH:=987647a4c8efe7b1e2d7108d56068e3bd7830d326680f0eaa2c705e4c59c46d9
+
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_SOURCE_VERSION)-$(PKG_VERSION)
-PKG_SOURCE:=$(PKG_SOURCE_SUBDIR).tar.gz
-PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_SOURCE_SUBDIR)
+PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-$(PKG_SOURCE_VERSION)
 
 PKG_ORIGIN_URL:=https://github.com/coova/coova-chilli
 
 PKG_INSTALL:=1
-GPL_INCLUDE_SRC:=1
-
-PKG_UPSTREAM_VERSION:=1.4
-PKG_UPSTREAM_URL:=https://codeload.github.com/coova/coova-chilli/tar.gz/refs/tags/$(PKG_UPSTREAM_VERSION)?
-PKG_UPSTREAM_FILE:=coova-chilli-$(PKG_UPSTREAM_VERSION).tar.gz
 
 PKG_CONFIG_DEPENDS := \
   COOVACHILLI_MINIPORTAL \
@@ -39,6 +36,7 @@ PKG_CONFIG_DEPENDS := \
   COOVACHILLI_LARGELIMITS \
   COOVACHILLI_NOSSL \
   COOVACHILLI_OPENSSL \
+  COOVACHILLI_CURL \
   COOVACHILLI_DATABASE \
   COOVACHILLI_UBUS \
   CONFIG_MOBILE_SUPPORT
@@ -51,7 +49,7 @@ define Package/coova-chilli
   SECTION:=net
   CATEGORY:=Network
   DEPENDS:=+libuci +libtlt_uci +kmod-tun +librt +COOVACHILLI_CYASSL:libcyassl +COOVACHILLI_OPENSSL:libopenssl \
-	+COOVACHILLI_DATABASE:libsqlite3 +MOBILE_SUPPORT:libgsm +libubus +libubox +libtltchilli +libjson-c
+	+COOVACHILLI_DATABASE:libsqlite3 +MOBILE_SUPPORT:libgsm +libubus +libubox +libtltchilli +libjson-c +COOVACHILLI_CURL:libcurl
   TITLE:=Wireless LAN HotSpot controller (Coova Chilli Version)
   URL:=https://coova.github.io/
   MENU:=1
@@ -129,6 +127,7 @@ define Build/Configure
 	$(if $(CONFIG_COOVACHILLI_UBUS),--enable,--disable)-ubus \
 	$(if $(CONFIG_IPV6),--with,--without)-ipv6 \
 	$(if $(CONFIG_COOVACHILLI_OPENSSL),--with,--without)-openssl \
+	$(if $(CONFIG_COOVACHILLI_CURL),--with,--without)-curl \
 	$(if $(CONFIG_PACKAGE_kmod-ipt-coova),--with-nfcoova) \
 	)
 endef

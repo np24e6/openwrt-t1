@@ -49,7 +49,6 @@ config OPENSSL_WITH_SSE2
 
 config OPENSSL_WITH_DEPRECATED
 	bool
-	default y
 	prompt "Include deprecated APIs"
 	help
 		This drops all deprecated API, including engine support.
@@ -247,7 +246,6 @@ comment "Engine/Hardware Support"
 config OPENSSL_ENGINE
 	bool "Enable engine support"
 	select OPENSSL_WITH_DEPRECATED
-	default y
 	help
 		This enables alternative cryptography implementations,
 		most commonly for interfacing with external crypto devices,

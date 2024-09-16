@@ -1,0 +1,77 @@
+--- a/src/libcharon/plugins/stroke/stroke_config.c
++++ b/src/libcharon/plugins/stroke/stroke_config.c
+@@ -1101,6 +1101,8 @@ static child_cfg_t *build_child_cfg(priv
+ 		.dpd_action = map_action(msg->add_conn.dpd.action),
+ 		.close_action = map_action(msg->add_conn.close_action),
+ 		.updown = msg->add_conn.me.updown,
++		.if_id_in = msg->add_conn.if_id_in,
++		.if_id_out = msg->add_conn.if_id_out,
+ 	};
+ 
+ 	child_cfg = child_cfg_create(msg->add_conn.name, &child);
+--- a/src/starter/confread.h
++++ b/src/starter/confread.h
+@@ -141,6 +141,8 @@ struct starter_conn {
+ 		unsigned long   sa_keying_tries;
+ 		unsigned long   sa_rekey_fuzz;
+ 		uint32_t       reqid;
++		uint32_t       if_id_in;
++		uint32_t       if_id_out;
+ 		mark_t          mark_in;
+ 		mark_t          mark_out;
+ 		uint32_t       replay_window;
+--- a/src/stroke/stroke_msg.h
++++ b/src/stroke/stroke_msg.h
+@@ -266,6 +266,8 @@ struct stroke_msg_t {
+ 			uint32_t reqid;
+ 			uint32_t tfc;
+ 			uint8_t ikedscp;
++			uint32_t if_id_in;
++			uint32_t if_id_out;
+ 
+ 			crl_policy_t crl_policy;
+ 			int unique;
+--- a/src/starter/keywords.h.in
++++ b/src/starter/keywords.h.in
+@@ -73,6 +73,8 @@ enum kw_token_t {
+ 	KW_MEDIATED_BY,
+ 	KW_ME_PEERID,
+ 	KW_REQID,
++	KW_IF_ID_IN,
++	KW_IF_ID_OUT,
+ 	KW_REPLAY_WINDOW,
+ 	KW_MARK,
+ 	KW_MARK_IN,
+--- a/src/starter/keywords.txt
++++ b/src/starter/keywords.txt
+@@ -71,6 +71,8 @@ mediation,         KW_MEDIATION
+ mediated_by,       KW_MEDIATED_BY
+ me_peerid,         KW_ME_PEERID
+ reqid,             KW_REQID
++if_id_in,          KW_IF_ID_IN
++if_id_out,         KW_IF_ID_OUT
+ replay_window,     KW_REPLAY_WINDOW
+ mark,              KW_MARK
+ mark_in,           KW_MARK_IN
+--- a/src/starter/args.c
++++ b/src/starter/args.c
+@@ -174,6 +174,8 @@ static const token_info_t token_info[] =
+ 	{ ARG_STR,  offsetof(starter_conn_t, me_mediated_by), NULL                     },
+ 	{ ARG_STR,  offsetof(starter_conn_t, me_peerid), NULL                          },
+ 	{ ARG_UINT, offsetof(starter_conn_t, reqid), NULL                              },
++	{ ARG_UINT, offsetof(starter_conn_t, if_id_in), NULL                           },
++	{ ARG_UINT, offsetof(starter_conn_t, if_id_out), NULL                          },
+ 	{ ARG_UINT, offsetof(starter_conn_t, replay_window), NULL                      },
+ 	{ ARG_MISC, 0, NULL  /* KW_MARK */                                             },
+ 	{ ARG_MISC, 0, NULL  /* KW_MARK_IN */                                          },
+--- a/src/starter/starterstroke.c
++++ b/src/starter/starterstroke.c
+@@ -234,6 +234,8 @@ int starter_stroke_add_conn(starter_conf
+ 	push_string(&msg, add_conn.ikeme.mediated_by, conn->me_mediated_by);
+ 	push_string(&msg, add_conn.ikeme.peerid, conn->me_peerid);
+ 	msg->add_conn.reqid = conn->reqid;
++	msg->add_conn.if_id_in = conn->if_id_in;
++	msg->add_conn.if_id_out = conn->if_id_out;
+ 	msg->add_conn.replay_window = conn->replay_window;
+ 	msg->add_conn.mark_in.value = conn->mark_in.value;
+ 	msg->add_conn.mark_in.mask = conn->mark_in.mask;

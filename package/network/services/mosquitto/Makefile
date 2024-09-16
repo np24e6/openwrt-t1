@@ -15,9 +15,11 @@ PKG_LICENSE:=EPL-2.0
 PKG_LICENSE_FILES:=LICENSE.txt
 PKG_CPE_ID:=cpe:/a:eclipse:mosquitto
 
-PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
-PKG_SOURCE_URL:=https://mosquitto.org/files/source/
 PKG_HASH:=3be7a911236567c1a9fbe25baf3e3167004ba4a0c151a448ef1f7fc077dba52f
+
+PKG_SOURCE_VERSION:=2.0.17
+PKG_SOURCE_URL:=https://mosquitto.org/files/source
+PKG_SOURCE:=mosquitto-$(PKG_SOURCE_VERSION).tar.gz
 
 include $(INCLUDE_DIR)/package.mk
 
@@ -235,6 +237,7 @@ define Package/libmosquittopp/install
 endef
 
 # Applies to all...
+TARGET_CFLAGS += -DOPENSSL_API_COMPAT=3000 -DOPENSSL_VERSION_NUMBER=0x30000000L
 MAKE_FLAGS += WITH_DOCS=no UNAME=Linux
 ifeq ($(BUILD_VARIANT),nossl)
 	MAKE_FLAGS += WITH_TLS=no WITH_WEBSOCKETS=no

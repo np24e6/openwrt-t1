@@ -22,8 +22,8 @@
 
 			gpio_sim_select {
 				gpio-export,name = "sim_sel";
-				gpio-export,output = <1>;
-				gpios = <&shift_io 3 GPIO_ACTIVE_LOW>;
+				gpio-export,output = <0>;
+				gpios = <&shift_io 3 GPIO_ACTIVE_HIGH>;
 			};
 		};
 
@@ -174,9 +174,14 @@
 			GPIO_103 {
 				compatible_versions = <9 99>;
 				line_name = "GPIO_SIM_SELECT";
-				active_low;
 			};
 		};
 	};
 
+};
+
+&mnfinfo {
+	sim_cfg {
+		default = "2111000_2112000";
+	};
 };

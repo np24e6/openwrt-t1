@@ -1,0 +1,35 @@
+#!/sbin/openrc-run
+
+extra_commands="reload enabled"
+
+depend() {
+	need ubusd
+}
+
+start() {
+	fw3 start
+
+	if [ -x /usr/bin/rutx_hnat ]; then
+		/usr/bin/rutx_hnat
+	fi
+}
+
+stop() {
+	fw3 flush
+}
+
+restart() {
+	fw3 restart
+
+	if [ -x /usr/bin/rutx_hnat ]; then
+		/usr/bin/rutx_hnat
+	fi
+}
+
+reload() {
+	fw3 reload
+}
+
+enabled() {
+	return 0
+}

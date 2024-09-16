@@ -1,0 +1,1027 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Changelog</title>
+  </head>
+  <body>
+    <div id="app">
+      <div class="loader" v-if="loading">
+        <h1>LOADING</h1>
+      </div>
+      <div class="header">
+        <pre>
+  ____  _   _     _     _   _   ____  _____  _      ___    ____ 
+ / ___|| | | |   / \   | \ | | / ___|| ____|| |    / _ \  / ___|
+| |    | |_| |  / _ \  |  \| || |  _ |  _|  | |   | | | || |  _ 
+| |___ |  _  | / ___ \ | |\  || |_| || |___ | |___| |_| || |_| |
+ \____||_| |_|/_/   \_\|_| \_| \____||_____||_____|\___/  \____|
+      </pre
+        >
+        <div class="lightBtn" @click="lightMode = !lightMode" :style="{filter: `saturate(${lightMode ? 100 : 0}%)`}">
+          🔅
+        </div>
+      </div>
+      <form @submit.prevent="save">
+        <div class="options" v-if="!editAll">
+          <label>ID:</label>
+          <label>Branch name:</label>
+          <div></div>
+          <input v-model="caseId" @input="showRefreshBtn = true" type="number" required />
+          <input
+            ref="branchRef"
+            pattern="^[a-zA-Z0-9\-_]+$"
+            title="branch name containing letters and '-'"
+            required
+            v-model="partialBranch"
+            @input="showRefreshBtn = true"
+          />
+          <button
+            type="button"
+            :style="{visibility: showRefreshBtn ? 'visible': 'hidden', width: '100%'}"
+            @click="refresh"
+          >
+            Pull changelog
+          </button>
+          <button type="button" @click="editAll = true">Review mode</button>
+        </div>
+        <div v-else>Review mode enabled</div>
+        <ul class="errors" v-if="errors.length > 0">
+          <b>Errors:</b>
+          <li v-for="error in errors"><pre>{{error}}</pre></li>
+        </ul>
+        <div class="line"></div>
+        <custom-table
+          v-if="sections.length > 0"
+          :sections="sections"
+          :topics="topics"
+          :edit-all="editAll"
+          :validations="validations"
+          :case-id-options="caseIdOptions"
+          :type-options="typeOptions"
+          :category-options="categoryOptions"
+          :depends-options="dependsOptions"
+          :get-topic-options="getTopicOptions"
+          :open-add-topic="openAddTopic"
+        >
+        </custom-table>
+        <div v-else>There is no changelogs yet</div>
+        <div class="buttons">
+          <div class="addButtons">
+            <button type="button" class="btnAdd" @click="addSection({type: 'Fix', change: 'fixed '})">ADD Fix</button>
+            <button type="button" class="btnAdd" @click="addSection({type: 'Improvements'})">ADD Improvements</button>
+            <button type="button" class="btnAdd" @click="addSection({type: 'New', change: 'added '})">ADD New</button>
+            <button type="button" class="btnAdd" @click="addSection({type: 'CVE Patches', change: 'CVE-XXXX-XXXX'})">
+              ADD CVE patch
+            </button>
+            <button type="button" class="btnAdd" @click="addSection({type: 'Updates', change: '1.1'})">
+              ADD Update
+            </button>
+          </div>
+          <button class="btnSave">SAVE</button>
+        </div>
+      </form>
+    </div>
+    <script type="module">
+      const vueUrl =
+        window.location.hash === '#dev'
+          ? 'https://unpkg.com/vue@3/dist/vue.esm-browser.js'
+          : 'https://unpkg.com/vue@3/dist/vue.esm-browser.prod.js'
+      const { createApp, ref, watch, computed, onMounted, onUnmounted, defineProps } = await import(vueUrl)
+
+      let idCounter = 0
+      function getId() {
+        return ++idCounter
+      }
+
+      function prettyDepend(option) {
+        return `${option.value === false ? 'no ' : ''}${option.name}${
+          option.type !== 'device' ? ` ${option.type}` : ''
+        }`
+      }
+
+      const mainElement = {
+        setup() {
+          const loading = ref(true)
+          const errors = ref([])
+          const apiUrl = new URL(location.href).origin
+          const sections = ref([])
+
+          const caseIdOptions = ref([])
+          const categoryOptions = ref(['', 'Network', 'Services', 'System'])
+          const typeOptions = ref(['', 'New', 'Fix', 'Improvements', 'Updates', 'CVE Patches'])
+
+          const topics = ref([])
+          function getTopicOptions(category) {
+            const catTopics = topics.value
+              .filter((topic) => topic.category === category)
+              .map((topic) => topic.name)
+              .sort()
+            catTopics.unshift('')
+            return catTopics
+          }
+
+          const lightMode = ref()
+          watch(lightMode, (newVal) => {
+            if (newVal !== null) localStorage.setItem('lightMode', newVal)
+            const root = document.querySelector(':root')
+            if (newVal) root.classList.add('light')
+            else root.classList.remove('light')
+          })
+          let initalLightMode = JSON.parse(localStorage.getItem('lightMode'))
+          if (initalLightMode === null) initalLightMode = window.matchMedia('(prefers-color-scheme: light)').matches
+          lightMode.value = initalLightMode
+
+          const partialBranch = ref('')
+          let _caseId = ref('')
+          const caseId = computed({
+            get() {
+              return _caseId.value
+            },
+            set(value) {
+              _caseId.value = String(value)
+            },
+          })
+
+          const branch = computed({
+            get() {
+              if (!caseId.value || partialBranch.value === 'all') return partialBranch.value
+              return `${caseId.value}-${partialBranch.value}`
+            },
+            set(value) {
+              const [id, ...rest] = value.split('-')
+              if (/\d+/.test(id)) {
+                caseId.value = id
+                partialBranch.value = rest.join('-')
+              } else {
+                partialBranch.value = value
+              }
+            },
+          })
+
+          const editAll = ref(false)
+          watch(editAll, () => {
+            branch.value = 'all'
+            refresh()
+          })
+
+          const depends = ref([])
+
+          // This is made for family/device sorting just by name.
+          // This could be made nicer by looking at inside devices but this is good enough
+          function dependSortName(name) {
+            const nameHasNumbers = name.split('').some((e) => !Number.isNaN(Number(e)))
+            if (!nameHasNumbers) return name
+            return Number.isNaN(Number(name.at(-1))) ? name.slice(0, -1) : name
+          }
+          const dependsOptions = computed(() => {
+            const sortedOptions = depends.value.sort((a, b) =>
+              a.type === 'hw' || b.type === 'hw'
+                ? Number(b.type === 'hw') - Number(a.type === 'hw')
+                : dependSortName(a.name).localeCompare(dependSortName(b.name))
+            )
+            const prettyOptions = sortedOptions.map((option) => ({
+              value: option,
+              text: prettyDepend(option),
+            }))
+
+            return ['', ...prettyOptions]
+          })
+
+          function addSection(initial = {}) {
+            sections.value.push({ id: getId(), ...initial })
+          }
+
+          const validations = {
+            'CVE Patches': {
+              title: 'CVE Identifier e.g CVE-2024-0193',
+              pattern: '^CVE-\\d*-\\d*$',
+            },
+            Updates: {
+              title: 'New version number. Validation only does not allow spaces.',
+              pattern: '^[^ ]*$',
+            },
+            default: {
+              title: 'first letter lowercase. Do not end with "." or space',
+              pattern: '^[a-z].*[^ .]$',
+            },
+          }
+
+          function updateTopics() {
+            return fetch(`${apiUrl}/options/topics`)
+              .then(async (resp) => {
+                topics.value = await resp.json()
+              })
+              .catch((e) => {
+                errors.value.push('Failed to get topics')
+                console.error(e)
+              })
+          }
+
+          function updateDepends() {
+            return fetch(`${apiUrl}/options/depends`)
+              .then(async (resp) => {
+                const options = await resp.json()
+                depends.value = options
+              })
+              .catch((e) => {
+                errors.value.push('Failed to get devices')
+                console.error(e)
+              })
+          }
+
+          function updateBranch() {
+            return fetch(`${apiUrl}/current-branch`)
+              .then(async (resp) => {
+                branch.value = await resp.text()
+              })
+              .catch((e) => {
+                errors.value.push('Failed to get current branch')
+                console.error(e)
+              })
+          }
+
+          function updateChangelog() {
+            return fetch(`${apiUrl}/changelogs/${branch.value}`)
+              .then(async (resp) => {
+                if (resp.status !== 200) throw new Error()
+                const respJson = await resp.json().catch((e) => {
+                  errors.value.push(`Failed to parse changelog: \n${e.message}`)
+                  console.error(e)
+                })
+                caseIdOptions.value = respJson
+                  .map((e) => e.caseId)
+                  .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
+                sections.value = respJson.map((e) => ({ id: getId(), ...e }))
+              })
+              .catch(() => {
+                sections.value = []
+              })
+          }
+
+          function getSectionToSave() {
+            return sections.value.map((section) => ({
+              caseId: caseId.value,
+              ...section,
+              notImportant: section.notImportant ? true : undefined,
+              id: undefined,
+            }))
+          }
+          function save(e) {
+            return fetch(`${apiUrl}/changelogs/${branch.value}`, {
+              method: 'POST',
+              body: JSON.stringify(getSectionToSave()),
+            })
+              .then(async (resp) => {
+                if (resp.ok) return stopServer()
+                else throw await resp.text()
+              })
+              .then(() => {
+                window.close()
+              })
+              .catch((e) => {
+                errors.value = []
+                errors.value.push(`Failed to save changelog\n${e}`)
+                console.error(e)
+              })
+          }
+
+          const showRefreshBtn = ref(false)
+          const branchRef = ref(null)
+          async function refresh() {
+            if (branch.value !== 'all' && !branchRef.value.reportValidity()) return
+            errors.value = []
+            showRefreshBtn.value = false
+            await updateChangelog()
+          }
+
+          async function openAddTopic() {
+            const results = await OpenPrompt('Create new topic', [
+              {
+                name: 'category',
+                prettyName: 'Category',
+                component: CustomSelect,
+                componentBind: {
+                  options: categoryOptions.value,
+                  required: true,
+                },
+              },
+              {
+                name: 'name',
+                prettyName: 'Name',
+                component: CustomInput,
+                componentBind: {
+                  pattern: '^[A-Z0-9].*$',
+                  title: 'Topic name should start with upper case letter or number',
+                  required: true,
+                },
+              },
+              {
+                name: 'depends',
+                prettyName: 'For',
+                component: DependMultiselect,
+                componentBind: {
+                  options: dependsOptions.value,
+                },
+              },
+            ])
+            if (results === null) return
+            return fetch(`${apiUrl}/options/topics`, {
+              method: 'POST',
+              body: JSON.stringify(results),
+            }).then(() => {
+              errors.value = []
+              return updateTopics()
+            })
+          }
+
+          onMounted(async () => {
+            await Promise.all([updateTopics(), updateDepends(), updateBranch()]).then(updateChangelog)
+            loading.value = false
+          })
+
+          function stopServer() {
+            return fetch(`${apiUrl}/stop`, { method: 'POST' })
+          }
+
+          window.addEventListener('beforeunload', function (e) {
+            return stopServer()
+          })
+
+          return {
+            lightMode,
+            errors,
+            showRefreshBtn,
+            sections,
+            partialBranch,
+            caseId,
+            editAll,
+            validations,
+            // options
+            dependsOptions,
+            caseIdOptions,
+            categoryOptions,
+            typeOptions,
+            // functions
+            getTopicOptions,
+            addSection,
+            refresh,
+            openAddTopic,
+            save,
+            // refs
+            branchRef,
+            loading,
+            topics,
+          }
+        },
+      }
+
+      const CustomSelect = {
+        props: ['options', 'modelValue', 'required'],
+        setup(props, ctx) {
+          const parsedOptions = computed(() => {
+            return props.options.map((option) => {
+              if (typeof option === 'string') {
+                return {
+                  text: option,
+                  value: JSON.stringify(option),
+                }
+              }
+              return {
+                text: option.value,
+                ...option,
+                value: JSON.stringify(option.value),
+              }
+            })
+          })
+          const selectedOption = computed(() =>
+            parsedOptions.value.find((option) => option.value === JSON.stringify(props.modelValue))
+          )
+          watch(selectedOption, (newVal) => {
+            if (selectedOption.value === undefined) return change('')
+            if (selectedOption.value.disabled) {
+              const firstUsable = parsedOptions.value.find((option) => !option.disabled)
+              if (firstUsable) change(firstUsable.value)
+            }
+          })
+          function change(value) {
+            ctx.emit('update:modelValue', value ? JSON.parse(value) : value)
+          }
+          inputHelper(props, ctx)
+          return {
+            selectedOption,
+            props,
+            parsedOptions,
+            change,
+          }
+        },
+        template: `
+          <select :value="props.modelValue ? JSON.stringify(props.modelValue) : props.modelValue" @input="change($event.target.value)" :required="props.required">
+            <option v-for='option in parsedOptions' :value="option.value" :disabled="option.disabled">
+              {{ option.text }}
+            </option>
+          </select>
+          `,
+      }
+
+      const CustomTextarea = {
+        props: ['pattern', 'required', 'title', 'modelValue'],
+        setup(props, ctx) {
+          const element = ref(null)
+          function autoExpandTextArea() {
+            if (element.value.style.height) return
+            if (element.value.scrollHeight > element.value.clientHeight) {
+              element.value.rows += 1
+              autoExpandTextArea()
+            }
+          }
+          function onInput(event) {
+            ctx.emit('update:modelValue', event.target.value)
+            validateElement()
+            autoExpandTextArea()
+          }
+          function validateElement() {
+            if (element.value.validity.valueMissing) return
+            if (typeof props.pattern === 'string' && !new RegExp(props.pattern).test(element.value.value)) {
+              element.value.setCustomValidity(props.title)
+            } else {
+              element.value.setCustomValidity('')
+            }
+            element.value.reportValidity()
+          }
+          watch(props, validateElement)
+          onMounted(() => {
+            validateElement()
+            autoExpandTextArea()
+          })
+          inputHelper(props, ctx)
+          return {
+            props,
+            onInput,
+            element,
+          }
+        },
+        template: `
+            <textarea
+              ref="element"
+              rows="3"
+              :value="props.modelValue"
+              :title="props.title"
+              :required="required"
+              @input="onInput"
+            >
+            </textarea>
+          `,
+      }
+
+      const CustomInput = {
+        props: ['pattern', 'required', 'title', 'modelValue'],
+        setup(props, ctx) {
+          function onInput(event) {
+            ctx.emit('update:modelValue', event.target.value)
+          }
+          inputHelper(props, ctx)
+          return {
+            props,
+            onInput,
+          }
+        },
+        template: `
+            <input
+              rows="3"
+              :value="props.modelValue"
+              :title="props.title"
+              :required="props.required"
+              :pattern="props.pattern"
+              @input="onInput"
+            >
+            </input>
+          `,
+      }
+
+      // Does not have depend flexability to handle other values
+      // devices are deleted from options as saved option should not have it
+      const DependMultiselect = {
+        props: {
+          options: Array,
+          defaultDepends: {
+            type: Array,
+            default() {
+              return []
+            },
+          },
+          modelValue: {
+            type: Array,
+            default() {
+              return []
+            },
+          },
+        },
+        setup(props, ctx) {
+          const liveValues = ref([])
+          watch(
+            () => props.modelValue,
+            (newVal) => {
+              liveValues.value = [...newVal, '']
+            },
+            { immediate: true, deep: true }
+          )
+          const parsedOptions = computed(() => {
+            return props.options.map((option) => {
+              if (typeof option === 'string') return option
+              return {
+                text: option.text,
+                value: {
+                  type: option.value.type,
+                  name: option.value.name,
+                  value: option.value.value,
+                },
+              }
+            })
+          })
+          function compareOptions(a, b) {
+            return a.type === b.type && a.name === b.name
+          }
+          const selectedValues = computed(() => {
+            return props.modelValue.map(
+              (value) => props.options.find((option) => compareOptions(value, option?.value ?? option)).value
+            )
+          })
+          function otherOptions(currValue) {
+            return selectedValues.value.filter((value) => !compareOptions(value, currValue))
+          }
+          function isDisabled(targetOption, currValue) {
+            if (!targetOption) return false
+            if (
+              props.defaultDepends.some(
+                (option) =>
+                  compareOptions(targetOption, option) ||
+                  (targetOption.type === 'device' && option.devices?.includes(targetOption.name))
+              )
+            )
+              return true
+            return otherOptions(currValue).some(
+              (option) =>
+                compareOptions(targetOption, option) ||
+                (targetOption.type === 'device' && option.devices?.includes(targetOption.name))
+            )
+          }
+          function getOptions(currValue) {
+            return parsedOptions.value.map((option) => {
+              if (typeof option === 'string') return option
+              return {
+                ...option,
+                disabled: isDisabled(option.value, currValue),
+              }
+            })
+          }
+          function change(index, value) {
+            const tempArr = [...props.modelValue]
+            tempArr[index] = value
+            ctx.emit(
+              'update:modelValue',
+              tempArr.filter((e) => e)
+            )
+          }
+          inputHelper(props, ctx)
+          return {
+            props,
+            change,
+            getOptions,
+            liveValues,
+            prettyDepend,
+          }
+        },
+        template: `
+          <div v-for="(value, index) in props.defaultDepends" class="fakeValue">
+            {{ prettyDepend(value) }}
+          </div>
+          <custom-select
+            v-for="(value, index) in liveValues"
+            :options="getOptions(value)"
+            :modelValue="value"
+            @update:modelValue="(value) => change(index, value)"
+          >
+          </custom-select>
+          `,
+      }
+
+      function inputHelper(props, ctx) {
+        // Make sure that input is fully sunced with model
+        onMounted(() => {
+          ctx.emit('update:modelValue', props.modelValue)
+        })
+        onUnmounted(() => {
+          ctx.emit('update:modelValue', undefined)
+        })
+      }
+
+      function OpenPrompt(title, fields) {
+        return new Promise((resolve) => {
+          function destroy() {
+            app?.unmount()
+            app = undefined
+            el.remove()
+            el = undefined
+          }
+          function submit(form) {
+            resolve(JSON.parse(JSON.stringify(form)))
+            destroy()
+          }
+          function cancel() {
+            destroy()
+            resolve(null)
+          }
+          const CustomPrompt = {
+            props: ['title', 'fields'],
+            setup(props, ctx) {
+              const root = ref(null)
+              const form = ref({})
+              onMounted(() => {
+                root.value.showModal()
+              })
+              return {
+                props,
+                submit,
+                root,
+                form,
+                cancel,
+              }
+            },
+            template: `
+              <dialog ref="root">
+                <h3>{{ title }}</h3>
+                <form @submit.prevent="submit(form)" style="display: flex; gap: 0.5em">
+                  <template v-for="field in props.fields" :key="props.name">
+                    <label> {{ field.prettyName ?? field.name }} </label>
+                    <component
+                      :is="field.component"
+                      v-bind="field.componentBind"
+                      @update:modelValue="(value) => form[field.name] = value"
+                      :modelValue="form[field.name]"
+                    ></component>
+                  </template>
+                  <div style="display: flex; justify-content: end; gap: 0.25em; margin-top: 1em">
+                    <button @click.prevent="cancel">Close</button>
+                    <button>OK</button>
+                  </div>
+                </form>
+              </dialog>
+              `,
+          }
+
+          let el = document.createElement('div')
+          let app = createApp(CustomPrompt, {
+            title,
+            fields,
+          }).component('custom-select', CustomSelect)
+          document.querySelector('body').appendChild(el)
+          app.mount(el)
+        })
+      }
+
+      // had to move this from main html as html is very strict about table bodies and can mess them up before vue hidration
+      const CustomTable = {
+        props: [
+          'sections',
+          'topics',
+          'editAll',
+          'validations',
+          'caseIdOptions',
+          'typeOptions',
+          'categoryOptions',
+          'getTopicOptions',
+          'dependsOptions',
+          'openAddTopic',
+        ],
+        setup(props) {
+          return {
+            props,
+          }
+        },
+        template: `
+      <table>
+        <colgroup>
+          <col v-show="props.editAll" span="1" style="width: 10%" />
+          <col v-show="props.editAll" span="1" style="width: 5%" />
+          <col span="1" style="width: 15%" />
+          <col span="1" style="width: 15%" />
+          <col span="1" style="width: auto" />
+          <col span="1" style="width: 15%" />
+          <col span="1" style="width: 7%" />
+        </colgroup>
+        <thead>
+          <tr>
+            <th v-show="props.editAll">Case ID</th>
+            <th v-show="props.editAll" class="tooltip">
+              ?
+              <span class="tooltiptext"
+                >Do not show change in Public changelog. True - do not show, False - show</span
+              >
+            </th>
+            <th>Type</th>
+            <th>Cat/Topic <button type="button" @click="props.openAddTopic">add</button></th>
+            <th class="tooltip">
+              Change ?
+              <span class="tooltiptext">
+                Describe change. Start with lower case letter. Do not end with dot or space.
+              </span>
+            </th>
+            <th class="tooltip">
+              For ?
+              <span class="tooltiptext">
+                Only use it if only some devices with specified service have this change. For e.g. if only RUTX11 had
+                changes then specify it here. If change was for "Wireless" and change was for every device with
+                "Wireless" then do not.
+              </span>
+            </th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="sections">
+          <custom-row v-for="(section, index) in props.sections" :key="section.id" class="section">
+            <td v-if="props.editAll">
+              <custom-select v-model="section.caseId" :options="props.caseIdOptions" required></custom-select>
+            </td>
+            <td v-if="props.editAll"><input v-model="section.notImportant" type="checkbox" /></td>
+            <td><custom-select v-model="section.type" :options="props.typeOptions" required></custom-select></td>
+            <td>
+              <custom-select
+                v-if="['', 'New', 'Improvements', 'Fix', 'Updates'].includes(section.type)"
+                v-model="section.category"
+                :options="props.categoryOptions"
+                required
+              ></custom-select>
+              <custom-select
+                v-if="['', 'New', 'Improvements', 'Fix'].includes(section.type)"
+                v-model="section.topic"
+                :options="props.getTopicOptions(section.category)"
+                required
+              ></custom-select>
+              <input
+                v-if="section.type === 'Updates'"
+                v-model="section.topic"
+                title="Package name that is beeing updated"
+                required
+              />
+            </td>
+            <td>
+              <custom-textarea
+                v-model="section.change"
+                :pattern="(props.validations[section.type] ?? props.validations.default).pattern"
+                :title="(props.validations[section.type] ?? props.validations.default).title"
+                required
+              ></custom-textarea>
+            </td>
+            <td>
+              <depend-multiselect
+                v-model="section.depends"
+                :options="props.dependsOptions"
+                :default-depends="props.topics.find(topic => topic.category === section.category && topic.name === section.topic)?.depends ?? []"
+              />
+            </td>
+            <td><button class="btnRemove" @click="sections.splice(index, 1)">REMOVE</button></td>
+          </custom-row>
+        </tbody>
+      </table>
+          `,
+      }
+      // Super laggy without this. Mb :key does not work properly withouth this. IDK
+      const CustomRow = {
+        template: `<tr><slot/></tr>`,
+      }
+
+      createApp(mainElement)
+        .component('custom-select', CustomSelect)
+        .component('custom-textarea', CustomTextarea)
+        .component('depend-multiselect', DependMultiselect)
+        .component('custom-table', CustomTable)
+        .component('custom-row', CustomRow)
+        .mount('#app')
+    </script>
+    <style>
+      :root {
+        color: white;
+        color-scheme: dark;
+        display: flex;
+        justify-content: center;
+      }
+      :root.light {
+        color: black;
+        color-scheme: white;
+      }
+      body {
+        background-color: #252330;
+        width: 900px;
+        font-family: monospace;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5em;
+      }
+      :root.light body {
+        background-color: whitesmoke;
+      }
+      #preview {
+        width: 100%;
+        height: 20em;
+      }
+      .errors {
+        border-radius: 0.25em;
+        width: calc(100% - 4em);
+        padding: 1em 2em;
+        background-color: lightcoral;
+        color: black;
+      }
+      .btnRemove {
+        min-width: unset;
+        background-color: lightcoral;
+        color: black;
+        width: fit-content;
+        font-weight: 600;
+        border-radius: 4px;
+      }
+      .btnAdd,
+      .btnSave {
+        font-size: small;
+        border-radius: 4px;
+        padding: 0.25em;
+        background-color: lightblue;
+        color: black;
+        width: fit-content;
+        font-weight: 600;
+        height: 3em;
+      }
+      .btnAdd {
+        background-color: lightblue;
+        width: 33.3%;
+      }
+      .btnSave {
+        background-color: lightgreen;
+        width: 100%;
+      }
+      .addButtons {
+        width: 100%;
+        display: flex;
+      }
+      .buttons {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5em;
+      }
+      .line {
+        width: 100%;
+        border-top: 1px white dashed;
+      }
+      :root.light .line {
+        border-color: black;
+      }
+      .options {
+        gap: 0.5em;
+        display: grid;
+        grid-template-columns: 100px 400px 120px;
+        align-items: center;
+        justify-items: left;
+      }
+      .options input {
+        width: calc(100% - 0.5em);
+      }
+      form {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 2em;
+      }
+      .section input {
+        width: calc(100% - 1em);
+      }
+      .section select {
+        width: calc(100% - 0.5em);
+      }
+      .section textarea {
+        width: calc(100% - 1em);
+        resize: vertical;
+      }
+      input:invalid,
+      select:invalid,
+      textarea:invalid {
+        border: 2px solid red;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      th {
+        padding: 0.25em 0;
+      }
+      thead {
+        position: sticky;
+        top: 0;
+      }
+      thead tr,
+      tbody tr:nth-child(even) {
+        background-color: #3b3945;
+      }
+      tbody tr:nth-child(odd) {
+        background-color: rgba(0, 0, 0, 0.25);
+      }
+      :root.light thead tr,
+      :root.light tbody tr:nth-child(even) {
+        background-color: #ddd;
+      }
+      :root.light tbody tr:nth-child(odd) {
+        background-color: white;
+      }
+      tbody td {
+        vertical-align: top;
+        padding: 0.5em 0;
+      }
+      tbody td:last-child {
+        padding-right: 0.5em;
+      }
+      tbody td:first-child {
+        padding-left: 0.5em;
+      }
+      tbody td > *:not(:last-child) {
+        margin-bottom: 0.25em;
+      }
+      textarea:disabled {
+        color: rgb(167, 167, 167);
+      }
+      .tooltip {
+        position: relative;
+      }
+      .tooltip .tooltiptext {
+        visibility: hidden;
+        width: 200px;
+        background-color: #555;
+        text-align: center;
+        padding: 5px 5px;
+        border-radius: 6px;
+
+        /* Position the tooltip text */
+        position: absolute;
+        z-index: 1;
+        bottom: 125%;
+        left: 50%;
+        margin-left: -60px;
+
+        /* Fade in tooltip */
+        opacity: 0;
+        transition: opacity 0.3s;
+      }
+      :root.light .tooltip .tooltiptext {
+        background-color: #ccc;
+      }
+      .tooltip:hover .tooltiptext {
+        visibility: visible;
+        opacity: 1;
+      }
+      .header {
+        display: flex;
+        margin: 1em 0;
+      }
+      pre {
+        margin: 0;
+      }
+      .lightBtn {
+        user-select: none;
+        margin-left: auto;
+        margin-bottom: auto;
+        border: unset;
+        font-size: xx-large;
+        cursor: pointer;
+      }
+      dialog {
+        min-width: 200px;
+        border: 1px grey solid;
+        border-radius: 0.5em;
+      }
+      dialog::backdrop {
+        background-color: #00000088;
+      }
+      .loader {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        position: fixed;
+        bottom: 0;
+        top: 0;
+        left: 0;
+        right: 0;
+        background-color: #000;
+        z-index: 2;
+      }
+      .fakeValue {
+        background-color: black;
+        border: gray 1px solid;
+        padding: 0.25em;
+        border-radius: 0.25em;
+        margin-right: 0.5em;
+      }
+      :root.light .fakeValue {
+        background-color: rgba(0, 0, 0, 0.25);
+      }
+    </style>
+  </body>
+</html>

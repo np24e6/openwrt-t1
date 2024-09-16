@@ -1,0 +1,25 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+CONFIG="simcard"
+
+migrate_section() {
+	local section="$1"
+
+	config_get operator "$section" "operator"
+	config_get opernum "$section" "opernum"
+	[ -z "$opernum" ] ||
+	[ "$operator" != "manual" ] &&
+	[ "$operator" != "manual-auto" ] && return
+
+	uci_remove "$CONFIG" "$section" operlist
+	uci_remove "$CONFIG" "$section" opermode
+	uci_remove "$CONFIG" "$section" operlist_name
+}
+
+config_load "$CONFIG"
+config_foreach migrate_section "sim"
+uci_commit "$CONFIG"
+
+exit 0

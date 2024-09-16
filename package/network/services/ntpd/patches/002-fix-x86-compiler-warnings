@@ -1,0 +1,28 @@
+--- a/libntp/timetoa.c
++++ b/libntp/timetoa.c
+@@ -99,8 +99,11 @@
+ 	}
+ 
+ 	/* finally format the data and return the result */
++_Pragma ("GCC diagnostic push") 
++_Pragma ("GCC diagnostic ignored \"-Wformat-truncation\"")
+ 	snprintf(cp, LIB_BUFLENGTH, "%s%" UTIME_FORMAT ".%0*ld",
+ 	    notneg? "" : "-", secs_u, prec_u, frac);
+-	
++_Pragma ("GCC diagnostic pop")
++
+ 	return cp;
+ }
+
+--- a/libntp/work_thread.c
++++ b/libntp/work_thread.c
+@@ -11,6 +11,9 @@
+ #include <signal.h>
+ #ifndef SYS_WINNT
+ #include <pthread.h>
++#if defined(__x86_64__)
++#include <bits/pthread_stack_min.h>
++#endif
+ #endif
+ 
+ #include "ntp_stdlib.h"

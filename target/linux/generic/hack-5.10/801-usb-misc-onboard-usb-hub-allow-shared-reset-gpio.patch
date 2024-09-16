@@ -6,10 +6,8 @@ As the onboard_usb_hub hub driver essentially requires duplicating the dt node
 for USB3 hubs, this also means duplicating the reset GPIO. For whatever reason this
 configuration works just fine on mainline?
 
-Index: linux-5.10.206/drivers/usb/misc/onboard_usb_hub.c
-===================================================================
---- linux-5.10.206.orig/drivers/usb/misc/onboard_usb_hub.c
-+++ linux-5.10.206/drivers/usb/misc/onboard_usb_hub.c
+--- a/drivers/usb/misc/onboard_usb_hub.c
++++ b/drivers/usb/misc/onboard_usb_hub.c
 @@ -267,7 +267,7 @@ static int onboard_hub_probe(struct plat
  	}
  

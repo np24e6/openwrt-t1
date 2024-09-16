@@ -149,9 +149,9 @@ endif
 PACKAGE_DIR:=$(BIN_DIR)/packages
 PACKAGE_DIR_ALL:=$(TOPDIR)/staging_dir/packages/$(BOARD)
 BUILD_DIR:=$(BUILD_DIR_BASE)/$(TARGET_DIR_NAME)
-STAGING_DIR:=$(TOPDIR)/staging_dir/$(TARGET_DIR_NAME)
+STAGING_DIR?=$(TOPDIR)/staging_dir/$(TARGET_DIR_NAME)
 BUILD_DIR_TOOLCHAIN:=$(BUILD_DIR_BASE)/$(TOOLCHAIN_DIR_NAME)
-TOOLCHAIN_DIR:=$(TOPDIR)/staging_dir/$(TOOLCHAIN_DIR_NAME)
+TOOLCHAIN_DIR?=$(TOPDIR)/staging_dir/$(TOOLCHAIN_DIR_NAME)
 STAMP_DIR:=$(BUILD_DIR)/stamp
 STAMP_DIR_HOST=$(BUILD_DIR_HOST)/stamp
 TARGET_ROOTFS_DIR?=$(if $(call qstrip,$(CONFIG_TARGET_ROOTFS_DIR)),$(call qstrip,$(CONFIG_TARGET_ROOTFS_DIR)),$(BUILD_DIR))
@@ -162,11 +162,11 @@ BUILD_LOG_DIR:=$(if $(call qstrip,$(CONFIG_BUILD_LOG_DIR)),$(call qstrip,$(CONFI
 PKG_INFO_DIR := $(STAGING_DIR)/pkginfo
 GPL_NAME:=rutos-$(BOARD)-$(shell echo $(CONFIG_TLT_VERSIONING_PREFIX) | tr A-Z a-z)-sdk
 GPL_BUILD_DIR:=$(BUILD_DIR)/$(GPL_NAME)
-GENINFO_FILE:=$(BIN_DIR)/rutos-$(CONFIG_TARGET_BOARD)-package-geninfo.csv
+GENINFO_FILE:=$(BIN_DIR)/rutos-$(CONFIG_TARGET_BOARD)-$(call device_shortname)-package-geninfo.csv
 
 BUILD_DIR_HOST:=$(if $(IS_PACKAGE_BUILD),$(BUILD_DIR_BASE)/hostpkg,$(BUILD_DIR_BASE)/host)
-STAGING_DIR_HOST:=$(TOPDIR)/staging_dir/host
-STAGING_DIR_HOSTPKG:=$(TOPDIR)/staging_dir/hostpkg
+STAGING_DIR_HOST?=$(TOPDIR)/staging_dir/host
+STAGING_DIR_HOSTPKG?=$(TOPDIR)/staging_dir/hostpkg
 
 TARGET_PATH:=$(subst $(space),:,$(filter-out .,$(filter-out ./,$(subst :,$(space),$(PATH)))))
 TARGET_INIT_PATH:=$(call qstrip,$(CONFIG_TARGET_INIT_PATH))
@@ -199,8 +199,8 @@ ifndef DUMP
       TARGET_CPPFLAGS+= -I$(TOOLCHAIN_DIR)/include/fortify
     endif
     TARGET_CPPFLAGS+= -I$(TOOLCHAIN_DIR)/include
-    TARGET_LDFLAGS+= -L$(TOOLCHAIN_DIR)/usr/lib -L$(TOOLCHAIN_DIR)/lib
-    TARGET_PATH:=$(TOOLCHAIN_DIR)/bin:$(TARGET_PATH)
+    TARGET_LDFLAGS+= -L$(TOOLCHAIN_DIR)/usr/lib -L$(TOOLCHAIN_DIR)/lib -Wl,-rpath-link,$(TOOLCHAIN_DIR)/lib
+    TARGET_PATH:=$(if $(findstring $(TOOLCHAIN_DIR),$(TARGET_PATH)),$(TARGET_PATH),$(TOOLCHAIN_DIR)/bin:$(TARGET_PATH))
   else
     ifeq ($(CONFIG_NATIVE_TOOLCHAIN),)
       TARGET_CROSS:=$(call qstrip,$(CONFIG_TOOLCHAIN_PREFIX))

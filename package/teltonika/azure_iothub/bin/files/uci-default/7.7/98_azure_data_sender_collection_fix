@@ -1,0 +1,42 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+[ -f "/etc/config/azure_iothub" ] || return 0
+[ -f "/etc/config/data_sender" ] || return 0
+
+handle_az_inputs() {
+	local input_section_name="$1"
+
+	config_get na_str "$input_section_name" in_na_str
+	config_get delimiter "$input_section_name" in_delimiter
+
+	[ -n "$in_na_str" ] || uci_set data_sender "$input_section_name" na_str "N/A"
+	[ -n "$in_delimiter" ] || uci_set data_sender "$input_section_name" delimiter ","
+
+	if [ "$input_section_name" = "mdcollect_in_device_1" ]; then
+		config_get mdc_period "$input_section_name" mdc_period
+
+		[ -n "$mdc_period" ] || uci_set data_sender "$input_section_name" mdc_period "day"
+	fi
+}
+
+update_sender_opts() {
+	local sec="$1"
+
+	if [ "$sec" = "collection_1" ]; then
+		config_get na_str "$sec" cl_na_str
+		[ -n "$cl_na_str" ] || uci_set data_sender "$sec" na_str "N/A"
+
+		config_get output "$sec" output
+		if [ "$output" = "device_1" ]; then
+			config_list_foreach "$sec" input handle_az_inputs
+		fi
+	fi
+}
+
+config_load data_sender
+config_foreach update_sender_opts collection
+
+uci commit
+return 0

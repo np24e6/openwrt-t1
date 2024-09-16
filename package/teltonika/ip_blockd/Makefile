@@ -2,14 +2,18 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=ip_blockd
-PKG_VERSION:=2024-05-23
-PKG_RELEASE:=2
+PKG_VERSION:=2024-06-17
+PKG_RELEASE:=1
 
-PKG_SOURCE_VERSION:=1.9.1
+PKG_SOURCE_VERSION:=1.10
 
 PKG_FIXUP:=autoreconf
 
 PKG_LICENSE:=Teltonika-closed
+
+PKG_CONFIG_DEPENDS := \
+  CONFIG_IP_BLOCKD_MAC_SUPPORT \
+  CONFIG_MOBILE_SUPPORT
 
 include $(INCLUDE_DIR)/package.mk
 
@@ -17,7 +21,7 @@ define Package/ip_blockd
 	SECTION:=base
 	CATEGORY:=Base system
 	TITLE:=IP Block Daemon
-	DEPENDS:=+rpcd +ipset +iptables +libubus +libubox +libuci +liblog +libip4tc +libip6tc +libipset +libtlt-logger +libblobmsg-json +libubox +libboardjson +libtlt_utils +libsqlite3
+	DEPENDS:=+rpcd +ipset +iptables +libubus +libubox +libuci +liblog +libip4tc +libip6tc +libipset +libtlt-logger +libblobmsg-json +libtlt_utils +libsqlite3
 	MENU:=1
 endef
 
@@ -33,9 +37,8 @@ define Package/ip_blockd/conffiles
 /etc/config/ip_blockd
 endef
 
-ifdef CONFIG_IP_BLOCKD_MAC_SUPPORT
-	CONFIGURE_ARGS += --enable-mac
-endif
+CONFIGURE_ARGS += $(if $(CONFIG_IP_BLOCKD_MAC_SUPPORT),--enable-mac)
+CONFIGURE_ARGS += $(if $(CONFIG_MOBILE_SUPPORT),--enable-phone)
 
 
 define Package/ip_blockd/install

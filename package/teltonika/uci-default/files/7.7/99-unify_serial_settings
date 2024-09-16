@@ -37,4 +37,3 @@ config_foreach rename_serial_opts serial_client
 uci_commit "$DNP3_CONFIG"
 
 exit 0
-

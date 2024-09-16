@@ -1,5 +1,5 @@
-diff --recursive --unified --new-file --no-dereference orig/.gitignore src/.gitignore
---- orig/.gitignore	2016-11-09 19:40:33.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/.gitignore src/.gitignore
+--- upstream/.gitignore	2016-11-09 19:40:33.000000000 +0000
 +++ src/.gitignore	1970-01-01 00:00:00.000000000 +0000
 @@ -1,62 +0,0 @@
 -*.o
@@ -64,9 +64,9 @@ diff --recursive --unified --new-file --no-dereference orig/.gitignore src/.giti
 -shellinaboxd.1
 -shellinaboxd.ps
 -stamp-h1
-diff --recursive --unified --new-file --no-dereference orig/.gitlab-ci.yml src/.gitlab-ci.yml
---- orig/.gitlab-ci.yml	1970-01-01 00:00:00.000000000 +0000
-+++ src/.gitlab-ci.yml	2024-02-26 13:24:42.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/.gitlab-ci.yml src/.gitlab-ci.yml
+--- upstream/.gitlab-ci.yml	1970-01-01 00:00:00.000000000 +0000
++++ src/.gitlab-ci.yml	2024-03-07 10:35:31.000000000 +0000
 @@ -0,0 +1,20 @@
 +include:
 +  - project: teltonika/ci-templates
@@ -89,9 +89,9 @@ diff --recursive --unified --new-file --no-dereference orig/.gitlab-ci.yml src/.
 +  needs:
 +    - job: semgrep_errors
 \ No newline at end of file
-diff --recursive --unified --new-file --no-dereference orig/cli.conf src/cli.conf
---- orig/cli.conf	1970-01-01 00:00:00.000000000 +0000
-+++ src/cli.conf	2024-02-26 13:24:42.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/cli.conf src/cli.conf
+--- upstream/cli.conf	1970-01-01 00:00:00.000000000 +0000
++++ src/cli.conf	2024-03-07 10:35:31.000000000 +0000
 @@ -0,0 +1,6 @@
 +config status 'status'
 +	option enable '1'
@@ -99,9 +99,9 @@ diff --recursive --unified --new-file --no-dereference orig/cli.conf src/cli.con
 +	option shell_limit '5'
 +
 +config cli
-diff --recursive --unified --new-file --no-dereference orig/config.h src/config.h
---- orig/config.h	1970-01-01 00:00:00.000000000 +0000
-+++ src/config.h	2024-02-26 13:24:42.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/config.h src/config.h
+--- upstream/config.h	1970-01-01 00:00:00.000000000 +0000
++++ src/config.h	2024-03-07 10:35:31.000000000 +0000
 @@ -0,0 +1,189 @@
 +/* config.h.  Generated from config.h.in by configure.  */
 +/* config.h.in.  Generated from configure.ac by autoheader.  */
@@ -292,9 +292,9 @@ diff --recursive --unified --new-file --no-dereference orig/config.h src/config.
 +
 +/* Define to empty if `const' does not conform to ANSI C. */
 +/* #undef const */
-diff --recursive --unified --new-file --no-dereference orig/configure.ac src/configure.ac
---- orig/configure.ac	2016-11-09 19:40:33.000000000 +0000
-+++ src/configure.ac	2024-02-26 13:24:42.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/configure.ac src/configure.ac
+--- upstream/configure.ac	2016-11-09 19:40:33.000000000 +0000
++++ src/configure.ac	2024-03-07 10:35:31.000000000 +0000
 @@ -34,6 +34,9 @@
  AC_CHECK_HEADERS([libutil.h pthread.h pty.h strings.h syslog.h sys/prctl.h \
                    sys/uio.h util.h])
@@ -305,9 +305,9 @@ diff --recursive --unified --new-file --no-dereference orig/configure.ac src/con
  dnl Most systems require linking against libutil.so in order to get login_tty()
  AC_CHECK_FUNCS(login_tty, [],
                 [AC_CHECK_LIB(util, login_tty,
-diff --recursive --unified --new-file --no-dereference orig/libhttp/httpconnection.c src/libhttp/httpconnection.c
---- orig/libhttp/httpconnection.c	2016-11-09 19:40:33.000000000 +0000
-+++ src/libhttp/httpconnection.c	2024-02-26 13:24:42.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/libhttp/httpconnection.c src/libhttp/httpconnection.c
+--- upstream/libhttp/httpconnection.c	2016-11-09 19:40:33.000000000 +0000
++++ src/libhttp/httpconnection.c	2024-03-07 10:35:31.000000000 +0000
 @@ -288,33 +288,38 @@
  }
  
@@ -373,9 +373,9 @@ diff --recursive --unified --new-file --no-dereference orig/libhttp/httpconnecti
          httpSendReply(http, 400, "Bad Request", NO_MSG);
          return HTTP_DONE;
        }
-diff --recursive --unified --new-file --no-dereference orig/libhttp/server.c src/libhttp/server.c
---- orig/libhttp/server.c	2016-11-09 19:40:33.000000000 +0000
-+++ src/libhttp/server.c	2024-02-26 13:24:42.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/libhttp/server.c src/libhttp/server.c
+--- upstream/libhttp/server.c	2016-11-09 19:40:33.000000000 +0000
++++ src/libhttp/server.c	2024-03-07 10:35:31.000000000 +0000
 @@ -171,7 +171,7 @@
                                                   "content-length");
    if (!contentLength ||
@@ -432,10 +432,47 @@ diff --recursive --unified --new-file --no-dereference orig/libhttp/server.c src
    info("[server] Listening on port %d...", server->port);
  
    check(server->pollFds         = malloc(sizeof(struct pollfd)));
-diff --recursive --unified --new-file --no-dereference orig/libhttp/ssl.c src/libhttp/ssl.c
---- orig/libhttp/ssl.c	2016-11-09 19:40:33.000000000 +0000
-+++ src/libhttp/ssl.c	2024-02-26 13:24:42.000000000 +0000
-@@ -208,7 +208,7 @@
+diff --recursive --unified --new-file --no-dereference upstream/libhttp/ssl.c src/libhttp/ssl.c
+--- upstream/libhttp/ssl.c	2016-11-09 19:40:33.000000000 +0000
++++ src/libhttp/ssl.c	2024-03-07 10:35:31.000000000 +0000
+@@ -117,6 +117,9 @@
+ int           (*SSL_CTX_set_cipher_list)(SSL_CTX *, const char *);
+ void          (*SSL_CTX_set_info_callback)(SSL_CTX *,
+                                            void (*)(const SSL *, int, int));
++#if OPENSSL_VERSION_NUMBER >= 0x10100000L
++unsigned long (*SSL_CTX_set_options)(SSL_CTX *, unsigned long);
++#endif
+ int           (*SSL_CTX_use_PrivateKey_file)(SSL_CTX *, const char *, int);
+ int           (*SSL_CTX_use_PrivateKey_ASN1)(int, SSL_CTX *,
+                                              const unsigned char *, long);
+@@ -130,7 +133,9 @@
+ BIO *         (*SSL_get_rbio)(const SSL *);
+ const char *  (*SSL_get_servername)(const SSL *, int);
+ BIO *         (*SSL_get_wbio)(const SSL *);
++#if OPENSSL_VERSION_NUMBER < 0x10100000L
+ int           (*SSL_library_init)(void);
++#endif
+ SSL *         (*SSL_new)(SSL_CTX *);
+ int           (*SSL_read)(SSL *, void *, int);
+ SSL_CTX *     (*SSL_set_SSL_CTX)(SSL *, SSL_CTX *);
+@@ -139,10 +144,16 @@
+ int           (*SSL_set_ex_data)(SSL *, int, void *);
+ int           (*SSL_shutdown)(SSL *);
+ int           (*SSL_write)(SSL *, const void *, int);
++#if OPENSSL_VERSION_NUMBER < 0x10100000L
+ SSL_METHOD *  (*SSLv23_server_method)(void);
++#else
++SSL_METHOD *  (*TLS_server_method)(void);
++#endif
+ X509 *        (*d2i_X509)(X509 **px, const unsigned char **in, int len);
+ void          (*X509_free)(X509 *a);
++#if OPENSSL_VERSION_NUMBER < 0x10100000L
+ void          (*x_sk_zero)(void *st);
++#endif
+ void *        (*x_SSL_COMP_get_compression_methods)(void);
+ #endif
+ 
+@@ -208,7 +219,7 @@
    // The feature is currently disabled.
    const char* path_libcrypto = NULL; // getenv ("SHELLINABOX_LIBCRYPTO_SO");
    if (path_libcrypto == NULL)
@@ -444,16 +481,130 @@ diff --recursive --unified --new-file --no-dereference orig/libhttp/ssl.c src/li
  
    if (!crypto++) {
  #ifdef RTLD_NOLOAD
-@@ -267,7 +267,7 @@
+@@ -267,8 +278,8 @@
    // The feature is currently disabled.
    const char* path_libssl = NULL; // = getenv ("SHELLINABOX_LIBSSL_SO");
    if (path_libssl == NULL)
 -    path_libssl = "libssl.so";
+-  check(!SSL_library_init);
 +    path_libssl = "/usr/lib/libssl.so.1.0.0";
-   check(!SSL_library_init);
++  check(!SSL_CTX_new);
    struct {
      union {
-@@ -666,14 +666,7 @@
+       void *avoid_gcc_warning_about_type_punning;
+@@ -299,6 +310,9 @@
+     { { &SSL_CTX_new },                 "SSL_CTX_new" },
+     { { &SSL_CTX_set_cipher_list },     "SSL_CTX_set_cipher_list" },
+     { { &SSL_CTX_set_info_callback },   "SSL_CTX_set_info_callback" },
++#if OPENSSL_VERSION_NUMBER > 0x10100000L
++    { { &SSL_CTX_set_options },         "SSL_CTX_set_options" },
++#endif
+     { { &SSL_CTX_use_PrivateKey_file }, "SSL_CTX_use_PrivateKey_file" },
+     { { &SSL_CTX_use_PrivateKey_ASN1 }, "SSL_CTX_use_PrivateKey_ASN1" },
+     { { &SSL_CTX_use_certificate_file },"SSL_CTX_use_certificate_file"},
+@@ -312,7 +326,9 @@
+     { { &SSL_get_servername },          "SSL_get_servername" },
+ #endif
+     { { &SSL_get_wbio },                "SSL_get_wbio" },
++#if OPENSSL_VERSION_NUMBER < 0x10100000L
+     { { &SSL_library_init },            "SSL_library_init" },
++#endif
+     { { &SSL_new },                     "SSL_new" },
+     { { &SSL_read },                    "SSL_read" },
+ #ifdef HAVE_TLSEXT
+@@ -323,10 +339,16 @@
+     { { &SSL_set_ex_data },             "SSL_set_ex_data" },
+     { { &SSL_shutdown },                "SSL_shutdown" },
+     { { &SSL_write },                   "SSL_write" },
++#if OPENSSL_VERSION_NUMBER < 0x10100000L
+     { { &SSLv23_server_method },        "SSLv23_server_method" },
++#else
++    { { &TLS_server_method },           "TLS_server_method" },
++#endif
+     { { &d2i_X509 },                    "d2i_X509" },
+     { { &X509_free },                   "X509_free" },
++#if OPENSSL_VERSION_NUMBER < 0x10100000L
+     { { &x_sk_zero },                   "sk_zero" }
++#endif
+   };
+   for (unsigned i = 0; i < sizeof(symbols)/sizeof(symbols[0]); i++) {
+     if (!(*symbols[i].var = loadSymbol(path_libssl, symbols[i].fn))) {
+@@ -343,7 +365,9 @@
+   // ends
+ 
+ 
++#if OPENSSL_VERSION_NUMBER < 0x10100000L
+   SSL_library_init();
++#endif
+   dcheck(!ERR_peek_error());
+   debug("[ssl] Loaded SSL suppport...");
+ }
+@@ -351,8 +375,12 @@
+ 
+ int serverSupportsSSL(void) {
+ #if defined(HAVE_OPENSSL) && !defined(HAVE_DLOPEN)
++#if OPENSSL_VERSION_NUMBER < 0x10100000L
+   return SSL_library_init();
+ #else
++  return 1;
++#endif
++#else
+ #if defined(HAVE_OPENSSL)
+   // We want to call loadSSL() exactly once. For single-threaded applications,
+   // this is straight-forward. For threaded applications, we need to call
+@@ -372,8 +400,12 @@
+       loadSSL();
+     }
+   }
++#if OPENSSL_VERSION_NUMBER < 0x10100000L
+   return !!SSL_library_init;
+ #else
++  return 1;
++#endif
++#else
+   return 0;
+ #endif
+ #endif
+@@ -623,7 +655,11 @@
+ static SSL_CTX *sslMakeContext(void) {
+ 
+   SSL_CTX *context;
++#if OPENSSL_VERSION_NUMBER < 0x10100000L
+   check(context = SSL_CTX_new(SSLv23_server_method()));
++#else
++  check(context = SSL_CTX_new(TLS_server_method()));
++#endif
+ 
+   long options  = SSL_OP_ALL;
+   options      |= SSL_OP_NO_SSLv2;
+@@ -641,6 +677,7 @@
+   // Set default SSL options.
+   SSL_CTX_set_options(context, options);
+ 
++#if OPENSSL_VERSION_NUMBER < 0x10100000L
+   // Workaround for SSL_OP_NO_COMPRESSION with older OpenSSL versions.
+ #ifdef HAVE_DLOPEN
+   if (SSL_COMP_get_compression_methods) {
+@@ -649,6 +686,7 @@
+ #elif OPENSSL_VERSION_NUMBER >= 0x00908000L
+   sk_SSL_COMP_zero(SSL_COMP_get_compression_methods());
+ #endif
++#endif
+ 
+   // For Perfect Forward Secrecy (PFS) support we need to enable some additional
+   // SSL options, provide eliptic curve key object for handshake and add chipers
+@@ -657,23 +695,18 @@
+   SSL_CTX_set_options(context, SSL_OP_SINGLE_ECDH_USE);
+   SSL_CTX_set_options(context, SSL_OP_CIPHER_SERVER_PREFERENCE);
+ 
++#if OPENSSL_VERSION_NUMBER < 0x10100000L
+   EC_KEY *ecKey;
+   check(ecKey   = EC_KEY_new_by_curve_name(NID_X9_62_prime256v1));
+   SSL_CTX_set_tmp_ecdh(context, ecKey);
+   EC_KEY_free(ecKey);
++#endif
+ 
+   debug("[ssl] Support for PFS enabled...");
  #endif
  
    check(SSL_CTX_set_cipher_list(context,
@@ -469,9 +620,86 @@ diff --recursive --unified --new-file --no-dereference orig/libhttp/ssl.c src/li
  
    SSL_CTX_set_info_callback(context, sslInfoCallback);
  
-diff --recursive --unified --new-file --no-dereference orig/libhttp/url.c src/libhttp/url.c
---- orig/libhttp/url.c	2016-11-09 19:40:33.000000000 +0000
-+++ src/libhttp/url.c	2024-02-26 13:24:42.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/libhttp/ssl.h src/libhttp/ssl.h
+--- upstream/libhttp/ssl.h	2016-11-09 19:40:33.000000000 +0000
++++ src/libhttp/ssl.h	2024-03-07 10:35:31.000000000 +0000
+@@ -99,6 +99,9 @@
+ extern int     (*x_SSL_CTX_set_cipher_list)(SSL_CTX *, const char *);
+ extern void    (*x_SSL_CTX_set_info_callback)(SSL_CTX *,
+                                               void (*)(const SSL *, int, int));
++#if OPENSSL_VERSION_NUMBER >= 0x10100000L
++extern unsigned long (*x_SSL_CTX_set_options)(SSL_CTX *, unsigned long);
++#endif
+ extern int     (*x_SSL_CTX_use_PrivateKey_file)(SSL_CTX *, const char *, int);
+ extern int     (*x_SSL_CTX_use_PrivateKey_ASN1)(int, SSL_CTX *,
+                                                 const unsigned char *, long);
+@@ -112,7 +115,9 @@
+ extern BIO    *(*x_SSL_get_rbio)(const SSL *);
+ extern const char *(*x_SSL_get_servername)(const SSL *, int);
+ extern BIO    *(*x_SSL_get_wbio)(const SSL *);
++#if OPENSSL_VERSION_NUMBER < 0x10100000L
+ extern int     (*x_SSL_library_init)(void);
++#endif
+ extern SSL    *(*x_SSL_new)(SSL_CTX *);
+ extern int     (*x_SSL_read)(SSL *, void *, int);
+ extern SSL_CTX*(*x_SSL_set_SSL_CTX)(SSL *, SSL_CTX *);
+@@ -121,10 +126,16 @@
+ extern int     (*x_SSL_set_ex_data)(SSL *, int, void *);
+ extern int     (*x_SSL_shutdown)(SSL *);
+ extern int     (*x_SSL_write)(SSL *, const void *, int);
++#if OPENSSL_VERSION_NUMBER < 0x10100000L
+ extern SSL_METHOD *(*x_SSLv23_server_method)(void);
++#else
++extern SSL_METHOD *(*x_TLS_server_method)(void);
++#endif
+ extern X509 *  (*x_d2i_X509)(X509 **px, const unsigned char **in, int len);
+ extern void    (*x_X509_free)(X509 *a);
++#if OPENSSL_VERSION_NUMBER < 0x10100000L
+ extern void    (*x_sk_zero)(void *st);
++#endif
+ extern void   *(*x_SSL_COMP_get_compression_methods)(void);
+ 
+ #define BIO_ctrl                     x_BIO_ctrl
+@@ -146,6 +157,9 @@
+ #define SSL_CTX_new                  x_SSL_CTX_new
+ #define SSL_CTX_set_cipher_list      x_SSL_CTX_set_cipher_list
+ #define SSL_CTX_set_info_callback    x_SSL_CTX_set_info_callback
++#if OPENSSL_VERSION_NUMBER >= 0x10100000L
++#define SSL_CTX_set_options          x_SSL_CTX_set_options
++#endif
+ #define SSL_CTX_use_PrivateKey_file  x_SSL_CTX_use_PrivateKey_file
+ #define SSL_CTX_use_PrivateKey_ASN1  x_SSL_CTX_use_PrivateKey_ASN1
+ #define SSL_CTX_use_certificate_file x_SSL_CTX_use_certificate_file
+@@ -157,7 +171,9 @@
+ #define SSL_get_rbio                 x_SSL_get_rbio
+ #define SSL_get_servername           x_SSL_get_servername
+ #define SSL_get_wbio                 x_SSL_get_wbio
++#if OPENSSL_VERSION_NUMBER < 0x10100000L
+ #define SSL_library_init             x_SSL_library_init
++#endif
+ #define SSL_new                      x_SSL_new
+ #define SSL_read                     x_SSL_read
+ #define SSL_set_SSL_CTX              x_SSL_set_SSL_CTX
+@@ -166,10 +182,16 @@
+ #define SSL_set_ex_data              x_SSL_set_ex_data
+ #define SSL_shutdown                 x_SSL_shutdown
+ #define SSL_write                    x_SSL_write
++#if OPENSSL_VERSION_NUMBER < 0x10100000L
+ #define SSLv23_server_method         x_SSLv23_server_method
++#else
++#define TLS_server_method            x_TLS_server_method
++#endif
+ #define d2i_X509                     x_d2i_X509
+ #define X509_free                    x_X509_free
++#if OPENSSL_VERSION_NUMBER < 0x10100000L
+ #define sk_zero                      x_sk_zero
++#endif
+ #define SSL_COMP_get_compression_methods    x_SSL_COMP_get_compression_methods
+ 
+ #undef  BIO_set_buffer_read_data
+diff --recursive --unified --new-file --no-dereference upstream/libhttp/url.c src/libhttp/url.c
+--- upstream/libhttp/url.c	2016-11-09 19:40:33.000000000 +0000
++++ src/libhttp/url.c	2024-03-07 10:35:31.000000000 +0000
 @@ -313,6 +313,19 @@
              }
            }
@@ -492,16 +720,16 @@ diff --recursive --unified --new-file --no-dereference orig/libhttp/url.c src/li
        }
        if (lastPart) {
          warn("[http] Missing final \"boundary\" for \"multipart/form-data\"!");
-diff --recursive --unified --new-file --no-dereference orig/m4/.gitignore src/m4/.gitignore
---- orig/m4/.gitignore	2016-11-09 19:40:33.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/m4/.gitignore src/m4/.gitignore
+--- upstream/m4/.gitignore	2016-11-09 19:40:33.000000000 +0000
 +++ src/m4/.gitignore	1970-01-01 00:00:00.000000000 +0000
 @@ -1,3 +0,0 @@
 -# This directory is used by autotools, so we ignore all files except this one.
 -*
 -!.gitignore
-diff --recursive --unified --new-file --no-dereference orig/shellinabox/cgi_root.html src/shellinabox/cgi_root.html
---- orig/shellinabox/cgi_root.html	2016-11-09 19:40:33.000000000 +0000
-+++ src/shellinabox/cgi_root.html	2024-02-26 13:24:42.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/shellinabox/cgi_root.html src/shellinabox/cgi_root.html
+--- upstream/shellinabox/cgi_root.html	2016-11-09 19:40:33.000000000 +0000
++++ src/shellinabox/cgi_root.html	2024-03-07 10:35:31.000000000 +0000
 @@ -49,7 +49,7 @@
      http://shellinabox.com
      -->
@@ -538,9 +766,9 @@ diff --recursive --unified --new-file --no-dereference orig/shellinabox/cgi_root
      })();
      --></script>
    </head>
-diff --recursive --unified --new-file --no-dereference orig/shellinabox/launcher.c src/shellinabox/launcher.c
---- orig/shellinabox/launcher.c	2016-11-09 19:40:33.000000000 +0000
-+++ src/shellinabox/launcher.c	2024-02-26 13:24:42.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/shellinabox/launcher.c src/shellinabox/launcher.c
+--- upstream/shellinabox/launcher.c	2016-11-09 19:40:33.000000000 +0000
++++ src/shellinabox/launcher.c	2024-03-07 10:35:31.000000000 +0000
 @@ -86,10 +86,6 @@
  #include <util.h>
  #endif
@@ -597,9 +825,9 @@ diff --recursive --unified --new-file --no-dereference orig/shellinabox/launcher
          *s                    = '-';
        }
      }
-diff --recursive --unified --new-file --no-dereference orig/shellinabox/root_page.html src/shellinabox/root_page.html
---- orig/shellinabox/root_page.html	2016-11-09 19:40:33.000000000 +0000
-+++ src/shellinabox/root_page.html	2024-02-26 13:24:42.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/shellinabox/root_page.html src/shellinabox/root_page.html
+--- upstream/shellinabox/root_page.html	2016-11-09 19:40:33.000000000 +0000
++++ src/shellinabox/root_page.html	2024-03-07 10:35:31.000000000 +0000
 @@ -110,6 +110,22 @@
        }
  
@@ -623,9 +851,9 @@ diff --recursive --unified --new-file --no-dereference orig/shellinabox/root_pag
      <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
      <script type="text/javascript" src="ShellInABox.js"></script>
    </head>
-diff --recursive --unified --new-file --no-dereference orig/shellinabox/service.c src/shellinabox/service.c
---- orig/shellinabox/service.c	2016-11-09 19:40:33.000000000 +0000
-+++ src/shellinabox/service.c	2024-02-26 13:24:42.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/shellinabox/service.c src/shellinabox/service.c
+--- upstream/shellinabox/service.c	2016-11-09 19:40:33.000000000 +0000
++++ src/shellinabox/service.c	2024-03-07 10:35:31.000000000 +0000
 @@ -253,9 +253,10 @@
    free(desc);
  }
@@ -646,9 +874,9 @@ diff --recursive --unified --new-file --no-dereference orig/shellinabox/service.
    }
  }
  
-diff --recursive --unified --new-file --no-dereference orig/shellinabox/service.h src/shellinabox/service.h
---- orig/shellinabox/service.h	2016-11-09 19:40:33.000000000 +0000
-+++ src/shellinabox/service.h	2024-02-26 13:24:42.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/shellinabox/service.h src/shellinabox/service.h
+--- upstream/shellinabox/service.h	2016-11-09 19:40:33.000000000 +0000
++++ src/shellinabox/service.h	2024-03-07 10:35:31.000000000 +0000
 @@ -61,13 +61,14 @@
    const char *group;
    const char *cwd;
@@ -665,9 +893,9 @@ diff --recursive --unified --new-file --no-dereference orig/shellinabox/service.
  void destroyService(struct Service *service);
  void deleteService(struct Service *service);
  void destroyServiceHashEntry(void *arg, char *key, char *value);
-diff --recursive --unified --new-file --no-dereference orig/shellinabox/shell_in_a_box.jspp src/shellinabox/shell_in_a_box.jspp
---- orig/shellinabox/shell_in_a_box.jspp	2016-11-09 19:40:33.000000000 +0000
-+++ src/shellinabox/shell_in_a_box.jspp	2024-02-26 13:24:42.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/shellinabox/shell_in_a_box.jspp src/shellinabox/shell_in_a_box.jspp
+--- upstream/shellinabox/shell_in_a_box.jspp	2016-11-09 19:40:33.000000000 +0000
++++ src/shellinabox/shell_in_a_box.jspp	2024-03-07 10:35:31.000000000 +0000
 @@ -92,7 +92,7 @@
  function ShellInABox(url, container) {
    if (url == undefined) {
@@ -713,9 +941,9 @@ diff --recursive --unified --new-file --no-dereference orig/shellinabox/shell_in
      request.setRequestHeader('Cache-Control', 'no-cache');
      request.setRequestHeader('Content-Type',
                             'application/x-www-form-urlencoded; charset=utf-8');
-diff --recursive --unified --new-file --no-dereference orig/shellinabox/shellinaboxd.c src/shellinabox/shellinaboxd.c
---- orig/shellinabox/shellinaboxd.c	2016-11-09 19:40:33.000000000 +0000
-+++ src/shellinabox/shellinaboxd.c	2024-02-26 13:24:42.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/shellinabox/shellinaboxd.c src/shellinabox/shellinaboxd.c
+--- upstream/shellinabox/shellinaboxd.c	2016-11-09 19:40:33.000000000 +0000
++++ src/shellinabox/shellinaboxd.c	2024-03-07 10:35:31.000000000 +0000
 @@ -65,6 +65,7 @@
  #include <sys/un.h>
  #include <time.h>
@@ -849,9 +1077,9 @@ diff --recursive --unified --new-file --no-dereference orig/shellinabox/shellina
            unlink(pidfile);
          }
        }
-diff --recursive --unified --new-file --no-dereference orig/shellinabox/vt100.jspp src/shellinabox/vt100.jspp
---- orig/shellinabox/vt100.jspp	2016-11-09 19:40:33.000000000 +0000
-+++ src/shellinabox/vt100.jspp	2024-02-26 13:24:42.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/shellinabox/vt100.jspp src/shellinabox/vt100.jspp
+--- upstream/shellinabox/vt100.jspp	2016-11-09 19:40:33.000000000 +0000
++++ src/shellinabox/vt100.jspp	2024-03-07 10:35:31.000000000 +0000
 @@ -98,6 +98,9 @@
  #define MOUSE_UP       1
  #define MOUSE_CLICK    2
@@ -948,9 +1176,9 @@ diff --recursive --unified --new-file --no-dereference orig/shellinabox/vt100.js
  };
  
  VT100.prototype.Latin1Map = [
-diff --recursive --unified --new-file --no-dereference orig/shellinabox.init src/shellinabox.init
---- orig/shellinabox.init	1970-01-01 00:00:00.000000000 +0000
-+++ src/shellinabox.init	2024-02-26 13:24:42.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/shellinabox.init src/shellinabox.init
+--- upstream/shellinabox.init	1970-01-01 00:00:00.000000000 +0000
++++ src/shellinabox.init	2024-03-07 10:35:31.000000000 +0000
 @@ -0,0 +1,46 @@
 +#!/bin/sh /etc/rc.common
 +# Copyright (C) 2018 Teltonika
@@ -998,9 +1226,9 @@ diff --recursive --unified --new-file --no-dereference orig/shellinabox.init src
 +{
 +	restart_service
 +}
-diff --recursive --unified --new-file --no-dereference orig/shellinabox.sh src/shellinabox.sh
---- orig/shellinabox.sh	1970-01-01 00:00:00.000000000 +0000
-+++ src/shellinabox.sh	2024-02-26 13:24:42.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/shellinabox.sh src/shellinabox.sh
+--- upstream/shellinabox.sh	1970-01-01 00:00:00.000000000 +0000
++++ src/shellinabox.sh	2024-03-07 10:35:31.000000000 +0000
 @@ -0,0 +1,55 @@
 +#!/bin/sh
 +title=""

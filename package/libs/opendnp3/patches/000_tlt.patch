@@ -1,0 +1,152 @@
+diff --recursive --unified --new-file --no-dereference upstream/cpp/lib/include/opendnp3/gen/Parity.h src/cpp/lib/include/opendnp3/gen/Parity.h
+--- upstream/cpp/lib/include/opendnp3/gen/Parity.h	2021-08-10 13:43:15.000000000 +0000
++++ src/cpp/lib/include/opendnp3/gen/Parity.h	2023-03-06 07:20:28.000000000 +0000
+@@ -44,6 +44,8 @@
+ {
+   Even = 1,
+   Odd = 2,
++  Mark = 3,
++  Space = 4,
+   None = 0
+ };
+ 
+diff --recursive --unified --new-file --no-dereference upstream/cpp/lib/src/channel/ASIOSerialHelpers.cpp src/cpp/lib/src/channel/ASIOSerialHelpers.cpp
+--- upstream/cpp/lib/src/channel/ASIOSerialHelpers.cpp	2021-08-10 13:43:15.000000000 +0000
++++ src/cpp/lib/src/channel/ASIOSerialHelpers.cpp	2023-03-06 07:20:28.000000000 +0000
+@@ -88,6 +88,12 @@
+     case (Parity::Odd):
+         t = asio::serial_port_base::parity::odd;
+         break;
++    case (Parity::Mark):
++        t = asio::serial_port_base::parity::mark;
++       break;
++    case (Parity::Space):
++        t = asio::serial_port_base::parity::space;
++       break;
+     default:
+         break;
+     }
+diff --recursive --unified --new-file --no-dereference upstream/deps/asio.cmake src/deps/asio.cmake
+--- upstream/deps/asio.cmake	2021-08-10 13:43:15.000000000 +0000
++++ src/deps/asio.cmake	2023-03-06 07:20:28.000000000 +0000
+@@ -1,5 +1,16 @@
+ include(FetchContent)
+ 
++
++find_program(PATCH
++NAMES patch
++HINTS ${GIT_DIR}
++PATH_SUFFIXES usr/bin
++)
++
++if(NOT PATCH)
++  message(FATAL_ERROR "Did not find GNU Patch")
++endif()
++
+ FetchContent_Declare(
+     asio
+     URL      https://github.com/chriskohlhoff/asio/archive/asio-1-16-0.zip
+@@ -7,6 +18,23 @@
+ )
+ 
+ FetchContent_GetProperties(asio)
++
++set(in_file1
++${CMAKE_SOURCE_DIR}/_deps/asio-src/asio/include/asio/impl/serial_port_base.ipp
++)
++
++set(in_file2
++${CMAKE_SOURCE_DIR}/_deps/asio-src/asio/include/asio/serial_port_base.hpp
++)
++
++set(patch_file1
++${CMAKE_SOURCE_DIR}/deps/serial_port_base.ipp.patch
++)
++
++set(patch_file2
++${CMAKE_SOURCE_DIR}/deps/serial_port_base.hpp.patch
++)
++
+ if(NOT asio_POPULATED)
+     FetchContent_Populate(asio)
+ 
+@@ -14,6 +42,29 @@
+ 
+     add_library(asio INTERFACE)
+     target_include_directories(asio INTERFACE ${asio_SOURCE_DIR}/asio/include)
++
++    execute_process(COMMAND echo pathisthis ${CMAKE_SOURCE_DIR}
++    TIMEOUT 15
++    COMMAND_ECHO STDOUT
++    RESULT_VARIABLE ret
++    )
++
++    execute_process(COMMAND ${PATCH} ${in_file1} ${patch_file1}
++    TIMEOUT 15
++    COMMAND_ECHO STDOUT
++    RESULT_VARIABLE ret
++    )
++
++    execute_process(COMMAND ${PATCH} ${in_file2} ${patch_file2}
++    TIMEOUT 15
++    COMMAND_ECHO STDOUT
++    RESULT_VARIABLE ret
++    )
++
++    if(NOT ret EQUAL 0)
++        message(FATAL_ERROR "Failed to patch asio")
++    endif()
++
+     target_compile_definitions(asio INTERFACE ASIO_STANDALONE)
+     target_compile_features(asio INTERFACE cxx_std_11)
+     target_link_libraries(asio INTERFACE Threads::Threads)
+diff --recursive --unified --new-file --no-dereference upstream/deps/serial_port_base.hpp.patch src/deps/serial_port_base.hpp.patch
+--- upstream/deps/serial_port_base.hpp.patch	1970-01-01 00:00:00.000000000 +0000
++++ src/deps/serial_port_base.hpp.patch	2023-03-06 07:20:28.000000000 +0000
+@@ -0,0 +1,13 @@
++diff --git a/asio/include/asio/serial_port_base.hpp b/asio/include/asio/serial_port_base.hpp
++index 1f027601..e2f0c4cf 100644
++--- a/asio/include/asio/serial_port_base.hpp
+++++ b/asio/include/asio/serial_port_base.hpp
++@@ -91,7 +91,7 @@ public:
++   class parity
++   {
++   public:
++-    enum type { none, odd, even };
+++    enum type { none, odd, even, mark, space };
++     ASIO_DECL explicit parity(type t = none);
++     type value() const;
++     ASIO_DECL ASIO_SYNC_OP_VOID store(
+diff --recursive --unified --new-file --no-dereference upstream/deps/serial_port_base.ipp.patch src/deps/serial_port_base.ipp.patch
+--- upstream/deps/serial_port_base.ipp.patch	1970-01-01 00:00:00.000000000 +0000
++++ src/deps/serial_port_base.ipp.patch	2023-03-06 07:20:28.000000000 +0000
+@@ -0,0 +1,29 @@
++diff --git a/asio/include/asio/impl/serial_port_base.ipp b/asio/include/asio/impl/serial_port_base.ipp
++index 984d7a85..7cb53d0d 100644
++--- a/asio/include/asio/impl/serial_port_base.ipp
+++++ b/asio/include/asio/impl/serial_port_base.ipp
++@@ -328,7 +328,7 @@ ASIO_SYNC_OP_VOID serial_port_base::flow_control::load(
++ serial_port_base::parity::parity(serial_port_base::parity::type t)
++   : value_(t)
++ {
++-  if (t != none && t != odd && t != even)
+++  if (t != none && t != odd && t != even && t != mark && t != space)
++   {
++     std::out_of_range ex("invalid parity value");
++     asio::detail::throw_exception(ex);
++@@ -374,6 +374,15 @@ ASIO_SYNC_OP_VOID serial_port_base::parity::store(
++     storage.c_iflag |= INPCK;
++     storage.c_cflag |= (PARENB | PARODD);
++     break;
+++  case mark:
+++    storage.c_iflag |= INPCK;
+++    storage.c_cflag |= PARENB | CMSPAR | PARODD;
+++    break;
+++  case space:
+++    storage.c_iflag |= INPCK;
+++    storage.c_cflag |= PARENB | CMSPAR;
+++    storage.c_cflag &= ~PARODD;
+++    break;
++   default:
++     break;
++   }

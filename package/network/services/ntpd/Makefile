@@ -11,12 +11,14 @@ PKG_NAME:=ntpd
 PKG_VERSION:=4.2.8p15
 PKG_RELEASE:=3
 
-PKG_SOURCE:=ntp-$(PKG_VERSION).tar.gz
-PKG_SOURCE_URL:=http://www.eecis.udel.edu/~ntp/ntp_spool/ntp4/ntp-4.2/
+PKG_SOURCE_VERSION:=4.2.8p15
+PKG_SOURCE:=ntp-$(PKG_SOURCE_VERSION).tar.gz
+PKG_SOURCE_URL:=http://www.eecis.udel.edu/~ntp/ntp_spool/ntp4/ntp-4.2
+
 PKG_HASH:=f65840deab68614d5d7ceb2d0bb9304ff70dcdedd09abb79754a87536b849c19
 PKG_BUILD_DIR:=$(BUILD_DIR)/ntp-$(PKG_VERSION)
 
-PKG_LICENSE:=Unique
+PKG_LICENSE:=NTP
 PKG_LICENSE_FILES:=COPYRIGHT html/copyright.html
 PKG_CPE_ID:=cpe:/a:ntp:ntp
 

@@ -1,19 +1,19 @@
 include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
-GPL_INCLUDE_SRC:=1
-
 PKG_NAME:=libazure-iot-sdk-c
-PKG_VERSION:=2023-01-05
+PKG_VERSION:=2024-04-29
 PKG_RELEASE:=1
+
+# Need this to not redownload source each time it is compiled
 
 PKG_SOURCE_PROTO:=git
 PKG_SOURCE_URL:=https://github.com/Azure/azure-iot-sdk-c.git
 PKG_SOURCE_VERSION:=3fd808bee3c88f8578dcc30c0a6d1d396c172070
-# Need this to not redownload source each time it is compiled
-PKG_MIRROR_HASH:=a39263d0de257d188cc26fa86510b1ac
+PKG_HASH:=e9af1ddae3942040c698e60678a6ad6f1051b5fe0ad51b24a4cd87686e1ffc67
 
 PKG_LICENSE:=MIT
+PKG_LICENSE_FILES:=LICENSE
 
 include $(INCLUDE_DIR)/package.mk
 include $(INCLUDE_DIR)/cmake.mk
@@ -25,15 +25,16 @@ define Package/libazure-iot-sdk-c
 	TITLE:=Azure IoT C SDKs and Libraries
 endef
 
-CMAKE_OPTIONS += -DCMAKE_BUILD_TYPE="Release" \
-				 -Dbuild_as_dynamic=ON \
-				 -Duse_mqtt=ON \
-				 -Duse_amqp=OFF \
-				 -Duse_http=OFF \
-				 -Duse_prov_client=ON \
-				 -Dhsm_type_x509=ON \
-				 -DBUILD_TESTING=OFF \
-				 -Dskip_samples=ON
+CMAKE_OPTIONS += -Dbuild_as_dynamic=ON \
+		 -Duse_mqtt=ON \
+		 -Duse_amqp=OFF \
+		 -Duse_http=OFF \
+		 -Duse_prov_client=ON \
+		 -Dhsm_type_x509=ON \
+		 -DBUILD_TESTING=OFF \
+		 -Dskip_samples=ON \
+		 -Ddont_use_uploadtoblob=ON \
+		 -DCMAKE_BUILD_TYPE="Release"
 
 define Build/InstallDev
 	$(INSTALL_DIR) $(STAGING_DIR)/usr/include/

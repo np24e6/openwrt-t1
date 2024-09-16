@@ -1,22 +1,61 @@
 --- a/uci.c
 +++ b/uci.c
-@@ -1321,7 +1321,7 @@ rpc_uci_trigger_event(struct ubus_contex
+@@ -148,6 +148,7 @@ static const struct blobmsg_policy rpc_u
+ enum {
+ 	RPC_C_CONFIG,
+ 	RPC_C_SESSION,
++	RPC_C_L_SESSION,
+ 	__RPC_C_MAX,
+ };
+ 
+@@ -155,6 +156,8 @@ static const struct blobmsg_policy rpc_u
+ 	[RPC_C_CONFIG]   = { .name = "config",  .type = BLOBMSG_TYPE_STRING },
+ 	[RPC_C_SESSION]  = { .name = "ubus_rpc_session",
+ 	                                        .type = BLOBMSG_TYPE_STRING },
++	[RPC_C_L_SESSION]  = { .name = "log_rpc_session",
++	                                        .type = BLOBMSG_TYPE_STRING },
+ };
+ 
+ enum {
+@@ -1320,8 +1323,25 @@ rpc_uci_trigger_event(struct ubus_contex
+ 	free(pkg);
  }
  
++static char* rpc_uci_parse_session_username(struct blob_attr *sid)
++{
++	const char *session = blobmsg_data(sid);
++	if (!session)
++		return NULL;
++
++	struct blob_attr *attr = rpc_session_data(session, "username");
++	if (!attr)
++		return NULL;
++
++	const char *username = blobmsg_data(attr);
++	if (!username)
++		return NULL;
++
++	return strdup(username);
++}
++
  static int
 -rpc_uci_revert_commit(struct ubus_context *ctx, struct blob_attr *msg, bool commit)
 +rpc_uci_revert_commit(struct ubus_context *ctx, struct blob_attr *msg, bool commit, bool log)
  {
  	struct blob_attr *tb[__RPC_C_MAX];
  	struct uci_package *p = NULL;
-@@ -1345,7 +1345,14 @@ rpc_uci_revert_commit(struct ubus_contex
+@@ -1345,7 +1365,18 @@ rpc_uci_revert_commit(struct ubus_contex
  	{
  		if (!uci_load(cursor, ptr.package, &p))
  		{
 -			uci_commit(cursor, &p, false);
 +			if (log)
 +			{
-+				uci_logged_commit(cursor, &p, false);
++				char* username = rpc_uci_parse_session_username(tb[RPC_C_SESSION] ? tb[RPC_C_SESSION] : tb[RPC_C_L_SESSION]);
++				uci_logged_commit_user(cursor, &p, false, username);
++				if (username) {
++					free(username);
++				}
 +			}
 +			else
 +			{
@@ -25,7 +64,7 @@
  			uci_unload(cursor, p);
  			rpc_uci_trigger_event(ctx, blobmsg_get_string(tb[RPC_C_CONFIG]));
  		}
-@@ -1367,7 +1374,7 @@ rpc_uci_revert(struct ubus_context *ctx,
+@@ -1367,7 +1398,7 @@ rpc_uci_revert(struct ubus_context *ctx,
                 struct ubus_request_data *req, const char *method,
                 struct blob_attr *msg)
  {
@@ -34,7 +73,7 @@
  }
  
  static int
-@@ -1375,7 +1382,15 @@ rpc_uci_commit(struct ubus_context *ctx,
+@@ -1375,7 +1406,15 @@ rpc_uci_commit(struct ubus_context *ctx,
                 struct ubus_request_data *req, const char *method,
                 struct blob_attr *msg)
  {
@@ -51,7 +90,7 @@
  }
  
  static int
-@@ -1771,6 +1786,7 @@ int rpc_uci_api_init(struct ubus_context
+@@ -1771,6 +1810,7 @@ int rpc_uci_api_init(struct ubus_context
  		UBUS_METHOD("changes",  rpc_uci_changes,  rpc_uci_config_policy),
  		UBUS_METHOD("revert",   rpc_uci_revert,   rpc_uci_config_policy),
  		UBUS_METHOD("commit",   rpc_uci_commit,   rpc_uci_config_policy),
@@ -59,3 +98,38 @@
  		UBUS_METHOD("apply",    rpc_uci_apply,    rpc_uci_apply_policy),
  		UBUS_METHOD("confirm",  rpc_uci_confirm,  rpc_uci_rollback_policy),
  		UBUS_METHOD("rollback", rpc_uci_rollback, rpc_uci_rollback_policy),
+--- a/session.c
++++ b/session.c
+@@ -1349,6 +1349,21 @@ int rpc_session_api_init(struct ubus_con
+ 	return ubus_add_object(ctx, &obj);
+ }
+ 
++struct blob_attr *rpc_session_data(const char *sid, const char *element)
++{
++	struct rpc_session_data *data;
++	struct rpc_session *ses = rpc_session_get(sid);
++
++	if (!ses)
++		return NULL;
++
++	data = avl_find_element(&ses->data, element, data, avl);
++	if (!data)
++		return NULL;
++
++	return data->attr;
++}
++
+ bool rpc_session_access(const char *sid, const char *scope,
+                         const char *object, const char *function)
+ {
+--- a/include/rpcd/session.h
++++ b/include/rpcd/session.h
+@@ -71,6 +71,8 @@ int rpc_session_api_init(struct ubus_con
+ bool rpc_session_access(const char *sid, const char *scope,
+                         const char *object, const char *function);
+ 
++struct blob_attr *rpc_session_data(const char *sid, const char *element);
++
+ struct rpc_session_cb {
+ 	struct list_head list;
+ 	void (*cb)(struct rpc_session *, void *);

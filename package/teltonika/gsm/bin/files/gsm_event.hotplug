@@ -21,6 +21,18 @@ get_contype() {
     json_get_var CONTYPE net_mode
 }
 
+get_up_mobile_ifaces() {
+    local modem="$1"
+    ubus call network.interface dump | \
+    jsonfilter -qe '@.interface[@.up=true && @.data.modem="'$modem'"].interface' | \
+    grep -E '(.*_4$|.*_6$)'
+}
+
+get_uptime() {
+    local iface="$1"
+    ubus call network.interface."$iface" status 2>/dev/null | jsonfilter -qe '@.uptime'
+}
+
 interface=$(echo "$INTERFACE" | sed -E 's|(.*)_[46]$|\1|')
 iface=$(echo "$INTERFACE" | grep -e "_4" -e "_6" | wc -l)
 MODEM=$(uci -q get network."$interface".modem)
@@ -29,15 +41,25 @@ DEV_NAME=$(mnf_info -n | cut -b 0-6)
 
 if [ "$MODEM" != "" ]; then
     MODEM_TYPE="$(get_modem_type "$MODEM")"
+    UP_IFACES="$(get_up_mobile_ifaces "$MODEM")"
 
     if [ "$ACTION" = "ifup" ] && [ "$iface" -gt 0 ]; then
+        [ "$(echo "$UP_IFACES" | wc -l)" -gt 1 ] && {
+            UPTIME="$(get_uptime $INTERFACE)"
+            for i in $UP_IFACES; do
+                [ "$INTERFACE" = "$i" ] && continue
+                # Skip logging if its not the first connected iface
+                [ "$(get_uptime $i)" -gt "$UPTIME" ] && return 0
+            done
+        }
+
         mdm_ubus_obj="$(find_mdm_ubus_obj "$MODEM")"
         get_operator
         get_contype
         log "Mobile Data" "Mobile data connected ($MODEM_TYPE modem)"
         log "Network Type" "Joined $CONTYPE network ($MODEM_TYPE modem)"
         log "Network Operator" "Connected to $OPERATOR operator ($MODEM_TYPE modem)"
-    elif [ "$ACTION" = "ifdown" ]; then
+    elif [ "$ACTION" = "ifdown" ] && [ "$UP_IFACES" = "" ]; then
         log "Mobile Data" "Mobile data disconnected ($MODEM_TYPE modem)"
     fi
 fi

@@ -6,7 +6,7 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=modem_updater
-PKG_SOURCE_VERSION:=6.1
+PKG_SOURCE_VERSION:=7.0
 
 PKG_LICENSE:=Teltonika-closed
 
@@ -35,6 +35,7 @@ define Package/modem_updater/install
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/QDLoader/quectel_loader $(1)/usr/bin/QDLoader
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/fbfdownloader/fbfdownloader $(1)/usr/bin/fbfdownloader
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/modem_updater.sh $(1)/usr/bin/modem_updater
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/telit_uxfp/uxfp/linux/uxfp $(1)/usr/bin/uxfp
 
 endef
 

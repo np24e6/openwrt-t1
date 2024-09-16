@@ -252,3 +252,21 @@
 		};
 	};
 };
+
+&mnfinfo {
+	simpin3 {
+		reg = <&config_rw 0x20 0x8>;
+		type = "digit";
+		default = "";
+	};
+
+	simpin4 {
+		reg = <&config_rw 0x30 0x8>;
+		type = "digit";
+		default = "";
+	};
+
+	sim_cfg {
+		default = "0110000_0000000_0210000_0000000";
+	};
+};

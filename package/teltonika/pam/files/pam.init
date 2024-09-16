@@ -11,12 +11,23 @@ ENABLED=0
 
 radius_pam_conf() {
 	local var="$1" sec="$2"
-	local server secret port timeout
+	local server secret port timeout additional service
 
+	config_get service "$sec" service
 	config_get server "$sec" server
 	config_get secret "$sec" secret
 	config_get port "$sec" port 1812
 	config_get timeout "$sec" timeout 3
+
+	[ "$service" == "rpcd" ] && {
+		local external_users="$(uci -q get rpcd.@rpcd[0].pam_all_users)"
+		[ "$external_users" == "1" ] && additional=" privilege_level localifdown"
+	}
+
+	[ "$service" == "sshd" ] && {
+		local external_users="$(uci -q get dropbear.@dropbear[0].pam_privilege_lvl)"
+		[ -n "$external_users" ] && [ "$external_users" -gt 0 ] && additional=" privilege_level localifdown"
+	}
 
 	[ -z "$server" ] || [ -z "$secret" ] && {
 		logger -t pam "Radius server ip or secret is not configured"
@@ -27,7 +38,7 @@ radius_pam_conf() {
 
 	echo "$server:$port $secret $timeout" > "${RADIUS_DIR}/${sec}"
 
-	eval "$var=\"conf=${RADIUS_DIR}/${sec}\""
+	eval "$var=\"conf=${RADIUS_DIR}/${sec}${additional}\""
 }
 
 tacplus_pam_conf() {
@@ -73,6 +84,9 @@ start_pam_cb() {
 		tacplus)
 			tacplus_pam_conf extra "$sec"
 			;;
+		unix)
+			extra="try_first_pass"
+			;;
 	esac
 
 	echo "auth ${type} pam_${module}.so ${extra}" >> "${PAM_DIR}/${service}"
@@ -80,7 +94,7 @@ start_pam_cb() {
 
 service_triggers()
 {
-	procd_add_reload_trigger pam
+	procd_add_reload_trigger pam dropbear rpcd
 }
 
 start_service() {

@@ -33,8 +33,8 @@ gre_generic_setup() {
 	[ -n "$tunlink" ] && json_add_string link "$tunlink"
 
 	json_add_object 'data'
-	[ -n "$ikey" ] && json_add_int ikey "$ikey"
-	[ -n "$okey" ] && json_add_int okey "$okey"
+	[ -n "$ikey" ] && json_add_string ikey "$ikey"
+	[ -n "$okey" ] && json_add_string okey "$okey"
 	[ -n "$icsum" ] && json_add_boolean icsum "$icsum"
 	[ -n "$ocsum" ] && json_add_boolean ocsum "$ocsum"
 	[ -n "$iseqno" ] && json_add_boolean iseqno "$iseqno"
@@ -254,8 +254,8 @@ gre_generic_init_config() {
 	proto_config_add_string "tos"
 	proto_config_add_string "tunlink"
 	proto_config_add_string "zone"
-	proto_config_add_int "ikey"
-	proto_config_add_int "okey"
+	proto_config_add_string "ikey"
+	proto_config_add_string "okey"
 	proto_config_add_boolean "icsum"
 	proto_config_add_boolean "ocsum"
 	proto_config_add_boolean "iseqno"

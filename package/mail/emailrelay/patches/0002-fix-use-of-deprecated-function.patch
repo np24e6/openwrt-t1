@@ -1,0 +1,25 @@
+From 0ae83403116e369ad2d33bfc20b42ac5a00c459e Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Joris=20Vai=C5=A1vila?= <joris.vaisvila@teltonika.lt>
+Date: Wed, 6 Mar 2024 15:21:41 +0200
+Subject: [PATCH] fix use of deprecated function
+
+---
+ src/gssl/gssl_openssl.cpp | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/gssl/gssl_openssl.cpp b/src/gssl/gssl_openssl.cpp
+index 7cca9fb..9b98fc5 100644
+--- a/src/gssl/gssl_openssl.cpp
++++ b/src/gssl/gssl_openssl.cpp
+@@ -623,7 +623,7 @@ GSsl::Protocol::Result GSsl::OpenSSL::ProtocolImp::accept()
+ 
+ void GSsl::OpenSSL::ProtocolImp::saveResult()
+ {
+-	m_peer_certificate = Certificate(SSL_get_peer_certificate(m_ssl.get()),true).str() ;
++	m_peer_certificate = Certificate(SSL_get1_peer_certificate(m_ssl.get()),true).str() ;
+ 	m_peer_certificate_chain = CertificateChain(SSL_get_peer_cert_chain(m_ssl.get())).str() ;
+ 	m_verified = !m_peer_certificate.empty() && SSL_get_verify_result(m_ssl.get()) == X509_V_OK ;
+ }
+-- 
+2.44.0
+

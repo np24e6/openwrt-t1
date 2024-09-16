@@ -12,20 +12,19 @@ PKG_VERSION:=2022-08-29
 PKG_RELEASE:=1
 
 PKG_SOURCE_PROTO:=git
-PKG_SOURCE_URL:=https://git.code.sf.net/p/minidlna/git
-PKG_SOURCE_DATE:=2022-08-29
 PKG_SOURCE_VERSION:=0a6e10e821e920e0fedfc86850cdf90f131b1e5b
+PKG_SOURCE_URL:=https://git.code.sf.net/p/minidlna/git
+
+PKG_SOURCE_DATE:=2022-08-29
 
 PKG_MAINTAINER:=
-PKG_LICENSE:=GPL-2.0-or-later BSD-3-Clause
+PKG_LICENSE:=GPL-2.0-only BSD-3-Clause
 PKG_LICENSE_FILES:=COPYING LICENCE.miniupnpd
 
 PKG_FIXUP:=autoreconf
 PKG_INSTALL:=1
 PKG_BUILD_PARALLEL:=1
 PKG_BUILD_DEPENDS:=util-linux
-
-GPL_INCLUDE_SRC:=1
 
 include $(INCLUDE_DIR)/package.mk
 include $(INCLUDE_DIR)/nls.mk

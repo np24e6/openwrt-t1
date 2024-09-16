@@ -11,8 +11,11 @@ PKG_NAME:=miniupnpd
 PKG_VERSION:=2.3.4
 PKG_RELEASE:=1
 
-PKG_SOURCE_URL:=https://miniupnp.tuxfamily.org/files
-PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
+PKG_SOURCE_VERSION:=2.3.4
+PKG_SOURCE:=$(PKG_NAME)-$(PKG_SOURCE_VERSION).tar.gz
+PKG_SOURCE_URL:=http://miniupnp.free.fr/files \
+		https://miniupnp.tuxfamily.org/files
+
 PKG_HASH:=e7303348fc8ac427de7f04f0eeb757d49dcc8367311ee2582552c38f5d6da08a
 
 PKG_MAINTAINER:=

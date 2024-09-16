@@ -11,8 +11,10 @@ PKG_NAME:=json-c
 PKG_VERSION:=0.15
 PKG_RELEASE:=2
 
-PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION)-nodoc.tar.gz
-PKG_SOURCE_URL:=https://s3.amazonaws.com/json-c_releases/releases/
+PKG_SOURCE_VERSION:=0.15
+PKG_SOURCE:=$(PKG_NAME)-$(PKG_SOURCE_VERSION)-nodoc.tar.gz
+PKG_SOURCE_URL:=https://s3.amazonaws.com/json-c_releases/releases
+
 PKG_HASH:=99bca4f944b8ced8ae0bbc6310d6a3528ca715e69541793a1ef51f8c5b4b0878
 
 PKG_MAINTAINER:=Felix Fietkau <nbd@nbd.name>

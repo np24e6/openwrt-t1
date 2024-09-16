@@ -3,16 +3,20 @@ include $(TOPDIR)/rules.mk
 PKG_NAME:=urngd
 PKG_RELEASE:=1
 
-PKG_SOURCE_PROTO:=git
-PKG_SOURCE_URL=$(PROJECT_GIT)/project/urngd.git
 PKG_SOURCE_DATE:=2020-01-21
-PKG_SOURCE_VERSION:=c7f7b6b65b82eda4675b42d8cd28d76ea7aebf1a
-PKG_MIRROR_HASH:=2d31025b79fe130c579d6c3f4bf4dc12abc43a7319b20a5cdca24ae363ec70f3
 
-PKG_LICENSE:=GPL-2.0 BSD-3-Clause
-PKG_LICENSE_FILES:=
+PKG_LICENSE:=BSD-3-Clause
+PKG_LICENSE_FILES:=urngd.c
 
 PKG_BUILD_PARALLEL:=1
+
+PKG_CONFIG_DEPENDS += \
+	CONFIG_USE_PROCD \
+	CONFIG_USE_OPENRC
+
+PKG_SOURCE_PROTO:=git
+PKG_SOURCE_URL=$(PROJECT_GIT)/project/urngd.git
+PKG_SOURCE_VERSION:=c7f7b6b65b82eda4675b42d8cd28d76ea7aebf1a
 
 include $(INCLUDE_DIR)/package.mk
 include $(INCLUDE_DIR)/cmake.mk
@@ -43,6 +47,9 @@ define Package/urngd/install
 	$(INSTALL_BIN) ./files/$(PKG_NAME).init $(1)/etc/init.d/$(PKG_NAME)
 	$(INSTALL_DIR) $(1)/sbin
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/$(PKG_NAME) $(1)/sbin/$(PKG_NAME)
+
+	$(if $(CONFIG_USE_OPENRC),\
+		$(OPENRC_INSTALL) sysinit urgnd ./files/urgnd.openrc $(1))
 endef
 
 $(eval $(call BuildPackage,urngd))

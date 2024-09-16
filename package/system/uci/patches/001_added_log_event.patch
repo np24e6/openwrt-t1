@@ -1,21 +1,18 @@
-Index: uci-2021-10-22-f84f49f0/uci.h
-===================================================================
---- uci-2021-10-22-f84f49f0.orig/uci.h
-+++ uci-2021-10-22-f84f49f0/uci.h
-@@ -241,6 +241,9 @@ extern int uci_save(struct uci_context *
+--- a/uci.h
++++ b/uci.h
+@@ -241,6 +241,10 @@ extern int uci_save(struct uci_context *
   */
  extern int uci_commit(struct uci_context *ctx, struct uci_package **p, bool overwrite);
  
 +/* Replica of uci_commit with additional configuration changes logger */
 +extern int uci_logged_commit(struct uci_context *ctx, struct uci_package **package, bool overwrite);
++extern int uci_logged_commit_user(struct uci_context *ctx, struct uci_package **package, bool overwrite, const char *user);
 +
  /**
   * uci_list_configs: List available uci config files
   * @ctx: uci context
-Index: uci-2021-10-22-f84f49f0/libuci.c
-===================================================================
---- uci-2021-10-22-f84f49f0.orig/libuci.c
-+++ uci-2021-10-22-f84f49f0/libuci.c
+--- a/libuci.c
++++ b/libuci.c
 @@ -24,6 +24,9 @@
  #include <stdio.h>
  #include <dlfcn.h>
@@ -26,15 +23,15 @@ Index: uci-2021-10-22-f84f49f0/libuci.c
  #include "uci.h"
  
  static const char *uci_errstr[] = {
-@@ -43,6 +46,43 @@ static const char *uci_errstr[] = {
+@@ -43,6 +46,48 @@ static const char *uci_errstr[] = {
  __private const char *uci_confdir = UCI_CONFDIR;
  __private const char *uci_savedir = UCI_SAVEDIR;
  
 +#ifdef ENABLE_UCI_LOGGING
-+void tlt_log_event(const char *config);
++void tlt_log_event(const char *config, const char *user);
 +
 +/* For teltonika use-case */
-+void tlt_log_event(const char *config) {
++void tlt_log_event(const char *config, const char *user) {
 +
 +	struct ubus_context *ctx;
 +	struct blob_buf b = { 0 };
@@ -50,8 +47,13 @@ Index: uci-2021-10-22-f84f49f0/libuci.c
 +		return;
 +	}
 +
-+	snprintf(message, sizeof(message),
-+		 "%s configuration has been changed", config);
++	if (user && user[0] != '\0') {
++		snprintf(message, sizeof(message),
++		 	"User \"%s\" changed %s configuration", user, config);
++	} else {
++		snprintf(message, sizeof(message),
++		 	"%s configuration has been changed", config);
++	}
 +
 +	blob_buf_init(&b, 0);
 +	blobmsg_add_string(&b, "event", message);
@@ -70,11 +72,16 @@ Index: uci-2021-10-22-f84f49f0/libuci.c
  /* exported functions */
  struct uci_context *uci_alloc_context(void)
  {
-@@ -193,6 +233,23 @@ int uci_commit(struct uci_context *ctx,
+@@ -193,6 +238,28 @@ int uci_commit(struct uci_context *ctx,
  	return 0;
  }
  
 +int uci_logged_commit(struct uci_context *ctx, struct uci_package **package, bool overwrite)
++{
++	return uci_logged_commit_user(ctx, package, overwrite, NULL);
++}
++
++int uci_logged_commit_user(struct uci_context *ctx, struct uci_package **package, bool overwrite, const char *user)
 +{
 +	struct uci_package *p;
 +	UCI_HANDLE_ERR(ctx);
@@ -85,7 +92,7 @@ Index: uci-2021-10-22-f84f49f0/libuci.c
 +	p->backend->commit(ctx, package, overwrite);
 +
 +#ifdef ENABLE_UCI_LOGGING
-+	tlt_log_event((*package)->e.name);
++	tlt_log_event((*package)->e.name, user);
 +#endif // ENABLE_UCI_LOGGING
 +
 +	return 0;
@@ -94,10 +101,8 @@ Index: uci-2021-10-22-f84f49f0/libuci.c
  int uci_load(struct uci_context *ctx, const char *name, struct uci_package **package)
  {
  	struct uci_package *p;
-Index: uci-2021-10-22-f84f49f0/CMakeLists.txt
-===================================================================
---- uci-2021-10-22-f84f49f0.orig/CMakeLists.txt
-+++ uci-2021-10-22-f84f49f0/CMakeLists.txt
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
 @@ -18,6 +18,11 @@ OPTION(UCI_DEBUG "debugging support" OFF
  OPTION(UCI_DEBUG_TYPECAST "typecast debugging support" OFF)
  OPTION(BUILD_LUA "build Lua binding" ON)

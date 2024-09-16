@@ -1,0 +1,21 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+[ -f "/etc/config/azure_iothub" ] || return 0
+
+migrade_old_sections() {
+	local sec="$1"
+
+	if [ "$sec" = "device_1" ]; then
+		uci_set azure_iothub "$sec" old "1"
+	else
+		uci_set azure_iothub "$sec" hidden "1"
+	fi
+}
+
+config_load azure_iothub
+config_foreach migrade_old_sections azure_iothub
+
+uci commit
+return 0

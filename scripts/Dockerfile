@@ -3,7 +3,7 @@ FROM ubuntu:focal-20230308
 # Set environment variables
 ENV DEBIAN_FRONTEND noninteractive
 ENV LC_ALL C.UTF-8
-ENV NODE_MAJOR 18
+ENV NODE_MAJOR 20
 ENV TZ Etc/UTC
 
 # Set startup command
@@ -41,6 +41,7 @@ RUN apt update && apt upgrade -y \
 	git \
 	gnupg \
 	groff \
+	gperf \
 	help2man \
 	java-wrappers \
 	java-propose-classpath \
@@ -61,9 +62,9 @@ RUN apt update && apt upgrade -y \
 	pkg-config \
 	psmisc \
 	python-is-python3 \
-	python3 \
-	python3-dev \
-	python3-distutils \
+	python3.9 \
+	python3.9-dev \
+	python3.9-distutils \
 	python3-yaml \
 	rsync \
 	sharutils \

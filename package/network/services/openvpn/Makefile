@@ -9,14 +9,16 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=openvpn
 
-PKG_VERSION:=2.5.3
-PKG_RELEASE:=4
+PKG_VERSION:=2.6.9
+PKG_RELEASE:=1
 
+PKG_HASH:=e08d147e15b4508dfcd1d6618a1f21f1495f9817a8dadc1eddf0532fa116d7e3
+
+PKG_SOURCE_VERSION:=2.6.9
+PKG_SOURCE=openvpn-$(PKG_SOURCE_VERSION).tar.gz
 PKG_SOURCE_URL:=\
 	https://build.openvpn.net/downloads/releases/ \
 	https://swupdate.openvpn.net/community/releases/
-PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.xz
-PKG_HASH:=fb6a9943c603a1951ca13e9267653f8dd650c02f84bccd2b9d20f06a4c9c9a7e
 
 PKG_MAINTAINER:=Magnus Kroken <mkroken@gmail.com>
 
@@ -24,7 +26,8 @@ PKG_INSTALL:=1
 PKG_FIXUP:=autoreconf
 PKG_BUILD_PARALLEL:=1
 PKG_BUILD_FLAGS:=gc-sections
-PKG_LICENSE:=GPL-2.0
+PKG_LICENSE:=GPL-2.0-only
+PKG_LICENSE_FILES:=COPYING COPYRIGHT.GPL
 PKG_CPE_ID:=cpe:/a:openvpn:openvpn
 
 include $(INCLUDE_DIR)/package.mk
@@ -36,7 +39,8 @@ define Package/openvpn/Default
   URL:=http://openvpn.net
   SUBMENU:=VPN
   MENU:=1
-  DEPENDS:=+kmod-tun +OPENVPN_$(1)_ENABLE_LZO:liblzo +OPENVPN_$(1)_ENABLE_IPROUTE2:ip $(3) +libubus +libubox +libuci
+  DEPENDS:=+kmod-tun +libcap-ng +OPENVPN_$(1)_ENABLE_LZO:liblzo +OPENVPN_$(1)_ENABLE_LZ4:liblz4 +OPENVPN_$(1)_ENABLE_IPROUTE2:ip \
+	+OPENVPN_$(1)_ENABLE_DCO:libnl-genl +OPENVPN_$(1)_ENABLE_DCO:kmod-ovpn-dco-v2 $(3) +libubus +libubox
   VARIANT:=$(1)
   PROVIDES:=openvpn openvpn-crypto
 endef
@@ -57,8 +61,6 @@ CONFIGURE_VARS += \
 	IPROUTE=/sbin/ip \
 	NETSTAT=/sbin/netstat
 
-TARGET_LDFLAGS += -Wl,--gc-sections,-luci
-
 define Build/Configure
 	$(call Build/Configure/Default, \
 		$(if $(CONFIG_OPENVPN_$(BUILD_VARIANT)_ENABLE_SMALL),--enable-small) \
@@ -72,12 +74,10 @@ define Build/Configure
 		$(if $(CONFIG_OPENVPN_$(BUILD_VARIANT)_ENABLE_X509_ALT_USERNAME),--enable,--disable)-x509-alt-username \
 		$(if $(CONFIG_OPENVPN_$(BUILD_VARIANT)_ENABLE_MANAGEMENT),--enable,--disable)-management \
 		$(if $(CONFIG_OPENVPN_$(BUILD_VARIANT)_ENABLE_FRAGMENT),--enable,--disable)-fragment \
-		$(if $(CONFIG_OPENVPN_$(BUILD_VARIANT)_ENABLE_MULTIHOME),--enable,--disable)-multihome \
 		$(if $(CONFIG_OPENVPN_$(BUILD_VARIANT)_ENABLE_IPROUTE2),--enable,--disable)-iproute2 \
-		$(if $(CONFIG_OPENVPN_$(BUILD_VARIANT)_ENABLE_DEF_AUTH),--enable,--disable)-def-auth \
-		$(if $(CONFIG_OPENVPN_$(BUILD_VARIANT)_ENABLE_PF),--enable,--disable)-pf \
 		$(if $(CONFIG_OPENVPN_$(BUILD_VARIANT)_ENABLE_PORT_SHARE),--enable,--disable)-port-share \
-		$(if $(CONFIG_OPENVPN_OPENSSL),--with-crypto-library=openssl) \
+		$(if $(CONFIG_OPENVPN_$(BUILD_VARIANT)_ENABLE_DCO),--enable,--disable)-dco \
+		$(if $(CONFIG_OPENVPN_OPENSSL),--with-crypto-library=openssl --with-openssl-engine=no) \
 	)
 endef
 
@@ -134,16 +134,16 @@ define Package/openvpn-$(BUILD_VARIANT)/install
 		$(1)/etc/openvpn/
 
 	$(INSTALL_DATA) \
-	 	files/nord_template.ovpn \
-	 	$(1)/etc/openvpn/
+		files/nord_template.ovpn \
+		$(1)/etc/openvpn/
 
 	$(INSTALL_DATA) \
-	 	files/express_template.ovpn \
-	 	$(1)/etc/openvpn/
+		files/express_template.ovpn \
+		$(1)/etc/openvpn/
 
 	$(INSTALL_BIN) \
-                files/updown.sh \
-                $(1)/etc/openvpn/
+		files/updown.sh \
+		$(1)/etc/openvpn/
 
 	$(INSTALL_BIN) \
 		files/route.sh \
@@ -153,7 +153,6 @@ define Package/openvpn-$(BUILD_VARIANT)/install
 		$(INSTALL_BIN) \
 			files/openvpn.check \
 			(1)/usr/sbin/openvpn_check)
-
 endef
 
 $(eval $(call BuildPackage,openvpn-openssl))

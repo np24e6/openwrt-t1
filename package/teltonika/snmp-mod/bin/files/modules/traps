@@ -34,6 +34,8 @@ traps_mib_group_adc0='adc0Notification,
 '
 traps_mib_group_iio='digitalIioNotification,
 '
+traps_mib_group_pwr0='powerVoltageNotification,
+'
 
 # Trap definitions
 
@@ -145,6 +147,13 @@ digitalOutput2Notification NOTIFICATION-TYPE
 	STATUS		current
 	DESCRIPTION	"Digital output2 trap"
 	::= { ioNotifications 14 }
+'
+
+traps_mib_pwr0='
+powerVoltageNotification NOTIFICATION-TYPE
+	STATUS		current
+	DESCRIPTION	"Power voltage trap"
+	::= { ioNotifications 15 }
 '
 
 traps_mib_eventlog='

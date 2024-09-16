@@ -1,0 +1,212 @@
+--- a/hostapd/config_file.c
++++ b/hostapd/config_file.c
+@@ -125,6 +125,8 @@ static int hostapd_config_read_maclist(c
+ 	char buf[128], *pos;
+ 	int line = 0;
+ 	u8 addr[ETH_ALEN];
++	u8 from[ETH_ALEN] = {0};
++	u8 to[ETH_ALEN] = {0};
+ 	int vlan_id;
+ 
+ 	f = fopen(fname, "r");
+@@ -156,17 +158,43 @@ static int hostapd_config_read_maclist(c
+ 			pos++;
+ 		}
+ 
+-		if (hwaddr_aton(pos, addr)) {
+-			wpa_printf(MSG_ERROR, "Invalid MAC address '%s' at "
+-				   "line %d in '%s'", pos, line, fname);
+-			fclose(f);
+-			return -1;
++		char *mac1 = strtok(pos, "-");
++		char *mac2 = strtok(NULL, "-");
++
++		if (mac1 && mac2) {
++			if (hwaddr_aton(mac1, from)) {
++				wpa_printf(MSG_ERROR,
++					   "Invalid MAC range start '%s' at "
++					   "line %d in '%s'",
++					   pos, line, fname);
++				fclose(f);
++				return -1;
++			}
++
++			if (hwaddr_aton(mac2, to)) {
++				wpa_printf(MSG_ERROR,
++					   "Invalid MAC range end '%s' at "
++					   "line %d in '%s'",
++					   pos, line, fname);
++				fclose(f);
++				return -1;
++			}
++
++		} else {
++			if (hwaddr_aton(pos, addr)) {
++				wpa_printf(MSG_ERROR, "Invalid MAC address '%s' at "
++					   "line %d in '%s'",
++					   pos, line, fname);
++				fclose(f);
++				return -1;
++			}
+ 		}
+ 
+ 		if (rem) {
+-			hostapd_remove_acl_mac(acl, num, addr);
++			hostapd_remove_acl_mac(acl, num, addr, from, to);
+ 			continue;
+ 		}
++
+ 		vlan_id = 0;
+ 		pos = buf;
+ 		while (*pos != '\0' && *pos != ' ' && *pos != '\t')
+@@ -176,7 +204,7 @@ static int hostapd_config_read_maclist(c
+ 		if (*pos != '\0')
+ 			vlan_id = atoi(pos);
+ 
+-		if (hostapd_add_acl_maclist(acl, num, vlan_id, addr) < 0) {
++		if (hostapd_add_acl_maclist(acl, num, vlan_id, addr, from, to) < 0) {
+ 			fclose(f);
+ 			return -1;
+ 		}
+@@ -184,9 +212,6 @@ static int hostapd_config_read_maclist(c
+ 
+ 	fclose(f);
+ 
+-	if (*acl)
+-		qsort(*acl, *num, sizeof(**acl), hostapd_acl_comp);
+-
+ 	return 0;
+ }
+ 
+--- a/src/ap/ap_config.c
++++ b/src/ap/ap_config.c
+@@ -1027,23 +1027,22 @@ void hostapd_config_free(struct hostapd_
+ int hostapd_maclist_found(struct mac_acl_entry *list, int num_entries,
+ 			  const u8 *addr, struct vlan_description *vlan_id)
+ {
+-	int start, end, middle, res;
+-
+-	start = 0;
+-	end = num_entries - 1;
+-
+-	while (start <= end) {
+-		middle = (start + end) / 2;
+-		res = os_memcmp(list[middle].addr, addr, ETH_ALEN);
++	int i, res;
++	for (i = 0; i < num_entries; i++) {
++		res = os_memcmp(list[i].addr, addr, ETH_ALEN);
+ 		if (res == 0) {
+ 			if (vlan_id)
+-				*vlan_id = list[middle].vlan_id;
++				*vlan_id = list[i].vlan_id;
++			return 1;
++		}
++
++		if (os_memcmp(addr, list[i].from, ETH_ALEN) >= 0 &&
++		    os_memcmp(addr, list[i].to, ETH_ALEN) <= 0 &&
++		    os_memcmp(list[i].from, list[i].to, ETH_ALEN) != 0) {
++			if (vlan_id)
++				*vlan_id = list[i].vlan_id;
+ 			return 1;
+ 		}
+-		if (res < 0)
+-			start = middle + 1;
+-		else
+-			end = middle - 1;
+ 	}
+ 
+ 	return 0;
+@@ -1720,7 +1719,7 @@ int hostapd_acl_comp(const void *a, cons
+ 
+ 
+ int hostapd_add_acl_maclist(struct mac_acl_entry **acl, int *num,
+-			    int vlan_id, const u8 *addr)
++			    int vlan_id, const u8 *addr, const u8 *from, const u8 *to)
+ {
+ 	struct mac_acl_entry *newacl;
+ 
+@@ -1732,6 +1731,13 @@ int hostapd_add_acl_maclist(struct mac_a
+ 
+ 	*acl = newacl;
+ 	os_memcpy((*acl)[*num].addr, addr, ETH_ALEN);
++
++	if(from)
++		os_memcpy((*acl)[*num].from, from, ETH_ALEN);
++
++	if(to)
++		os_memcpy((*acl)[*num].to, to, ETH_ALEN);
++
+ 	os_memset(&(*acl)[*num].vlan_id, 0, sizeof((*acl)[*num].vlan_id));
+ 	(*acl)[*num].vlan_id.untagged = vlan_id;
+ 	(*acl)[*num].vlan_id.notempty = !!vlan_id;
+@@ -1742,7 +1748,7 @@ int hostapd_add_acl_maclist(struct mac_a
+ 
+ 
+ void hostapd_remove_acl_mac(struct mac_acl_entry **acl, int *num,
+-			    const u8 *addr)
++			    const u8 *addr, const u8 *from, const u8 *to)
+ {
+ 	int i = 0;
+ 
+@@ -1750,6 +1756,10 @@ void hostapd_remove_acl_mac(struct mac_a
+ 		if (os_memcmp((*acl)[i].addr, addr, ETH_ALEN) == 0) {
+ 			os_remove_in_array(*acl, *num, sizeof(**acl), i);
+ 			(*num)--;
++		} else if (from && to && os_memcmp((*acl)[i].from, from, ETH_ALEN) == 0 &&
++			   os_memcmp((*acl)[i].to, to, ETH_ALEN) == 0) {
++			os_remove_in_array(*acl, *num, sizeof(**acl), i);
++			(*num)--;
+ 		} else {
+ 			i++;
+ 		}
+--- a/src/ap/ap_config.h
++++ b/src/ap/ap_config.h
+@@ -67,6 +67,8 @@ typedef u8 macaddr[ETH_ALEN];
+ 
+ struct mac_acl_entry {
+ 	macaddr addr;
++	macaddr from;
++	macaddr to;
+ 	struct vlan_description vlan_id;
+ };
+ 
+@@ -1312,8 +1314,8 @@ bool hostapd_sae_pk_exclusively(struct h
+ int hostapd_setup_sae_pt(struct hostapd_bss_config *conf);
+ int hostapd_acl_comp(const void *a, const void *b);
+ int hostapd_add_acl_maclist(struct mac_acl_entry **acl, int *num,
+-			    int vlan_id, const u8 *addr);
++			    int vlan_id, const u8 *addr, const u8 *from, const u8 *to);
+ void hostapd_remove_acl_mac(struct mac_acl_entry **acl, int *num,
+-			    const u8 *addr);
++			    const u8 *addr, const u8 *from, const u8 *to);
+ 
+ #endif /* HOSTAPD_CONFIG_H */
+--- a/src/ap/ctrl_iface_ap.c
++++ b/src/ap/ctrl_iface_ap.c
+@@ -1393,7 +1393,7 @@ int hostapd_ctrl_iface_acl_del_mac(struc
+ 		return -1;
+ 
+ 	if (hostapd_maclist_found(*acl, *num, addr, &vlan_id))
+-		hostapd_remove_acl_mac(acl, num, addr);
++		hostapd_remove_acl_mac(acl, num, addr, NULL, NULL);
+ 
+ 	return 0;
+ }
+@@ -1403,7 +1403,7 @@ void hostapd_ctrl_iface_acl_clear_list(s
+ 				       int *num)
+ {
+ 	while (*num)
+-		hostapd_remove_acl_mac(acl, num, (*acl)[0].addr);
++		hostapd_remove_acl_mac(acl, num, (*acl)[0].addr, (*acl)[0].from, (*acl)[0].to);
+ }
+ 
+ 
+@@ -1445,7 +1445,7 @@ int hostapd_ctrl_iface_acl_add_mac(struc
+ 		vlanid = atoi(pos + 8);
+ 
+ 	if (!hostapd_maclist_found(*acl, *num, addr, &vlan_id)) {
+-		ret = hostapd_add_acl_maclist(acl, num, vlanid, addr);
++		ret = hostapd_add_acl_maclist(acl, num, vlanid, addr, NULL, NULL);
+ 		if (ret != -1 && *acl)
+ 			qsort(*acl, *num, sizeof(**acl), hostapd_acl_comp);
+ 	}

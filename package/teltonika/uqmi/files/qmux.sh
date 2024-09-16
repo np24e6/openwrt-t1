@@ -62,56 +62,28 @@ proto_qmux_setup() {
 	json_get_vars pdp device modem pdptype sim delay method mtu dhcp dhcpv6 ip4table ip6table \
 	leasetime mac $PROTO_DEFAULT_OPTIONS
 
-        local gsm_modem="$(find_mdm_ubus_obj "$modem")"
+	local gsm_modem="$(find_mdm_ubus_obj "$modem")"
 
-        [ -z "$gsm_modem" ] && {
-                echo "Failed to find gsm modem ubus object, exiting."
-                return 1
-        }
+	[ -z "$gsm_modem" ] && {
+			echo "Failed to find gsm modem ubus object, exiting."
+			return 1
+	}
 
 	pdp=$(get_pdp "$interface")
 
 	[ -n "$delay" ] || [ "$pdp" = "1" ] && delay=0 || delay=3
 	sleep "$delay"
 
+#~ Parameters part------------------------------------------------------
 	[ -z "$sim" ] && sim=$(get_config_sim "$interface")
-
-#~ SIM Parameters part------------------------------------------------------
-
-	echo "Quering active sim position"
-	json_set_namespace gobinet old_cb
-	json_load "$(ubus call $gsm_modem get_sim_slot)"
-	json_get_var active_sim index
-	json_set_namespace $old_cb
-
-# 	Restart if check failed
-	if [ "$active_sim" -lt 1 ] || [ "$active_sim" -gt 2 ]; then
-		echo "Bad active sim: $active_sim."
-		return
-	fi
-
-	# check if current sim and interface sim match
-	[ "$active_sim" = "$sim" ] || {
-		echo "Active sim: $active_sim. \
-		This interface uses different simcard: $sim."
-		proto_notify_error "$interface" WRONG_SIM
-		proto_block_restart "$interface"
-		return
-	}
-
-	get_simcard_parameters() {
-		local section="$1"
-		local mdm
-		config_get position "$section" position
-		config_get mdm "$section" modem
-
-		[ "$modem" = "$mdm" ] && \
-		[ "$position" = "$active_sim" ] && {
-			config_get deny_roaming "$section" deny_roaming "0"
-		}
-	}
-	config_load simcard
-	config_foreach get_simcard_parameters "sim"
+	active_sim=$(get_active_sim "$interface" "$old_cb" "$gsm_modem")
+	esim_profile_index=$(get_active_esim_profile_index "$modem")
+	# verify active sim by return value(non zero means that the check failed)
+	verify_active_sim "$sim" "$active_sim" "$interface" || return
+	# verify active esim profile index by return value(non zero means that the check failed)
+	verify_active_esim "$esim_profile_index" "$interface" || return
+	deny_roaming=$(get_deny_roaming "$active_sim" "$modem" "$esim_profile_index")
+#~ ---------------------------------------------------------------------
 
 	get_qmimux_by_id() {
 		local interface
@@ -135,8 +107,7 @@ proto_qmux_setup() {
 		let "ifid++"
 	}
 
-#~ Network part ---------------------------------------------------------------------
-
+#~ ---------------------------------------------------------------------
 	[ -n "$ctl_device" ] && device="$ctl_device"
 	[ -z "$timeout" ] && timeout="30"
 	[ -z "$metric" ] && metric="1"
@@ -272,7 +243,6 @@ ${ifid} --ep-iface-number ${ep_iface} --set-client-id wds,${cid_4}"
 		fi
 		echo "cid6: $cid_6"
 
-		#~ Bind context to port
 		call_uqmi_command "uqmi -d $device $options --wds-bind-mux-data-port --mux-id $ifid \
 --ep-iface-number $ep_iface --set-client-id wds,$cid_6"
 

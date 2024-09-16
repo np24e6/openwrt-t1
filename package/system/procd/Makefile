@@ -10,15 +10,11 @@ include $(TOPDIR)/rules.mk
 PKG_NAME:=procd
 PKG_RELEASE:=$(AUTORELEASE)
 
-PKG_SOURCE_PROTO:=git
-PKG_SOURCE_URL=$(PROJECT_GIT)/project/procd.git
 PKG_SOURCE_DATE:=2021-02-23
-PKG_SOURCE_VERSION:=37eed131e9967a35f47bacb3437a9d3c8a57b3f4
-PKG_MIRROR_HASH:=2b0131ff9055ccf987cbeb5f36c2c2585dc780999df6be312fbbbcd61ce676d4
 CMAKE_INSTALL:=1
 
-PKG_LICENSE:=GPL-2.0
-PKG_LICENSE_FILES:=
+PKG_LICENSE:=LGPL-2.1-only
+PKG_LICENSE_FILES:=procd.h
 
 PKG_MAINTAINER:=John Crispin <john@phrozen.org>
 
@@ -27,7 +23,12 @@ PKG_ASLR_PIE_REGULAR:=1
 PKG_CONFIG_DEPENDS:= \
 	CONFIG_TARGET_INIT_PATH CONFIG_KERNEL_SECCOMP \
 	CONFIG_PROCD_SHOW_BOOT CONFIG_PROCD_ZRAM_TMPFS \
-	CONFIG_KERNEL_NAMESPACES CONFIG_PACKAGE_procd-ujail CONFIG_PACKAGE_procd-seccomp
+	CONFIG_KERNEL_NAMESPACES CONFIG_PACKAGE_procd-ujail CONFIG_PACKAGE_procd-seccomp \
+	CONFIG_USE_PROCD CONFIG_USE_OPENRC
+
+PKG_SOURCE_PROTO:=git
+PKG_SOURCE_URL=$(PROJECT_GIT)/project/procd.git
+PKG_SOURCE_VERSION:=37eed131e9967a35f47bacb3437a9d3c8a57b3f4
 
 include $(INCLUDE_DIR)/package.mk
 include $(INCLUDE_DIR)/cmake.mk
@@ -50,6 +51,14 @@ endef
 define Package/procd
   $(call Package/procd/Default)
   VARIANT:=default
+endef
+
+define Package/procd-init
+  $(call Package/procd/Default)
+  SECTION:=base
+  CATEGORY:=Base system
+  DEPENDS:=@USE_PROCD +procd
+  TITLE:=OpenWrt system process manager init
 endef
 
 define Package/procd-ujail
@@ -117,11 +126,19 @@ CMAKE_OPTIONS += -DSECCOMP_SUPPORT=$(SECCOMP) -DUTRACE_SUPPORT=$(SECCOMP)
 define Package/procd/install
 	$(INSTALL_DIR) $(1)/sbin $(1)/etc $(1)/lib/functions
 
-	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/{init,procd,askfirst,udevtrigger,upgraded} $(1)/sbin/
+	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/{procd,askfirst,udevtrigger,upgraded} $(1)/sbin/
 	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/libsetlbf.so $(1)/lib
 	$(INSTALL_BIN) ./files/reload_config $(1)/sbin/
 	$(INSTALL_CONF) ./files/hotplug*.json $(1)/etc/
 	$(INSTALL_DATA) ./files/procd.sh $(1)/lib/functions/
+
+	$(if $(CONFIG_USE_OPENRC),\
+		$(OPENRC_INSTALL) sysinit procd ./files/procd.openrc $(1))
+endef
+
+define Package/procd-init/install
+	$(INSTALL_DIR) $(1)/sbin
+	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/init $(1)/sbin/
 endef
 
 define Package/procd-ujail/install
@@ -154,6 +171,7 @@ define Package/uxc/install
 endef
 
 $(eval $(call BuildPackage,procd))
+$(eval $(call BuildPackage,procd-init))
 $(eval $(call BuildPackage,procd-ujail))
 $(eval $(call BuildPackage,procd-ujail-console))
 $(eval $(call BuildPackage,procd-seccomp))

@@ -271,6 +271,8 @@ config_conn() {
 	local xauth_identity
 	local comp_mode
 	local type
+	local if_id_out
+	local if_id_in
 
 	config_get mode                     "$1"           mode "start"
 	config_get local_subnet             "$1"           local_subnet ""
@@ -301,10 +303,12 @@ config_conn() {
 	config_get rightprotoport           "$1"           rightprotoport ""
 	config_get defaultroute             "$1"           defaultroute "0"
 	config_get xauth                    "$1"           xauth "0"
-	config_get xauth_identity	    "$1"	   xauth_identity ""
-	config_get comp_mode		    "$1"           comp_mode "0"
-	config_get type       	  	    "$1"           type
-	config_get passthrough		    "$1"	   passthrough
+	config_get xauth_identity           "$1"           xauth_identity ""
+	config_get comp_mode                "$1"           comp_mode "0"
+	config_get type                     "$1"           type
+	config_get passthrough              "$1"           passthrough
+	config_get if_id_out                "$1"           if_id_out
+	config_get if_id_in                 "$1"           if_id_in
 
 	[ -n "$local_nat" ] && local_subnet=$local_nat
 
@@ -327,8 +331,12 @@ config_conn() {
 
 	[ -n "$local_sourceip" ] && ipsec_xappend "  leftsourceip=$local_sourceip"
 
-	[ "$local_firewall" -eq 1 ] && ipsec_xappend "  leftfirewall=yes" || \
+	if [ "$local_firewall" -eq 1 ]; then
+		ipsec_xappend "  leftfirewall=yes"
+	else
 		ipsec_xappend "  leftfirewall=no"
+		ipsec_xappend "  leftupdown=/etc/hotplug.d/ipsec/08-status-gen"
+	fi
 
 	[ "$remote_firewall" -eq 1 ] && ipsec_xappend "  rightfirewall=yes" || \
 		ipsec_xappend "  rightfirewall=no"
@@ -342,7 +350,9 @@ config_conn() {
 	ipsec_xappend "  dpdtimeout=${dpdtimeout}s"
 
 	[ -n "$inactivity" ] && ipsec_xappend "  inactivity=$inactivity"
-	[ -n "$reqid" ] && ipsec_xappend "  reqid=$reqid"
+	[ -n "$reqid" ]      && ipsec_xappend "  reqid=$reqid"
+	[ -n "$if_id_in" ]   && ipsec_xappend "  if_id_in=$if_id_in"
+	[ -n "$if_id_out" ]  && ipsec_xappend "  if_id_out=$if_id_out"
 
 	if [ "$auth_method" = "psk" ]; then
 		ipsec_xappend "  leftauth=psk"

@@ -2,7 +2,7 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/version.mk
 
 PKG_NAME:=ipq-wifi-firmware
-PKG_RELEASE:=1
+PKG_RELEASE:=2
 PKG_FLAGS:=nonshared
 
 PKG_LICENSE:=GPL-2.0-or-later
@@ -50,6 +50,8 @@ define ipq-wifi-firmware-install-one
 endef
 # Blank line required at end of above define due to foreach context
 
+
+
 define generate-ipq-wifi-firmware-package
   define Package/ipq-wifi-firmware-$(1)
     $(call Package/ipq-wifi-firmware-default)
@@ -73,6 +75,7 @@ Do not install it for any other device!
     $$$$(foreach IPQ_WIFI_FIRMWARE_FILE,$$$$(wildcard firmware-$(1).*),\
       $$$$(call ipq-wifi-firmware-install-one,$$$$(IPQ_WIFI_FIRMWARE_FILE),$$(1)))
   endef
+
 
   PREV_BOARD+=ipq-wifi-firmware-$(1)
 endef

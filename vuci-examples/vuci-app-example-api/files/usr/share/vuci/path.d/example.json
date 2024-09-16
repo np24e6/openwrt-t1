@@ -1,4 +1,3 @@
 [
-    { "/example_f/{service_group}/{sid}": "services/function_example" },
-    { "/example_c/{service_group}/{sid}": "services/config_example" }
+    { "/example_f/{service_group}/{sid}": "services/function_example" }
 ]

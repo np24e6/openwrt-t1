@@ -8,22 +8,15 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=ddns-scripts
-PKG_VERSION:=2024-03-07
+PKG_VERSION:=2024-04-16
 PKG_RELEASE:=1
 
-PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
-PKG_SOURCE_VERSION:=1.4
+
 GPL_INCLUDE_SRC:=1
 
 PKG_LICENSE:=GPL-2.0
 PKG_MAINTAINER:=
 PKG_ORIGIN_URL:=https://github.com/openwrt/packages/tree/openwrt-21.02/net/ddns-scripts
-
-STRIP_COMPONENTS:=0
-
-PKG_UPSTREAM_VERSION:=18.06
-PKG_UPSTREAM_URL:=https://git.teltonika.lt/api/v4/projects/352/packages/generic/ddns-scripts/$(PKG_UPSTREAM_VERSION)
-PKG_UPSTREAM_FILE:=ddns-scripts-$(PKG_UPSTREAM_VERSION).tar.gz
 
 include $(INCLUDE_DIR)/package.mk
 
@@ -105,7 +98,7 @@ endef
 define Package/ddns-scripts_nsupdate
     $(call Package/ddns-scripts/Default)
     TITLE:=DDNS extension using Bind nsupdate
-    DEPENDS:=ddns-scripts +bind-client
+    DEPENDS:=ddns-scripts +snsupdate
 endef
 define Package/ddns-scripts_nsupdate/description
     Dynamic DNS Client scripts extension for direct updates using Bind nsupdate
@@ -139,7 +132,7 @@ endef
 define Package/tlt-ddns
 	$(call Package/ddns-scripts/Default)
 	TITLE:=Dynamic DNS Client scripts (with IPv6 support)
-	DEPENDS:=+ddns-scripts +!SMALL_FLASH:ddns-scripts_nsupdate \
+	DEPENDS:=+ddns-scripts +ddns-scripts_nsupdate \
 		+ddns-scripts_no-ip_com +ddns-scripts_cloudflare.com-v4 +libatomic
 endef
 

@@ -1,6 +1,7 @@
 #!/bin/sh
 
 PROG_NAME="firstboot"
+BJSON_PATH="/etc/board.json"
 
 usage_print() {
         echo "Usage: $PROG_NAME [-y][-f]"
@@ -39,5 +40,9 @@ else
         # reset SMS limit database
         rm /log/sms.db  &>/dev/null
 fi;
+
+# copy board.json to tmp for proper modem shutdown
+[ -e "$BJSON_PATH" ] && cp "$BJSON_PATH" /tmp/
+
 # now perform rootfs reset
 /sbin/jffs2reset "-y"

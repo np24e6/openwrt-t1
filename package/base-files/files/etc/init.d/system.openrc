@@ -1,0 +1,29 @@
+#!/sbin/openrc-run
+
+depend() {
+	after boot
+}
+
+start() {
+	. /lib/functions.sh
+
+	local hostname conloglevel buffersize timezone zonename
+	local CFG="system"
+	config_load "$CFG"
+	config_get hostname "$CFG" hostname "%%NAME%%"
+	config_get conloglevel "$CFG" conloglevel
+	config_get buffersize "$CFG" buffersize
+	config_get timezone "$CFG" timezone "UTC"
+	config_get zonename "$CFG" zonename
+
+	echo "$hostname" > /proc/sys/kernel/hostname
+	[ -z "$conloglevel" -a -z "$buffersize" ] \
+		|| dmesg ${conloglevel:+-n $conloglevel} ${buffersize:+-s $buffersize}
+	echo "$timezone" > /tmp/TZ
+	[ -n "$zonename" ] && [ -f "/usr/share/zoneinfo/${zonename// /_}" ] \
+		&& ln -sf "/usr/share/zoneinfo/${zonename// /_}" /tmp/localtime \
+		&& rm -f /tmp/TZ
+
+	# apply timezone to kernel
+	hwclock -u --systz
+}

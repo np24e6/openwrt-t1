@@ -1,0 +1,12 @@
+--- a/scripts/netifd-wireless.sh
++++ b/scripts/netifd-wireless.sh
+@@ -380,7 +380,7 @@
+ }
+ 
+ _wdev_common_iface_config() {
+-	config_add_string mode ssid encryption 'key:wpakey'
++	config_add_string mode ssid encryption _device_id 'key:wpakey'
+ 	config_add_boolean bridge_isolate
+ }
+ 
+

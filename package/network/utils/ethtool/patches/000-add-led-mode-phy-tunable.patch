@@ -1,0 +1,153 @@
+--- a/ethtool.c
++++ b/ethtool.c
+@@ -5352,6 +5352,29 @@ static int do_get_phy_tunable(struct cmd
+ 			fprintf(stdout,
+ 				"Energy Detect Power Down: enabled, TX %u msecs\n",
+ 				cont.msecs);
++	} else if (!strcmp(argp[0], "led-mode")) {
++		struct {
++			struct ethtool_tunable ds;
++			u8 mode;
++		} cont;
++
++		cont.ds.cmd = ETHTOOL_PHY_GTUNABLE;
++		cont.ds.id = ETHTOOL_PHY_LED_MODE;
++		cont.ds.type_id = ETHTOOL_TUNABLE_U8;
++		cont.ds.len = 1;
++		if (send_ioctl(ctx, &cont.ds) < 0) {
++			perror("Cannot Get PHY LED mode value");
++			return 87;
++		}
++
++		if (cont.mode == ETHTOOL_PHY_LED_MODE_OFF)
++			fprintf(stdout, "PHY LED mode: always off\n");
++		else if (cont.mode == ETHTOOL_PHY_LED_MODE_ON)
++			fprintf(stdout, "PHY LED mode: always on\n");
++		else if (cont.mode == ETHTOOL_PHY_LED_MODE_AUTO)
++			fprintf(stdout, "PHY LED mode: auto\n");
++		else
++			fprintf(stdout, "PHY LED mode: unknown\n");
+ 	} else {
+ 		exit_bad_args();
+ 	}
+@@ -5516,6 +5539,22 @@ static int parse_named_u16(struct cmd_co
+ 	return ret;
+ }
+ 
++static int parse_named_str(struct cmd_context *ctx, const char *name, char **val)
++{
++	if (ctx->argc < 2)
++		return 0;
++
++	if (strcmp(*ctx->argp, name))
++		return 0;
++
++	*val = *(ctx->argp + 1);
++
++	ctx->argc -= 2;
++	ctx->argp += 2;
++
++	return 1;
++}
++
+ static int do_set_phy_tunable(struct cmd_context *ctx)
+ {
+ 	int err = 0;
+@@ -5525,6 +5564,9 @@ static int do_set_phy_tunable(struct cmd
+ 	u8 fld_msecs = ETHTOOL_PHY_FAST_LINK_DOWN_ON;
+ 	u8 edpd_changed = 0, edpd_enable = 0;
+ 	u16 edpd_tx_interval = ETHTOOL_PHY_EDPD_DFLT_TX_MSECS;
++	u8 led_changed = 0, led_mode = 0;
++	char *led_mode_str = NULL;
++
+ 
+ 	/* Parse arguments */
+ 	if (parse_named_bool(ctx, "downshift", &ds_enable)) {
+@@ -5539,6 +5581,9 @@ static int do_set_phy_tunable(struct cmd
+ 		edpd_changed = 1;
+ 		if (edpd_enable)
+ 			parse_named_u16(ctx, "msecs", &edpd_tx_interval);
++	} else if (parse_named_str(ctx, "led-mode", &led_mode_str)) {
++		led_changed = 1;
++
+ 	} else {
+ 		exit_bad_args();
+ 	}
+@@ -5573,6 +5618,15 @@ static int do_set_phy_tunable(struct cmd
+ 				(ETHTOOL_PHY_EDPD_NO_TX - 1));
+ 			exit_bad_args();
+ 		}
++	} else if (led_changed) {
++		if (!strcmp(led_mode_str, "off"))
++			led_mode = ETHTOOL_PHY_LED_MODE_OFF;
++		else if (!strcmp(led_mode_str, "on"))
++			led_mode = ETHTOOL_PHY_LED_MODE_ON;
++		else if (!strcmp(led_mode_str, "auto"))
++			led_mode = ETHTOOL_PHY_LED_MODE_AUTO;
++		else
++			exit_bad_args();
+ 	}
+ 
+ 	/* Do it */
+@@ -5624,8 +5678,23 @@ static int do_set_phy_tunable(struct cmd
+ 			perror("Cannot Set PHY Energy Detect Power Down");
+ 			err = 87;
+ 		}
+-	}
++	} else if (led_changed) {
++		struct {
++			struct ethtool_tunable fld;
++			u8 mode;
++		} cont;
+ 
++		cont.fld.cmd = ETHTOOL_PHY_STUNABLE;
++		cont.fld.id = ETHTOOL_PHY_LED_MODE;
++		cont.fld.type_id = ETHTOOL_TUNABLE_U8;
++		cont.fld.len = 1;
++		cont.mode = led_mode;
++		err = send_ioctl(ctx, &cont.fld);
++		if (err < 0) {
++			perror("Cannot Set PHY LED mode");
++			err = 87;
++		}
++	}
+ 	return err;
+ }
+ 
+@@ -6034,6 +6102,7 @@ static const struct option args[] = {
+ 		.xhelp	= "		[ downshift on|off [count N] ]\n"
+ 			  "		[ fast-link-down on|off [msecs N] ]\n"
+ 			  "		[ energy-detect-power-down on|off [msecs N] ]\n"
++			  "		[ led-mode auto|on|off ]\n"
+ 	},
+ 	{
+ 		.opts	= "--get-phy-tunable",
+@@ -6042,6 +6111,7 @@ static const struct option args[] = {
+ 		.xhelp	= "		[ downshift ]\n"
+ 			  "		[ fast-link-down ]\n"
+ 			  "		[ energy-detect-power-down ]\n"
++			  "		[ led-mode ]\n"
+ 	},
+ 	{
+ 		.opts	= "--get-tunable",
+--- a/uapi/linux/ethtool.h
++++ b/uapi/linux/ethtool.h
+@@ -277,12 +277,18 @@ struct ethtool_tunable {
+ #define ETHTOOL_PHY_EDPD_DFLT_TX_MSECS		0xffff
+ #define ETHTOOL_PHY_EDPD_NO_TX			0xfffe
+ #define ETHTOOL_PHY_EDPD_DISABLE		0
++#define ETHTOOL_PHY_LED_MODE_OFF	0
++#define ETHTOOL_PHY_LED_MODE_ON		1
++#define ETHTOOL_PHY_LED_MODE_AUTO	2
++#define ETHTOOL_PHY_LED_MODE_UNKNOWN	3
++
+ 
+ enum phy_tunable_id {
+ 	ETHTOOL_PHY_ID_UNSPEC,
+ 	ETHTOOL_PHY_DOWNSHIFT,
+ 	ETHTOOL_PHY_FAST_LINK_DOWN,
+ 	ETHTOOL_PHY_EDPD,
++	ETHTOOL_PHY_LED_MODE,
+ 	/*
+ 	 * Add your fresh new phy tunable attribute above and remember to update
+ 	 * phy_tunable_strings[] in net/core/ethtool.c

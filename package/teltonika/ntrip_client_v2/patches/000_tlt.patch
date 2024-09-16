@@ -1,0 +1,4523 @@
+diff --recursive --unified --new-file --no-dereference upstream/.gitignore src/.gitignore
+--- upstream/.gitignore	2020-10-06 06:58:41.000000000 +0000
++++ src/.gitignore	1970-01-01 00:00:00.000000000 +0000
+@@ -1,57 +0,0 @@
+-# Prerequisites
+-*.d
+-
+-# Object files
+-*.o
+-*.ko
+-*.obj
+-*.elf
+-
+-# Linker output
+-*.ilk
+-*.map
+-*.exp
+-
+-# Precompiled Headers
+-*.gch
+-*.pch
+-
+-# Libraries
+-*.lib
+-*.a
+-*.la
+-*.lo
+-
+-# Shared objects (inc. Windows DLLs)
+-*.dll
+-*.so
+-*.so.*
+-*.dylib
+-
+-# Executables
+-*.exe
+-*.out
+-*.app
+-*.i*86
+-*.x86_64
+-*.hex
+-
+-# Debug files
+-*.dSYM/
+-*.su
+-*.idb
+-*.pdb
+-
+-# Kernel Module Compile Results
+-*.mod*
+-*.cmd
+-.tmp_versions/
+-modules.order
+-Module.symvers
+-Mkfile.old
+-dkms.conf
+-
+-ntrip_caster
+-ntrip_client
+-ntrip_server
+-
+diff --recursive --unified --new-file --no-dereference upstream/.gitlab-ci.yml src/.gitlab-ci.yml
+--- upstream/.gitlab-ci.yml	1970-01-01 00:00:00.000000000 +0000
++++ src/.gitlab-ci.yml	2024-06-20 10:37:55.000000000 +0000
+@@ -0,0 +1,20 @@
++include:
++  - project: teltonika/ci-templates
++    file:
++      - /templates/semgrep.yml
++
++workflow:
++  rules:
++    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
++    - if: $CI_PIPELINE_SOURCE == "web"
++    - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
++      when: never
++    - if: $CI_COMMIT_BRANCH
++
++semgrep_errors:
++  extends: .semgrep_errors
++
++semgrep_info:
++  extends: .semgrep_info
++  needs:
++    - job: semgrep_errors
+\ No newline at end of file
+diff --recursive --unified --new-file --no-dereference upstream/.gitmodules src/.gitmodules
+--- upstream/.gitmodules	1970-01-01 00:00:00.000000000 +0000
++++ src/.gitmodules	2024-06-20 10:37:55.000000000 +0000
+@@ -0,0 +1,3 @@
++[submodule "test/support"]
++	path = test/support
++	url = git@git.teltonika.lt:teltonika/packages/unit_test_stubs.git
+diff --recursive --unified --new-file --no-dereference upstream/.semgrepignore src/.semgrepignore
+--- upstream/.semgrepignore	1970-01-01 00:00:00.000000000 +0000
++++ src/.semgrepignore	2024-06-20 10:37:55.000000000 +0000
+@@ -0,0 +1 @@
++examples/
+diff --recursive --unified --new-file --no-dereference upstream/CMakeLists.txt src/CMakeLists.txt
+--- upstream/CMakeLists.txt	2020-10-06 06:58:41.000000000 +0000
++++ src/CMakeLists.txt	2024-06-20 10:37:55.000000000 +0000
+@@ -1,44 +1,14 @@
+-cmake_minimum_required(VERSION 2.8)
+-
++cmake_minimum_required(VERSION 3.11)
+ project(ntrip)
+ 
+-set(VERSION_MAJOR 1)
+-set(VERSION_MINOR 0)
+-set(VERSION_PATCH 0)
+-
+-option(NTRIP_BUILD_EXAMPLES "Build ntrip examples" OFF)
+-
+-add_definitions("-std=c++11 -pthread")
+-
+-set(CMAKE_LIBRARY_OUTPUT_PATH ${CMAKE_CURRENT_BINARY_DIR}/lib)
+-set(CMAKE_INCLUDE_OUTPUT_PATH ${CMAKE_CURRENT_BINARY_DIR}/include)
+-
+ set(ntrip_include_dirs ${CMAKE_CURRENT_SOURCE_DIR}/include)
+ include_directories(SYSTEM ${ntrip_include_dirs})
+-
+-macro (add_sources)
+-  file (RELATIVE_PATH _relPath "${PROJECT_SOURCE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}")
+-  foreach (_src ${ARGN})
+-    if (_relPath)
+-      list (APPEND SRCS "${_relPath}/${_src}")
+-    else()
+-      list (APPEND SRCS "${_src}")
+-    endif ()
+-  endforeach ()
+-  if (_relPath)
+-    # propagate SRCS to parent directory
+-    set (SRCS ${SRCS} PARENT_SCOPE)
+-  endif ()
+-endmacro ()
+-
+ aux_source_directory(src src_MAIN)
+ 
+ add_library(${PROJECT_NAME}
+-  ${src_MAIN}
+-)
++        ${src_MAIN}
++        )
+ set_target_properties(${PROJECT_NAME} PROPERTIES INTERFACE_INCLUDE_DIRECTORIES ${ntrip_include_dirs})
++add_subdirectory(examples)
+ 
+-if (NTRIP_BUILD_EXAMPLES)
+-  add_subdirectory(examples)
+-endif (NTRIP_BUILD_EXAMPLES)
+-
++install(TARGETS ${PROJECT_NAME})
+diff --recursive --unified --new-file --no-dereference upstream/CMakeSettings.json src/CMakeSettings.json
+--- upstream/CMakeSettings.json	2020-10-06 06:58:41.000000000 +0000
++++ src/CMakeSettings.json	2024-06-20 10:37:55.000000000 +0000
+@@ -4,7 +4,9 @@
+       "name": "x64-Debug",
+       "generator": "Ninja",
+       "configurationType": "Debug",
+-      "inheritEnvironments": [ "msvc_x64_x64" ],
++      "inheritEnvironments": [
++        "msvc_x64_x64"
++      ],
+       "buildRoot": "${projectDir}\\out\\build\\${name}",
+       "installRoot": "${projectDir}\\out\\install\\${name}",
+       "cmakeCommandArgs": "",
+@@ -24,11 +26,17 @@
+       "generator": "Unix Makefiles",
+       "configurationType": "Debug",
+       "cmakeExecutable": "/usr/bin/cmake",
+-      "remoteCopySourcesExclusionList": [ ".vs", ".git", "out" ],
++      "remoteCopySourcesExclusionList": [
++        ".vs",
++        ".git",
++        "out"
++      ],
+       "cmakeCommandArgs": "",
+       "buildCommandArgs": "",
+       "ctestCommandArgs": "",
+-      "inheritEnvironments": [ "linux_x64" ],
++      "inheritEnvironments": [
++        "linux_x64"
++      ],
+       "remoteMachineName": "${defaultRemoteMachineName}",
+       "remoteCMakeListsRoot": "$HOME/.vs/${projectDirName}/${workspaceHash}/src",
+       "remoteBuildRoot": "$HOME/.vs/${projectDirName}/${workspaceHash}/out/build/${name}",
+diff --recursive --unified --new-file --no-dereference upstream/Makefile src/Makefile
+--- upstream/Makefile	2020-10-06 06:58:41.000000000 +0000
++++ src/Makefile	1970-01-01 00:00:00.000000000 +0000
+@@ -1,38 +0,0 @@
+-.PHONY: clean
+-
+-CC=
+-CFLAGS=-Wall -std=c++11 -pthread
+-
+-INC=-I./include
+-LDFLAGS= -lpthread
+-
+-
+-all: ntrip_client ntrip_caster ntrip_server
+-
+-
+-ntrip_caster: examples/ntrip_caster.o \
+-	src/ntrip_caster.o \
+-	src/ntrip_util.o
+-	$(CC)g++ $^ ${LDFLAGS} -o $@
+-
+-ntrip_client: examples/ntrip_client.o \
+-	src/ntrip_client.o \
+-	src/ntrip_util.o
+-	$(CC)g++ $^ ${LDFLAGS} -o $@
+-
+-ntrip_server: examples/ntrip_server.o \
+-	src/ntrip_server.o \
+-	src/ntrip_util.o
+-	$(CC)g++ $^ ${LDFLAGS} -o $@
+-
+-%.o:%.cc
+-	$(CC)g++ $(CFLAGS) $(INC) $(LDFLAGS) -o $@ -c $<
+-
+-install:
+-	$(CC)strip ntrip_caster ntrip_client ntrip_server
+-
+-
+-clean:
+-	rm -rf src/*.o examples/*.o 
+-	rm -rf ntrip_caster ntrip_client ntrip_server
+-
+diff --recursive --unified --new-file --no-dereference upstream/README.md src/README.md
+--- upstream/README.md	2020-10-06 06:58:41.000000000 +0000
++++ src/README.md	2024-06-20 10:37:55.000000000 +0000
+@@ -1,58 +1,76 @@
+-# pi_ublox-ntrip
++# NTRIP
+ 
+-用于运行在树莓派上为ublox提供ntrip服务
++A package containing NTRIP client application.
++
++# NTRIP protocol
++
++Ntrip - Networked Transport of RTCM via Internet Protocol. NTRIP stands for an application-level protocol for streaming Global Navigation Satellite System (GNSS) data over the Internet. It is a generic, stateless protocol based on the Hypertext Transfer Protocol HTTP. Ntrip is an RTCM standard designed for disseminating differential correction data (e.g in the RTCM-104 format) or other kinds of GNSS streaming data to stationary or mobile users over the Internet, allowing simultaneous PC, Laptop, PDA, or receiver connections to a broadcasting host. NTRIP is implemented in three system software components: NtripClients, NtripServers and NtripCasters. The NtripCaster is the actual HTTP server program whereas NtripClient and NtripServer are acting as HTTP clients
++
++![image.png](./image.png)
++
++Our router acts as NTRIP client and via serial connected end device as RTK receiver or rover. Server to which router application connects acts as NTRIP caster. RTK is short for real time kinematics. A GPS receiver capable of RTK takes in the normal GPS signals from the Global Navigation Satellite Systems along with a correction stream (provided from our router serial device) and achieve up to 1cm positional accuracy. 
++
++---
++
++## Execution
++
++ntrip_client is daemon managed by procd system.
++
++ntrip_client is launched if one or more sections in uci configuration is enabled.
++
++There can be several deamon instances running simultaniously, one per serial (or usb) device.
++
++
++Argument table:
++
++Name | Comment
++--- | ---
++-D [ debug level ] |  Enables debug message printing and sets debugging level
++-d [serial device] | Selects serial device to be used
++
++## Dependencies
++
++ntrip_client dependency table:
++
++Name | Type | Comment
++--- | --- | ---
++libstdcpp | lib | c++ library for generic functions used
++libuci | lib | For configuration parsing
++libtlt_uci | lib | For configuration parsing
++libubus | lib |  For communication via ubus
++libjson-c | lib | For json parsing
++libblobmsg-json | lib | For json parsing
++libgps | lib | For communication with GPS module (if available)
++
++
++---
++
++## Configuration
++
++ntrip_client uci configuration defines these settings in rs_ntrip config file:
++
++**tcp_master section**
++
++Option Name | Type | Optional | Default | Posible variables | Comment
++--- | --- | --- | --- | --- | ---
++device | string | False | empty string | serial device path availabe | identifies serial device to be used
++enabled | int | False | 0 | 0 or 1 | enables ntrip client instance
++ntrip_ip | string | False | empty string | IPv4 address | NTRIP server IP address
++ntrip_port | int | False | - | 1 to 65535  | NTRIP server port
++ntrip_mount_point | string | False | empty string | any server mountpoint | identifies NTRIP mountpoint
++ntrip_data_format | string | False | u | n / h / u | NTRIP version to be used
++ntrip_user | string | False | - | any string | Username for authentification with NTRIP server
++ntrip_password | string | False | - | any string | Password for authentification with NTRIP server
++nmea_source | int | False | 4 | 1 / 2 / 3 / 4 | enables ntrip client instance
++user_nmea | string | False | - | valid NMEA GPGGA string | NMEA string to determine initial position
++lattitude | string | False | - | Lattitude string  | Lattitude string to determine initial position
++longitude | string | False | - | Longitude string | Longitude string to determine initial position
++baudrate | int | False | 115200 | all supported baudrates | Serial device baud rate
++databits | int | False | 8 | supported databit count | Serial data bits
++parity | string | False | "none" | "none", "even", "odd" | Serial parity
++stopbits | int | False | 1 | 1, 2 | Serial device stop bit count
++flowcontrol | string | False | "none" | "none", "rts/cts", "xon/xoff" | Serial device flow control
++report_interval | int | False | 10 | 1-86400 | How often current coordinates are sent to NTRIP server
++udp_port_listen | int | False | - | 1 to 65535 | UDP port used for listening (If UDP mode is used)
++---
+ 
+-致谢：
+-```bash
+-https://github.com/hanoi404/ntrip
+-```
+-
+-## 结构与工作流程
+-
+-1. 使用**ntrip_client**向千寻ntrip要求RTCM数据并保存至文件 **\[timestamp\].nema** 
+-2. 使用**sendNema.py**读取 **\[timestamp\].nema** 并从串口发送至 ublox
+-3. 使用**ntripinit.sh**和**crontab**对**ntrip_client**与**sendNema.py**做进程保活
+-
+-## Quick start
+-
+-1. git clone & cd
+-```
+-git clone https://github.com/hail-linda/pi_ublox-ntrip.git
+-cd pi_ublox-ntrip
+-```
+-2. 修改千寻账号密码 与 参考坐标（用概略坐标给差分网络提供参考）
+-```
+-cd examples
+-vim ntrip_client.cc
+-
+-更改：
+-    std::string ip = "203.107.45.154";
+-    int port = 8003;
+-    std::string user = "qxuesg00000";//
+-    std::string passwd = "0000000";
+-    std::string mountpoint = "AUTO";
+-中的 user 和 passwd
+-
+-更改
+-    ntrip_client.set_location(46.00000,125.00000);
+-中的经纬度
+-```
+-
+-3. 添加定时任务
+-```
+-sudo vim /etc/crontab
+-在文档末添加
+-
+-*/2 *   * * *   pi  pkill py
+-* *     * * *   pi  bash [pi_ublox-ntrip]/ntripinit.sh > [pi_ublox-ntrip]/log 
+-```
+-
+-4. make & reboot
+-```
+-make all
+-sudo shutdwon -r now
+-```
+-
+-## TODO
+-- NTRIP账号外部输入
+-- GPGAA生成与注入
+diff --recursive --unified --new-file --no-dereference upstream/examples/CMakeLists.txt src/examples/CMakeLists.txt
+--- upstream/examples/CMakeLists.txt	2020-10-06 06:58:41.000000000 +0000
++++ src/examples/CMakeLists.txt	2024-06-20 10:37:55.000000000 +0000
+@@ -1,26 +1,20 @@
+-add_executable(ntrip_caster
+-  ntrip_caster.cc
+-)
+-add_dependencies(ntrip_caster ntrip)
+-target_link_libraries(ntrip_caster
+-  ntrip
+-  pthread
+-)
++set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+ 
+ add_executable(ntrip_client
+-  ntrip_client.cc
+-)
++        ntrip_client.cc
++        )
+ add_dependencies(ntrip_client ntrip)
+ target_link_libraries(ntrip_client
+-  ntrip
+-  pthread
+-)
+-
+-add_executable(ntrip_server
+-  ntrip_server.cc
+-)
+-add_dependencies(ntrip_server ntrip)
+-target_link_libraries(ntrip_server
+-  ntrip
+-  pthread
+-)
++        tlt_termios
++        ntrip
++        blobmsg_json
++        json-c
++        uci
++        tlt_uci
++        ubus
++        ubox
++        )
++        
++if(DEFINED GPS_SUPPORT)
++	target_link_libraries(ntrip_client gps)
++endif()
+diff --recursive --unified --new-file --no-dereference upstream/examples/ntrip_caster.cc src/examples/ntrip_caster.cc
+--- upstream/examples/ntrip_caster.cc	2020-10-06 06:58:41.000000000 +0000
++++ src/examples/ntrip_caster.cc	1970-01-01 00:00:00.000000000 +0000
+@@ -1,33 +0,0 @@
+-// Copyright 2019 Yuming Meng. All Rights Reserved.
+-//
+-// Licensed under the Apache License, Version 2.0 (the "License");
+-// you may not use this file except in compliance with the License.
+-// You may obtain a copy of the License at
+-//
+-//     http://www.apache.org/licenses/LICENSE-2.0
+-//
+-// Unless required by applicable law or agreed to in writing, software
+-// distributed under the License is distributed on an "AS IS" BASIS,
+-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+-// See the License for the specific language governing permissions and
+-// limitations under the License.
+-
+-#include "ntrip_caster.h"
+-
+-
+-using libntrip::NtripCaster;
+-
+-int main(int argc, char *argv[]) {
+-  NtripCaster my_caster;
+-  my_caster.Init(8090, 30, 2000);
+-  // my_caster.Init("127.0.0.1", 8090, 10, 2000);
+-  my_caster.Run();
+-
+-  while (1) {
+-    // TODO(mengyuming@hotmail.com) : Add your code in here.
+-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+-  }
+-
+-  return 0;
+-}
+-
+diff --recursive --unified --new-file --no-dereference upstream/examples/ntrip_client.cc src/examples/ntrip_client.cc
+--- upstream/examples/ntrip_client.cc	2020-10-06 06:58:41.000000000 +0000
++++ src/examples/ntrip_client.cc	2024-06-20 10:37:55.000000000 +0000
+@@ -13,50 +13,679 @@
+ // limitations under the License.
+ 
+ #include "ntrip_client.h"
++#include "ntrip_user.h"
++#include "ntrip_util.h"
+ 
+-#include <unistd.h>
+-#include <stdint.h>
++#include <json-c/json.h>
+ 
+-#include <string>
+-#include <vector>
++#define SECTION "ntrip"
++#define CONFIG	"rs_ntrip"
+ 
+-#include "ntrip_util.h"
++using libntrip::NtripClient;
++NtripClient ntrip_client;
+ 
++unsigned int debug_level = 3; // 0,1,2,3 debug levels available
++struct configuration config; // all the uci configuration goes here
+ 
+-using libntrip::NtripClient;
++void get_input_arguments(int argc, char **argv);
++void print_usage_message(void);
++void get_uci_configuration(void);
++void validate_configuration(void);
++void initiate_serial_device(void);
++void get_nmea_from_gps(NtripClient *ntrip_client, configuration *config);
++void get_nmea_from_serial_device(NtripClient *ntrip_client, configuration *config);
++void gps_device_nmea_loop(NtripClient *ntrip_client, configuration *config);
++void serial_device_nmea_loop(NtripClient *ntrip_client, configuration *config);
++static struct uci_package *config_init_package(struct uci_context *uci, const char *config);
++void run_the_client(int data_format);
++
++void sigint_handler(int signum)
++{ // Handler for SIGINT
++	ntrip_client.Stop();
++	DEBUG(0, "NTRIP client was stopped properly\n");
++
++	exit(0);
++}
++
++void run_the_client(int data_format)
++{
++	while (1) {
++		if (ntrip_client.Run_ntrip_universal(data_format)) {
++			DEBUG(3, "ntrip client run started successfully\n");
++			break;
++		} else {
++			DEBUG(0, "Was unable to run the ntrip client, going to retry\n");
++			sleep(CLIENT_RERUN_PERIOD);
++		}
++	}
++}
++
++int main(int argc, char **argv)
++{
++	DEBUG(0, "NTRIP client starting\n");
++
++	signal(SIGINT, sigint_handler);
++	signal(SIGPIPE, SIG_IGN);
++
++	get_input_arguments(argc, argv);
++	get_uci_configuration();
++	validate_configuration();
++	initiate_serial_device();
++
++	ntrip_client.Init(config.address, config.port, config.username, config.password, config.mount_point,
++			  config.udp_port_listen, config.rtsp_url);
++
++	ntrip_client.OnReceived([](const char *buffer, const int &size) {
++		DEBUG(9, "Ntrip data from server [%d]: ", size);
++		for (int i = 0; i < size; ++i) {
++			DEBUG(9, "%02X ", static_cast<uint8_t>(buffer[i]));
++		}
++		DEBUG(9, "\n\n");
++		write(config.serial_device_fd, buffer,
++		      size); // forward data to serial device
++		DEBUG(3, "[%d] symbols attempted to write to serial device fd = [%d]\n", size,
++		      config.serial_device_fd);
++	});
++
++	if (config.nmea_source == PREDEFINED_COORDINATES) {
++		DEBUG(3, "nmea_source == PREDEFINED_COORDINATES [%f, %f]\n", config.lattitude,
++		      config.longitude);
++		ntrip_client.set_location(config.lattitude, config.longitude);
++	} else if (config.nmea_source == PREDEFINED_STRING) {
++		DEBUG(3, "nmea_source == PREDEFINED_STRING [%s]\n", config.initial_gga_string);
++		char my_nmea_buffer[128] = { 0 };
++		strncpy(my_nmea_buffer, config.initial_gga_string, sizeof(my_nmea_buffer) - 3);
++		strcat(my_nmea_buffer, "\r\n");
+ 
+-int main(void) {
+-std::string ip = "203.107.45.154";
+-int port = 8003;
+-std::string user = "qxuesg001056";
+-std::string passwd = "3d683eb";
+-std::string mountpoint = "AUTO";
+-
+-  NtripClient ntrip_client;
+-  ntrip_client.Init(ip, port, user, passwd, mountpoint);
+-  ntrip_client.OnReceived([](const char *buffer, const int &size) {
+-    printf("Recv[%d]: ", size);
+-    for (int i = 0; i < size; ++i) {
+-      printf("%02X ", static_cast<uint8_t>(buffer[i]));
+-    }
+-    printf("\n");
+-  });
+-  // std::string gga;
+-  // if (libntrip::GetGGAFrameData(22.57311, 113.94905, 10.0, &gga) == 0) {
+-  //   printf("GGA buffer: %s\n", gga.c_str());
+-  //   ntrip_client.set_gga_buffer(gga);
+-  // }
+-  //ntrip_client.set_location(22.57311, 113.94905);
+-  ntrip_client.set_location(45.43593,126.75558);
+-  ntrip_client.set_report_interval(10);
+-  ntrip_client.Run();
+-  // Exit the program after 10 seconds.
+-  int cnt = 10;
+-  do {
+-    std::this_thread::sleep_for(std::chrono::seconds(1));
+-  } while (1);
++		ntrip_client.set_gga_buffer(my_nmea_buffer);
++	} else if (config.nmea_source == ROUTER_GPS_DEVICE) {
++		DEBUG(3, "nmea_source == ROUTER_GPS_DEVICE\n");
++		get_nmea_from_gps(&ntrip_client, &config);
++	} else if (config.nmea_source == FROM_SERIAL_DEVICE) {
++		DEBUG(3, "nmea_source == FROM_SERIAL_DEVICE\n");
++		get_nmea_from_serial_device(&ntrip_client, &config);
++	}
+ 
+-  ntrip_client.Stop();
+-  return 0;
++	DEBUG(3, "Setting report interval=%d\n", config.report_interval);
++	ntrip_client.set_report_interval(config.report_interval);
++
++	DEBUG(3, "Setting disconnect on no data from server interval=%d\n", config.close_on_no_data);
++	ntrip_client.set_no_data_interval(config.close_on_no_data);
++
++	run_the_client(config.data_format);
++
++	if (config.nmea_source == ROUTER_GPS_DEVICE) {
++		gps_device_nmea_loop(&ntrip_client, &config);
++	} else if (config.nmea_source == FROM_SERIAL_DEVICE) {
++		serial_device_nmea_loop(&ntrip_client, &config);
++	} else {
++		while (1) {
++			DEBUG(3, "No active NMEA acquiring is needed\n");
++			if (ntrip_client.service_is_running() == false) {
++				DEBUG(3, "Service has stopped running, going to restart the connection\n");
++				run_the_client(config.data_format);
++			}
++			std::this_thread::sleep_for(std::chrono::seconds(5));
++		}
++	}
++	// ntrip_client.Stop();
+ }
+ 
++static void gpsd_ubus_cb(struct ubus_request *req, int type, struct blob_attr *msg)
++{
++	json_object *json;
++	json_object *value;
++	enum json_tokener_error jerr = json_tokener_success;
++	double parsed_value	     = 0;
++	char *ret;
++	int sucess     = 0;
++	int fix_status = 0;
++
++	if (!msg) {
++		DEBUG(3, "gpsd_ubus_cb callback msg is NULL, bailing\n");
++		return;
++	}
++
++	ret = blobmsg_format_json(msg, true);
++	if (ret == NULL) {
++		DEBUG(3, "Failed to format json from message blob\n");
++		return;
++	}
++
++	json = json_tokener_parse_verbose(ret, &jerr);
++	free(ret);
++
++	if (!json) {
++		DEBUG(3, "Failed to read ubus call json\n");
++		return;
++	}
++
++	sucess = json_object_object_get_ex(json, "fix_status", &value);
++	if (!sucess) {
++		DEBUG(3, "Failed to get the latitude value object from json\n");
++		goto err_exit;
++	}
++
++	fix_status = json_object_get_int(value);
++	DEBUG(3, "fix_status:%d\n", fix_status);
++
++	if (fix_status == 0) {
++		DEBUG(3, "no GPS fix acquired, yet\n");
++		goto err_exit;
++	}
++
++	sucess = json_object_object_get_ex(json, "latitude", &value);
++	if (!sucess) {
++		DEBUG(3, "Failed to get the latitude value object from json\n");
++		goto err_exit;
++	}
++
++	parsed_value	 = json_object_get_double(value);
++	config.lattitude = parsed_value;
++
++	sucess = json_object_object_get_ex(json, "longitude", &value);
++	if (!sucess) {
++		DEBUG(3, "Failed to get the longitude value object from json\n");
++		goto err_exit;
++	}
++
++	parsed_value		= json_object_get_double(value);
++	config.longitude	= parsed_value;
++	config.initial_nmea_set = 1;
++
++err_exit:
++	json_object_put(json);
++}
++
++void gps_device_nmea_loop(NtripClient *ntrip_client, configuration *config)
++{
++	DEBUG(3, "gps_device_nmea_loop\n");
++
++	while (1) {
++		if (ntrip_client->service_is_running() == false) {
++			DEBUG(3, "Service has stopped running, going to restart the connection\n");
++			run_the_client(config->data_format);
++		}
++		DEBUG(3, "Going to update coordinates from router GPS device\n");
++		get_nmea_from_gps(ntrip_client, config);
++		sleep(config->report_interval);
++	}
++}
++
++void serial_device_nmea_loop(NtripClient *ntrip_client, configuration *config)
++{
++	DEBUG(3, "Serial device nmea_loop\n");
++
++	while (1) {
++		if (ntrip_client->service_is_running() == false) {
++			DEBUG(3, "Service has stopped running, going to restart the connection\n");
++			run_the_client(config->data_format);
++		}
++		DEBUG(3, "Going to update coordinates from router serial device\n");
++		get_nmea_from_serial_device(ntrip_client, config);
++		//sleep(config->report_interval);
++	}
++}
++
++void get_nmea_from_gps(NtripClient *ntrip_client, configuration *config)
++{
++	DEBUG(3, "Getting nmea from router GPS device\n");
++
++	char call[50] = { 0 };
++	int ret	      = -1;
++	int ubus_flg  = 0;
++	int timeout   = 5;
++
++	if (config->ubus == NULL) {
++		config->ubus = ubus_connect(NULL);
++		if (!config->ubus) {
++			DEBUG(0, "Failed to connect to ubus, exiting\n");
++			exit(1);
++		}
++	}
++
++	//if (config->gpsd_ubus_id == 0) {
++	//	strncpy(call, "gpsd", sizeof(call) - 1);
++
++	strncpy(call, "gpsd", sizeof(call) - 1);
++	ret = ubus_lookup_id(config->ubus, call, &(config->gpsd_ubus_id));
++	while (ret) {
++		DEBUG(0, "Failed to lookup ubus gpsd id (make sure that GPSD is enabled "
++			 "and running), going to retry\n");
++		sleep(UBUS_RETRY_TIMEOUT);
++		ret = ubus_lookup_id(config->ubus, call, &(config->gpsd_ubus_id));
++	}
++
++	config->initial_nmea_set = 0;
++
++	while (1) {
++		if ((ret = ubus_invoke(config->ubus, config->gpsd_ubus_id, "position", NULL, gpsd_ubus_cb,
++				       (void *)config, timeout * 1000))) {
++			DEBUG(0, "Failed to ubus invoke position\n");
++			sleep(UBUS_RETRY_TIMEOUT);
++			break;
++		}
++
++		if (config->initial_nmea_set == 1) {
++			ntrip_client->set_location(config->lattitude, config->longitude);
++			DEBUG(3, "Coordinates were acquired and set successfully [%f, %f]\n",
++			      config->lattitude, config->longitude);
++			break;
++		}
++
++		DEBUG(1, "Failed to get GPS coordinates, going to retry\n");
++		sleep(NMEA_ACQUIRE_PERIOD);
++	}
++
++	DEBUG(3, "update_values_from_ubus complete\n");
++}
++
++int checksums_are_matching(char *tmp_buff, char *checksum)
++{
++	if (checksum == 0)
++		return 0;
++
++	int i;
++	unsigned int calculated_checksum = 0;
++	unsigned int converted_checksum	 = 0;
++
++	for (i = 1; sizeof(*tmp_buff); i++) {
++		if (tmp_buff[i] == '*')
++			break;
++		calculated_checksum ^= tmp_buff[i];
++	}
++
++	std::stringstream ss;
++	ss << std::hex << checksum;
++	ss >> converted_checksum;
++
++	DEBUG(3, "provided checksum:%u, calculated_checksum:%u\n", converted_checksum, calculated_checksum);
++	if (converted_checksum == calculated_checksum) {
++		return 1;
++	} else {
++		return 0;
++	}
++}
++
++int have_valid_nmea(char *buff, unsigned int *buff_used, char *nmea_string_found)
++{
++	DEBUG(3, "Validating buff_used:%d, buff=[%s]\n", *buff_used, buff);
++
++	char *gpgga_string = NULL;
++	char tmp_buff[512] = { 0 };
++	int i;
++	char *checksum	     = NULL;
++	int pointer_position = 0;
++
++	if (*buff_used < 20) {
++		DEBUG(3, "NMEA sentence too short\n");
++		return 0;
++	}
++
++	gpgga_string = strstr(buff, "$");
++	if (gpgga_string == NULL) {
++		DEBUG(3, "GGA string start not found\n");
++		return 0;
++	} else {
++		pointer_position = gpgga_string - buff;
++		if (pointer_position > BUFF_SIZE - 21) {
++			DEBUG(3, "String wont fit to the buffer, cleaning up\n");
++			memset(buff, 0, BUFF_SIZE);
++			*buff_used = 0;
++			return 0;
++		}
++
++		if (gpgga_string[3] == 'G' && gpgga_string[4] == 'G' && gpgga_string[5] == 'A') {
++			DEBUG(3, "Found start of a string : [%c][%c][%c][%c][%c][%c][%c]\n", gpgga_string[0],
++			      gpgga_string[1], gpgga_string[2], gpgga_string[3], gpgga_string[4],
++			      gpgga_string[5], gpgga_string[6]);
++		} else {
++			if (gpgga_string[1] && gpgga_string[2] && gpgga_string[3] && gpgga_string[4] &&
++			    gpgga_string[5] && gpgga_string[6]) {
++				DEBUG(3, "GGA string start malformed, cleaning the buffer\n");
++				memset(buff, 0, BUFF_SIZE);
++				*buff_used = 0;
++				return 0;
++			} else {
++				DEBUG(3, "GGA string start not full, waiting for more characters\n");
++				return 0;
++			}
++		}
++	}
++
++	strncpy(tmp_buff, gpgga_string, sizeof(tmp_buff) - 1);
++
++	for (i = 0; i < sizeof(tmp_buff) - 3; i++) {
++		if (tmp_buff[i] == '*' && tmp_buff[i + 1] != 0 && tmp_buff[i + 2] != 0) {
++			memset(tmp_buff + i + 3, 0, sizeof(tmp_buff) - i - 3);
++			checksum = tmp_buff + i + 1;
++			DEBUG(3, "checksum found=%s\n", checksum);
++			break;
++		}
++	}
++
++	DEBUG(3, "gga_string FOUND=[%s]\n", tmp_buff);
++	if (checksums_are_matching((char *)&tmp_buff, checksum)) {
++		DEBUG(3, "Checksums are matching\n");
++		strncpy(nmea_string_found, tmp_buff, 127);
++		return 1;
++	} else {
++		if (!checksum) {
++			DEBUG(3, "Checksum is not found in the buffer yet\n");
++		} else {
++			DEBUG(2, "Checksums are NOT matching, cleaning the buffer\n");
++			memset(buff, 0, BUFF_SIZE);
++			*buff_used = 0;
++		}
++
++		return 0;
++	}
++}
++
++void get_nmea_from_serial_device(NtripClient *ntrip_client, configuration *config)
++{
++	DEBUG(3, "Getting nmea from serial device\n");
++	int rez			    = 0;
++	char tmp_buff[BUFF_SIZE]    = { 0 };
++	char nmea_string_found[256] = { 0 };
++	unsigned int buff_used	    = 0;
++
++	struct pollfd *poll_file_descriptors;
++	poll_file_descriptors = (struct pollfd *)calloc(1, sizeof(struct pollfd));
++	if (!poll_file_descriptors) {
++		DEBUG(0, "Out of memory, exiting\n");
++		exit(1);
++	}
++
++	poll_file_descriptors[0].fd	= config->serial_device_fd;
++	poll_file_descriptors[0].events = POLLIN;
++
++	while (1) {
++		DEBUG(3, "Waiting for valid NMEA from serial device\n");
++		poll(poll_file_descriptors, 1, -1);
++		DEBUG(3, "Poll passed\n");
++
++		rez = read(config->serial_device_fd, tmp_buff + buff_used, sizeof(tmp_buff) - buff_used);
++		if (rez > 0)
++			buff_used += rez;
++
++		DEBUG(3, "Serial device read returned [%d], tmp_buff=%s, buff_used=%d\n", rez, tmp_buff,
++		      buff_used);
++		if (have_valid_nmea((char *)&tmp_buff, &buff_used, (char *)&nmea_string_found)) {
++			if (strlen(nmea_string_found) < sizeof(nmea_string_found) - 2) {
++				strcat(nmea_string_found, "\r\n");
++			}
++
++			ntrip_client->set_gga_buffer(nmea_string_found);
++			DEBUG(3, "NMEA from serial device acquired and set successfully : [%s]\n",
++			      nmea_string_found);
++			break;
++		} else {
++			DEBUG(3, "No Valid NMEA found in buffer yet\n");
++		}
++
++		if (buff_used == sizeof(tmp_buff)) {
++			DEBUG(3, "Buffer full, cleaning up\n");
++			buff_used = 0;
++			memset(tmp_buff, 0, sizeof(tmp_buff));
++		}
++	}
++	free(poll_file_descriptors);
++}
++
++void print_usage_message(void)
++{
++	DEBUG(0, "ntrip_client -s <config section> -D <debug level>\n");
++}
++
++void get_input_arguments(int argc, char **argv)
++{
++	int option_index = 0;
++	int opt;
++
++	if (argc == 1) {
++		print_usage_message();
++		exit(1);
++	}
++
++	while ((opt = getopt_long(argc, argv, "s:D:", long_options, &option_index)) != -1) {
++		switch (opt) {
++		case 's':
++			config.config_id = optarg;
++			DEBUG(3, "Using config section=%s\n", config.config_id);
++			break;
++
++		case 'D':
++			debug_level = strtol(optarg, NULL, 10);
++			DEBUG(0, "Debug level set to %d\n", debug_level);
++			break;
++
++		default:
++			print_usage_message();
++			exit(1);
++		}
++	}
++}
++
++static struct uci_package *config_init_package(struct uci_context *uci, const char *config)
++{
++	struct uci_context *ctx = uci;
++	struct uci_package *p	= NULL;
++
++	if (ctx) {
++		p = uci_lookup_package(ctx, config);
++		if (p) {
++			uci_unload(ctx, p);
++		}
++		if (uci_load(ctx, config, &p)) {
++			DEBUG(3, "uci load failed\n");
++			return NULL;
++		}
++	}
++	return p;
++}
++
++void get_uci_configuration(void)
++{
++	DEBUG(3, "Getting uci configuration\n");
++	struct uci_context *uci;
++	char *uci_tmp;
++	uci = uci_alloc_context();
++	if (!uci) {
++		DEBUG(1, "Unable to allocate UCI context, exiting\n");
++		exit(1);
++	}
++
++	if (config.config_id == NULL) {
++		DEBUG(0, "Config ID is not specified\n");
++		exit(1);
++	}
++
++	uci_tmp = ucix_get_option_cfg(uci, "rs_ntrip", config.config_id, "device");
++	if (uci_tmp) {
++		config.serial_device = uci_tmp;
++		DEBUG(3, "serial_device:[%s]\n", config.serial_device);
++	}
++
++	config.enabled = ucix_get_option_int(uci, "rs_ntrip", config.config_id, "enabled", 0);
++	DEBUG(3, "Enabled:[%d]\n", config.enabled);
++
++	uci_tmp = ucix_get_option_cfg(uci, "rs_ntrip", config.config_id, "ntrip_ip");
++	if (uci_tmp) {
++		config.address = uci_tmp;
++		DEBUG(3, "ntrip_ip:[%s]\n", config.address);
++	}
++
++	config.port = ucix_get_option_int(uci, "rs_ntrip", config.config_id, "ntrip_port", 0);
++	DEBUG(3, "ntrip_port:[%d]\n", config.port);
++
++	uci_tmp = ucix_get_option_cfg(uci, "rs_ntrip", config.config_id, "ntrip_mount_point");
++	if (uci_tmp) {
++		config.mount_point = uci_tmp;
++		DEBUG(3, "mount_point:[%s]\n", config.mount_point);
++	}
++
++	config.data_format = NTRIP_V2_UDP; //default value ntrip_v2_udp
++
++	uci_tmp = ucix_get_option_cfg(uci, "rs_ntrip", config.config_id, "ntrip_data_format");
++	if (uci_tmp) {
++		DEBUG(3, "data_format string:[%s]\n", uci_tmp);
++		if (uci_tmp[0] == 'n') {
++			DEBUG(3, "NTRIP Version 1.0 Caster\n");
++			config.data_format = NTRIP_V1;
++		} else if (uci_tmp[0] == 'h') {
++			DEBUG(3, "NTRIP Version 2.0 Caster in TCP/IP mode\n");
++			config.data_format = NTRIP_V2;
++		} else if (uci_tmp[0] == 'u') {
++			DEBUG(3, "NTRIP Version 2.0 Caster in UDP mode\n");
++			config.data_format = NTRIP_V2_UDP;
++		}
++	}
++
++	config.close_on_no_data =
++		ucix_get_option_int(uci, "rs_ntrip", config.config_id, "close_on_no_data", 30);
++	if (config.data_format == NTRIP_V2_UDP) {
++		config.close_on_no_data = 0;
++	}
++	DEBUG(3, "close_on_no_data period:[%d]\n", config.close_on_no_data);
++
++	uci_tmp = ucix_get_option_cfg(uci, "rs_ntrip", config.config_id, "ntrip_user");
++	if (uci_tmp) {
++		config.username = uci_tmp;
++		DEBUG(3, "username:[%s]\n", config.username);
++	}
++	uci_tmp = ucix_get_option_cfg(uci, "rs_ntrip", config.config_id, "ntrip_password");
++	if (uci_tmp) {
++		config.password = uci_tmp;
++		DEBUG(3, "password:[%s]\n", config.password);
++	}
++
++	int nmea_source	   = ucix_get_option_int(uci, "rs_ntrip", config.config_id, "nmea_source", -1);
++	config.nmea_source = nmea_source;
++	DEBUG(3, "nmea_source:[%d]\n", config.nmea_source);
++
++	uci_tmp = ucix_get_option_cfg(uci, "rs_ntrip", config.config_id, "user_nmea");
++	if (uci_tmp) {
++		config.initial_gga_string = uci_tmp;
++		DEBUG(3, "user_nmea:[%s]\n", config.initial_gga_string);
++	}
++	uci_tmp = ucix_get_option_cfg(uci, "rs_ntrip", config.config_id, "lattitude");
++	if (uci_tmp) {
++		config.lattitude = strtod(uci_tmp, NULL);
++		free(uci_tmp);
++	} else {
++		config.lattitude = 0.000000;
++	}
++	DEBUG(3, "lattitude:[%f]\n", config.lattitude);
++
++	uci_tmp = ucix_get_option_cfg(uci, "rs_ntrip", config.config_id, "longitude");
++	if (uci_tmp) {
++		config.longitude = strtod(uci_tmp, NULL);
++		free(uci_tmp);
++	} else {
++		config.longitude = 0.000000;
++	}
++	DEBUG(3, "longitude:[%f]\n", config.longitude);
++
++	if (ltermios_read_settings(&config.s, uci, "rs_ntrip", config.config_id)) {
++		DEBUG(3, "ltermios_read_settings failed: %s\n", config.s.error);
++		exit(1);
++	}
++
++	ltermios_debug(&config.s);
++
++	config.report_interval =
++		ucix_get_option_int(uci, "rs_ntrip", config.config_id, "report_interval", 10);
++	DEBUG(3, "report_interval:[%d]\n", config.report_interval);
++
++	config.udp_port_listen = ucix_get_option_int(uci, "rs_ntrip", config.config_id, "udp_port_listen", 0);
++	DEBUG(3, "udp_port_listen:[%d]\n", config.udp_port_listen);
++
++	uci_tmp = ucix_get_option_cfg(uci, "rs_ntrip", config.config_id, "rtsp_url");
++	if (uci_tmp) {
++		config.rtsp_url = uci_tmp;
++		DEBUG(3, "rtsp_url:[%s]\n", config.rtsp_url);
++	}
++
++	DEBUG(3, "cleaning UCI structures\n");
++	uci_free_context(uci);
++}
++
++void validate_configuration(void)
++{
++	DEBUG(3, "Validating the configuration\n");
++
++	if (!config.serial_device) {
++		DEBUG(0, "NTRIP serial device is not configured\n");
++		exit(1);
++	}
++	if (config.enabled == 0) {
++		DEBUG(0, "NTRIP application is not enabled\n");
++		exit(1);
++	}
++	if (!config.address) {
++		DEBUG(0, "NTRIP address is not configured\n");
++		exit(1);
++	}
++	if (config.port == 0) {
++		DEBUG(0, "NTRIP port is not set\n");
++		exit(1);
++	}
++	if (!config.mount_point) {
++		DEBUG(0, "NTRIP mount point is not configured\n");
++		exit(1);
++	}
++	if (config.nmea_source < 0) { // defaults to nmea_source == FROM_SERIAL_DEVICE
++		DEBUG(0, "NTRIP data source is not configured\n");
++		exit(1);
++	}
++	if (config.nmea_source == PREDEFINED_STRING) {
++		if (!config.initial_gga_string) {
++			DEBUG(0, "NTRIP initial NMEA string is not configured\n");
++			exit(1);
++		}
++	}
++	if (config.report_interval <= 0) {
++		DEBUG(0, "report_interval is not valid, setting to default 10 sec, value\n");
++		config.report_interval = 10;
++	}
++	if (!config.username) {
++		DEBUG(0, "No NTRIP username set\n");
++		config.username = "";
++	}
++	if (!config.password) {
++		DEBUG(0, "No NTRIP password set\n");
++		config.password = "";
++	}
++
++	DEBUG(3, "Configuration validated successfully\n");
++}
++
++void initiate_serial_device(void)
++{
++	struct libtlt_termios_settings *s = &config.s;
++
++	DEBUG(3, "Initiating serial device [%s]\n", s->device);
++
++	s->fd = open(s->device, O_RDWR | O_NOCTTY | O_NDELAY | O_NONBLOCK);
++	if (s->fd == -1) {
++		DEBUG(0, "unable to open serial device '%s'", s->device);
++		exit(1);
++	}
++
++	config.serial_device_fd = s->fd;
++
++	tcgetattr(s->fd, &s->termios);
++	s->termios.c_lflag &= ~ICANON; // Disable Canonical Input
++	s->termios.c_oflag &= ~(ONLCR | OCRNL | ONOCR);
++	s->termios.c_lflag &= ~(ECHOE | ECHOK | ECHOCTL | ECHOKE);
++	cfmakeraw(&s->termios);
++	tcsetattr(s->fd, TCSANOW, NULL);
++
++	if (ltermios_set_settings(s)) {
++		DEBUG(0, "ltermios_set_settings failed: %s\n", s->error);
++		exit(1);
++	}
++
++	DEBUG(3, "Serial device initiated successfully\n");
++}
+diff --recursive --unified --new-file --no-dereference upstream/examples/ntrip_server.cc src/examples/ntrip_server.cc
+--- upstream/examples/ntrip_server.cc	2020-10-06 06:58:41.000000000 +0000
++++ src/examples/ntrip_server.cc	1970-01-01 00:00:00.000000000 +0000
+@@ -1,50 +0,0 @@
+-// Copyright 2019 Yuming Meng. All Rights Reserved.
+-//
+-// Licensed under the Apache License, Version 2.0 (the "License");
+-// you may not use this file except in compliance with the License.
+-// You may obtain a copy of the License at
+-//
+-//     http://www.apache.org/licenses/LICENSE-2.0
+-//
+-// Unless required by applicable law or agreed to in writing, software
+-// distributed under the License is distributed on an "AS IS" BASIS,
+-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+-// See the License for the specific language governing permissions and
+-// limitations under the License.
+-
+-#include "ntrip_server.h"
+-
+-#include <unistd.h>
+-#include <stdint.h>
+-
+-#include <string>
+-#include <vector>
+-
+-
+-using libntrip::NtripServer;
+-
+-int main(void) {
+-  std::string ip = "127.0.0.1";
+-  int port = 8090;
+-  std::string user = "test01";
+-  std::string passwd  = "123456";
+-  // Mount point must be consistent with 'ntrip_str',
+-  // 'STR;{mountpoint};{mountpoint};'.
+-  std::string mountpoint  = "RTCM32";
+-  std::string ntrip_str = "STR;RTCM32;RTCM32;RTCM 3.2;"
+-                          "1004(1),1005/1007(5),PBS(10);2;GPS;SGNET;CHN;"
+-                          "31;121;1;1;SGCAN;None;B;N;0;;";
+-
+-  NtripServer ntrip_server;
+-  ntrip_server.Init(ip, port, user, passwd, mountpoint, ntrip_str);
+-
+-  if (!ntrip_server.Run()) exit(1);
+-
+-  while (1) {
+-    // TODO(mengyuming@hotmail.com) : Add your code in here.
+-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+-  }
+-
+-  ntrip_server.Stop();
+-  return 0;
+-}
+diff --recursive --unified --new-file --no-dereference upstream/files/rs_ntrip.conf src/files/rs_ntrip.conf
+--- upstream/files/rs_ntrip.conf	1970-01-01 00:00:00.000000000 +0000
++++ src/files/rs_ntrip.conf	2024-06-20 10:37:55.000000000 +0000
+@@ -0,0 +1 @@
++
+diff --recursive --unified --new-file --no-dereference upstream/files/rs_ntrip.init src/files/rs_ntrip.init
+--- upstream/files/rs_ntrip.init	1970-01-01 00:00:00.000000000 +0000
++++ src/files/rs_ntrip.init	2024-06-20 10:37:55.000000000 +0000
+@@ -0,0 +1,34 @@
++#!/bin/sh /etc/rc.common
++
++USE_PROCD=1
++START=99
++STOP=10
++
++run_ntrip_instance() {
++	local section="$1"
++	local enabled
++	config_get enabled $1 enabled
++
++	if [ "$enabled" = "1" ]; then
++		procd_open_instance
++		procd_set_param file /etc/config/rs_ntrip
++		procd_set_param command /usr/sbin/ntrip_client
++		procd_append_param command -s "$section"
++		procd_set_param respawn ${respawn_threshold:-0} ${respawn_timeout:-6} ${respawn_retry:-0}
++		procd_close_instance
++	fi
++}
++
++start_service() {
++	config_load rs_ntrip
++	config_foreach run_ntrip_instance ntrip
++}
++
++service_triggers() {
++	procd_add_reload_trigger "rs_ntrip"
++}
++
++reload_service(){
++	stop
++	start
++}
+diff --recursive --unified --new-file --no-dereference upstream/get.sh src/get.sh
+--- upstream/get.sh	2020-10-06 06:58:41.000000000 +0000
++++ src/get.sh	1970-01-01 00:00:00.000000000 +0000
+@@ -1,4 +0,0 @@
+-# chkconfig: 3 67 22
+-#!/home/pi/pi_ublox-ntripsc
+-# description: ntrip_client
+-/home/pi/pi_ublox-ntrip/ntrip_client
+Binary files upstream/image.png and src/image.png differ
+diff --recursive --unified --new-file --no-dereference upstream/include/mount_point.h src/include/mount_point.h
+--- upstream/include/mount_point.h	2020-10-06 06:58:41.000000000 +0000
++++ src/include/mount_point.h	2024-06-20 10:37:55.000000000 +0000
+@@ -17,13 +17,12 @@
+ 
+ #include <list>
+ 
+-
+ struct MountPoint {
+-  int server_fd;
+-  char username[16];
+-  char password[16];
+-  char mount_point_name[16];
+-  std::list<int> client_socket_list;
++	int server_fd;
++	char username[16];
++	char password[16];
++	char mount_point_name[16];
++	std::list<int> client_socket_list;
+ };
+ 
+-#endif  // NTRIPLIB_MOUNT_POINT_H_
++#endif // NTRIPLIB_MOUNT_POINT_H_
+diff --recursive --unified --new-file --no-dereference upstream/include/ntrip_caster.h src/include/ntrip_caster.h
+--- upstream/include/ntrip_caster.h	2020-10-06 06:58:41.000000000 +0000
++++ src/include/ntrip_caster.h	2024-06-20 10:37:55.000000000 +0000
+@@ -17,71 +17,71 @@
+ 
+ #include <sys/epoll.h>
+ 
+-#include <string>
+ #include <list>
++#include <string>
++#include <thread> // NOLINT.
+ #include <vector>
+-#include <thread>  // NOLINT.
+ 
+ #include "mount_point.h"
+ 
+-
+-namespace libntrip {
++namespace libntrip
++{
+ 
+ class NtripCaster {
+- public:
+-  NtripCaster() = default;
+-  NtripCaster(const NtripCaster &) = delete;
+-  NtripCaster& operator=(const NtripCaster&) = delete;
+-  ~NtripCaster();
+-
+-  void Init(const int &port, const int &sock_count, const int &time_out) {
+-    server_port_ = port;
+-    max_count_ = sock_count;
+-    time_out_ = time_out;
+-  }
+-  void Init(const std::string &server_ip, const int &port,
+-            const int &sock_count, const int &time_out) {
+-    server_ip_ = server_ip;
+-    server_port_ = port;
+-    max_count_ = sock_count;
+-    time_out_ = time_out;
+-  }
+-  bool Run(void);
+-  void Stop(void);
+-  bool service_is_running(void) const {
+-    return service_is_running_;
+-  }
+-
+- private:
+-  void ThreadHandler(void);
+-  int NtripCasterWait(const int &time_out);
+-  int AcceptNewConnect(void);
+-  int RecvData(const int &sock, char *recv_buf);
+-  int SendData(const int &sock, const char *send_buf, const int &buf_len);
+-  void DealDisconnect(const int &sock);
+-  int ParseData(const int &sock, char *recv_buf, const int &len);
+-  int DealServerConnectRequest(std::vector<std::string> *buffer_line,
+-                               const int &sock);
+-  void SendSourceTableData(const int &sock);
+-  int DealClientConnectRequest(std::vector<std::string> *buffer_line,
+-                               const int &sock);
+-  int TryToForwardServerData(const int &server_sock,
+-                             const char *buf, const int &buf_len);
+-
+-  bool main_thread_is_running_ = false;
+-  bool service_is_running_ = false;
+-  std::string server_ip_;
+-  int server_port_ = -1;
+-  int time_out_ = 0;
+-  int listen_sock_ = -1;
+-  int epoll_fd_ = -1;
+-  int max_count_ = 0;
+-  struct epoll_event *epoll_events_ = nullptr;
+-  std::thread main_thread_;
+-  std::list<MountPoint> mount_point_list_;
+-  std::vector<std::string> ntrip_str_list_;
++    public:
++	NtripCaster()			 = default;
++	NtripCaster(const NtripCaster &) = delete;
++	NtripCaster &operator=(const NtripCaster &) = delete;
++	~NtripCaster();
++
++	void Init(const int &port, const int &sock_count, const int &time_out)
++	{
++		server_port_ = port;
++		max_count_   = sock_count;
++		time_out_    = time_out;
++	}
++	void Init(const std::string &server_addr, const int &port, const int &sock_count, const int &time_out)
++	{
++		server_addr_	    = server_addr;
++		server_port_	    = port;
++		max_count_	    = sock_count;
++		time_out_	    = time_out;
++		service_is_running_ = false;
++	}
++	bool Run(void);
++	void Stop(void);
++	bool service_is_running(void) const
++	{
++		return service_is_running_;
++	}
++
++    private:
++	void ThreadHandler(void);
++	int NtripCasterWait(const int &time_out);
++	int AcceptNewConnect(void);
++	int RecvData(const int &sock, char *recv_buf);
++	int SendData(const int &sock, const char *send_buf, const int &buf_len);
++	void DealDisconnect(const int &sock);
++	int ParseData(const int &sock, char *recv_buf, const int &len);
++	int DealServerConnectRequest(std::vector<std::string> *buffer_line, const int &sock);
++	void SendSourceTableData(const int &sock);
++	int DealClientConnectRequest(std::vector<std::string> *buffer_line, const int &sock);
++	int TryToForwardServerData(const int &server_sock, const char *buf, const int &buf_len);
++
++	bool main_thread_is_running_ = false;
++	bool service_is_running_     = false;
++	std::string server_addr_;
++	int server_port_		  = -1;
++	int time_out_			  = 0;
++	int listen_sock_		  = -1;
++	int epoll_fd_			  = -1;
++	int max_count_			  = 0;
++	struct epoll_event *epoll_events_ = nullptr;
++	std::thread main_thread_;
++	std::list<MountPoint> mount_point_list_;
++	std::vector<std::string> ntrip_str_list_;
+ };
+ 
+-}  // namespace libntrip
++} // namespace libntrip
+ 
+-#endif  // NTRIPLIB_NTRIP_CASTER_H_
++#endif // NTRIPLIB_NTRIP_CASTER_H_
+diff --recursive --unified --new-file --no-dereference upstream/include/ntrip_client.h src/include/ntrip_client.h
+--- upstream/include/ntrip_client.h	2020-10-06 06:58:41.000000000 +0000
++++ src/include/ntrip_client.h	2024-06-20 10:37:55.000000000 +0000
+@@ -16,81 +16,123 @@
+ #define NTRIPLIB_NTRIP_CLIENT_H_
+ 
+ #include <atomic>
+-#include <string>
+-#include <thread>  // NOLINT.
++#include <cstring>
++#include <fcntl.h>
+ #include <functional>
++#include <iostream>
++#include <signal.h>
++#include <sstream>
++#include <stdint.h>
++#include <string>
++#include <sys/socket.h>
++#include <sys/un.h>
++#include <thread> // NOLINT.
++#include <unistd.h>
++#include <vector>
++
++#define NMEA_ACQUIRE_PERIOD 5
++#define CLIENT_RERUN_PERIOD 10
++#define UBUS_RETRY_TIMEOUT  10
++
++#define NTRIP_V1     0
++#define NTRIP_V2     1
++#define NTRIP_V2_UDP 2
++
++#ifndef ARRAY_SIZE
++#define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
++#endif
+ 
+-namespace libntrip {
++#define BUFF_SIZE 512
+ 
++namespace libntrip
++{
+ using ClientCallback = std::function<void(const char *, const int &)>;
+-
+ class NtripClient {
+- public:
+-  NtripClient() = default;
+-  NtripClient(const NtripClient &) = delete;
+-  NtripClient& operator=(const NtripClient &) = delete;
+-  NtripClient(const std::string &ip, const int &port,
+-              const std::string &user, const std::string &passwd,
+-              const std::string &mountpoint) :
+-      server_ip_(ip),
+-      server_port_(port),
+-      user_(user),
+-      passwd_(passwd),
+-      mountpoint_(mountpoint) { }
+-  ~NtripClient() { Stop(); }
+-
+-  void Init(const std::string &ip, const int &port,
+-            const std::string &user, const std::string &passwd,
+-            const std::string &mountpoint) {
+-    server_ip_ = ip;
+-    server_port_ = port;
+-    user_ = user;
+-    passwd_ = passwd;
+-    mountpoint_ = mountpoint;
+-  }
+-  // 更新发送的GGA语句.
+-  // 根据ntrip账号的要求, 如果距离服务器位置过远, 服务器不会返回差分数据.
+-  void set_gga_buffer(const std::string &gga_buffer) {
+-    gga_buffer_ = gga_buffer;
+-  }
+-  // 设置固定位置坐标, 由此自动生成GGA数据.
+-  void set_location(double const& latitude, double const& longitude) {
+-    latitude_ = latitude;
+-    longitude_ = longitude;
+-  }
+-  // 设置GGA上报时间间隔, 单位秒(s).
+-  void set_report_interval(int const& intv) {
+-    report_interval_ = intv;
+-  }
+-
+-  // 设置接收到数据时的回调函数.
+-  void OnReceived(const ClientCallback &callback) { callback_ = callback; }
+-  bool Run(void);
+-  void Stop(void);
+-  bool service_is_running(void) const {
+-    return service_is_running_;
+-  }
+-
+- private:
+-  // Thread handler.
+-  void TheradHandler(void);
+-
+-  std::atomic_bool service_is_running_;
+-  std::atomic_bool gga_is_update_;  // 外部更新GGA数据标志.
+-  int report_interval_;  // GGA数据上报时间间隔.
+-  double latitude_ = 22.570535;  // 固定坐标纬度.
+-  double longitude_ = 113.937739;  // 固定坐标经度.
+-  std::thread thread_;
+-  std::string server_ip_;
+-  int server_port_ = -1;
+-  std::string user_;
+-  std::string passwd_;
+-  std::string mountpoint_;
+-  std::string gga_buffer_;
+-  int socket_fd_ = -1;
+-  ClientCallback callback_;
++    public:
++	NtripClient()			 = default;
++	NtripClient(const NtripClient &) = delete;
++	NtripClient &operator=(const NtripClient &) = delete;
++	NtripClient(const std::string &addr, const int &port, const std::string &user,
++		    const std::string &passwd, const std::string &mountpoint)
++		: server_addr_(addr), server_port_(port), user_(user), passwd_(passwd), mountpoint_(mountpoint)
++	{
++	}
++	~NtripClient()
++	{
++		Stop();
++	}
++
++	void Init(const std::string &addr, const int &port, const std::string &user, const std::string &passwd,
++		  const std::string &mountpoint, const int &udp_port_listen, char *&rtsp_url)
++	{
++		server_addr_	    = addr;
++		server_port_	    = port;
++		user_		    = user;
++		passwd_		    = passwd;
++		mountpoint_	    = mountpoint;
++		udp_port_listen_    = udp_port_listen;
++		rtsp_url_	    = rtsp_url;
++		service_is_running_ = false;
++	}
++
++	void set_gga_buffer(const std::string &gga_buffer)
++	{
++		gga_buffer_ = gga_buffer;
++	}
++
++	void set_location(double const &latitude, double const &longitude)
++	{
++		latitude_  = latitude;
++		longitude_ = longitude;
++	}
++
++	void set_report_interval(int const &intv)
++	{
++		report_interval_ = intv;
++	}
++	
++	void set_no_data_interval(int const &intv)
++	{
++		no_data_ = intv;
++	}
++
++	void OnReceived(const ClientCallback &callback)
++	{
++		callback_ = callback;
++	}
++	bool Run_ntrip_universal(int data_format);
++	void Stop(void);
++	bool service_is_running(void) const
++	{
++		return service_is_running_;
++	}
++
++    private:
++	// Thread handler.
++	void TheradHandler(void);
++
++	std::atomic_bool service_is_running_;
++	std::atomic_bool gga_is_update_;
++	int report_interval_;
++	int no_data_ = 0;
++	double latitude_  = 0;
++	double longitude_ = 0;
++	std::thread thread_;
++	std::string server_addr_;
++	int server_port_ = -1;
++	std::string user_;
++	std::string passwd_;
++	std::string mountpoint_;
++	std::string gga_buffer_;
++	int udp_port_listen_ = 2101;
++	char *rtsp_url_;
++	int socket_fd_ = -1;
++	ClientCallback callback_;
+ };
++} // namespace libntrip
+ 
+-}  // namespace libntrip
+-
+-#endif  // NTRIPLIB_NTRIP_CLIENT_H_
++extern unsigned int debug_level;
++#define DEBUG(level, args...)                                                                                \
++	if (debug_level >= level)                                                                                \
++		printf(args);
++#endif // NTRIPLIB_NTRIP_CLIENT_H_
+diff --recursive --unified --new-file --no-dereference upstream/include/ntrip_server.h src/include/ntrip_server.h
+--- upstream/include/ntrip_server.h	2020-10-06 06:58:41.000000000 +0000
++++ src/include/ntrip_server.h	2024-06-20 10:37:55.000000000 +0000
+@@ -15,83 +15,83 @@
+ #ifndef NTRIPLIB_NTRIP_SERVER_H_
+ #define NTRIPLIB_NTRIP_SERVER_H_
+ 
+-
+-#include <sys/types.h>
+ #include <sys/socket.h>
++#include <sys/types.h>
+ 
+-#include <string>
+-#include <thread>  // NOLINT.
+ #include <list>
++#include <string>
++#include <thread> // NOLINT.
+ #include <vector>
+ 
+-namespace libntrip {
++namespace libntrip
++{
+ 
+ class NtripServer {
+- public:
+-  NtripServer() = default;
+-  NtripServer(const NtripServer &) = delete;
+-  NtripServer& operator=(const NtripServer &) = delete;
+-  NtripServer(const std::string &ip, const int &port,
+-         const std::string &user, const std::string &passwd,
+-         const std::string &mountpoint,
+-         const std::string &ntrip_str) :
+-      server_ip_(ip),
+-      server_port_(port),
+-      user_(user),
+-      passwd_(passwd),
+-      mountpoint_(mountpoint),
+-      ntrip_str_(ntrip_str) { }
+-  ~NtripServer();
+-
+-  void Init(const std::string &ip, const int &port,
+-            const std::string &user, const std::string &passwd,
+-            const std::string &mountpoint, const std::string &ntrip_str) {
+-    server_ip_ = ip;
+-    server_port_ = port;
+-    user_ = user;
+-    passwd_ = passwd;
+-    mountpoint_ = mountpoint;
+-    ntrip_str_ = ntrip_str;
+-  }
+-
+-  bool SendData(const char *data, const int &size) {
+-    return (size == send(socket_fd_, data, size, 0));
+-  }
+-  bool SendData(const std::vector<char> &data) {
+-    return SendData(data.data(), data.size());
+-  }
+-  bool SendData(const std::string &data) {
+-    return SendData(data.data(), data.size());
+-  }
+-
+-  // TODO(mengyuming@hotmail.com) : Not implemented.
+-  void PushData(const char *data, const int &size);
+-  void PushData(const std::vector<char> &data);
+-  void PushData(const std::string &data);
+-
+-  bool Run(void);
+-  void Stop(void);
+-  bool service_is_running(void) const {
+-    return service_is_running_;
+-  }
+-
+- private:
+-  // Thread handler.
+-  void TheradHandler(void);
+-
+-  bool thread_is_running_ = false;
+-  bool service_is_running_ = false;
+-  std::thread thread_;
+-  std::string server_ip_;
+-  int server_port_ = -1;
+-  std::string user_;
+-  std::string passwd_;
+-  std::string mountpoint_;
+-  std::string ntrip_str_;
+-  int socket_fd_ = -1;
+-  std::list<std::vector<char>> data_list_;
++    public:
++	NtripServer()			 = default;
++	NtripServer(const NtripServer &) = delete;
++	NtripServer &operator=(const NtripServer &) = delete;
++	NtripServer(const std::string &addr, const int &port, const std::string &user,
++		    const std::string &passwd, const std::string &mountpoint, const std::string &ntrip_str)
++		: server_addr_(addr), server_port_(port), user_(user), passwd_(passwd), mountpoint_(mountpoint),
++		  ntrip_str_(ntrip_str)
++	{
++	}
++	~NtripServer();
++
++	void Init(const std::string &addr, const int &port, const std::string &user, const std::string &passwd,
++		  const std::string &mountpoint, const std::string &ntrip_str)
++	{
++		server_addr_	    = addr;
++		server_port_	    = port;
++		user_		    = user;
++		passwd_		    = passwd;
++		mountpoint_	    = mountpoint;
++		ntrip_str_	    = ntrip_str;
++		service_is_running_ = false;
++	}
++
++	bool SendData(const char *data, const int &size)
++	{
++		return (size == send(socket_fd_, data, size, 0));
++	}
++	bool SendData(const std::vector<char> &data)
++	{
++		return SendData(data.data(), data.size());
++	}
++	bool SendData(const std::string &data)
++	{
++		return SendData(data.data(), data.size());
++	}
++
++	void PushData(const char *data, const int &size);
++	void PushData(const std::vector<char> &data);
++	void PushData(const std::string &data);
++
++	bool Run(void);
++	void Stop(void);
++	bool service_is_running(void) const
++	{
++		return service_is_running_;
++	}
++
++    private:
++	// Thread handler.
++	void TheradHandler(void);
++
++	bool thread_is_running_	 = false;
++	bool service_is_running_ = false;
++	std::thread thread_;
++	std::string server_addr_;
++	int server_port_ = -1;
++	std::string user_;
++	std::string passwd_;
++	std::string mountpoint_;
++	std::string ntrip_str_;
++	int socket_fd_ = -1;
++	std::list<std::vector<char> > data_list_;
+ };
+ 
+-}  // namespace libntrip
++} // namespace libntrip
+ 
+-#endif  // NTRIPLIB_NTRIP_SERVER_H_
++#endif // NTRIPLIB_NTRIP_SERVER_H_
+diff --recursive --unified --new-file --no-dereference upstream/include/ntrip_user.h src/include/ntrip_user.h
+--- upstream/include/ntrip_user.h	1970-01-01 00:00:00.000000000 +0000
++++ src/include/ntrip_user.h	2024-06-20 10:37:55.000000000 +0000
+@@ -0,0 +1,70 @@
++#ifndef NTRIPLIB_NTRIP_USER_H_
++#define NTRIPLIB_NTRIP_USER_H_
++
++#include <signal.h>
++
++#include <getopt.h>
++#include <libtlt_termios.h>
++
++#if GPS_SUPPORT
++	#include <libgps/libgps.h>
++#endif
++
++#include <libtlt_uci.h>
++#include <libubox/blob.h>
++#include <libubox/blobmsg.h>
++#include <libubox/blobmsg_json.h>
++#include <libubox/uloop.h>
++#include <sys/stat.h>
++#include <sys/types.h>
++#include <syslog.h>
++#include <termios.h>
++#include <uci.h>
++
++#include <libubus.h>
++#include <poll.h>
++
++enum nmea_sources { NONE, PREDEFINED_STRING, PREDEFINED_COORDINATES, ROUTER_GPS_DEVICE, FROM_SERIAL_DEVICE };
++
++struct configuration {
++	int enabled	  = 0;
++	char *address  = NULL;
++	int port	  = 0;
++	char *mount_point = NULL;
++
++	int data_format = 0;
++	char *username	= NULL;
++	char *password	= NULL;
++
++	int nmea_source = FROM_SERIAL_DEVICE;
++
++	float lattitude		 = 0;
++	float longitude		 = 0;
++	char *initial_gga_string = NULL;
++
++	struct libtlt_termios_settings s;
++
++	char *serial_device	  = NULL;
++	int serial_device_fd	  = 0;
++	int initial_nmea_set	  = 0;
++	struct ubus_context *ubus = NULL;
++	unsigned int gpsd_ubus_id = 0;
++	int report_interval	  = 10;
++	int udp_port_listen	  = 2101;
++	char *rtsp_url		  = NULL;
++	
++	int close_on_no_data = 30;
++	char *config_id = NULL;
++};
++
++struct option long_options[] = { { "help", no_argument, 0, 'h' },
++				 { "serial_device", no_argument, 0, 'd' },
++				 { "debug", required_argument, 0, 'D' },
++				 { 0, 0, 0, 0 } };
++
++extern unsigned int debug_level;
++#define DEBUG(level, args...)                                                                                \
++	if (debug_level >= level)                                                                            \
++		printf(args);
++
++#endif
+diff --recursive --unified --new-file --no-dereference upstream/include/ntrip_util.h src/include/ntrip_util.h
+--- upstream/include/ntrip_util.h	2020-10-06 06:58:41.000000000 +0000
++++ src/include/ntrip_util.h	2024-06-20 10:37:55.000000000 +0000
+@@ -17,8 +17,8 @@
+ 
+ #include <string>
+ 
+-
+-namespace libntrip {
++namespace libntrip
++{
+ 
+ constexpr char kCasterAgent[] = "NTRIP NTRIPCaster/20191018";
+ constexpr char kClientAgent[] = "NTRIP NTRIPClient/20191018";
+@@ -28,11 +28,9 @@
+ void PrintCharArrayHex(const char *src, const int &len);
+ int BccCheckSumCompareForGGA(const char *src);
+ int Base64Encode(const char *src, char *result);
+-int Base64Decode(const char *src, char *user, char *passwd);
+-int GetSourcetable(const char *path, char *data, const int &data_len);
+-int GetGGAFrameData(double const& latitude, double const& longitude,
+-                    double const& altitude, std::string* const gga_str);
++int GetGGAFrameData(double const &latitude, double const &longitude, double const &altitude,
++		    std::string *const gga_str);
+ 
+-}  // namespace libntrip
++} // namespace libntrip
+ 
+-#endif  // NTRIPLIB_NTRIP_UTIL_H_
++#endif // NTRIPLIB_NTRIP_UTIL_H_
+diff --recursive --unified --new-file --no-dereference upstream/ntripinit.sh src/ntripinit.sh
+--- upstream/ntripinit.sh	2020-10-06 06:58:41.000000000 +0000
++++ src/ntripinit.sh	1970-01-01 00:00:00.000000000 +0000
+@@ -1,19 +0,0 @@
+-count=`ps -ef | grep sendNema2.py | wc -l`
+-
+-if [ $count -lt 2 ]
+-then
+-	python /home/pi/pi_ublox-ntrip/sendNema2.py &
+-fi
+-
+-count=`ps -ef |grep ntrip_client | wc -l`
+-if [ $count -lt 2 ]
+-then 
+-	/home/pi/pi_ublox-ntrip/ntrip_client &
+-fi
+-
+-count=`ps -ef | grep pppd | wc -l`
+-if [ $count -lt 2 ]
+-then 
+-	sudo /home/pi/quectel-pppd.sh /dev/ttyUSB3 ctnet ctnet@mycdma.cn vnet.mobi
+-fi
+-
+diff --recursive --unified --new-file --no-dereference upstream/project.yml src/project.yml
+--- upstream/project.yml	1970-01-01 00:00:00.000000000 +0000
++++ src/project.yml	2024-06-20 10:37:55.000000000 +0000
+@@ -0,0 +1,103 @@
++---
++# This sample demonstrates running a collection of unit tests.
++
++:project:
++  :use_exceptions: FALSE
++  :use_test_preprocessor: TRUE
++  :use_auxiliary_dependencies: TRUE
++  :build_root: build
++  :release_build: FALSE
++  :test_file_prefix: test_
++  :which_ceedling: gem
++  :ceedling_version: 0.31.1
++  :default_tasks:
++    - test:all
++
++:environment:
++  - :path:
++      - "#{ENV['PATH']}"
++
++:extension:
++  :executable: .out
++
++:paths:
++  :libraries: []
++  :test:
++    - +:test/**
++    # - -:test/support
++  # :support:
++    # - test/support
++  :source:
++    - src/**
++  :include:
++    - ./
++    - src/
++    - include/**
++    - "#{ENV['STAGING_DIR']}/usr/include/"
++    # - "#{ENV['STAGING_DIR']}/usr/include/libubox/*"
++    # - "#{ENV['TOOLCHAIN_DIR']}/include/"
++
++:tools:
++  :test_compiler:
++    :executable: "#{ENV['CC']}"
++    :name: "OpenWRT gcc"
++    :arguments:
++      - -I"$": COLLECTION_PATHS_TEST_SUPPORT_SOURCE_INCLUDE_VENDOR
++      - -I"$": COLLECTION_PATHS_TEST_TOOLCHAIN_INCLUDE
++      - "#{ENV['CFLAGS']}"
++      - "#{ENV['CPPFLAGS']}"
++      - -DTEST
++      - -c
++      - -Og -ggdb3 # for debugging
++      - -o ${2}
++      - ${1}
++  :test_linker:
++    :executable: "#{ENV['CC']}"
++    :name: "OpenWRT gcc linker"
++    :arguments:
++      - -I"$": COLLECTION_PATHS_TEST_SUPPORT_SOURCE_INCLUDE_VENDOR
++      - "#{ENV['CFLAGS']}"
++      - "#{ENV['CPPFLAGS']}"
++      - "#{ENV['LDFLAGS']}"
++      - -DTEST
++      - -Og -ggdb3 # for debugging
++      - -lubus
++      - -o ${2}
++      - ${1}
++  :test_fixture:
++    :executable: "#{ENV['TOPDIR']}/scripts/tests_upload_and_run.sh"
++    :name: "Test uploader and runner script"
++    :arguments:
++      - "#{ENV['TARGET_IP']}"
++      - "#{ENV['TARGET_PORT']}"
++      - "${1}"
++
++:cmock:
++  :mock_prefix: mock_
++  :when_no_prototypes: :error
++  # :when_ptr: :compare_ptr
++  :enforce_strict_ordering: TRUE
++  :plugins:
++    - :array
++    - :callback
++    - :expect_any_args
++    - :ignore
++    - :ignore_arg
++    # - :ignore_stateless
++    - :return_thru_ptr
++  :treat_as:
++    int8: INT8
++    uint8: HEX8
++    uint16: HEX16
++    uint32: UINT32
++    bool: UINT8
++  :treat_externs: :include
++  :treat_inlines: :exclude
++
++:plugins:
++  :load_paths:
++    - "#{Ceedling.load_path}"
++  :enabled:
++    - stdout_pretty_tests_report
++    - module_generator
++
+diff --recursive --unified --new-file --no-dereference upstream/send.sh src/send.sh
+--- upstream/send.sh	2020-10-06 06:58:41.000000000 +0000
++++ src/send.sh	1970-01-01 00:00:00.000000000 +0000
+@@ -1,3 +0,0 @@
+-#!/home/pi/pi_ublox-ntrip
+-
+-python /home/pi/pi_ublox-ntrip/sendNema2.py
+diff --recursive --unified --new-file --no-dereference upstream/sendNema.py src/sendNema.py
+--- upstream/sendNema.py	2020-10-06 06:58:41.000000000 +0000
++++ src/sendNema.py	1970-01-01 00:00:00.000000000 +0000
+@@ -1,55 +0,0 @@
+-# -*- coding:utf-8 -*-
+-import os
+-import sys
+-import serial
+-import time
+-
+-def hexshow(data): 
+-    hex_data = ''
+-    hLen = len(data) 
+-
+-    for i in xrange(hLen):
+-        hvol = ord(data[i])
+-        hhex = '%02x' % hvol
+-        hex_data += hhex+' '
+-
+-    print 'hexshow:', hex_data 
+-
+-# 加载串口端口信息
+-ser = serial.Serial("/dev/ttyUSB0", 115200, timeout=0.5)    # 57600为了和仪器的波特率匹配
+-ser.flushInput()                                            # 将serial上的接收数据全部清除
+-
+-
+-while (True):
+-    path = sys.path[0]
+-    lastNema = 0;
+-    for files in os.listdir(path): 
+-        if(files[-5:]==".nema"):
+-            if(files[:-5]>lastNema):
+-                lastNema = files[:-5]
+-            
+-    files = str(lastNema)+".nema"
+-    fileSize = os.path.getsize(files)
+-    with open(files, "rb") as f:
+-        NEMA = f.read()+"\r\n"
+-        print(NEMA)
+-        
+-    lenBuffer = ser.inWaiting()
+-    dataRead = ser.read(lenBuffer)
+-    print(dataRead)
+-    dataSend = ser.write(NEMA)
+-    #print(files)
+-    print(hexshow(NEMA))
+-    #hexshow(count)
+-    for files in os.listdir(path): 
+-        if(files[:-5]<int(lastNema)-10):
+-            print(files)
+-            os.remove(files)
+-    time.sleep(1.2)     # 程序暂停5秒，等待缓存内存入数据。
+-    '''
+-for files in os.listdir(path): 
+-    if(files[-5:]==".nema"):
+-        print(files)
+-        os.remove(files)
+-        '''
+-
+diff --recursive --unified --new-file --no-dereference upstream/sendNema2.py src/sendNema2.py
+--- upstream/sendNema2.py	2020-10-06 06:58:41.000000000 +0000
++++ src/sendNema2.py	1970-01-01 00:00:00.000000000 +0000
+@@ -1,102 +0,0 @@
+-# -*- coding:utf-8 -*-
+-import os
+-import sys
+-import serial
+-import time
+-
+-def printdataRead(dataRead):
+-    lines = dataRead.splitlines()
+-    for line in lines:
+-        #print(line[0:6])
+-        if(line[0:6]=="$GNGGA"):
+-            with open("GNGGA","w") as f:
+-                f.write(line)
+-                print(line)
+-            return
+-
+-def hexshow(data): 
+-    hex_data = ''
+-    hLen = len(data)
+-    if hLen > 4 :
+-        if('%02x' % ord(data[3])=="3e" and ('%02x' % ord(data[4]))[0]=="d") and \
+-            '%02x' % ord(data[0])=="d3" and '%02x' % ord(data[1])=="00":
+-                hex_data += "----1005----"
+-                with open("/home/pi/R1005","w") as f:
+-                    f.write(data)
+-    for i in xrange(hLen):
+-        if('%02x' % ord(data[i])=="d3" and '%02x' % ord(data[i+1])=="00"):
+-            hex_data += "\n\n"
+-        hvol = ord(data[i])
+-        hhex = '%02x' % hvol
+-        hex_data += hhex+' '
+-        
+-
+-    print 'hexshow:', hex_data
+-    
+-def sendFile(file):
+-    with open(files, "rb") as f:
+-        NEMA = f.read()+"\r\n"
+-        #print(NEMA)
+-                
+-        lenBuffer = ser.inWaiting()
+-        dataRead = ser.read(lenBuffer)
+-        printdataRead(dataRead)
+-        dataSend = ser.write(NEMA)
+-        print(files)
+-        print(hexshow(NEMA))
+-        #hexshow(count)
+-        
+-def sendR1005():
+-    with open("/home/pi/R1005", "rb") as f:
+-        NEMA = f.read()+"\r\n"
+-        #print(NEMA)
+-                
+-        lenBuffer = ser.inWaiting()
+-        dataRead = ser.read(lenBuffer)
+-        printdataRead(dataRead)
+-        dataSend = ser.write(NEMA)
+-        print(files)
+-        print(hexshow(NEMA))
+-        #hexshow(count)
+-
+-
+-
+-# 加载串口端口信息
+-try:
+-    ser = serial.Serial("/dev/ttyUSB0", 115200)
+-    print("use usb0")
+-except:
+-    ser = serial.Serial("/dev/ttyUSB4", 115200)
+-    print("use usb4")
+-ser.flushInput()                                            # 将serial上的接收数据全部清除
+-
+-
+-while (True):
+-    path = sys.path[0]
+-    path = "/home/pi"
+-    numOfFile = 0
+-    fileList=[]
+-    for files in os.listdir(path): 
+-        if(files[-5:]==".nema"):
+-            fileList.append(files[:-5])
+-    fileList.sort()
+-    #print(fileList)
+-    
+-    if(len(fileList) >= 2):
+-        files = fileList[0]+".nema"
+-        files = "/home/pi/"+files
+-        sendFile(files)
+-        #print("filelast",fileList[0][-1])
+-        if(fileList[0][-1]=="0"):
+-            sendR1005()
+-        #print(files) 
+-        os.remove(files)
+-    if(len(fileList) < 2):
+-        time.sleep(0.8)     # 程序
+-    '''
+-for files in os.listdir(path): 
+-    if(files[-5:]==".nema"):
+-        print(files)
+-        os.remove(files)
+-        '''
+-
+diff --recursive --unified --new-file --no-dereference upstream/src/CMakeLists.txt src/src/CMakeLists.txt
+--- upstream/src/CMakeLists.txt	2020-10-06 06:58:41.000000000 +0000
++++ src/src/CMakeLists.txt	2024-06-20 10:37:55.000000000 +0000
+@@ -1,11 +1,7 @@
+ add_sources(
+-  caster.cc
+-  caster.h
+   client.cc
+   client.h
+   mount_point.h
+-  server.cc
+-  server.h
+   util.cc
+   util.h
+ )
+diff --recursive --unified --new-file --no-dereference upstream/src/mount_point.h src/src/mount_point.h
+--- upstream/src/mount_point.h	2020-10-06 06:58:41.000000000 +0000
++++ src/src/mount_point.h	2024-06-20 10:37:55.000000000 +0000
+@@ -17,13 +17,12 @@
+ 
+ #include <list>
+ 
+-
+ struct MountPoint {
+-  int server_fd;
+-  char username[16];
+-  char password[16];
+-  char mount_point_name[16];
+-  std::list<int> client_socket_list;
++	int server_fd;
++	char username[16];
++	char password[16];
++	char mount_point_name[16];
++	std::list<int> client_socket_list;
+ };
+ 
+-#endif  // NTRIPLIB_MOUNT_POINT_H_
++#endif // NTRIPLIB_MOUNT_POINT_H_
+diff --recursive --unified --new-file --no-dereference upstream/src/ntrip_caster.cc src/src/ntrip_caster.cc
+--- upstream/src/ntrip_caster.cc	2020-10-06 06:58:41.000000000 +0000
++++ src/src/ntrip_caster.cc	1970-01-01 00:00:00.000000000 +0000
+@@ -1,599 +0,0 @@
+-// Copyright 2019 Yuming Meng. All Rights Reserved.
+-//
+-// Licensed under the Apache License, Version 2.0 (the "License");
+-// you may not use this file except in compliance with the License.
+-// You may obtain a copy of the License at
+-//
+-//     http://www.apache.org/licenses/LICENSE-2.0
+-//
+-// Unless required by applicable law or agreed to in writing, software
+-// distributed under the License is distributed on an "AS IS" BASIS,
+-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+-// See the License for the specific language governing permissions and
+-// limitations under the License.
+-
+-#include "ntrip_caster.h"
+-
+-#include <sys/types.h>
+-#include <sys/socket.h>
+-#include <sys/epoll.h>
+-
+-#include <netinet/in.h>
+-#include <netinet/tcp.h>
+-#include <arpa/inet.h>
+-#include <unistd.h>
+-#include <time.h>
+-#include <fcntl.h>
+-#include <errno.h>
+-#include <stdio.h>
+-#include <stdlib.h>
+-#include <string.h>
+-
+-#include <iostream>
+-#include <algorithm>
+-#include <string>
+-#include <vector>
+-
+-#include "ntrip_util.h"
+-
+-
+-namespace libntrip {
+-
+-constexpr int kMaxBufferLength = 65536;
+-
+-static int EpollRegister(const int &epoll_fd, const int &fd) {
+-  struct epoll_event ev;
+-  int ret, flags;
+-
+-  // Important: make the fd non-blocking.
+-  flags = fcntl(fd, F_GETFL);
+-  fcntl(fd, F_SETFL, flags | O_NONBLOCK);
+-
+-  ev.events = EPOLLIN;
+-  // ev.events = EPOLLIN | EPOLLET;
+-  ev.data.fd = fd;
+-  do {
+-      ret = epoll_ctl(epoll_fd, EPOLL_CTL_ADD, fd, &ev);
+-  } while (ret < 0 && errno == EINTR);
+-
+-  return ret;
+-}
+-
+-static int EpollUnregister(const int &epoll_fd, const int &fd) {
+-  int ret;
+-
+-  do {
+-    ret = epoll_ctl(epoll_fd, EPOLL_CTL_DEL, fd, NULL);
+-  } while (ret < 0 && errno == EINTR);
+-
+-  return ret;
+-}
+-
+-static void PrepareBufferLine(const char *buf, const int &buf_len,
+-                              std::vector<std::string> *buffer_line) {
+-  char *temp = new char[buf_len + 1];
+-  memset(temp, 0x0, buf_len + 1);
+-  memcpy(temp, buf, buf_len + 1);
+-  char *result = strtok(temp, "\n");
+-  while (result != nullptr) {
+-    std::string line(result);
+-    buffer_line->push_back(line);
+-    result = strtok(NULL, "\n");
+-  }
+-  reverse(buffer_line->begin(), buffer_line->end());
+-  delete [] temp;
+-}
+-
+-static void ClearClientConnectInMountPoint(std::list<int> *list) {
+-  if ((list != nullptr) && (!list->empty())) {
+-    auto it = list->begin();
+-    while (it != list->end()) {
+-      close(*it);
+-      it = list->erase(it);
+-    }
+-  }
+-}
+-
+-static void ClearAllConnectInMountPoint(std::list<MountPoint> *list) {
+-  if ((list != nullptr) && (!list->empty())) {
+-    auto it = list->begin();
+-    while (it != list->end()) {
+-      ClearClientConnectInMountPoint(&(it->client_socket_list));
+-      close(it->server_fd);
+-      it = list->erase(it);
+-    }
+-  }
+-}
+-
+-
+-//
+-// Public.
+-//
+-
+-NtripCaster::~NtripCaster() {
+-  if (main_thread_is_running_) {
+-    Stop();
+-  }
+-  if (listen_sock_ > 0) {
+-    close(listen_sock_);
+-  }
+-  if (epoll_fd_ > 0) {
+-    close(epoll_fd_);
+-  }
+-  if (epoll_events_ != nullptr) {
+-    delete [] epoll_events_;
+-  }
+-  ClearAllConnectInMountPoint(&mount_point_list_);
+-  ntrip_str_list_.clear();
+-}
+-
+-bool NtripCaster::Run(void) {
+-  struct sockaddr_in server_addr;
+-  memset(&server_addr, 0, sizeof(struct sockaddr_in));
+-  server_addr.sin_family = AF_INET;
+-  server_addr.sin_port = htons(server_port_);
+-  if (server_ip_.empty()) {
+-    server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+-  } else {
+-    server_addr.sin_addr.s_addr = inet_addr(server_ip_.c_str());
+-  }
+-
+-  listen_sock_ = socket(AF_INET, SOCK_STREAM, 0);
+-  if (listen_sock_ == -1) {
+-    exit(1);
+-  }
+-
+-  if (bind(listen_sock_, reinterpret_cast<struct sockaddr*>(&server_addr),
+-           sizeof(struct sockaddr)) == -1) {
+-    exit(1);
+-  }
+-
+-  if (listen(listen_sock_, 5) == -1) {
+-    exit(1);
+-  }
+-
+-  epoll_events_ = new struct epoll_event[max_count_];
+-  if (epoll_events_ == nullptr) {
+-    exit(1);
+-  }
+-  epoll_fd_ = epoll_create(max_count_);
+-  EpollRegister(epoll_fd_, listen_sock_);
+-  main_thread_ = std::thread(&NtripCaster::ThreadHandler, this);
+-  main_thread_.detach();
+-  service_is_running_ = true;
+-  printf("NtripCaster service starting ...\n");
+-  return true;
+-}
+-
+-void NtripCaster::Stop(void) {
+-  if (main_thread_is_running_) {
+-    main_thread_is_running_ = false;
+-    service_is_running_ = false;
+-    if (listen_sock_ > 0) {
+-      EpollUnregister(epoll_fd_, listen_sock_);
+-      close(listen_sock_);
+-    }
+-    if (epoll_fd_ > 0) {
+-      close(epoll_fd_);
+-    }
+-  }
+-}
+-
+-
+-//
+-// Private.
+-//
+-
+-void NtripCaster::ThreadHandler(void) {
+-  int ret;
+-  int alive_count;
+-  char *recv_buf = new char[kMaxBufferLength];
+-  char *send_buf = new char[kMaxBufferLength];
+-
+-  while (1) {
+-    ret = NtripCasterWait(time_out_);
+-    if (ret == 0) {
+-      printf("Time out\n");
+-      continue;
+-    } else if (ret == -1) {
+-      printf("Error\n");
+-    } else {
+-      alive_count = ret;
+-      for (int i = 0; i < alive_count; ++i) {
+-        if (epoll_events_[i].data.fd == listen_sock_) {
+-          // If the server listens to the EPOLLIN events,
+-          // accept new client and add this socket to epoll listen list.
+-          if (epoll_events_[i].events & EPOLLIN) {
+-            AcceptNewConnect();
+-          }
+-        } else {
+-          if (epoll_events_[i].events & EPOLLIN) {
+-            memset(recv_buf, 0, kMaxBufferLength);
+-            int ret = RecvData(epoll_events_[i].data.fd, recv_buf);
+-            // Received count is zero, socket error or disconnect,
+-            // we need remove this socket form epoll listen list.
+-            if (ret > 0) {
+-              // Start parsing received's remote data.
+-              if (ParseData(epoll_events_[i].data.fd, recv_buf, ret) < 0) {
+-                close(epoll_events_[i].data.fd);
+-              }
+-            } else if (ret == 0) {
+-              DealDisconnect(epoll_events_[i].data.fd);
+-            }
+-          } else if (epoll_events_[i].events & EPOLLOUT) {
+-            SendData(epoll_events_[i].data.fd, send_buf, strlen(send_buf));
+-            memset(send_buf, 0, kMaxBufferLength);
+-          }
+-        }
+-      }
+-    }
+-  }
+-  delete [] send_buf;
+-  delete [] recv_buf;
+-  main_thread_is_running_ = false;
+-  service_is_running_ = false;
+-}
+-
+-int NtripCaster::AcceptNewConnect(void) {
+-  struct sockaddr_in client_addr;
+-  memset(&client_addr, 0, sizeof(struct sockaddr_in));
+-  socklen_t clilen = sizeof(struct sockaddr);
+-  int new_sock = accept(listen_sock_, (struct sockaddr*)&client_addr, &clilen);
+-  // TCP socket keepalive.
+-  int keepalive = 1;     // Enable keepalive attributes.
+-  int keepidle = 30;     // Time out for starting detection.
+-  int keepinterval = 5;  // Time interval for sending packets during detection.
+-  int keepcount = 3;     // Max times for sending packets during detection.
+-  setsockopt(new_sock, SOL_SOCKET, SO_KEEPALIVE, &keepalive,
+-             sizeof(keepalive));
+-  setsockopt(new_sock, SOL_TCP, TCP_KEEPIDLE, &keepidle, sizeof(keepidle));
+-  setsockopt(new_sock, SOL_TCP, TCP_KEEPINTVL, &keepinterval,
+-             sizeof(keepinterval));
+-  setsockopt(new_sock, SOL_TCP, TCP_KEEPCNT, &keepcount, sizeof(keepcount));
+-  EpollRegister(epoll_fd_, new_sock);
+-  return new_sock;
+-}
+-
+-int NtripCaster::RecvData(const int &sock, char *recv_buf) {
+-  char buf[1024] = {0};
+-  int len = 0;
+-  int ret = 0;
+-
+-  while (ret >= 0) {
+-    ret = recv(sock, buf, sizeof(buf), 0);
+-    if (ret <= 0) {
+-      EpollUnregister(epoll_fd_, sock);
+-      close(sock);
+-      break;
+-    } else if (ret < 1024) {
+-      memcpy(recv_buf, buf, ret);
+-      len += ret;
+-      break;
+-    } else {
+-      memcpy(recv_buf, buf, sizeof(buf));
+-      len += ret;
+-    }
+-  }
+-
+-  return ret <= 0 ? ret : len;
+-}
+-
+-int NtripCaster::SendData(const int &sock,
+-                          const char *send_buf, const int &buf_len) {
+-  int len = 0;
+-  int ret = 0;
+-
+-  while (len < buf_len) {
+-    if (buf_len < 1024) {
+-      ret = send(sock, send_buf + len, buf_len, 0);
+-    } else {
+-      ret = send(sock, send_buf + len, 1024, 0);
+-    }
+-    if (ret <= 0) {
+-      EpollUnregister(epoll_fd_, sock);
+-      close(sock);
+-      break;
+-    } else {
+-      len += ret;
+-    }
+-
+-    if (ret < 1024) {
+-      break;
+-    }
+-  }
+-
+-  return ret <= 0 ? ret : len;
+-}
+-
+-int NtripCaster::NtripCasterWait(const int &time_out) {
+-  return epoll_wait(epoll_fd_, epoll_events_, max_count_, time_out);
+-}
+-
+-void NtripCaster::DealDisconnect(const int &sock) {
+-  if (!mount_point_list_.empty()) {
+-    auto it = mount_point_list_.begin();
+-    while (it != mount_point_list_.end()) {
+-      if (it->server_fd == sock) {  // It is ntrip server.
+-        printf("NtripServer disconnect\n");
+-        ClearClientConnectInMountPoint(&(it->client_socket_list));
+-        // Remove mount point information from source table list.
+-        std::string mount_point_name(it->mount_point_name);
+-        std::string ntrip_str("STR;" + mount_point_name + ";");
+-        auto str_it = ntrip_str_list_.begin();
+-        while (str_it != ntrip_str_list_.end()) {
+-          if (str_it->find(ntrip_str) != std::string::npos) {
+-            ntrip_str_list_.erase(str_it);
+-            break;
+-          }
+-          ++str_it;
+-        }
+-        mount_point_list_.erase(it);
+-        break;
+-      } else {  // is ntrip client.
+-        bool find_sock = false;
+-        auto cit = it->client_socket_list.begin();
+-        while (cit != it->client_socket_list.end()) {
+-          if (*cit == sock) {
+-            printf("NtripClient disconnect\n");
+-            it->client_socket_list.erase(cit);
+-            find_sock = true;
+-            break;
+-          }
+-          ++cit;
+-        }
+-        if (find_sock == true) {
+-          break;
+-        }
+-      }
+-      ++it;
+-    }
+-  }
+-  close(sock);
+-}
+-
+-int NtripCaster::ParseData(const int &sock,
+-                           char* recv_buf, const int &buf_len) {
+-  int retval = -1;
+-  std::vector<std::string> buffer_line;
+-
+-  // printf("Received [%d] btyes data:\n", buf_len);
+-  // PrintCharArray(recv_buf, buf_len);
+-  std::string str = recv_buf;
+-  if ((str.find("GET /") != std::string::npos) ||
+-      (str.find("POST /") != std::string::npos)) {
+-    PrepareBufferLine(recv_buf, buf_len, &buffer_line);
+-    str = buffer_line.back();
+-    // Server request to connect to Caster.
+-    if ((str.find("POST /") != std::string::npos) &&
+-        (str.find("HTTP/1.1") != std::string::npos)) {
+-      PrintCharArray(recv_buf, buf_len);
+-      retval = DealServerConnectRequest(&buffer_line, sock);
+-    } else if ((str.find("GET /") != std::string::npos) &&
+-               (str.find("HTTP/1.1") != std::string::npos ||
+-                str.find("HTTP/1.0") != std::string::npos)) {
+-      PrintCharArray(recv_buf, buf_len);
+-      retval = DealClientConnectRequest(&buffer_line, sock);
+-    }
+-  } else {
+-    // Data sent by Server, it needs to be forwarded to connected client.
+-    if ((retval = TryToForwardServerData(sock, recv_buf, buf_len)) < 0) {
+-      // If Caster as a base station, it maybe needs to deal the GGA data
+-      // sent by the ntrip client, now it's just printing.
+-      if (str.find("$GPGGA,") != std::string::npos ||
+-          str.find("$GNGGA,") != std::string::npos) {
+-        if (!BccCheckSumCompareForGGA(str.c_str())) {
+-          // printf("Check sum pass\n");
+-          printf("%s", str.c_str());
+-        }
+-        retval = 0;
+-      }
+-    }
+-  }
+-
+-  if (!buffer_line.empty()) {
+-    buffer_line.clear();
+-  }
+-  return retval;
+-}
+-
+-int NtripCaster::DealServerConnectRequest(std::vector<std::string> *buffer_line,
+-                                          const int &sock) {
+-  char mount_point_name[16] = {0};
+-  char user_passwd_raw[48] = {0};
+-  char user[16] = {0};
+-  char passwd[16] = {0};
+-
+-  std::string str = buffer_line->back();
+-  buffer_line->pop_back();
+-  sscanf(str.c_str(), "%*[^/]%*c%[^ ]", mount_point_name);
+-  std::string name1 = mount_point_name;
+-  std::string name2;
+-  // Check mountpoint.
+-  if (!mount_point_list_.empty()) {
+-    auto it = mount_point_list_.begin();
+-    while (it != mount_point_list_.end()) {
+-      name2 = it->mount_point_name;
+-      if (name1 == name2) {
+-        printf("MountPoint already used!!!\n");
+-        SendData(sock, "ERROR - Bad Password\r\n", 22);
+-        // EpollUnregister(epoll_fd_, sock);
+-        return -1;
+-      }
+-      ++it;
+-    }
+-  }
+-  // printf("Can use this mount point\n");
+-  while (!buffer_line->empty()) {
+-    str = buffer_line->back();
+-    buffer_line->pop_back();
+-    if (str.find("Authorization: Basic") != std::string::npos) {
+-      sscanf(str.c_str(), "%*[^ ]%*c%*[^ ]%*c%[^\r]", user_passwd_raw);
+-      if (strlen(user_passwd_raw) > 0) {
+-        // Decode username && password.
+-        Base64Decode(user_passwd_raw, user, passwd);
+-        // printf("Username: [%s], Password: [%s]\n", passwd, passwd);
+-        // Save the mount point information.
+-        MountPoint mount_point = {0};
+-        str = mount_point_name;
+-        memcpy(mount_point.mount_point_name, str.c_str(), str.size());
+-        str = user;
+-        memcpy(mount_point.username, str.c_str(), str.size());
+-        str = passwd;
+-        memcpy(mount_point.password, str.c_str(), str.size());
+-        mount_point.server_fd = sock;
+-        mount_point_list_.push_back(mount_point);
+-        // printf("Add mount point ok\n");
+-        break;
+-      }
+-    }
+-  }
+-  if (!buffer_line->empty()) {
+-    str = buffer_line->back();
+-    buffer_line->pop_back();
+-    std::string name3;
+-    // Check mount point information, save to source table list.
+-    if (str.find("Ntrip-STR:") != std::string::npos) {
+-      char *str_mnt = new char[16];
+-      char *str_mnt_check = new char[16];
+-      sscanf(str.c_str(), "%*[^;]%*c%[^;]%*c%[^;]", str_mnt, str_mnt_check);
+-      // printf("%s, %s\n", str_mnt, str_mnt_check);
+-      name2 = str_mnt;
+-      name3 = str_mnt_check;
+-      if ((name1 != name2) || (name1 != name3)) {
+-        SendData(sock, "ERROR - Bad Password\r\n", 22);
+-        // EpollUnregister(epoll_fd_, sock);
+-        return -1;
+-      }
+-      delete(str_mnt);
+-      delete(str_mnt_check);
+-      std::string ntrip_str = str.substr(11, str.size() - 11);
+-      ntrip_str += "\n";
+-      ntrip_str_list_.push_back(ntrip_str);
+-      ntrip_str = "";
+-      SendData(sock, "ICY 200 OK\r\n", 12);
+-      return 0;
+-    }
+-  }
+-  return -1;
+-}
+-
+-void NtripCaster::SendSourceTableData(const int &sock) {
+-  std::string ntrip_str = "";
+-  auto it = ntrip_str_list_.begin();
+-  while (it != ntrip_str_list_.end()) {
+-    ntrip_str.append(*it);
+-    ++it;
+-  }
+-  char *datetime = new char[128];
+-  time_t now;
+-  time(&now);
+-  struct tm *tm_now = localtime(&now);
+-  strftime(datetime, 128, "%x %H:%M:%S %Z", tm_now);
+-  char *data = new char[kMaxBufferLength];
+-  memset(data, 0x0, kMaxBufferLength);
+-  int len = snprintf(data, kMaxBufferLength-1,
+-                     "SOURCETABLE 200 OK\r\n"
+-                     "Server: %s\r\n"
+-                     "Content-Type: text/plain\r\n"
+-                     "Content-Length: %d\r\n"
+-                     "Date: %s\r\n"
+-                     "\r\n"
+-                     "%s"
+-                     "ENDSOURCETABLE\r\n",
+-                     kCasterAgent, static_cast<int>(ntrip_str.size()),
+-                     datetime, ntrip_str.c_str());
+-  SendData(sock, data, len);
+-  delete(datetime);
+-  delete(data);
+-}
+-
+-int NtripCaster::DealClientConnectRequest(std::vector<std::string> *buffer_line,
+-                                          const int &sock) {
+-  char mount_point_name[16] = {0};
+-  char user_passwd_raw[48] = {0};
+-  char user[16] = {0};
+-  char passwd[16] = {0};
+-
+-  std::string str = buffer_line->back();
+-  buffer_line->pop_back();
+-  sscanf(str.c_str(), "%*[^/]%*c%[^ ]", mount_point_name);
+-  if (!strlen(mount_point_name)) {  // Request to get the source table.
+-    SendSourceTableData(sock);
+-  } else {  // Request to get the differential data.
+-    if (!mount_point_list_.empty()) {
+-      std::string name1 = mount_point_name;
+-      std::string name2;
+-      auto it = mount_point_list_.begin();
+-      while (it != mount_point_list_.end()) {
+-        name2 = it->mount_point_name;
+-        if (name1 == name2) {
+-          break;
+-        }
+-        ++it;
+-      }
+-      if (it == mount_point_list_.end()) {
+-        printf("MountPoint not find!!!\n");
+-        SendData(sock, "HTTP/1.1 401 Unauthorized\r\n", 27);
+-        // EpollUnregister(epoll_fd_, sock);
+-        return -1;
+-      }
+-      while (!buffer_line->empty()) {
+-        str = buffer_line->back();
+-        buffer_line->pop_back();
+-        if (str.find("Authorization: Basic") != std::string::npos) {
+-          // Get username && password.
+-          sscanf(str.c_str(), "%*[^ ]%*c%*[^ ]%*c%[^\r]", user_passwd_raw);
+-          if (strlen(user_passwd_raw) > 0) {
+-            // Decode username && password.
+-            Base64Decode(user_passwd_raw, user, passwd);
+-            // printf("Username: [%s], Password: [%s]\n", passwd, passwd);
+-            // Check username && password.
+-            std::string user1 = user;
+-            std::string user2 = it->username;
+-            std::string passwd1 = passwd;
+-            std::string passwd2 = it->password;
+-            if (user1 != user2 || passwd1 != passwd2) {
+-              printf("Password error!!!\n");
+-              SendData(sock, "HTTP/1.1 401 Unauthorized\r\n", 27);
+-              // EpollUnregister(epoll_fd_, sock);
+-              return -1;
+-            }
+-            SendData(sock, "ICY 200 OK\r\n", 12);
+-            it->client_socket_list.push_back(sock);
+-            // printf("Client connect ok\n");
+-            return 0;
+-          }
+-        }
+-      }
+-    } else {
+-      SendData(sock, "HTTP/1.1 401 Unauthorized\r\n", 27);
+-      // EpollUnregister(epoll_fd_, sock);
+-    }
+-  }
+-  return -1;
+-}
+-
+-// TODO(mengyuming@hotmail.com) : Multiple connections still have problems.
+-int NtripCaster::TryToForwardServerData(const int &server_sock,
+-                                        const char *buf, const int &buf_len) {
+-  if (!mount_point_list_.empty()) {
+-    auto it = mount_point_list_.begin();
+-    while (it != mount_point_list_.end()) {
+-      if (it->server_fd == server_sock) {
+-        if (!it->client_socket_list.empty()) {
+-          auto cit = it->client_socket_list.begin();
+-          while (cit != it->client_socket_list.end()) {
+-            SendData(*cit, buf, buf_len);
+-            // printf("forward %d byte data\n", buf_len);
+-            ++cit;
+-          }
+-        }
+-        return 0;
+-      }
+-     ++it;
+-    }
+-  }
+-  return -1;
+-}
+-
+-}  // namespace libntrip
+diff --recursive --unified --new-file --no-dereference upstream/src/ntrip_caster.h src/src/ntrip_caster.h
+--- upstream/src/ntrip_caster.h	2020-10-06 06:58:41.000000000 +0000
++++ src/src/ntrip_caster.h	1970-01-01 00:00:00.000000000 +0000
+@@ -1,87 +0,0 @@
+-// Copyright 2019 Yuming Meng. All Rights Reserved.
+-//
+-// Licensed under the Apache License, Version 2.0 (the "License");
+-// you may not use this file except in compliance with the License.
+-// You may obtain a copy of the License at
+-//
+-//     http://www.apache.org/licenses/LICENSE-2.0
+-//
+-// Unless required by applicable law or agreed to in writing, software
+-// distributed under the License is distributed on an "AS IS" BASIS,
+-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+-// See the License for the specific language governing permissions and
+-// limitations under the License.
+-
+-#ifndef NTRIPLIB_NTRIP_CASTER_H_
+-#define NTRIPLIB_NTRIP_CASTER_H_
+-
+-#include <sys/epoll.h>
+-
+-#include <string>
+-#include <list>
+-#include <vector>
+-#include <thread>  // NOLINT.
+-
+-#include "mount_point.h"
+-
+-
+-namespace libntrip {
+-
+-class NtripCaster {
+- public:
+-  NtripCaster() = default;
+-  NtripCaster(const NtripCaster &) = delete;
+-  NtripCaster& operator=(const NtripCaster&) = delete;
+-  ~NtripCaster();
+-
+-  void Init(const int &port, const int &sock_count, const int &time_out) {
+-    server_port_ = port;
+-    max_count_ = sock_count;
+-    time_out_ = time_out;
+-  }
+-  void Init(const std::string &server_ip, const int &port,
+-            const int &sock_count, const int &time_out) {
+-    server_ip_ = server_ip;
+-    server_port_ = port;
+-    max_count_ = sock_count;
+-    time_out_ = time_out;
+-  }
+-  bool Run(void);
+-  void Stop(void);
+-  bool service_is_running(void) const {
+-    return service_is_running_;
+-  }
+-
+- private:
+-  void ThreadHandler(void);
+-  int NtripCasterWait(const int &time_out);
+-  int AcceptNewConnect(void);
+-  int RecvData(const int &sock, char *recv_buf);
+-  int SendData(const int &sock, const char *send_buf, const int &buf_len);
+-  void DealDisconnect(const int &sock);
+-  int ParseData(const int &sock, char *recv_buf, const int &len);
+-  int DealServerConnectRequest(std::vector<std::string> *buffer_line,
+-                               const int &sock);
+-  void SendSourceTableData(const int &sock);
+-  int DealClientConnectRequest(std::vector<std::string> *buffer_line,
+-                               const int &sock);
+-  int TryToForwardServerData(const int &server_sock,
+-                             const char *buf, const int &buf_len);
+-
+-  bool main_thread_is_running_ = false;
+-  bool service_is_running_ = false;
+-  std::string server_ip_;
+-  int server_port_ = -1;
+-  int time_out_ = 0;
+-  int listen_sock_ = -1;
+-  int epoll_fd_ = -1;
+-  int max_count_ = 0;
+-  struct epoll_event *epoll_events_ = nullptr;
+-  std::thread main_thread_;
+-  std::list<MountPoint> mount_point_list_;
+-  std::vector<std::string> ntrip_str_list_;
+-};
+-
+-}  // namespace libntrip
+-
+-#endif  // NTRIPLIB_NTRIP_CASTER_H_
+diff --recursive --unified --new-file --no-dereference upstream/src/ntrip_client.cc src/src/ntrip_client.cc
+--- upstream/src/ntrip_client.cc	2020-10-06 06:58:41.000000000 +0000
++++ src/src/ntrip_client.cc	2024-06-20 10:37:55.000000000 +0000
+@@ -12,222 +12,313 @@
+ // See the License for the specific language governing permissions and
+ // limitations under the License.
+ 
+-#include "ntrip_client.h"
+-
++#include <arpa/inet.h>
+ #include <sys/types.h>
+ #include <sys/socket.h>
++#include <netdb.h>
++#include <chrono>
++#include <errno.h>
++#include <list>
+ #include <netinet/in.h>
+ #include <netinet/tcp.h>
+-#include <arpa/inet.h>
+-#include <unistd.h>
+-#include <fcntl.h>
+-#include <errno.h>
+-#include <time.h>
+ #include <stdio.h>
+ #include <stdlib.h>
+-#include <string.h>
+-
+-#include <chrono>
+-#include <string>
+-#include <thread>  // NOLINT.
+-#include <list>
+-#include <vector>
++#include <time.h>
+ 
++#include "ntrip_client.h"
+ #include "ntrip_util.h"
+-#include <iostream>
+-#include <fstream>
+ 
+-using namespace std;
++extern struct configuration config;
+ 
+-namespace libntrip {
++namespace libntrip
++{
++namespace
++{
++// GPGGA format example.
++constexpr char gpgga_buffer[] = "$GPGGA,083552.00,3000.0000000,N,11900.0000000,E,"
++				"1,08,1.0,0.000,M,100.000,M,,*57\r\n";
+ 
+-namespace {
++} // namespace
+ 
+-// GPGGA format example.
+-constexpr char gpgga_buffer[] =
+-    "$GPGGA,083552.00,3000.0000000,N,11900.0000000,E,"
+-    "1,08,1.0,0.000,M,100.000,M,,*57\r\n";
+-
+-}  // namespace
+-
+-//
+-// Public method.
+-//
+-
+-bool NtripClient::Run(void) {
+-  service_is_running_.store(false);
+-  int ret = -1;
+-  char recv_buf[1024] = {0};
+-  char request_data[1024] = {0};
+-  char userinfo_raw[48] = {0};
+-  char userinfo[64] = {0};
+-  // Generate base64 encoding of username and password.
+-  snprintf(userinfo_raw, sizeof(userinfo_raw) , "%s:%s",
+-           user_.c_str(), passwd_.c_str());
+-  Base64Encode(userinfo_raw, userinfo);
+-  // Generate request data format of ntrip.
+-  snprintf(request_data, sizeof(request_data),
+-           "GET /%s HTTP/1.1\r\n"
+-           "User-Agent: %s\r\n"
+-           "Accept: */*\r\n"
+-           "Connection: close\r\n"
+-           "Authorization: Basic %s\r\n"
+-           "\r\n",
+-           mountpoint_.c_str(), kClientAgent, userinfo);
+-
+-  struct sockaddr_in server_addr;
+-  memset(&server_addr, 0, sizeof(struct sockaddr_in));
+-  server_addr.sin_family = AF_INET;
+-  server_addr.sin_port = htons(server_port_);
+-  server_addr.sin_addr.s_addr = inet_addr(server_ip_.c_str());
+-
+-  int socket_fd = socket(AF_INET, SOCK_STREAM, 0);
+-  if (socket_fd == -1) {
+-    printf("Create socket fail\n");
+-    return false;
+-  }
+-
+-  // Connect to caster.
+-  if (connect(socket_fd, reinterpret_cast<struct sockaddr *>(&server_addr),
+-              sizeof(struct sockaddr_in)) < 0) {
+-    printf("Connect caster failed!!!\n");
+-    return false;
+-  }
+-
+-  int flags = fcntl(socket_fd, F_GETFL);
+-  fcntl(socket_fd, F_SETFL, flags | O_NONBLOCK);
+-
+-  // Send request data.
+-  if (send(socket_fd, request_data, strlen(request_data), 0) < 0) {
+-    printf("Send request failed!!!\n");
+-    close(socket_fd);
+-    return false;
+-  }
+-
+-  // Waitting for request to connect caster success.
+-  int timeout = 3;
+-  while (timeout--) {
+-    ret = recv(socket_fd, recv_buf, sizeof(recv_buf), 0);
+-    if ((ret > 0) && !strncmp(recv_buf, "ICY 200 OK\r\n", 12)) {
+-      if (gga_buffer_.empty()) {
+-        GetGGAFrameData(latitude_, longitude_, 10.0, &gga_buffer_);
+-      }
+-      ret = send(socket_fd, gga_buffer_.c_str(), gga_buffer_.size(), 0);
+-      if (ret < 0) {
+-        printf("Send gpgga data fail\n");
+-        close(socket_fd);
+-        return false;
+-      }
+-      // printf("Send gpgga data ok\n");
+-      break;
+-    } else if (ret == 0) {
+-      printf("Remote socket close when send gga 1!!!\n");
+-      close(socket_fd);
+-      return false;
+-    }
+-    sleep(1);
+-  }
+-
+-  if (timeout <= 0) {
+-    return false;
+-  }
+-  // TCP socket keepalive.
+-  int keepalive = 1;  // Enable keepalive attributes.
+-  int keepidle = 30;  // Time out for starting detection.
+-  int keepinterval = 5;  // Time interval for sending packets during detection.
+-  int keepcount = 3;  // Max times for sending packets during detection.
+-  setsockopt(socket_fd, SOL_SOCKET, SO_KEEPALIVE, &keepalive,
+-             sizeof(keepalive));
+-  setsockopt(socket_fd, SOL_TCP, TCP_KEEPIDLE, &keepidle, sizeof(keepidle));
+-  setsockopt(socket_fd, SOL_TCP, TCP_KEEPINTVL, &keepinterval,
+-             sizeof(keepinterval));
+-  setsockopt(socket_fd, SOL_TCP, TCP_KEEPCNT, &keepcount, sizeof(keepcount));
+-  socket_fd_ = socket_fd;
+-  thread_ = std::thread(&NtripClient::TheradHandler, this);
+-  thread_.detach();
+-  printf("NtripClient service starting ...\n");
+-  gga_is_update_.store(false);
+-  return true;
++long int get_session_number(char *buff, int length)
++{
++	char *session_string_start = NULL;
++	long int session_num	   = 0;
++
++	DEBUG(3, "get_session_number START, buffer[%d]\n", length);
++	if (length <= 0) {
++		return 0;
++	}
++	session_string_start = strstr(buff, "Session: ");
++	if (!session_string_start) {
++		return 0;
++	}
++	session_num = strtol(session_string_start + 9, NULL, 10);
++	DEBUG(3, "parsed out session_num:%ld\n", session_num);
++
++	return session_num;
+ }
+ 
+-void NtripClient::Stop(void) {
+-  service_is_running_.store(false);
+-  if (socket_fd_ != -1) {
+-    close(socket_fd_);
+-    socket_fd_ = -1;
+-  }
++bool parse_server_address(struct sockaddr_in &server_addr, std::string &address, int port)
++{
++	memset(&server_addr, 0, sizeof(struct sockaddr_in));
++
++	struct addrinfo hints, *res;
++	memset(&hints, 0, sizeof(struct addrinfo));
++	hints.ai_family = AF_INET;
++
++	int rc = getaddrinfo(address.c_str(), NULL, &hints, &res);
++	if (rc != 0) {
++		DEBUG(1, "ERROR: Failed to resolve hostname: %s\n", gai_strerror(rc))
++		return false;
++	}
++
++	memcpy(&server_addr, res->ai_addr, sizeof(struct sockaddr_in));
++	server_addr.sin_port = htons(port);
++
++	freeaddrinfo(res);
++	return true;
+ }
+ 
+-//
+-// Private method.
+-//
++bool NtripClient::Run_ntrip_universal(int data_format)
++{
++	if (data_format == NTRIP_V1) {
++		DEBUG(3, "Ntrip client in ntrip_v1 version run\n");
++	} else if (data_format == NTRIP_V2) {
++		DEBUG(3, "Ntrip client in ntrip_v2 version run\n");
++	} else {
++		DEBUG(3, "Ntrip client in ntrip_v2 UDP version run\n");
++	}
++
++	service_is_running_.store(false);
++	int ret				  = -1;
++	char recv_buf[1024]		  = { 0 };
++	char request_data[1024]		  = { 0 };
++	char userinfo_raw[48]		  = { 0 };
++	char userinfo[64]		  = { 0 };
++	unsigned int authorization_needed = 0;
++	char auth_string[128]		  = { 0 };
++
++	unsigned int local_len	= 0;
++	unsigned int server_len = 0;
++	int socket_fd		= 0;
++
++	if (user_.length() && passwd_.length()) {
++		authorization_needed = 1;
++		DEBUG(3, "have USERNAME and PASSWORD\n");
++		// Generate base64 encoding of username and password.
++		snprintf(userinfo_raw, sizeof(userinfo_raw), "%s:%s", user_.c_str(), passwd_.c_str());
++		Base64Encode(userinfo_raw, userinfo);
++		snprintf(auth_string, sizeof(auth_string), "Authorization: Basic %s\r\n", userinfo);
++	}
++
++	if (data_format == NTRIP_V1) {
++		// Generate request data format of ntrip V1.
++		snprintf(request_data, sizeof(request_data),
++			 "GET /%s HTTP/1.0\r\n"
++			 "User-Agent: %s\r\n"
++			 "%s"
++			 "\r\n",
++			 mountpoint_.c_str(), kClientAgent, authorization_needed ? auth_string : "");
++	} else {
++		// Generate request data format of ntrip V2 or ntrip V2 UDP.
++		snprintf(request_data, sizeof(request_data),
++			 "GET /%s HTTP/1.1\r\n"
++			 "User-Agent: %s\r\n"
++			 "Accept: */*\r\n"
++			 "Connection: close\r\n"
++			 "Ntrip-Version: Ntrip/2.0\r\n"
++			 "Host: %s:%d\r\n"
++			 "%s"
++			 "\r\n",
++			 mountpoint_.c_str(), kClientAgent, server_addr_.c_str(), server_port_,
++			 authorization_needed ? auth_string : "");
++	}
++
++	DEBUG(3, "request_data=[%s]\n", request_data);
++
++	struct sockaddr_in server_addr;
++	server_len = sizeof(server_addr);
++
++	if (!parse_server_address(server_addr, server_addr_, server_port_)) {
++		// Error message printed in 'parse_server_address'
++		return false;
++	}
++
++	struct sockaddr_in local_addr;
++	memset(&local_addr, 0, sizeof(struct sockaddr_in));
++	local_addr.sin_family	   = AF_INET;
++	local_addr.sin_port	   = htons(udp_port_listen_);
++	local_addr.sin_addr.s_addr = htonl(INADDR_ANY);
++	local_len		   = sizeof(local_addr);
++
++	if (data_format == NTRIP_V2_UDP) {
++		socket_fd = socket(AF_INET, SOCK_DGRAM, 0);
++	} else {
++		socket_fd = socket(AF_INET, SOCK_STREAM, 0);
++	}
++
++	if (socket_fd == -1) {
++		DEBUG(3, "Create socket fail\n");
++		return false;
++	}
++
++	int optval = 1;
++	setsockopt(socket_fd, SOL_SOCKET, SO_REUSEADDR, (const void *)&optval, sizeof(int));
++
++	if (data_format == NTRIP_V2_UDP) {
++		if ((bind(socket_fd, (struct sockaddr *)&local_addr, server_len)) < 0) {
++			DEBUG(3, "Error bind\n");
++			return false;
++		} else {
++			DEBUG(3, "Bind completed successfully\n");
++		}
++	}
++
++	// Connect to caster.
++	if (connect(socket_fd, reinterpret_cast<struct sockaddr *>(&server_addr),
++		    sizeof(struct sockaddr_in)) < 0) {
++		DEBUG(3, "Connect caster failed!!!\n");
++		return false;
++	}
++
++	int flags = fcntl(socket_fd, F_GETFL);
++	fcntl(socket_fd, F_SETFL, flags | O_NONBLOCK);
++
++	// Send request data.
++	if (send(socket_fd, request_data, strlen(request_data), 0) < 0) {
++		DEBUG(3, "Send request failed!!!\n");
++		close(socket_fd);
++		return false;
++	}
++
++	// Waitting for request to connect caster success.
++	int timeout = 5;
++	while (timeout--) {
++		if (data_format == NTRIP_V2_UDP) {
++			ret = recvfrom(socket_fd, recv_buf, sizeof(recv_buf), 0,
++				       (struct sockaddr *)&local_addr, &local_len);
++		} else {
++			ret = recv(socket_fd, recv_buf, sizeof(recv_buf), 0);
++		}
++
++		DEBUG(3, "server response, recv_buf:[%s]\n", recv_buf);
++		// allow to fall back to NTRIP V1 - accept NTRIPv1 reply from server also
++		if ((ret > 0) && (!strncmp(recv_buf, "HTTP/1.1 200 OK\r\n", 17) ||
++				  !strncmp(recv_buf, "ICY 200 OK\r\n", 12))) {
++			DEBUG(3, "Server has accepted login credentials\n");
++			if (gga_buffer_.empty()) {
++				DEBUG(3, "gga_buffer is empty\n");
++				GetGGAFrameData(latitude_, longitude_, 10.0, &gga_buffer_);
++			}
++			DEBUG(3, "send gga data, gga_buffer[%d] : [%s]\n", gga_buffer_.size(),
++			      gga_buffer_.c_str());
++			ret = send(socket_fd, gga_buffer_.c_str(), gga_buffer_.size(), 0);
++
++			if (ret < 0) {
++				DEBUG(3, "Send gpgga data fail\n");
++				close(socket_fd);
++				return false;
++			}
++			DEBUG(3, "Send gpgga data ok\n");
++			break;
++		} else if (ret == 0) {
++			DEBUG(3, "Remote socket close!!!\n");
++			close(socket_fd);
++			return false;
++		}
++		sleep(3);
++	}
++
++	if (timeout <= 0) {
++		close(socket_fd);
++		return false;
++	}
++	// TCP socket keepalive.
++	int keepalive	 = 1; // Enable keepalive attributes.
++	int keepidle	 = 10; // Time out for starting detection.
++	int keepinterval = 5; // Time interval for sending packets during detection.
++	int keepcount	 = 3; // Max times for sending packets during detection.
++	setsockopt(socket_fd, SOL_SOCKET, SO_KEEPALIVE, &keepalive, sizeof(keepalive));
++	setsockopt(socket_fd, SOL_TCP, TCP_KEEPIDLE, &keepidle, sizeof(keepidle));
++	setsockopt(socket_fd, SOL_TCP, TCP_KEEPINTVL, &keepinterval, sizeof(keepinterval));
++	setsockopt(socket_fd, SOL_TCP, TCP_KEEPCNT, &keepcount, sizeof(keepcount));
++	socket_fd_ = socket_fd;
++	service_is_running_.store(true);
++	thread_ = std::thread(&NtripClient::TheradHandler, this);
++	thread_.detach();
++	DEBUG(3, "NtripClient service starting...\n");
++	// gga_is_update_.store(false);
++	return true;
++}
+ 
+-void NtripClient::TheradHandler(void) {
+-  service_is_running_.store(true);
+-  int ret;
+-  char recv_buffer[1024] = {};
+-  auto start_tp = std::chrono::steady_clock::now();
+-  int intv_ms = report_interval_ * 1000;
+- 
+-  while (service_is_running_) {
+-
+-    ret = recv(socket_fd_, recv_buffer, sizeof(recv_buffer), 0);
+-    if(ret > 0){
+-      printf("ret:  %d\n",ret);
+-    if (gga_buffer_.empty()) {
+-      GetGGAFrameData(latitude_, longitude_, 10.0, &gga_buffer_);
+-    }
+-    time_t myt=time(NULL);
+-    char ggaBuffer[100]={0};
+-    char mytime[300] = {0};
+-    
+-    sprintf(mytime,"%li",myt);
+-    
+-    if(myt%10==0){
+-      std::ifstream GNGGA("GNGGA",ios::in);
+-      GNGGA.getline(ggaBuffer,100);
+-      GNGGA.close();
+-      ret = send(socket_fd_, ggaBuffer, 100, 0);
+-      printf("sendRet:  %s \n\n ret: %d",ggaBuffer,ret);
+-  }
+-
+-    FILE *nema ;
+-    strcat(mytime,".nema");
+-    nema = fopen(mytime,"wb");
+-    printf("\n%li\n",myt);
+-    printf("fileName:  %s\n",mytime);
+-    fwrite(recv_buffer,ret,1,nema);
+-    fclose(nema);
+-  }
+-    if (ret == 0) {
+-      printf("Remote socket close when send gga 2!!!\n");
+-      exit(0);
+-      break;
+-    } else if (ret < 0) {
+-      if ((errno == EAGAIN) || (errno == EWOULDBLOCK) || (errno == EINTR)) {
+-        std::this_thread::sleep_for(std::chrono::microseconds(10));
+-        continue;
+-      } else {
+-        printf("Remote socket error!!!\n");
+-        exit(0);
+-        break;
+-      }
+-    } else {
+-      callback_(recv_buffer, ret);
+-    }
+-    if (std::chrono::duration_cast<std::chrono::milliseconds>(
+-            std::chrono::steady_clock::now()-start_tp).count() >= intv_ms) {
+-      start_tp = std::chrono::steady_clock::now();
+-      if (gga_is_update_ == false) {
+-        GetGGAFrameData(latitude_, longitude_, 10.0, &gga_buffer_);
+-      }
+-      send(socket_fd_, gga_buffer_.c_str(), gga_buffer_.size(), 0);
+-      gga_is_update_.store(false);
+-    }
+-  }
+-  close(socket_fd_);
+-  socket_fd_ = -1;
+-  service_is_running_ = false;
++void NtripClient::Stop(void)
++{
++	DEBUG(3, "Stop the service\n");
++	service_is_running_.store(false);
++	if (socket_fd_ != -1) {
++		close(socket_fd_);
++		socket_fd_ = -1;
++	}
+ }
+ 
+-}  // namespace libntrip
++// Private method.
++void NtripClient::TheradHandler(void)
++{
++	int ret			= 0;
++	char recv_buffer[1024]	= {};
++	auto start_tp		= std::chrono::steady_clock::now();
++	auto last_received_time = std::chrono::steady_clock::now();
++
++	int intv_ms    = report_interval_ * 1000;
++	int no_data_ms = no_data_ * 1000;
++	while (service_is_running_) {
++		ret = recv(socket_fd_, recv_buffer, sizeof(recv_buffer), 0);
++		if (ret == 0) {
++			DEBUG(3, "Remote socket close!!!\n");
++			break;
++		} else if (ret < 0) {
++			if ((errno == EAGAIN) || (errno == EWOULDBLOCK) || (errno == EINTR)) {
++				std::this_thread::sleep_for(std::chrono::milliseconds(100));
++				//continue;
++			} else {
++				DEBUG(3, "Remote socket error!!!\n");
++				break;
++			}
++		} else {
++			callback_(recv_buffer, ret);
++			last_received_time = std::chrono::steady_clock::now();
++		}
++
++		if ((no_data_ms > 0) && (std::chrono::duration_cast<std::chrono::milliseconds>(
++						 std::chrono::steady_clock::now() - last_received_time)
++						 .count() >= no_data_ms)) {
++			DEBUG(1, "Closing connection due to no data from server for [%d]s\n", no_data_);
++			break;
++		}
++
++		DEBUG(9, "intv:[%d], current:[%d]\n", intv_ms,
++		      std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() -
++									    start_tp)
++			      .count());
++		auto now = std::chrono::steady_clock::now();
++		auto time_since_last_send =
++			std::chrono::duration_cast<std::chrono::milliseconds>(now - start_tp).count();
++		if (time_since_last_send >= intv_ms) {
++			start_tp = std::chrono::steady_clock::now();
++			/*if (gga_is_update_ == false) {
++        DEBUG(3,"GGA not updated, getting nmea from hardcoded coordinates\n");
++        GetGGAFrameData(latitude_, longitude_, 10.0, &gga_buffer_);
++      }*/
++			send(socket_fd_, gga_buffer_.c_str(), gga_buffer_.size(), 0);
++			DEBUG(3, "Send gga periodic: [%d]:[%s]\n", gga_buffer_.size(), gga_buffer_.c_str());
++			// gga_is_update_.store(false);
++		}
++	}
++
++	DEBUG(3, "Thread stopping the service\n");
++	close(socket_fd_);
++	socket_fd_	    = -1;
++	service_is_running_ = false;
++}
++} // namespace libntrip
+diff --recursive --unified --new-file --no-dereference upstream/src/ntrip_client.h src/src/ntrip_client.h
+--- upstream/src/ntrip_client.h	2020-10-06 06:58:41.000000000 +0000
++++ src/src/ntrip_client.h	1970-01-01 00:00:00.000000000 +0000
+@@ -1,93 +0,0 @@
+-// Copyright 2019 Yuming Meng. All Rights Reserved.
+-//
+-// Licensed under the Apache License, Version 2.0 (the "License");
+-// you may not use this file except in compliance with the License.
+-// You may obtain a copy of the License at
+-//
+-//     http://www.apache.org/licenses/LICENSE-2.0
+-//
+-// Unless required by applicable law or agreed to in writing, software
+-// distributed under the License is distributed on an "AS IS" BASIS,
+-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+-// See the License for the specific language governing permissions and
+-// limitations under the License.
+-
+-#ifndef NTRIPLIB_NTRIP_CLIENT_H_
+-#define NTRIPLIB_NTRIP_CLIENT_H_
+-
+-#include <atomic>
+-#include <string>
+-#include <thread>  // NOLINT.
+-#include <functional>
+-
+-namespace libntrip {
+-
+-using ClientCallback = std::function<void(const char *, const int &)>;
+-
+-class NtripClient {
+- public:
+-  NtripClient() = default;
+-  NtripClient(const NtripClient &) = delete;
+-  NtripClient& operator=(const NtripClient &) = delete;
+-  NtripClient(const std::string &ip, const int &port, const std::string &user,
+-              const std::string &passwd, const std::string &mountpoint)
+-      : server_ip_(ip),
+-        server_port_(port),
+-        user_(user),
+-        passwd_(passwd),
+-        mountpoint_(mountpoint) {}
+-  ~NtripClient() { Stop(); }
+-
+-  void Init(const std::string &ip, const int &port, const std::string &user,
+-            const std::string &passwd, const std::string &mountpoint) {
+-    server_ip_ = ip;
+-    server_port_ = port;
+-    user_ = user;
+-    passwd_ = passwd;
+-    mountpoint_ = mountpoint;
+-  }
+-  // 更新发送的GGA语句.
+-  // 根据ntrip账号的要求, 如果距离服务器位置过远, 服务器不会返回差分数据.
+-  void set_gga_buffer(const std::string &gga_buffer) {
+-    gga_buffer_ = gga_buffer;
+-    gga_is_update_.store(true);
+-  }
+-  // 设置固定位置坐标, 由此自动生成GGA数据.
+-  void set_location(double const& latitude, double const& longitude) {
+-    latitude_ = latitude;
+-    longitude_ = longitude;
+-  }
+-  // 设置GGA上报时间间隔, 单位秒(s).
+-  void set_report_interval(int const& intv) {
+-    report_interval_ = intv;
+-  }
+-
+-  // 设置接收到数据时的回调函数.
+-  void OnReceived(const ClientCallback &callback) { callback_ = callback; }
+-  bool Run(void);
+-  void Stop(void);
+-  bool service_is_running(void) const { return service_is_running_; }
+-
+- private:
+-  // Thread handler.
+-  void TheradHandler(void);
+-
+-  std::atomic_bool service_is_running_;
+-  std::atomic_bool gga_is_update_;  // 外部更新GGA数据标志.
+-  int report_interval_;  // GGA数据上报时间间隔.
+-  double latitude_ = 22.570535;  // 固定坐标纬度.
+-  double longitude_ = 113.937739;  // 固定坐标经度.
+-  std::thread thread_;
+-  std::string server_ip_;
+-  int server_port_ = -1;
+-  std::string user_;
+-  std::string passwd_;
+-  std::string mountpoint_;
+-  std::string gga_buffer_;
+-  int socket_fd_ = -1;
+-  ClientCallback callback_;
+-};
+-
+-}  // namespace libntrip
+-
+-#endif  // NTRIPLIB_NTRIP_CLIENT_H_
+diff --recursive --unified --new-file --no-dereference upstream/src/ntrip_server.cc src/src/ntrip_server.cc
+--- upstream/src/ntrip_server.cc	2020-10-06 06:58:41.000000000 +0000
++++ src/src/ntrip_server.cc	1970-01-01 00:00:00.000000000 +0000
+@@ -1,200 +0,0 @@
+-// Copyright 2019 Yuming Meng. All Rights Reserved.
+-//
+-// Licensed under the Apache License, Version 2.0 (the "License");
+-// you may not use this file except in compliance with the License.
+-// You may obtain a copy of the License at
+-//
+-//     http://www.apache.org/licenses/LICENSE-2.0
+-//
+-// Unless required by applicable law or agreed to in writing, software
+-// distributed under the License is distributed on an "AS IS" BASIS,
+-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+-// See the License for the specific language governing permissions and
+-// limitations under the License.
+-
+-#include "ntrip_server.h"
+-
+-#include <sys/types.h>
+-#include <sys/socket.h>
+-#include <netinet/in.h>
+-#include <netinet/tcp.h>
+-#include <arpa/inet.h>
+-#include <unistd.h>
+-#include <fcntl.h>
+-#include <errno.h>
+-#include <time.h>
+-#include <stdio.h>
+-#include <stdlib.h>
+-#include <string.h>
+-
+-#include <string>
+-#include <thread>  // NOLINT.
+-#include <list>
+-#include <vector>
+-
+-#include "ntrip_util.h"
+-
+-
+-namespace libntrip {
+-
+-// RTK format example.
+-constexpr uint8_t example_data[] = {
+-    0xd3, 0x00, 0x70, 0x8e, 0x43, 0x56, 0x45, 0x00, 0x00,
+-    0x55, 0xfb, 0x89, 0xff, 0xff, '\r', '\n'
+-};
+-
+-//
+-// Public method.
+-//
+-
+-NtripServer::~NtripServer() {
+-  if (thread_is_running_) {
+-    Stop();
+-  }
+-}
+-
+-bool NtripServer::Run(void) {
+-  int ret = -1;
+-  char request_buffer[1024] = {0};
+-  char userinfo_raw[48] = {0};
+-  char userinfo[64] = {0};
+-  // Generate base64 encoding of username and password.
+-  snprintf(userinfo_raw, sizeof(userinfo_raw) , "%s:%s",
+-           user_.c_str(), passwd_.c_str());
+-  Base64Encode(userinfo_raw, userinfo);
+-  // Generate request data format of ntrip.
+-  snprintf(request_buffer, sizeof(request_buffer),
+-           "POST /%s HTTP/1.1\r\n"
+-           "Host: %s:%d\r\n"
+-           "Ntrip-Version: Ntrip/2.0\r\n"
+-           "User-Agent: %s\r\n"
+-           "Authorization: Basic %s\r\n"
+-           "Ntrip-STR: %s\r\n"
+-           "Connection: close\r\n"
+-           "Transfer-Encoding: chunked\r\n",
+-           mountpoint_.c_str(), server_ip_.c_str(), server_port_,
+-           kServerAgent, userinfo, ntrip_str_.c_str());
+-
+-  struct sockaddr_in server_addr;
+-  memset(&server_addr, 0, sizeof(struct sockaddr_in));
+-  server_addr.sin_family = AF_INET;
+-  server_addr.sin_port = htons(server_port_);
+-  server_addr.sin_addr.s_addr = inet_addr(server_ip_.c_str());
+-
+-  int socket_fd = socket(AF_INET, SOCK_STREAM, 0);
+-  if (socket_fd == -1) {
+-    printf("Create socket fail\n");
+-    return false;
+-  }
+-
+-  // Connect to caster.
+-  if (connect(socket_fd, reinterpret_cast<struct sockaddr *>(&server_addr),
+-              sizeof(struct sockaddr_in)) < 0) {
+-    printf("Connect remote server failed!!!\n");
+-    close(socket_fd);
+-    return false;
+-  }
+-
+-  int flags = fcntl(socket_fd, F_GETFL);
+-  fcntl(socket_fd, F_SETFL, flags | O_NONBLOCK);
+-
+-  // Send request data.
+-  if (send(socket_fd, request_buffer, strlen(request_buffer), 0) < 0) {
+-    printf("Send authentication request failed!!!\n");
+-    close(socket_fd);
+-    return false;
+-  }
+-
+-  // Waitting for request to connect caster success.
+-  int timeout = 3;
+-  while (timeout--) {
+-    memset(request_buffer, 0x0, sizeof(request_buffer));
+-    ret = recv(socket_fd, request_buffer, sizeof(request_buffer), 0);
+-    if ((ret > 0) && !strncmp(request_buffer, "ICY 200 OK\r\n", 12)) {
+-      // printf("Connect to caster success\n");
+-      break;
+-    } else if (ret == 0) {
+-      printf("Remote socket close!!!\n");
+-      close(socket_fd);
+-      return false;
+-    }
+-    sleep(1);
+-  }
+-
+-  if (timeout <= 0) {
+-    return false;
+-  }
+-  // TCP socket keepalive.
+-  int keepalive = 1;  // Enable keepalive attributes.
+-  int keepidle = 30;  // Time out for starting detection.
+-  int keepinterval = 5;  // Time interval for sending packets during detection.
+-  int keepcount = 3;  // Max times for sending packets during detection.
+-  setsockopt(socket_fd, SOL_SOCKET, SO_KEEPALIVE, &keepalive,
+-             sizeof(keepalive));
+-  setsockopt(socket_fd, SOL_TCP, TCP_KEEPIDLE, &keepidle, sizeof(keepidle));
+-  setsockopt(socket_fd, SOL_TCP, TCP_KEEPINTVL, &keepinterval,
+-             sizeof(keepinterval));
+-  setsockopt(socket_fd, SOL_TCP, TCP_KEEPCNT, &keepcount, sizeof(keepcount));
+-  socket_fd_ = socket_fd;
+-  thread_ = std::thread(&NtripServer::TheradHandler, this);
+-  thread_.detach();
+-  service_is_running_ = true;
+-  printf("NtripServer starting ...\n");
+-  return true;
+-}
+-
+-void NtripServer::Stop(void) {
+-  thread_is_running_ = false;
+-  service_is_running_ = false;
+-  if (socket_fd_ != -1) {
+-    close(socket_fd_);
+-    socket_fd_ = -1;
+-  }
+-  if (!data_list_.empty()) {
+-    data_list_.clear();
+-  }
+-}
+-
+-//
+-// Private method.
+-//
+-
+-void NtripServer::TheradHandler(void) {
+-  int ret;
+-  char recv_buffer[1024] = {};
+-  thread_is_running_ = true;
+-  int cnt = 100;
+-  while (thread_is_running_) {
+-    // TODO(mengyuming@hotmail.com) : Now just send test data.
+-    if (--cnt == 0) {  // Near once per second.
+-      ret = send(socket_fd_, example_data, sizeof(example_data), 0);
+-      if (ret > 0) {
+-        printf("Send example_data success\n");
+-      } else if (ret < 0) {
+-        if ((errno == EAGAIN) || (errno == EWOULDBLOCK) || (errno == EINTR)) {
+-          continue;
+-        } else {
+-          printf("Remote socket error!!!\n");
+-          break;
+-        }
+-      } else if (ret == 0) {
+-        printf("Remote socket close!!!\n");
+-        break;
+-      }
+-      cnt = 100;
+-    }
+-    memset(recv_buffer, 0x0, sizeof(recv_buffer));
+-    ret = recv(socket_fd_, recv_buffer, sizeof(recv_buffer), 0);
+-    if (ret == 0) {
+-      printf("Remote socket close!!!\n");
+-      break;
+-    }
+-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+-  }
+-  close(socket_fd_);
+-  socket_fd_ = -1;
+-  thread_is_running_ = false;
+-  service_is_running_ = false;
+-}
+-
+-}  // namespace libntrip
+diff --recursive --unified --new-file --no-dereference upstream/src/ntrip_server.h src/src/ntrip_server.h
+--- upstream/src/ntrip_server.h	2020-10-06 06:58:41.000000000 +0000
++++ src/src/ntrip_server.h	1970-01-01 00:00:00.000000000 +0000
+@@ -1,97 +0,0 @@
+-// Copyright 2019 Yuming Meng. All Rights Reserved.
+-//
+-// Licensed under the Apache License, Version 2.0 (the "License");
+-// you may not use this file except in compliance with the License.
+-// You may obtain a copy of the License at
+-//
+-//     http://www.apache.org/licenses/LICENSE-2.0
+-//
+-// Unless required by applicable law or agreed to in writing, software
+-// distributed under the License is distributed on an "AS IS" BASIS,
+-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+-// See the License for the specific language governing permissions and
+-// limitations under the License.
+-
+-#ifndef NTRIPLIB_NTRIP_SERVER_H_
+-#define NTRIPLIB_NTRIP_SERVER_H_
+-
+-
+-#include <sys/types.h>
+-#include <sys/socket.h>
+-
+-#include <string>
+-#include <thread>  // NOLINT.
+-#include <list>
+-#include <vector>
+-
+-namespace libntrip {
+-
+-class NtripServer {
+- public:
+-  NtripServer() = default;
+-  NtripServer(const NtripServer &) = delete;
+-  NtripServer& operator=(const NtripServer &) = delete;
+-  NtripServer(const std::string &ip, const int &port,
+-         const std::string &user, const std::string &passwd,
+-         const std::string &mountpoint,
+-         const std::string &ntrip_str) :
+-      server_ip_(ip),
+-      server_port_(port),
+-      user_(user),
+-      passwd_(passwd),
+-      mountpoint_(mountpoint),
+-      ntrip_str_(ntrip_str) { }
+-  ~NtripServer();
+-
+-  void Init(const std::string &ip, const int &port,
+-            const std::string &user, const std::string &passwd,
+-            const std::string &mountpoint, const std::string &ntrip_str) {
+-    server_ip_ = ip;
+-    server_port_ = port;
+-    user_ = user;
+-    passwd_ = passwd;
+-    mountpoint_ = mountpoint;
+-    ntrip_str_ = ntrip_str;
+-  }
+-
+-  bool SendData(const char *data, const int &size) {
+-    return (size == send(socket_fd_, data, size, 0));
+-  }
+-  bool SendData(const std::vector<char> &data) {
+-    return SendData(data.data(), data.size());
+-  }
+-  bool SendData(const std::string &data) {
+-    return SendData(data.data(), data.size());
+-  }
+-
+-  // TODO(mengyuming@hotmail.com) : Not implemented.
+-  void PushData(const char *data, const int &size);
+-  void PushData(const std::vector<char> &data);
+-  void PushData(const std::string &data);
+-
+-  bool Run(void);
+-  void Stop(void);
+-  bool service_is_running(void) const {
+-    return service_is_running_;
+-  }
+-
+- private:
+-  // Thread handler.
+-  void TheradHandler(void);
+-
+-  bool thread_is_running_ = false;
+-  bool service_is_running_ = false;
+-  std::thread thread_;
+-  std::string server_ip_;
+-  int server_port_ = -1;
+-  std::string user_;
+-  std::string passwd_;
+-  std::string mountpoint_;
+-  std::string ntrip_str_;
+-  int socket_fd_ = -1;
+-  std::list<std::vector<char>> data_list_;
+-};
+-
+-}  // namespace libntrip
+-
+-#endif  // NTRIPLIB_NTRIP_SERVER_H_
+diff --recursive --unified --new-file --no-dereference upstream/src/ntrip_util.cc src/src/ntrip_util.cc
+--- upstream/src/ntrip_util.cc	2020-10-06 06:58:41.000000000 +0000
++++ src/src/ntrip_util.cc	2024-06-20 10:37:55.000000000 +0000
+@@ -19,128 +19,150 @@
+ #include <time.h>
+ #include <unistd.h>
+ 
+-#include <string>
+ #include <fstream>
++#include <string>
+ 
+-
+-namespace libntrip {
+-
+-namespace {
+-
+-double DegreeConvertToDDMM(double const& degree) {
+-  int deg = static_cast<int>(floor(degree));
+-  double minute = degree - deg*1.0;
+-  return (deg*1.0 + minute*60.0/100.0);
++namespace libntrip
++{
++namespace
++{
++#define LATLON_STR 32
++
++void DegreeConvertToDDMM(double const &degree, int deg_len, char *return_string)
++{
++	double const input_degrees = fabs(degree);
++	int int_degree		   = 0;
++	int int_min		   = 0;
++	double float_min	   = 0;
++
++	int_degree    = static_cast<int>(floor(input_degrees));
++	double minute = input_degrees - int_degree * 1.0;
++	float_min     = minute * 60;
++
++	if (deg_len == 2) {
++		snprintf(return_string, LATLON_STR - 1, "%.2d%07.4f", int_degree, float_min);
++	} else {
++		snprintf(return_string, LATLON_STR - 1, "%.3d%07.4f", int_degree, float_min);
++	}
+ }
+ 
+-}  // namespace
++} // namespace
+ 
+ //
+ // Ntrip util.
+ //
+ 
+-constexpr char kBase64CodingTable[] =
+-  "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+-
+-void PrintCharArray(const char *src, const int &len) {
+-  for (int i = 0; i < len; ++i) {
+-      printf("%c", (unsigned char)src[i]);
+-        }
+-    printf("\n");
+-}
+-
+-void PrintCharArrayHex(const char *src, const int &len) {
+-  for (int i = 0; i < len; ++i) {
+-      printf("%02x ", (unsigned char)src[i]);
+-        }
+-    printf("\n");
+-}
+-
+-int BccCheckSumCompareForGGA(const char *src) {
+-  int sum = 0;
+-  int num = 0;
+-
+-  sscanf(src, "%*[^*]*%x", &num);
+-  for (int i = 1; src[i] != '*'; ++i) {
+-    sum ^= src[i];
+-  }
+-  return sum - num;
+-}
+-
+-int GetIndexByChar(const char &ch) {
+-  for (int i = 0; i < 64; ++i) {
+-    if (ch == kBase64CodingTable[i]) {
+-      return i;
+-    }
+-  }
+-  return -1;
+-}
+-
+-inline char GetCharByIndex(const int &index) {
+-  return kBase64CodingTable[index];
+-}
+-
+-int Base64Encode(const char *src, char *result) {
+-  char temp[3] = {0};
+-  int i = 0, j = 0, count = 0;
+-  int len = strlen(src);
+-  if (len == 0) {
+-    return -1;
+-  }
+-
+-  if (len%3 != 0) {
+-    count = 3 - len%3;
+-  }
+-
+-  while (i < len) {
+-    strncpy(temp, src+i, 3);
+-    result[j+0] = GetCharByIndex((temp[0]&0xFC) >> 2);
+-    result[j+1] = GetCharByIndex(((temp[0]&0x3) << 4) | ((temp[1]&0xF0) >> 4));
+-    if (temp[1] == 0) {
+-      break;
+-    }
+-    result[j+2] = GetCharByIndex(((temp[1]&0xF) << 2) | ((temp[2]&0xC0) >> 6));
+-    if (temp[2] == 0) {
+-      break;
+-    }
+-    result[j+3] = GetCharByIndex(temp[2]&0x3F);
+-    i += 3;
+-    j += 4;
+-    memset(temp, 0x0, 3);
+-  }
++constexpr char kBase64CodingTable[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+ 
+-  while (count) {
+-    result[j+4-count] = '=';
+-    --count;
+-  }
++void PrintCharArray(const char *src, const int &len)
++{
++	for (int i = 0; i < len; ++i) {
++		printf("%c", (unsigned char)src[i]);
++	}
++	printf("\n");
++}
++
++void PrintCharArrayHex(const char *src, const int &len)
++{
++	for (int i = 0; i < len; ++i) {
++		printf("%02x ", (unsigned char)src[i]);
++	}
++	printf("\n");
++}
++
++int BccCheckSumCompareForGGA(const char *src)
++{
++	int sum = 0;
++	int num = 0;
++
++	// It is fine to use a semgrep here, because the data being read from
++	// nosemgrep
++	sscanf(src, "%*[^*]*%x", &num);
++	for (int i = 1; src[i] != '*'; ++i) {
++		sum ^= src[i];
++	}
++	return sum - num;
++}
++
++int GetIndexByChar(const char &ch)
++{
++	for (int i = 0; i < 64; ++i) {
++		if (ch == kBase64CodingTable[i]) {
++			return i;
++		}
++	}
++	return -1;
++}
++
++inline char GetCharByIndex(const int &index)
++{
++	return kBase64CodingTable[index];
++}
++
++int Base64Encode(const char *src, char *result)
++{
++	char temp[3] = { 0 };
++	int i = 0, j = 0, count = 0;
++	int len = strlen(src);
++	if (len == 0) {
++		return -1;
++	}
++
++	if (len % 3 != 0) {
++		count = 3 - len % 3;
++	}
++
++	while (i < len) {
++		strncpy(temp, src + i, 3);
++		result[j + 0] = GetCharByIndex((temp[0] & 0xFC) >> 2);
++		result[j + 1] = GetCharByIndex(((temp[0] & 0x3) << 4) | ((temp[1] & 0xF0) >> 4));
++		if (temp[1] == 0) {
++			break;
++		}
++		result[j + 2] = GetCharByIndex(((temp[1] & 0xF) << 2) | ((temp[2] & 0xC0) >> 6));
++		if (temp[2] == 0) {
++			break;
++		}
++		result[j + 3] = GetCharByIndex(temp[2] & 0x3F);
++		i += 3;
++		j += 4;
++		memset(temp, 0x0, 3);
++	}
++
++	while (count) {
++		result[j + 4 - count] = '=';
++		--count;
++	}
+ 
+-  return 0;
++	return 0;
+ }
+ 
++// For now this function is not used and semgrep is complaining about it. Let's just keep it commented out.
++/*
+ int Base64Decode(const char *src, char *user, char *passwd) {
+   char result[64] = {0};
+   char temp[4] = {0};
+   int i = 0;
+   int j = 0;
+   int len = strlen(src);
+-  if ((len == 0) || (len%4 != 0)) {
++  if ((len == 0) || (len % 4 != 0)) {
+     return -1;
+   }
+ 
+   while (i < len) {
+-    strncpy(temp, src+i, 4);
+-    result[j+0] = ((GetIndexByChar(temp[0])&0x3F) << 2) |
+-                  ((GetIndexByChar(temp[1])&0x3F) >> 4);
++    strncpy(temp, src + i, 4);
++    result[j + 0] = ((GetIndexByChar(temp[0]) & 0x3F) << 2) |
++                    ((GetIndexByChar(temp[1]) & 0x3F) >> 4);
+     if (temp[2] == '=') {
+       break;
+     }
+-    result[j+1] = ((GetIndexByChar(temp[1])&0xF) << 4) |
+-                  ((GetIndexByChar(temp[2])&0x3F) >> 2);
++    result[j + 1] = ((GetIndexByChar(temp[1]) & 0xF) << 4) |
++                    ((GetIndexByChar(temp[2]) & 0x3F) >> 2);
+     if (temp[3] == '=') {
+       break;
+     }
+-    result[j+2] = ((GetIndexByChar(temp[2])&0x3) << 6) |
+-                  ((GetIndexByChar(temp[3])&0x3F));
++    result[j + 2] = ((GetIndexByChar(temp[2]) & 0x3) << 6) |
++                    ((GetIndexByChar(temp[3]) & 0x3F));
+     i += 4;
+     j += 3;
+     memset(temp, 0x0, 4);
+@@ -149,10 +171,13 @@
+ 
+   return 0;
+ }
++*/
+ 
+-
++// For now this function is not used and semgrep is complaining about it. Let's just keep it commented out.
++/*
+ int GetSourcetable(const char *path, char *data, const int &data_len) {
+-  if (access(path, F_OK) == -1) return -1;
++  if (access(path, F_OK) == -1)
++    return -1;
+ 
+   std::ifstream ifs;
+   ifs.open(path, std::ios::in | std::ios::binary);
+@@ -172,41 +197,45 @@
+              "%s"
+              "ENDSOURCETABLE\r\n",
+              kCasterAgent, length, data);
+-    delete [] data;
++    delete[] data;
+   }
+ 
+   return 0;
+ }
++*/
+ 
+-int GetGGAFrameData(double const& latitude,
+-                    double const& longitude,
+-                    double const& altitude,
+-                    std::string* const gga_str) {
+-  if (gga_str == nullptr) return -1;
+-  char src[256] = {0};
+-  time_t t = time(nullptr);
+-  struct tm *tt = localtime(&t);
+-  double timestamp[3];
+-  timestamp[0] = tt->tm_hour >= 8 ? tt->tm_hour - 8 : tt->tm_hour + 24 - 8;
+-  timestamp[1] = tt->tm_min;
+-  timestamp[2] = tt->tm_sec;
+-  char *ptr = src;
+-  ptr += snprintf(ptr, sizeof(src)+src-ptr,
+-      "$GPGGA,%02.0f%02.0f%05.2f,%012.7f,%s,%013.7f,%s,1,"
+-      "10,1.2,%.4f,M,-2.860,M,,0000",
+-      timestamp[0], timestamp[1], timestamp[2],
+-      fabs(DegreeConvertToDDMM(latitude))*100.0,
+-      latitude > 0.0 ? "N" : "S",
+-      fabs(DegreeConvertToDDMM(longitude))*100.0,
+-      longitude > 0.0 ? "E" : "W",
+-      altitude);
+-  uint8_t checksum = 0;
+-  for (char *q = src + 1; q <= ptr; q++) {
+-    checksum ^= *q; // check sum.
+-  }
+-  ptr += snprintf(ptr, sizeof(src)+src-ptr, "*%02X%c%c", checksum, 0x0D, 0x0A);
+-  *gga_str = std::string(src, ptr-src);
+-  return BccCheckSumCompareForGGA(gga_str->c_str());
++int GetGGAFrameData(double const &latitude, double const &longitude, double const &altitude,
++		    std::string *const gga_str)
++{
++	if (gga_str == nullptr)
++		return -1;
++	char src[256] = { 0 };
++	time_t t      = time(nullptr);
++	struct tm *tt = gmtime(&t);
++	double timestamp[3];
++	timestamp[0] = tt->tm_hour;
++	timestamp[1] = tt->tm_min;
++	timestamp[2] = tt->tm_sec;
++	char *ptr    = src;
++
++	char lat_string[LATLON_STR] = { 0 };
++	char lon_string[LATLON_STR] = { 0 };
++
++	DegreeConvertToDDMM(latitude, 2, lat_string);
++	DegreeConvertToDDMM(longitude, 3, lon_string);
++
++	ptr += snprintf(ptr, sizeof(src) + src - ptr,
++			"$GPGGA,%02.0f%02.0f%05.2f,%s,%s,%s,%s,1,"
++			"10,1.2,%.4f,M,-2.860,M,,0000",
++			timestamp[0], timestamp[1], timestamp[2], lat_string, latitude > 0.0 ? "N" : "S",
++			lon_string, longitude > 0.0 ? "E" : "W", altitude);
++	uint8_t checksum = 0;
++	for (char *q = src + 1; q <= ptr; q++) {
++		checksum ^= *q; // check sum.
++	}
++	ptr += snprintf(ptr, sizeof(src) + src - ptr, "*%02X%c%c", checksum, 0x0D, 0x0A);
++	*gga_str = std::string(src, ptr - src);
++	return BccCheckSumCompareForGGA(gga_str->c_str());
+ }
+ 
+-}  // namespace libntrip
++} // namespace libntrip
+diff --recursive --unified --new-file --no-dereference upstream/src/ntrip_util.h src/src/ntrip_util.h
+--- upstream/src/ntrip_util.h	2020-10-06 06:58:41.000000000 +0000
++++ src/src/ntrip_util.h	2024-06-20 10:37:55.000000000 +0000
+@@ -17,9 +17,8 @@
+ 
+ #include <string>
+ 
+-
+-namespace libntrip {
+-
++namespace libntrip
++{
+ constexpr char kCasterAgent[] = "NTRIP NTRIPCaster/20191018";
+ constexpr char kClientAgent[] = "NTRIP NTRIPClient/20191018";
+ constexpr char kServerAgent[] = "NTRIP NTRIPServer/20191018";
+@@ -28,11 +27,9 @@
+ void PrintCharArrayHex(const char *src, const int &len);
+ int BccCheckSumCompareForGGA(const char *src);
+ int Base64Encode(const char *src, char *result);
+-int Base64Decode(const char *src, char *user, char *passwd);
+-int GetSourcetable(const char *path, char *data, const int &data_len);
+-int GetGGAFrameData(double const& latitude, double const& longitude,
+-                    double const& altitude, std::string* const gga_str);
++int GetGGAFrameData(double const &latitude, double const &longitude, double const &altitude,
++		    std::string *const gga_str);
+ 
+-}  // namespace libntrip
++} // namespace libntrip
+ 
+-#endif  // NTRIPLIB_NTRIP_UTIL_H_
++#endif // NTRIPLIB_NTRIP_UTIL_H_
+diff --recursive --unified --new-file --no-dereference upstream/test/support/.git src/test/support/.git
+--- upstream/test/support/.git	1970-01-01 00:00:00.000000000 +0000
++++ src/test/support/.git	2024-06-20 10:37:55.000000000 +0000
+@@ -0,0 +1 @@
++gitdir: ../../.git/modules/test/support
+diff --recursive --unified --new-file --no-dereference upstream/test/support/README.md src/test/support/README.md
+--- upstream/test/support/README.md	1970-01-01 00:00:00.000000000 +0000
++++ src/test/support/README.md	2024-06-20 10:37:55.000000000 +0000
+@@ -0,0 +1,3 @@
++# Stubs
++
++Stub headers that enable inline function mocking with Cmock.
+diff --recursive --unified --new-file --no-dereference upstream/test/support/stub_blob.h src/test/support/stub_blob.h
+--- upstream/test/support/stub_blob.h	1970-01-01 00:00:00.000000000 +0000
++++ src/test/support/stub_blob.h	2024-06-20 10:37:55.000000000 +0000
+@@ -0,0 +1,22 @@
++#ifndef STUB_BLOB_H
++#define STUB_BLOB_H
++
++#define blob_data     blob_data_orig
++#define blob_len      blob_len_orig
++#define blob_buf_init blob_buf_init_orig
++#define blob_buf_free blob_buf_free_orig
++#define blob_pad_len  blob_pad_len_orig
++#include <blob.h>
++#undef blob_data
++#undef blob_len
++#undef blob_buf_init
++#undef blob_buf_free
++#undef blob_pad_len
++
++void *blob_data(const struct blob_attr *attr);
++size_t blob_len(const struct blob_attr *attr);
++int blob_buf_init(struct blob_buf *buf, int id);
++void blob_buf_free(struct blob_buf *buf);
++size_t blob_pad_len(const struct blob_attr *attr);
++
++#endif // STUB_BLOB_H
+diff --recursive --unified --new-file --no-dereference upstream/test/support/stub_blobmsg.h src/test/support/stub_blobmsg.h
+--- upstream/test/support/stub_blobmsg.h	1970-01-01 00:00:00.000000000 +0000
++++ src/test/support/stub_blobmsg.h	2024-06-20 10:37:55.000000000 +0000
+@@ -0,0 +1,35 @@
++#ifndef STUB_BLOBMSG_H
++#define STUB_BLOBMSG_H
++
++#define blobmsg_add_field  blobmsg_add_field_orig
++#define blobmsg_add_string blobmsg_add_string_orig
++#define blobmsg_add_u32	   blobmsg_add_u32_orig
++#define blobmsg_get_string blobmsg_get_string_orig
++#define blobmsg_get_bool   blobmsg_get_bool_orig
++#define blobmsg_parse	   blobmsg_parse_orig
++#define blobmsg_data	   blobmsg_data_orig
++#define blobmsg_len	   blobmsg_len_orig
++#define blobmsg_data_len   blobmsg_data_len_orig
++#include <libubox/blobmsg.h>
++#undef blobmsg_add_field
++#undef blobmsg_add_string
++#undef blobmsg_add_u32
++#undef blobmsg_get_string
++#undef blobmsg_get_bool
++#undef blobmsg_parse
++#undef blobmsg_data
++#undef blobmsg_len
++#undef blobmsg_data_len
++
++int blobmsg_add_field(struct blob_buf *buf, int type, const char *name, const void *data, unsigned int len);
++int blobmsg_add_string(struct blob_buf *buf, const char *name, const char *string);
++int blobmsg_add_u32(struct blob_buf *buf, const char *name, uint32_t val);
++char *blobmsg_get_string(struct blob_attr *attr);
++bool blobmsg_get_bool(struct blob_attr *attr);
++int blobmsg_parse(const struct blobmsg_policy *policy, int policy_len, struct blob_attr **tb, void *data,
++		  unsigned int len);
++void *blobmsg_data(const struct blob_attr *attr);
++size_t blobmsg_len(const struct blob_attr *attr);
++size_t blobmsg_data_len(const struct blob_attr *attr);
++
++#endif // STUB_BLOBMSG_H
+diff --recursive --unified --new-file --no-dereference upstream/test/support/stub_libubus.h src/test/support/stub_libubus.h
+--- upstream/test/support/stub_libubus.h	1970-01-01 00:00:00.000000000 +0000
++++ src/test/support/stub_libubus.h	2024-06-20 10:37:55.000000000 +0000
+@@ -0,0 +1,47 @@
++#ifndef STUB_LIBUBUS_H
++#define STUB_LIBUBUS_H
++#ifdef TEST
++#include "stub_blobmsg.h"
++#else
++#include <libubox/blobmsg.h>
++#endif
++
++#define ubus_connect		 ubus_connect_orig
++#define ubus_free		 ubus_free_orig
++#define ubus_strerror		 ubus_strerror_orig
++#define ubus_lookup_id		 ubus_lookup_id_orig
++#define ubus_add_object		 ubus_add_object_orig
++#define ubus_register_subscriber ubus_register_subscriber_orig
++#define ubus_invoke		 ubus_invoke_orig
++#define ubus_subscribe		 ubus_subscribe_orig
++#define ubus_send_event		 ubus_send_event_orig
++#define ubus_invoke_fd		 ubus_invoke_fd_orig
++#define ubus_send_reply		 ubus_send_reply_orig
++#include <libubus.h>
++#undef ubus_connect
++#undef ubus_free
++#undef ubus_strerror
++#undef ubus_lookup_id
++#undef ubus_add_object
++#undef ubus_register_subscriber
++#undef ubus_invoke
++#undef ubus_subscribe
++#undef ubus_send_event
++#undef ubus_invoke_fd
++#undef ubus_send_reply
++
++struct ubus_context *ubus_connect(const char *path);
++void ubus_free(struct ubus_context *ctx);
++const char *ubus_strerror(int error);
++int ubus_lookup_id(struct ubus_context *ctx, const char *path, uint32_t *id);
++int ubus_add_object(struct ubus_context *ctx, struct ubus_object *obj);
++int ubus_register_subscriber(struct ubus_context *ctx, struct ubus_subscriber *obj);
++int ubus_subscribe(struct ubus_context *ctx, struct ubus_subscriber *obj, uint32_t id);
++int ubus_invoke(struct ubus_context *ctx, uint32_t obj, const char *method, struct blob_attr *msg,
++		ubus_data_handler_t cb, void *priv, int timeout);
++int ubus_send_event(struct ubus_context *ctx, const char *id, struct blob_attr *data);
++int ubus_invoke_fd(struct ubus_context *ctx, uint32_t obj, const char *method, struct blob_attr *msg,
++		   ubus_data_handler_t cb, void *priv, int timeout, int fd);
++int ubus_send_reply(struct ubus_context *ctx, struct ubus_request_data *req, struct blob_attr *msg);
++
++#endif // STUB_LIBUBUS_H
+diff --recursive --unified --new-file --no-dereference upstream/test/support/stub_stat.h src/test/support/stub_stat.h
+--- upstream/test/support/stub_stat.h	1970-01-01 00:00:00.000000000 +0000
++++ src/test/support/stub_stat.h	2024-06-20 10:37:55.000000000 +0000
+@@ -0,0 +1,16 @@
++#ifndef STUB_STAT_H
++#define STUB_STAT_H
++
++struct stat;
++typedef unsigned int __mode_t;
++
++#define stat  stat_orig
++#define mkdir mkdir_orig
++#include <sys/stat.h>
++#undef stat
++#undef mkdir
++
++int stat(const char *__restrict __file, struct stat *__restrict __buf);
++int mkdir(const char *__path, __mode_t __mode);
++
++#endif // STUB_STAT_H
+diff --recursive --unified --new-file --no-dereference upstream/test/support/stub_stdio.h src/test/support/stub_stdio.h
+--- upstream/test/support/stub_stdio.h	1970-01-01 00:00:00.000000000 +0000
++++ src/test/support/stub_stdio.h	2024-06-20 10:37:55.000000000 +0000
+@@ -0,0 +1,25 @@
++#ifndef STUB_STDIO_H
++#define STUB_STDIO_H
++
++#define fopen	fopen_orig
++#define fgets	fgets_orig
++#define fprintf fprintf_orig
++#define fflush	fflush_orig
++#define fclose	fclose_orig
++#define remove	remove_orig
++#include <stdio.h>
++#undef fopen
++#undef fgets
++#undef fprintf
++#undef fflush
++#undef fclose
++#undef remove
++
++FILE *fopen(const char *__restrict __filename, const char *__restrict __modes);
++char *fgets(char *__restrict __s, int __n, FILE *__restrict __stream);
++int fprintf(FILE *__restrict __stream, const char *__restrict __format, ...);
++int fflush(FILE *__stream);
++int fclose(FILE *__stream);
++int remove(const char *__filename);
++
++#endif // STUB_STDIO_H
+diff --recursive --unified --new-file --no-dereference upstream/test/support/stub_sysinfo.h src/test/support/stub_sysinfo.h
+--- upstream/test/support/stub_sysinfo.h	1970-01-01 00:00:00.000000000 +0000
++++ src/test/support/stub_sysinfo.h	2024-06-20 10:37:55.000000000 +0000
+@@ -0,0 +1,22 @@
++#ifndef STUB_SYSINFO_H
++#define STUB_SYSINFO_H
++
++struct sysinfo {
++	unsigned long uptime;
++	unsigned long loads[3];
++	unsigned long totalram;
++	unsigned long freeram;
++	unsigned long sharedram;
++	unsigned long bufferram;
++	unsigned long totalswap;
++	unsigned long freeswap;
++	unsigned short procs, pad;
++	unsigned long totalhigh;
++	unsigned long freehigh;
++	unsigned mem_unit;
++	char __reserved[256];
++};
++
++int sysinfo(struct sysinfo *info);
++
++#endif
+diff --recursive --unified --new-file --no-dereference upstream/test/support/stub_uci.h src/test/support/stub_uci.h
+--- upstream/test/support/stub_uci.h	1970-01-01 00:00:00.000000000 +0000
++++ src/test/support/stub_uci.h	2024-06-20 10:37:55.000000000 +0000
+@@ -0,0 +1,43 @@
++#ifndef STUB_UCI_H
++#define STUB_UCI_H
++
++#define uci_alloc_context	 uci_alloc_context_orig
++#define uci_free_context	 uci_free_context_orig
++#define uci_load		 uci_load_orig
++#define uci_unload		 uci_unload_orig
++#define uci_get_errorstr	 uci_get_errorstr_orig
++#define uci_lookup_package	 uci_lookup_package_orig
++#define uci_lookup_section	 uci_lookup_section_orig
++#define uci_lookup_option	 uci_lookup_option_orig
++#define uci_lookup_option_string uci_lookup_option_string_orig
++#define uci_lookup_ptr		 uci_lookup_ptr_orig
++#define uci_set			 uci_set_orig
++#define uci_commit		 uci_commit_orig
++#include <uci.h>
++#undef uci_alloc_context
++#undef uci_free_context
++#undef uci_load
++#undef uci_unload
++#undef uci_get_errorstr
++#undef uci_lookup_package
++#undef uci_lookup_section
++#undef uci_lookup_option_string
++#undef uci_lookup_ptr
++#undef uci_set
++#undef uci_commit
++#undef uci_lookup_option
++
++struct uci_context *uci_alloc_context(void);
++void uci_free_context(struct uci_context *ctx);
++int uci_load(struct uci_context *ctx, const char *name, struct uci_package **package);
++int uci_unload(struct uci_context *ctx, struct uci_package *p);
++void uci_get_errorstr(struct uci_context *ctx, char **dest, const char *str);
++struct uci_package *uci_lookup_package(struct uci_context *ctx, const char *name);
++const char *uci_lookup_option_string(struct uci_context *ctx, struct uci_section *s, const char *name);
++extern int uci_lookup_ptr(struct uci_context *ctx, struct uci_ptr *ptr, char *str, bool extended);
++extern int uci_set(struct uci_context *ctx, struct uci_ptr *ptr);
++extern int uci_commit(struct uci_context *ctx, struct uci_package **p, bool overwrite);
++struct uci_section *uci_lookup_section(struct uci_context *ctx, struct uci_package *p, const char *name);
++struct uci_option *uci_lookup_option(struct uci_context *ctx, struct uci_section *s, const char *name);
++
++#endif // STUB_UCI_H
+diff --recursive --unified --new-file --no-dereference upstream/test/support/stub_uloop.h src/test/support/stub_uloop.h
+--- upstream/test/support/stub_uloop.h	1970-01-01 00:00:00.000000000 +0000
++++ src/test/support/stub_uloop.h	2024-06-20 10:37:55.000000000 +0000
+@@ -0,0 +1,22 @@
++#ifndef STUB_ULOOP_H
++#define STUB_ULOOP_H
++
++#define uloop_timeout_set uloop_timeout_set_orig
++#define uloop_init	  uloop_init_orig
++#define uloop_done	  uloop_done_orig
++#define uloop_fd_add	  uloop_fd_add_orig
++#define uloop_run_timeout uloop_run_timeout_orig
++#include <libubox/uloop.h>
++#undef uloop_timeout_set
++#undef uloop_init
++#undef uloop_done
++#undef uloop_fd_add
++#undef uloop_run_timeout
++
++int uloop_timeout_set(struct uloop_timeout *timeout, int msecs);
++int uloop_init(void);
++void uloop_done(void);
++int uloop_fd_add(struct uloop_fd *sock, unsigned int flags);
++int uloop_run_timeout(int timeout);
++
++#endif // STUB_ULOOP_H
+diff --recursive --unified --new-file --no-dereference upstream/test.py src/test.py
+--- upstream/test.py	2020-10-06 06:58:41.000000000 +0000
++++ src/test.py	1970-01-01 00:00:00.000000000 +0000
+@@ -1,31 +0,0 @@
+-
+-# -*- coding:utf-8 -*-
+-import serial
+-import time
+-import sqlite3
+-
+-def hexshow(data): 
+-    hex_data = ''
+-    hLen = len(data) 
+-
+-    for i in xrange(hLen):
+-        hvol = ord(data[i])
+-        hhex = '%02x' % hvol
+-        hex_data += hhex+' '
+-
+-    print 'hexshow:', hex_data 
+-
+-# 加载串口端口信息
+-ser = serial.Serial("/dev/ttyUSB0", 115200, timeout=0.5)    # 57600为了和仪器的波特率匹配
+-ser.flushInput()                                            # 将serial上的接收数据全部清除
+-
+-
+-while (True):
+-    
+-    lenBuffer = ser.inWaiting()
+-    count = ser.read(lenBuffer)
+-    print(count)
+-    #hexshow(count)
+-    time.sleep(0.8)     # 程序暂停5秒，等待缓存内存入数据。
+-    
+-

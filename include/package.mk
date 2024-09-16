@@ -67,6 +67,7 @@ include $(INCLUDE_DIR)/prereq.mk
 include $(INCLUDE_DIR)/unpack.mk
 include $(INCLUDE_DIR)/depends.mk
 include $(INCLUDE_DIR)/portable.mk
+include $(INCLUDE_DIR)/openrc.mk
 
 ifneq ($(wildcard $(TOPDIR)/git-src/$(PKG_NAME)/.git),)
   USE_GIT_SRC_CHECKOUT:=1
@@ -341,9 +342,9 @@ ifndef Package/geninfo
 define Package/geninfo
 	printf "%s," \
 		"$(PKG_NAME)" \
-		"$(VERSION)" \
+		"$(if $(PKG_UPSTREAM_VERSION),$(PKG_UPSTREAM_VERSION),-)" \
 		"$(LICENSE)" \
-		"$(call Download/ParseURL,$(firstword $(PKG_ORIGIN_URL)))" \
+		"$(if $(PKG_UPSTREAM_URL),$(PKG_UPSTREAM_URL)/$(PKG_UPSTREAM_FILE),-)" \
 		>> "$(GENINFO_FILE)"; \
 	printf "\n" >> "$(GENINFO_FILE)"
 endef
@@ -464,7 +465,4 @@ ARCH=$(ARCH)" > "$(TMP_DIR)/.tc"; \
 	)
 
 geninfo:
-	$(if $(findstring package/teltonika,$(shell pwd)), \
-		$(if $(GPL_INCLUDE_SRC),$(call Package/geninfo)), \
-		$(if $(findstring feeds/vuci,$(shell pwd)),,$(call Package/geninfo)) \
-	)
+	$(if $(PKG_LICENSE),$(if $(findstring Teltonika-,$(PKG_LICENSE)),,$(call Package/geninfo)))

@@ -132,6 +132,8 @@ function iface_update_supplicant_macaddr(phy, config)
 	ubus.call("wpa_supplicant", "phy_set_macaddr_list", { phy: phy, macaddr: macaddr_list });
 }
 
+let reserved_macaddr = null;
+
 function iface_restart(phydev, config, old_config)
 {
 	let phy = phydev.name;
@@ -148,8 +150,17 @@ function iface_restart(phydev, config, old_config)
 	phydev.macaddr_init(iface_config_macaddr_list(config));
 	for (let i = 0; i < length(config.bss); i++) {
 		let bss = config.bss[i];
-		if (bss.default_macaddr)
-			bss.bssid = phydev.macaddr_next();
+		if (bss.default_macaddr) {
+			let macaddr = phydev.macaddr_next();
+			if(!reserved_macaddr) {
+				reserved_macaddr = phydev.macaddr_next();
+			}
+			if(macaddr == reserved_macaddr) {
+				bss.bssid = phydev.macaddr_next();
+				continue;
+			}
+			bss.bssid = macaddr;
+		}
 	}
 
 	iface_update_supplicant_macaddr(phy, config);
@@ -270,6 +281,7 @@ function get_config_bss(config, idx)
 
 function iface_reload_config(phydev, config, old_config)
 {
+	reserved_macaddr = null;
 	let phy = phydev.name;
 
 	if (!old_config || !is_equal(old_config.radio, config.radio))
@@ -514,6 +526,7 @@ function iface_reload_config(phydev, config, old_config)
 
 function iface_set_config(phy, config)
 {
+	reserved_macaddr = null;
 	let old_config = hostapd.data.config[phy];
 
 	hostapd.data.config[phy] = config;

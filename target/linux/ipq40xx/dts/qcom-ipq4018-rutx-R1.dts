@@ -29,8 +29,8 @@
 
 			gpio_sim_select {
 				gpio-export,name = "sim_sel";
-				gpio-export,output = <1>;
-				gpios = <&shift_io 3 GPIO_ACTIVE_LOW>;
+				gpio-export,output = <0>;
+				gpios = <&shift_io 3 GPIO_ACTIVE_HIGH>;
 			};
 		};
 
@@ -155,4 +155,10 @@
 	};
 
 	/delete-node/ ioman;
+};
+
+&mnfinfo {
+	sim_cfg {
+		default = "2112000_2111000";
+	};
 };

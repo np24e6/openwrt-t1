@@ -1,6 +1,7 @@
 #!/usr/bin/lua
 local CFG = {
-    APN_DB = "/usr/share/mobifd/apn.db",
+    APN_DB = "/tmp/apn.db",
+    APN_DB_COMPRESSED = "/usr/share/mobifd/apn.db.gz",
     BACKUP_FILE = "/usr/share/mobifd/apn_backup.json"
 }
 
@@ -10,7 +11,7 @@ local sqlite = require("vuci.sqlite").init()
 
 local function connect_db()
     local db = sqlite.database(CFG.APN_DB)
-    if not db then os.exit(1) end
+    if not db:get_db() then os.exit(1) end
     return db
 end
 
@@ -39,7 +40,6 @@ local function restore_data()
         local binds = {}
         local exist_binds = {}
         for k in pairs(row) do
-            if k:match("[^%w]") then os.exit(3) end
             table.insert(keys, k)
             table.insert(binds, ":" .. k)
             table.insert(exist_binds, k .. " = :" .. k)
@@ -58,6 +58,8 @@ local function restore_data()
     end
 
     db:close()
+    -- Compress and store database
+    os.execute("gzip -kc " .. CFG.APN_DB .. " > " .. CFG.APN_DB_COMPRESSED)
     fs.unlink(CFG.BACKUP_FILE)
 end
 

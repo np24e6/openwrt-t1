@@ -6,10 +6,10 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=cmStreamApp
-PKG_VERSION:=2024-03-05
+PKG_VERSION:=2024-06-17
 PKG_RELEASE:=1
 
-PKG_SOURCE_VERSION:=2.1
+PKG_SOURCE_VERSION:=2.2
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_SOURCE_VERSION)-$(PKG_VERSION)
 PKG_SOURCE:=$(PKG_SOURCE_SUBDIR).tar.gz
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_SOURCE_SUBDIR)
@@ -49,8 +49,8 @@ define Package/cmStreamApp/install
 	$(INSTALL_DIR) $(1)/etc/hotplug.d/iface
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/files/iot.hotplug $(1)/etc/hotplug.d/iface/97-iot
 
-	if [ ! $(TLT_PLATFORM_RUTX) ]; then \
-		$(SED) "s#Teltonika-Networks_RUTX#Teltonika-Networks_$(TLT_PLATFORM_NAME)#g" $(1)/usr/lib/lua/cm/srtemplate.txt; \
+	if [ ! $(CONFIG_HNAT) ]; then \
+		$(SED) "s#Teltonika-Networks_RUTX#Teltonika-Networks_$(call device_shortname)#g" $(1)/usr/lib/lua/cm/srtemplate.txt; \
 	fi;
 endef
 

@@ -1,0 +1,72 @@
+#!/bin/sh
+. /lib/functions.sh
+
+IND_5G=0
+IND_2G=0
+
+set_config() {
+
+	local section="$1"
+	local value="$2"
+	local option="$3"
+
+	uci_set "wireless" "$section" "$option" "$value"
+
+	return 0
+}
+
+add_device_prefix() {
+
+	local device="$1"
+
+	[ "$device" == "radio0" ] && set_config "$device" "wlan0" "ifname_prefix"
+	[ "$device" == "radio1" ] && set_config "$device" "wlan1" "ifname_prefix"
+
+	return 0
+}
+
+add_default_id() {
+	
+	local found_2g=""
+	local found_5g=""
+
+	config_get device "$1" "device"
+	
+	# Same interfaces can have option device, others list device
+	for i in $device
+	do
+		[ "$i" == "radio0" ] && found_2g="1"
+		[ "$i" == "radio1" ] && found_5g="1"
+	done
+
+	[ -n "$found_2g" ] && IND_2G=$((IND_2G + 1))
+	[ -n "$found_5g" ] && IND_5G=$((IND_5G + 1))
+
+	# Found interface with both devices
+	[ -n "$found_2g" ] && [ -n "$found_5g" ] && { 
+
+		local val=0
+
+		# Sync indexes as only one value will be set for both
+		[ "$IND_5G" -gt "$IND_2G" ] && val=$IND_5G || val=$IND_2G
+
+		IND_5G=$val
+		IND_2G=$val
+
+		set_config "$1" "$val" "_device_id"
+
+		return 0
+
+	}
+
+	[ -n "$found_2g" ] && set_config "$1" "$IND_2G" "_device_id" && return 0
+
+	set_config "$1" "$IND_5G" "_device_id"
+
+	return 0
+}
+
+config_load wireless
+config_foreach add_default_id "wifi-iface"
+config_foreach add_device_prefix "wifi-device"
+uci_commit wireless

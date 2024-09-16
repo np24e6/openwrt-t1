@@ -66,8 +66,8 @@ secure_tmp_config() {
 secure_config() {
 	local option value
 	local lines="$(uci -c "$ROOT_DIR/etc/config" show |
-		grep -iE "(\.)(.*)(pass|psw|pasw|psv|pasv|key|secret|username)(.*)=" |
-		grep -iE "((([A-Za-z0-9]|\_|\@|\[|\]|\-)*\.){2})(.*)(pass|psw|pasw|psv|pasv|key|secret|username)(.*)=")"
+		grep -iE "(\.)(.*)(pass|psw|pasw|psv|pasv|key|secret|username|id_scope|registration_id|x509certificate|x509privatekey)(.*)=" |
+		grep -iE "((([A-Za-z0-9]|\_|\@|\[|\]|\-)*\.){2})(.*)(pass|psw|pasw|psv|pasv|key|secret|username|id_scope|registration_id|x509certificate|x509privatekey)(.*)=")"
 	# local tmp_file=$(generate_random_str 64)
 
 	local IFS=$'\n'

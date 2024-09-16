@@ -21,6 +21,20 @@ ifdef PKG_SOURCE_VERSION
   PKG_SOURCE ?= $(PKG_SOURCE_SUBDIR).tar.xz
 endif
 
+ifeq ($(PKG_UPSTREAM_SUBDIR),)
+    PKG_UPSTREAM_SUBDIR = $(PKG_NAME)_$(PKG_UPSTREAM_VERSION)
+endif
+
+ifdef PKG_UPSTREAM_SOURCE_VERSION
+  PKG_UPSTREAM_VERSION ?= $(PKG_UPSTREAM_SOURCE_VERSION)
+  PKG_UPSTREAM_FILE ?= $(PKG_NAME)_$(PKG_UPSTREAM_VERSION).tar.xz
+else
+  PKG_UPSTREAM_FILE ?= $(PKG_UPSTREAM_URL_FILE)
+  ifeq ($(PKG_UPSTREAM_FILE),)
+    PKG_UPSTREAM_URL_FILE ?= $(PKG_NAME)_$(PKG_UPSTREAM_VERSION).tar.xz
+  endif
+endif
+
 DOWNLOAD_RDEP=$(STAMP_PREPARED) $(HOST_STAMP_PREPARED)
 
 define dl_method_git
@@ -61,7 +75,7 @@ define dl_pack
 endef
 define dl_tar_pack
 	$(TAR) --numeric-owner --owner=0 --group=0 --mode=a-s --sort=name \
-		$$$${TAR_TIMESTAMP:+--mtime="$$$$TAR_TIMESTAMP"} -c $(2) | $(call dl_pack,$(1))
+		$$$${TAR_TIMESTAMP:+--mtime="$$$$TAR_TIMESTAMP"} -c $(if $(3),-C $(2)/$(3)/.. $(notdir $(3)),$(2)) | $(call dl_pack,$(1))
 endef
 
 gen_sha256sum = $(shell $(MKHASH) sha256 $(DL_DIR)/$(1))
@@ -149,7 +163,7 @@ endef
 
 define DownloadMethod/default
 	$(SCRIPT_DIR)/download.pl "$(DL_DIR)" \
-		"$(if $(findstring $(TLT_GIT),$(PKG_SOURCE_URL)),skip-mirrors)" "$(FILE)" "$(HASH)" "$(URL_FILE)" $(foreach url,$(URL),"$(url)") $(foreach url,$(PKG_UPSTREAM_URL),"$(url)") \
+		"$(if $(findstring $(TLT_GIT),$(URL)),skip-mirrors)" "$(FILE)" "$(HASH)" "$(URL_FILE)" $(foreach url,$(URL),"$(url)") $(foreach url,$(PKG_UPSTREAM_URL),"$(url)") \
 	$(if $(filter check,$(1)), \
 		$(call check_hash,$(FILE),$(HASH),$(2)$(call hash_var,$(MD5SUM))) \
 		$(call check_md5,$(MD5SUM),$(2)MD5SUM,$(2)HASH) \
@@ -233,11 +247,11 @@ define DownloadMethod/rawgit
 	[ \! -d $(SUBDIR) ] && \
 	(git clone $(OPTS) $(URL) $(SUBDIR) || git clone $(OPTS) $(PKG_UPSTREAM_URL) $(SUBDIR)) && \
 	(cd $(SUBDIR) && git checkout $(VERSION) && \
-	git submodule update --init --recursive) && \
+		git submodule update --init --recursive) && \
 	echo "Packing checkout..." && \
 	export TAR_TIMESTAMP=`cd $(SUBDIR) && git log -1 --format='@%ct'` && \
-	rm -rf $(SUBDIR)/.git && \
-	$(call dl_tar_pack,$(TMP_DIR)/dl/$(FILE),$(SUBDIR)) && \
+	find "$(SUBDIR)" -type d -name '.git' | xargs rm -fr && \
+	$(call dl_tar_pack,$(TMP_DIR)/dl/$(FILE),$(SUBDIR),$(SOURCE_SUBDIR)) && \
 	mv $(TMP_DIR)/dl/$(FILE) $(DL_DIR)/ && \
 	rm -rf $(SUBDIR);
 endef
@@ -307,6 +321,7 @@ define Download/Defaults
   HASH=$$(MD5SUM)
   MD5SUM:=x
   SUBDIR:=
+  SOURCE_SUBDIR:=
   MIRROR:=1
   MIRROR_HASH=$$(MIRROR_MD5SUM)
   MIRROR_MD5SUM:=x
@@ -319,6 +334,7 @@ define Download/default
   URL:=$(PKG_SOURCE_URL)
   URL_FILE:=$(PKG_SOURCE_URL_FILE)
   SUBDIR:=$(PKG_SOURCE_SUBDIR)
+  SOURCE_SUBDIR:=
   PROTO:=$(PKG_SOURCE_PROTO)
   $(if $(PKG_SOURCE_MIRROR),MIRROR:=$(filter 1,$(PKG_MIRROR)))
   $(if $(PKG_MIRROR_MD5SUM),MIRROR_MD5SUM:=$(PKG_MIRROR_MD5SUM))
@@ -328,9 +344,21 @@ define Download/default
   $(if $(PKG_HASH),HASH:=$(PKG_HASH))
 endef
 
+define Download/upstream_vars
+  FILE:=$(PKG_UPSTREAM_FILE)
+  URL:=$(PKG_UPSTREAM_URL)
+  URL_FILE:=$(PKG_UPSTREAM_URL_FILE)
+  SUBDIR:=$(PKG_UPSTREAM_SUBDIR)
+  SOURCE_SUBDIR:=$(PKG_UPSTREAM_SOURCE_SUBDIR)
+  PROTO:=$(PKG_UPSTREAM_PROTO)
+  VERSION:=$(PKG_UPSTREAM_VERSION)
+  HASH=skip
+endef
+
 define Download
+  $(eval export DEFAULT_DOWNLOAD_SECTION:=$(1))
   $(eval $(Download/Defaults))
-  $(eval $(Download/$(1)))
+  $(eval $(Download/$(DEFAULT_DOWNLOAD_SECTION)))
   $(foreach FIELD,URL FILE $(Validate/$(call dl_method,$(URL),$(PROTO))),
     ifeq ($($(FIELD)),)
       $$(error Download/$(1) is missing the $(FIELD) field.)
@@ -344,13 +372,58 @@ define Download
 
   $(DL_DIR)/$(FILE):
 	mkdir -p $(DL_DIR)
-	$(call locked, \
-		$(if $(DownloadMethod/$(call dl_method,$(URL),$(PROTO))), \
-			$(call DownloadMethod/$(call dl_method,$(URL),$(PROTO)),check,$(if $(filter default,$(1)),PKG_,Download/$(1):)), \
-			$(DownloadMethod/unknown) \
-		),\
-		$(FILE))
+	$(call dl_retry,5, \
+		$(call locked, \
+			$(if $(DownloadMethod/$(call dl_method,$(URL),$(PROTO))), \
+				$(call DownloadMethod/$(call dl_method,$(URL),$(PROTO)),check,$(if $(filter default,$(1)),PKG_,Download/$(1):)), \
+				$(DownloadMethod/unknown) \
+			),\
+			$(FILE) \
+		) \
+	)
+endef
 
+# 1 => amount of tries
+# 2 => command to run
+define dl_retry
+  set -e; \
+  count=0; \
+  until [ $$$$count -ge $(1) ]; do \
+    $(2) && break; \
+    count=$$$$((count+1)); \
+	$(call MESSAGE,Warning: Package $(PKG_NAME) failed to download: retrying $$$$count/$(1)...); \
+    sleep 10; \
+  done; \
+  if [ $$$$count -eq $(1) ]; then \
+	$(call MESSAGE,Warning: Package $(PKG_NAME) failed to download afer $(1) attempts.); \
+    exit 1; \
+  fi
+endef
+
+
+define Download/upstream
+  download_upstream: download $(DL_DIR)/upstream/$(PKG_UPSTREAM_FILE)
+
+  $(DL_DIR)/upstream/$(PKG_UPSTREAM_FILE):
+	mkdir -p $(DL_DIR)/upstream
+
+	$(eval $(Download/Defaults))
+  	$(eval $(Download/upstream_vars))
+	$(eval OLD_DL_DIR:=$(DL_DIR))
+	$(eval DL_DIR:=$(DL_DIR)/upstream)
+
+	$(call dl_retry,5, \
+		$(call locked, \
+			$(if $(DownloadMethod/$(call dl_method,$(URL),$(PROTO))), \
+				$(call DownloadMethod/$(call dl_method,$(URL),$(PROTO)),check,$(if $(filter default,$(1)),PKG_,Download/$(1):)), \
+				$(DownloadMethod/unknown) \
+			),\
+			$(FILE) \
+		) \
+	)
+
+	$(eval DL_DIR:=$(OLD_DL_DIR))
+	$(if $(DEFAULT_DOWNLOAD_SECTION),$(eval $(Download/$(DEFAULT_DOWNLOAD_SECTION))))
 endef
 
 define Download/ParseURL

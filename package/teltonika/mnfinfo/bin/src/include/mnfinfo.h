@@ -31,6 +31,7 @@ char *lmnfinfo_get_wps(void);
 char *lmnfinfo_get_wifi_pw(void);
 char *lmnfinfo_get_passw(void);
 char *lmnfinfo_get_sim_pin(uint8_t sim_id);
+char *lmnfinfo_get_sim_cfg(uint8_t sim_id);
 uint32_t lmnfinfo_get_sim_pin_count();
 
 // returns true on success

@@ -12,13 +12,15 @@ PKG_NAME:=etherwake
 PKG_VERSION:=1.09
 PKG_RELEASE:=5
 
-PKG_SOURCE:=$(PKG_NAME)_$(PKG_VERSION).orig.tar.gz
 PKG_SOURCE_URL:=http://ftp.debian.org/debian/pool/main/e/etherwake
 PKG_HASH:=54241c7689579dc86e29e6afbc6d60e69f97135091a1395c8a10f6d5a2daec1d
 
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-$(PKG_VERSION).orig
 
-PKG_LICENSE:=GPL-2.0
+PKG_SOURCE_VERSION:=1.09
+PKG_SOURCE:=$(PKG_NAME)_$(PKG_SOURCE_VERSION).orig.tar.gz
+PKG_LICENSE:=GPL-2.0-only
+PKG_LICENSE_FILES:=ether-wake.c
 
 include $(INCLUDE_DIR)/package.mk
 

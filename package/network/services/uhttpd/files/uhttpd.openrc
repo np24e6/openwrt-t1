@@ -1,0 +1,77 @@
+#!/sbin/openrc-run
+
+. /lib/functions.sh
+
+command="/usr/sbin/uhttpd"
+command_args="-f -b -h /www -x /cgi-bin -l /api -L /www/cgi-bin/api_dispatcher.lua -u /ubus -t 600 -T 30 -k 0 -A 5 -I cgi-bin/index -E /cgi-bin/index -n 10 -N 100 -D -R -p 80 -C /etc/uhttpd.crt -K /etc/uhttpd.key -s 443"
+pidfile="/run/${RC_SVCNAME}.pid"
+supervisor=supervise-daemon
+respawn_delay=1
+respawn_max=0
+
+OPENSSL_BIN="/usr/bin/openssl"
+SSL_CERT="/etc/uhttpd.crt"
+SSL_KEY="/etc/uhttpd.key"
+
+depend() {
+    need network
+    use rpcd
+}
+
+sign_certificate() {
+    local crt_req="$1"
+    local crt="$2"
+    local ca="/etc/uhttpd-ca.crt"
+    local ca_key="/etc/uhttpd-ca.key"
+
+    if [ ! -e "$ca" ]; then
+        local macaddr="$(mnf_info -m)"
+        local ip_addr="$(uci get network.lan.ipaddr)"
+        $OPENSSL_BIN req -x509 -nodes \
+            -subj "/CN=ca" \
+            -newkey rsa:2048 -keyout "${ca_key}" -out "${ca}" -days 3650 &>/dev/null
+    fi
+    local extfile="$(mktemp)"
+    echo -e "extendedKeyUsage=serverAuth\nsubjectAltName=DNS:Teltonika${macaddr},IP:${ip_addr}" > "$extfile"
+    $OPENSSL_BIN x509 -req -in "${crt_req}" -CA "${ca}" -CAkey "${ca_key}" -out "${crt}" -days 3650 -extfile "$extfile" &>/dev/null
+    rm -f "$extfile" "${crt_req}"
+}
+
+generate_keys() {
+    local cfg="$1"
+    local crt="$2"
+    local key="$3"
+    local days bits country state location commonname key_type ec_curve
+
+    config_get days       "$cfg" days
+    config_get bits       "$cfg" bits
+    config_get country    "$cfg" country
+    config_get state      "$cfg" state
+    config_get location   "$cfg" location
+    config_get commonname "$cfg" commonname
+    config_get key_type   "$cfg" key_type
+    config_get ec_curve   "$cfg" ec_curve
+
+    local KEY_OPTS="rsa:${bits:-2048}"
+    local UNIQUEID=$(dd if=/dev/urandom bs=1 count=4 2>/dev/null | hexdump -e '1/1 "%02x"')
+    [ "$key_type" = "ec" ] && KEY_OPTS="ec -pkeyopt ec_paramgen_curve:${ec_curve:-P-256}"
+    [ -x "$OPENSSL_BIN" ] && {
+        $OPENSSL_BIN req -nodes \
+            -subj "/C=${country:-ZZ}/ST=${state:-Somewhere}/L=${location:-Unknown}/O=${commonname:-OpenWrt}$UNIQUEID/CN=${commonname:-OpenWrt}" \
+            -newkey $KEY_OPTS -keyout "${key}" -out "${crt}.req" &>/dev/null
+        sign_certificate "${crt}.req" "${crt}"
+        sync
+    }
+}
+
+start_pre() {
+    local cert key
+    config_get cert 	"$cfg" cert /etc/uhttpd.crt
+    config_get cert_key "$cfg" key	/etc/uhttpd.key
+
+    if [ ! -s "$cert" ] || [ ! -s "$cert_key" ]; then
+        ebegin "Generating SSL certificates"
+        generate_keys "defaults" "$cert" "$cert_key"
+        eend $?
+    fi
+}

@@ -1,0 +1,136 @@
+{
+   "bulk": false,
+   "jwt_login": false,
+   "refresh": false,
+   "firewall": {
+      "custom_rules": {
+         "actions": {
+            "reset": false
+         },
+         "config": false
+      }
+   },
+   "modems": {
+      "*": {
+         "actions": {
+            "exec_at": false
+         }
+      }
+   },
+   "email_relay": {
+      "config": false
+   },
+   "hotspot": {
+      "general": {
+         "options": false
+      },
+      "user": {
+         "config": false
+      }
+   },
+   "io": {
+      "juggler": {
+         "operations": {
+            "config": false
+         }
+      }
+   },
+   "modbus": {
+      "client" : {
+         "tcp": {
+            "*": {
+               "requests": {
+                  "actions": {
+                     "test_request": false
+                  }
+               }
+            }
+         },
+         "serial": {
+            "servers": {
+               "*": {
+                  "requests": {
+                     "actions": {
+                        "test_request": false
+                     }
+                  }
+               }
+            }
+         }
+      }
+   },
+   "package_manager": {
+      "actions": {
+         "delete_install_files": false,
+         "install_package": false,
+         "update_package": false
+      },
+      "restore": false
+   },
+   "usb_tools": {
+         "actions": {
+            "format": false,
+            "safe_remove": false
+         }
+   },
+   "wireguard": {
+      "actions": {
+         "generate_keys": false
+      }
+   },
+   "sms_utilities": {
+      "rules": {
+         "config": false
+      }
+   },
+   "topology": {
+      "status": false
+   },
+   "access_control": {
+      "device_pairing": {
+         "actions": {
+            "unpair": false
+         },
+         "config": {
+            "general": false
+         },
+         "status": false
+      }
+   },
+   "backup": {
+      "actions": false
+   },
+   "system": {
+      "actions": {
+         "change_password_firstlogin": false
+      }
+   },
+   "certificates": false,
+   "firmware": {
+      "device": false,
+      "modem": false,
+      "actions": false
+   },
+   "logging": {
+      "actions": {
+         "delete_log": false
+      }
+   },
+   "troubleshoot": {
+      "actions": {
+         "download": false
+      },
+      "kernel": {
+         "status": false
+      }
+   },
+   "users": {
+      "config": false,
+      "groups": {
+         "config": false
+      }
+   },
+   "events_log": {
+      "config": false
+   }
+}

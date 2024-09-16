@@ -14,6 +14,12 @@ case "$ACTION" in
 	ifup)
 		network_get_ipaddr ipaddr "$INTERFACE"
 		echo "address=/:tap200.rutos.net*:/$ipaddr" > /tmp/dnsmasq.d/hostname
+
+		network_get_subnet subnet_static "lan"
+		[ -n "$subnet_static" ] && {
+			ip addr del "$subnet_static" dev br-lan
+			ip addr add "$subnet_static" dev br-lan
+		}
 	;;
 	ifdown)
 		network_get_ipaddr ipaddr "lan"

@@ -41,6 +41,7 @@ opkg = \
   TMPDIR=$(1)/tmp \
   $(STAGING_DIR_HOST)/bin/opkg \
 	--offline-root $(1) \
+	--no-autoremove \
 	--force-postinstall \
 	--add-dest root:/ \
 	--add-arch all:100 \

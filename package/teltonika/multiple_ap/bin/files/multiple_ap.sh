@@ -12,7 +12,6 @@ TIMEOUT="$1"
 PRIORITY=0
 SSID=""
 ENCRYPTION=""
-BSSID=""
 AP_JSON="{}"
 MULTI_AP_IFACE=""
 
@@ -27,7 +26,7 @@ get_wifi_section() {
 }
 
 find_available() {
-	local enabled ssid_name bssid priority key encryption
+	local enabled ssid_name priority key encryption
 	local is_available="0"
 	local section="$1"
 
@@ -48,7 +47,6 @@ find_available() {
 		}
 
 		is_available="1"
-		json_get_var bssid bssid
 		json_select encryption
 		json_get_vars enabled
 		[ "$enabled" ] && [ "$enabled" -ne 0 ] || {
@@ -111,7 +109,7 @@ find_available() {
 	done
 
 	[ "$is_available" -eq 0 ] && return
-	[ -z "$bssid" ] || [ -z "$encryption" ] && return
+	[ -z "$encryption" ] && return
 	[ "$PRIORITY" -ne 0 ] && [ "$PRIORITY" -lt "$priority" ] && {
 		return
 	}
@@ -120,14 +118,13 @@ find_available() {
 	json_select "$ssid_name"
 	json_get_vars password_correct
 	[ "$password_correct" -eq 2 ] && {
-		check_connection "$ssid_name" "$bssid" "$key" "$encryption"
+		check_connection "$ssid_name" "$key" "$encryption"
 		password_correct=$?
 	}
 
 	[ "$password_correct" -eq 1 ] && {
 		PRIORITY="$priority"
 		SSID="$ssid_name"
-		BSSID="$bssid"
 		KEY="$key"
 		ENCRYPTION="$encryption"
 	}
@@ -138,13 +135,12 @@ find_available() {
 }
 
 check_connection() {
-	local ssid bssid key encryption
+	local ssid key encryption
 	ssid="$1"
-	bssid="$2"
-	key="$3"
-	encryption="$4"
+	key="$2"
+	encryption="$3"
 
-	write_wireless_config "$ssid" "$bssid" "$key" "$encryption"
+	write_wireless_config "$ssid" "$key" "$encryption"
 	[ -z "$MULTI_AP_IFACE" ] && {
 		get_multi_ap_iface
 		json_load "$AP_JSON"
@@ -186,14 +182,13 @@ check_connection() {
 }
 
 write_wireless_config() {
-	local ssid bssid key encryption
+	local ssid key encryption
 	ssid="$1"
-	bssid="$2"
-	key="$3"
-	encryption="$4"
-	[ -z "$ssid" ] || [ -z "$bssid" ] || [ -z "$encryption" ] && return
+	key="$2"
+	encryption="$3"
+	[ -z "$ssid" ] || [ -z "$encryption" ] && return
 	uci_set "wireless" "$SECTION" "ssid" "$ssid"
-	uci_set "wireless" "$SECTION" "bssid" "$bssid"
+	uci_remove "wireless" "$SECTION" "bssid"
 	uci_set "wireless" "$SECTION" "encryption" "$encryption"
 	[ "$encryption" != "none" ] && [ "$encryption" != "owe" ] && uci_set "wireless" "$SECTION" "key" "$key"
 	uci_set "wireless" "$SECTION" "disabled" "0"
@@ -284,8 +279,8 @@ while uci_get "multi_wifi" "@wifi-iface[0]" >/dev/null; do
 	PRIORITY=0
 
 	config_foreach find_available "wifi-iface"
-	[ "$PRIORITY" -eq 0 ] || [ -z "$SSID" ] || [ -z "$BSSID" ] || [ -z "$ENCRYPTION" ] && sleep "$TIMEOUT" && continue
-	write_wireless_config "$SSID" "$BSSID" "$KEY" "$ENCRYPTION" && sleep "$TIMEOUT"
+	[ "$PRIORITY" -eq 0 ] || [ -z "$SSID" ] || [ -z "$ENCRYPTION" ] && sleep "$TIMEOUT" && continue
+	write_wireless_config "$SSID"  "$KEY" "$ENCRYPTION" && sleep "$TIMEOUT"
 done
 
 exit 0

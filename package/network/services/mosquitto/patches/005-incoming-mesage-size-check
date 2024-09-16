@@ -1,0 +1,21 @@
+--- a/lib/packet_mosq.c
++++ b/lib/packet_mosq.c
+@@ -46,6 +46,8 @@
+ #  define G_MSGS_SENT_INC(A)
+ #  define G_PUB_MSGS_SENT_INC(A)
+ #endif
++
++#define MAX_INCOMING_BROKER_MESSAGE_SIZE 21000000 // Bytes
+ 
+ int packet__alloc(struct mosquitto__packet *packet)
+ {
+@@ -512,6 +514,9 @@
+ 		}
+ #else
+ 		/* FIXME - client case for incoming message received from broker too large */
++		if (mosq->protocol != mosq_p_mqtt5 && mosq->in_packet.remaining_length > MAX_INCOMING_BROKER_MESSAGE_SIZE) {
++			return MOSQ_ERR_PAYLOAD_SIZE;
++		}
+ #endif
+ 		if(mosq->in_packet.remaining_length > 0){
+ 			mosq->in_packet.payload = mosquitto__malloc(mosq->in_packet.remaining_length*sizeof(uint8_t));

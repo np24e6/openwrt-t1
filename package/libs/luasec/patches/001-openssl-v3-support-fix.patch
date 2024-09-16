@@ -1,0 +1,158 @@
+Index: luasec-0.9/src/context.c
+===================================================================
+--- luasec-0.9.orig/src/context.c
++++ luasec-0.9/src/context.c
+@@ -196,12 +196,13 @@ static void add_cert_error(lua_State *L,
+ /**
+  * Call Lua user function to get the DH key.
+  */
+-static DH *dhparam_cb(SSL *ssl, int is_export, int keylength)
++static EVP_PKEY *dhparam_cb(SSL *ssl, int is_export, int keylength)
+ {
+   BIO *bio;
+   lua_State *L;
+   SSL_CTX *ctx = SSL_get_SSL_CTX(ssl);
+   p_context pctx = (p_context)SSL_CTX_get_app_data(ctx);
++  EVP_PKEY *pkey = NULL;
+ 
+   L = pctx->L;
+ 
+@@ -223,12 +224,12 @@ static DH *dhparam_cb(SSL *ssl, int is_e
+ 
+   bio = BIO_new_mem_buf((void*)lua_tostring(L, -1), lua_rawlen(L, -1));
+   if (bio) {
+-    pctx->dh_param = PEM_read_bio_DHparams(bio, NULL, NULL, NULL);
++    pkey = PEM_read_bio_Parameters(bio, NULL);
+     BIO_free(bio);
+   }
+ 
+   lua_pop(L, 2);    /* Remove values from stack */
+-  return pctx->dh_param;
++  return pkey;
+ }
+ 
+ /**
+@@ -551,7 +552,24 @@ static int set_mode(lua_State *L)
+ static int set_dhparam(lua_State *L)
+ {
+   SSL_CTX *ctx = lsec_checkcontext(L, 1);
+-  SSL_CTX_set_tmp_dh_callback(ctx, dhparam_cb);
++  EVP_PKEY *pkey = NULL;
++
++  /* Call the callback to get the DH key */
++  pkey = dhparam_cb(NULL, 0, 0);
++
++  if (!pkey) {
++    lua_pushboolean(L, 0);
++    lua_pushstring(L, "Failed to generate DH key");
++    return 2;
++  }
++
++  /* Set the temporary DH key */
++  if (SSL_CTX_set0_tmp_dh_pkey(ctx, pkey) != 1) {
++    EVP_PKEY_free(pkey);
++    lua_pushboolean(L, 0);
++    lua_pushstring(L, "Failed to set DH key");
++    return 2;
++  }
+ 
+   /* Save callback */
+   luaL_getmetatable(L, "SSL:DH:Registry");
+@@ -569,23 +587,32 @@ static int set_dhparam(lua_State *L)
+ static int set_curve(lua_State *L)
+ {
+   long ret;
+-  EC_KEY *key = NULL;
++  EVP_PKEY *pkey = NULL;
+   SSL_CTX *ctx = lsec_checkcontext(L, 1);
+   const char *str = luaL_checkstring(L, 2);
++  char group_name[80];  // Buffer for the group name
++  size_t group_name_len = sizeof(group_name);
+ 
+   SSL_CTX_set_options(ctx, SSL_OP_SINGLE_ECDH_USE);
+ 
+-  key = lsec_find_ec_key(L, str);
++  pkey = lsec_find_ec_key(L, str);
+ 
+-  if (!key) {
++  if (!pkey) {
+     lua_pushboolean(L, 0);
+     lua_pushfstring(L, "elliptic curve '%s' not supported", str);
+     return 2;
+   }
+ 
+-  ret = SSL_CTX_set_tmp_ecdh(ctx, key);
+-  /* SSL_CTX_set_tmp_ecdh takes its own reference */
+-  EC_KEY_free(key);
++  if (EVP_PKEY_get_group_name(pkey, group_name, group_name_len, &group_name_len) != 1) {
++    EVP_PKEY_free(pkey);
++    lua_pushboolean(L, 0);
++    lua_pushstring(L, "Failed to get group name");
++    return 2;
++  }
++
++  ret = SSL_CTX_set1_groups_list(ctx, group_name);
++  /* SSL_CTX_set1_groups_list takes its own reference */
++  EVP_PKEY_free(pkey);
+ 
+   if (!ret) {
+     lua_pushboolean(L, 0);
+Index: luasec-0.9/src/ec.c
+===================================================================
+--- luasec-0.9.orig/src/ec.c
++++ luasec-0.9/src/ec.c
+@@ -1,12 +1,16 @@
+ #include <openssl/objects.h>
++#include <openssl/evp.h>
+ 
+ #include "ec.h"
+ 
+ #ifndef OPENSSL_NO_EC
+ 
+-EC_KEY *lsec_find_ec_key(lua_State *L, const char *str)
++EVP_PKEY *lsec_find_ec_key(lua_State *L, const char *str)
+ {
+   int nid;
++  EVP_PKEY *pkey = NULL;
++  EVP_PKEY_CTX *pctx = NULL;
++
+   lua_pushstring(L, "SSL:EC:CURVES");
+   lua_rawget(L, LUA_REGISTRYINDEX);
+   lua_pushstring(L, str);
+@@ -16,7 +20,22 @@ EC_KEY *lsec_find_ec_key(lua_State *L, c
+     return NULL;
+ 
+   nid = (int)lua_tonumber(L, -1);
+-  return EC_KEY_new_by_curve_name(nid);
++
++  /* Create a new empty context */
++  pctx = EVP_PKEY_CTX_new_id(nid, NULL);
++  if (pctx == NULL)
++    return NULL;
++
++  /* Generate the key */
++  if (EVP_PKEY_keygen_init(pctx) <= 0)
++    return NULL;
++
++  if (EVP_PKEY_keygen(pctx, &pkey) <= 0)
++    return NULL;
++
++  EVP_PKEY_CTX_free(pctx);
++
++  return pkey;
+ }
+ 
+ void lsec_load_curves(lua_State *L)
+Index: luasec-0.9/src/ec.h
+===================================================================
+--- luasec-0.9.orig/src/ec.h
++++ luasec-0.9/src/ec.h
+@@ -13,7 +13,7 @@
+ #ifndef OPENSSL_NO_EC
+ #include <openssl/ec.h>
+ 
+-EC_KEY *lsec_find_ec_key(lua_State *L, const char *str);
++EVP_PKEY *lsec_find_ec_key(lua_State *L, const char *str);
+ #endif
+ 
+ void lsec_get_curves(lua_State *L);

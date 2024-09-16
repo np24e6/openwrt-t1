@@ -8,12 +8,14 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=tailscale
-PKG_VERSION:=1.62.1
+PKG_VERSION:=1.68.1
 PKG_RELEASE:=1
 
-PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
-PKG_SOURCE_URL:=https://codeload.github.com/tailscale/tailscale/tar.gz/v$(PKG_VERSION)?
-PKG_HASH:=22737fae37e971fecdf49d6b741b99988868aa3f1e683e67e14b872a2c49ca1c
+PKG_HASH:=d7fe30282d2f5eabdc76a5a89f11d935ed3a5d93d55f5fd5b40f9a9f49e19490
+
+PKG_SOURCE_VERSION:=1.68.1
+PKG_SOURCE=tailscale-$(PKG_SOURCE_VERSION).tar.gz
+PKG_SOURCE_URL:=https://codeload.github.com/tailscale/tailscale/tar.gz/v$(PKG_SOURCE_VERSION)?
 
 PKG_MAINTAINER:=Jan Pavlinec <jan.pavlinec1@gmail.com>
 PKG_LICENSE:=BSD-3-Clause
@@ -33,7 +35,7 @@ GO_PKG_TAGS:=ts_include_cli
 
 
 include $(INCLUDE_DIR)/package.mk
-include $(TOPDIR)/feeds/packages/lang/golang/golang-package.mk
+include $(TOPDIR)/package/lang/golang/golang-package.mk
 
 define Package/tailscale
   SECTION:=net
@@ -73,4 +75,3 @@ define Package/tailscale/install
 endef
 
 $(eval $(call BuildPackage,tailscale))
-

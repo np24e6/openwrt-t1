@@ -15,7 +15,7 @@ Signed-off-by: John Crispin <blogic@openwrt.org>
  
  #include "gpiolib.h"
  #include "gpiolib-of.h"
-@@ -1046,3 +1048,72 @@ void of_gpiochip_remove(struct gpio_chip
+@@ -1046,3 +1048,77 @@ void of_gpiochip_remove(struct gpio_chip
  {
  	of_node_put(chip->of_node);
  }
@@ -32,7 +32,7 @@ Signed-off-by: John Crispin <blogic@openwrt.org>
 +	struct device_node *np = pdev->dev.of_node;
 +	struct device_node *cnp;
 +	u32 val;
-+	int nb = 0;
++	int nb = 0, ret;
 +
 +	for_each_child_of_node(np, cnp) {
 +		const char *name = NULL;
@@ -66,7 +66,12 @@ Signed-off-by: John Crispin <blogic@openwrt.org>
 +				continue;
 +
 +			dmc = of_property_read_bool(cnp, "gpio-export,direction_may_change");
-+			gpio_export_with_name(gpio, dmc, name);
++			ret = gpio_export_with_name(gpio, dmc, name);
++			if (ret) {
++				devm_gpio_free(&pdev->dev, gpio);
++				dev_err(&pdev->dev, "Failed to export gpio with name %s, retrying\n", name);
++				return -EPROBE_DEFER;
++			}
 +			nb++;
 +		}
 +	}

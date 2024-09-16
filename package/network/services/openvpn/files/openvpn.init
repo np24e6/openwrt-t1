@@ -104,10 +104,12 @@ decrypt_key() {
 	local key decrypt
 	config_get key "$s" key ""
 	config_get decrypt "$s" decrypt ""
-	[ -z "$key" ] || [ -z "$decrypt" ] && return
-	[ ! -d "/var/etc/openvpn-dkey" ] && mkdir -p "/var/etc/openvpn-dkey"
-	/usr/bin/openssl rsa -in "$key" -out "/var/etc/openvpn-dkey/${s}.key" -passin pass:"$decrypt" 1>/dev/null 2>&1
-	echo -e "key /var/etc/openvpn-dkey/${s}.key" >>"/var/etc/openvpn-$s.conf"
+	[ -z "$decrypt" ] && return
+	[ -z "$key" ] && key="/var/etc/openvpn_${s}.key"
+	if [ -e "$key" ]; then
+		/usr/bin/openssl pkey -in "$key" -out "/var/etc/openvpn_${s}.encrypted.key" -passin pass:"$decrypt" 1>/dev/null 2>&1
+		echo -e "key /var/etc/openvpn_${s}.encrypted.key" >>"/var/etc/openvpn-$s.conf"
+	fi
 }
 
 append_param() {
@@ -142,12 +144,36 @@ append_bools() {
 	done
 }
 
+increase_ipv6() {
+	local ipv6=$1
+	local ip mask last last_dec last_hex
+	ip="${ipv6%/*}"
+	mask="${ipv6##*/}"
+	[ "$mask" = "$ip" ] && mask="64"
+	last="${ip##*:}"
+	[ -n "$last" ] && last_dec=$(printf "%d" "0x$last") || last_dec=0
+	if [ "$last_dec" -lt 65535 ]; then
+		if [ "$last_dec" = 0 ]; then
+			last_dec=2
+		else
+			last_dec=$(( last_dec + 1 ))
+		fi
+	fi
+	last_hex=$(printf "%x" "$last_dec")
+	echo "${ip%:*}:${last_hex}/${mask}"
+}
+
 append_params() {
 	local p
 	local v
 	local s="$1"
 	local key_encrypted
+	local pool=0
 	config_get_bool key_encrypted "$s" key_encrypted 0
+	config_get ifconfig_ipv6_pool "$s" ifconfig_ipv6_pool ""
+	config_get ifconfig_pool_start "$s" ifconfig_pool_start ""
+	config_get ifconfig_pool_end "$s" ifconfig_pool_end ""
+	[ -n "$ifconfig_ipv6_pool" ] || { [ -n "$ifconfig_pool_start" ] && [ -n "$ifconfig_pool_end" ]; } && pool=1
 	shift
 	for p in "$@"; do
 		config_get v "$s" "$p"
@@ -155,6 +181,12 @@ append_params() {
 		for v in $v; do
 			if [ "$key_encrypted" = "1" ] && [ "$p" = "key" ]; then
 				decrypt_key "$s"
+			elif [ "$p" = "server_ipv6" ] && [ "$pool" = 1 ]; then
+				{
+				echo "ifconfig-ipv6 $v ${v%/*}"
+				[ -n "$ifconfig_ipv6_pool" ] && echo "ifconfig-ipv6-pool $ifconfig_ipv6_pool" || echo "ifconfig-ipv6-pool $(increase_ipv6 "$v")"
+				echo "push tun-ipv6"
+				} >>"/var/etc/openvpn-$s.conf"
 			else
 				[ -n "$v" ] && [ "$p" != "push" ] && append_param "$s" "$p" && echo " $v" >>"/var/etc/openvpn-$s.conf"
 				[ -n "$v" ] && [ "$p" = "push" ] && append_param "$s" "$p" && echo " \"$v\"" >>"/var/etc/openvpn-$s.conf"
@@ -231,6 +263,7 @@ openvpn_add_instance() {
 	local dir="$2"
 	local conf="$3"
 	local type="$4"
+	local nopool=""
 
 	{
 		[ "$type" = "client" ] && echo "auth-nocache"
@@ -248,12 +281,18 @@ openvpn_add_instance() {
 	config_get network_mask "$name" 'network_mask'
 	config_get server_ip "$name" 'server_ip'
 	config_get server_netmask "$name" 'server_netmask'
+	config_get ifconfig_pool_start "$name" 'ifconfig_pool_start'
+	config_get ifconfig_pool_end "$name" 'ifconfig_pool_end'
 	config_get status "$name" 'status'
 
 	[ -n "$local_ip" ] && [ -n "$remote_ip" ] && echo "ifconfig $local_ip $remote_ip" >> /var/etc/openvpn-"$name".conf
 	[ -n "$local_ipv6" ] && [ -n "$remote_ipv6" ] && echo "ifconfig-ipv6 $local_ipv6 $remote_ipv6" >> /var/etc/openvpn-"$name".conf
 	[ -n "$network_ip" ] && [ -n "$network_mask" ] && echo "route $network_ip $network_mask" >> /var/etc/openvpn-"$name".conf
-	[ -n "$server_ip" ] && [ -n "$server_netmask" ] && echo "server $server_ip $server_netmask" >> /var/etc/openvpn-"$name".conf
+	if [ -n "$ifconfig_pool_start" ] && [ -n "$ifconfig_pool_end" ]; then
+		echo "ifconfig-pool $ifconfig_pool_start $ifconfig_pool_end" >> /var/etc/openvpn-"$name".conf
+		nopool="nopool"
+	fi
+	[ -n "$server_ip" ] && [ -n "$server_netmask" ] && echo "server $server_ip $server_netmask $nopool" >> /var/etc/openvpn-"$name".conf
 	[ -z "$status" ] && echo "status /var/run/openvpn.$name.status 10" >> /var/etc/openvpn-"$name".conf
 
 	procd_open_instance "$name"
@@ -373,9 +412,12 @@ start_instance() {
 
 		echo "" >> "$OPENVPN_CONFIG"
 		config_get_bool upload_files "$s" 'upload_files' 0
+		config_get_bool key_encrypted "$s" key_encrypted 0
 		add_vars_to_config "$s" "$OPENVPN_CONFIG"
 		if [ "$upload_files" -eq 1 ]; then
 			add_authentication_to_config "$s" "$OPENVPN_CONFIG"
+		elif [ "$key_encrypted" -eq 1 ]; then
+			decrypt_key "$s"
 		fi
 
 		config_get status "$s" 'status'

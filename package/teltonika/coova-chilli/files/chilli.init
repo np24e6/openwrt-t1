@@ -4,7 +4,6 @@ START=99
 STOP=89
 USE_PROCD=1
 
-LOCAL_USERS=/var/run/chilli_localusers
 DB_PATH=/var/hotspot.db
 DB_PATH_FLASH=/etc/chilli/hotspot.db
 
@@ -110,7 +109,7 @@ set_chilli() {
 		seskeepalive | usetap | noarpentries | framedservice | scalewin | redir | injectwispr | redirurl | \
 		routeonetone | nousergardendata | uamgardendata | uamotherdata | withunixipc | uamallowpost | redirssl | \
 		uamuissl | layer3 | patricia | redirdnsreq | dhcpnotidle | ipv6 | ipv6only | registerusers | tos | testtime | \
-		trialusers | duplicateusers | nochallenge)
+		trialusers | duplicateusers | nochallenge | oidcforcehttps | uamblocklist)
 		{
 			[ "$2" = "true" ] || [ "$2" = "1" ]
 		} && set_conf_bool "$@"
@@ -122,13 +121,16 @@ set_chilli() {
 		}
 		case "$value" in
 		local)
-			set_conf "localusers" "$LOCAL_USERS"
+			set_conf_bool "localusers" 1
 			;;
 		sms_otp)
 			set_conf_bool "smsusers" 1
 			;;
 		mac_auth)
 			set_conf_bool "macusers" 1
+			;;
+		sso)
+			set_conf_bool "oidc" 1
 			;;
 		esac
 		;;
@@ -138,6 +140,9 @@ set_chilli() {
 			local uamlisten=$(uci -q get chilli."${CONFIG_SECTION}".uamlisten)
 			local mode=$(uci -q get chilli."${CONFIG_SECTION}"._mode)
 
+			# Coovachilli default if not IP is set
+			uamlisten="${uamlisten:-192.168.182.1}"
+
 			case "$mode" in
 			sms_otp)
 				route="smsauth"
@@ -145,7 +150,20 @@ set_chilli() {
 			mac_auth)
 				route="macauth"
 				;;
+			sso)
+				route="ssoauth"
+				;;
 			esac
+
+			local subdomain=$(uci -q get chilli."${CONFIG_SECTION}".subdomain)
+			local domain=$(uci -q get chilli."${CONFIG_SECTION}".domain)
+			[ -n "$subdomain" ] && [ -n "$domain" ] && {
+				set_conf "uamallowed" "${subdomain}.${domain}:${port:-81},${subdomain}.${domain}:444"
+				uamlisten="${subdomain}.${domain}"
+				uci -q set uhttpd.hotspot.rfc1918_filter="0"
+			} || {
+				uci -q set uhttpd.hotspot.rfc1918_filter="1"
+			}
 
 			[ "$_protocol" = "https" ] && {
 				port=444
@@ -163,9 +181,12 @@ set_chilli() {
 					uci -q set uhttpd.hotspot.key="$sslkey"
 				}
 				uci -q set uhttpd.hotspot.enable_https="1"
-				uci -q commit uhttpd
-				/etc/init.d/uhttpd reload
+			} || {
+				uci -q set uhttpd.hotspot.enable_https="0"
 			}
+
+			uci -q commit uhttpd
+			/etc/init.d/uhttpd reload
 
 			set_conf "uamserver" \
 				"${_protocol:-http}://${uamlisten}:${port:-81}/cgi-bin/hotspot/${route:-userpass}"
@@ -205,6 +226,7 @@ set_chilli() {
 	subdomain)
 		set_conf "uamhostname" "$2"
 		set_conf "uamaliasname" "$2"
+		set_conf_bool "domaindnslocal" 1
 		;;
 	_* | uamdomain_*) ;;
 
@@ -220,7 +242,9 @@ set_chilli_list() {
 	case "$1" in
 	moreif)
 		get_dhcp_interface "ifname" "$value"
-		set_conf "$option" "$ifname"
+		for name in $ifname; do
+			set_conf "$option" "$name"
+		done
 		;;
 	*)
 		set_conf "$@"
@@ -242,64 +266,6 @@ get_option() {
 	esac
 }
 
-set_group() {
-	local section=$1 u_group=$2 user_section=$3
-	local name username password option
-	local timeout idle dw_max up_max dw_bwidth upl_bwidth period start
-
-	config_get name "${section}" name
-	[ "$u_group" != "$name" ] && return 0
-
-	config_get username "${user_section}" username
-	config_get password "${user_section}" password
-	[ -n "$username" ] && [ -n "$password" ] || return 0
-
-	config_get timeout "${user_section}" defsessiontimeout
-	[ -n "$timeout" ] || config_get timeout "${section}" defsessiontimeout 0
-
-	config_get idle "${user_section}" defidletimeout
-	[ -n "$idle" ] || config_get idle "${section}" defidletimeout 0
-
-	config_get dw_max "${user_section}" downloadlimit
-	[ -n "$dw_max" ] || config_get dw_max "${section}" downloadlimit 0
-
-	config_get up_max "${user_section}" uploadlimit
-	[ -n "$up_max" ] || config_get up_max "${section}" uploadlimit 0
-
-	config_get dw_bwidth "${user_section}" downloadbandwidth
-	[ -n "$dw_bwidth" ] || config_get dw_bwidth "${section}" downloadbandwidth 0
-
-	config_get upl_bwidth "${user_section}" uploadbandwidth
-	[ -n "$upl_bwidth" ] || config_get upl_bwidth "${section}" uploadbandwidth 0
-
-	config_get period "${user_section}" period
-	if [ -n "$period" ]; then
-		option=$(get_option "$period")
-		config_get start "${user_section}" "$option" "1"
-	else
-		config_get period "${section}" period "3"
-		option=$(get_option "$period")
-		config_get start "${section}" "$option" "1"
-	fi
-
-	echo "$username:$password:$timeout:$idle:$dw_max:$up_max:$dw_bwidth:$upl_bwidth:$period:$start" >>$LOCAL_USERS
-}
-
-set_user() {
-	local section=$1
-	local group
-
-	config_get group "${section}" group "default"
-	[ -n "$group" ] || return 0
-
-	config_foreach set_group group "${group}" "${section}"
-}
-
-reload_users() {
-	[ -e $LOCAL_USERS ] && rm -rf $LOCAL_USERS
-	config_foreach set_user user
-}
-
 net_type_wifi() {
 	[ "$(echo "$1" | grep -c "wifi")" -gt 0 ]
 }
@@ -318,7 +284,7 @@ get_dhcp_interface() {
 		network_get_device var "$net"
 	fi
 
-	[ -n "$var" ] && eval "$1=$var" || unset "$1"
+	[ -n "$var" ] && eval "$1=\"$var\"" || unset "$1"
 }
 
 start_chilli() {
@@ -347,7 +313,13 @@ start_chilli() {
 	[ -z "$dhcpif" ] && return
 	[ -n "$chilli_group" ] && config_foreach set_dyn_limits group "$chilli_group" "dyn"
 	[ -n "$trial_group" ] && config_foreach set_dyn_limits group "$trial_group" "trial"
-	macaddr=$(cat /sys/class/net/"${dhcpif}"/address)
+
+	local ifname
+	for name in $dhcpif; do
+		[ -z "$ifname" ] && ifname=$name || set_conf "moreif" "$name"
+	done
+	[ -z "$ifname" ] && return
+	macaddr=$(cat /sys/class/net/"${ifname}"/address)
 
 	procd_open_instance "$cfg"
 	procd_open_trigger
@@ -358,7 +330,7 @@ start_chilli() {
 	procd_set_param file "$uamdomainfile"
 	procd_append_param command --testtime --fg --conf "${base}.conf" --pidfile "${base}.pid"
 	procd_append_param command --cmdsocket "${base}.sock" --unixipc "${base}.ipc"
-	procd_append_param command --dhcpif "$dhcpif" ${macaddr:+--nasmac ${macaddr//:/-}}
+	procd_append_param command --dhcpif "$ifname" ${macaddr:+--nasmac ${macaddr//:/-}}
 	procd_set_param respawn
 	procd_set_param stdout 1
 	procd_set_param stderr 1
@@ -368,7 +340,6 @@ start_chilli() {
 start_service() {
 	config_load chilli
 	config_foreach start_chilli chilli "$@"
-	reload_users
 }
 
 stop_service() {

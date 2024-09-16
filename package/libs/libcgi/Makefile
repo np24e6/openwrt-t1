@@ -4,26 +4,27 @@ PKG_NAME:=libcgi
 PKG_VERSION:=1.3.0
 PKG_RELEASE:=1
 
-PKG_SOURCE_PROTO:=git
-PKG_SOURCE_URL=https://github.com/rafaelsteil/libcgi.git
-PKG_SOURCE_VERSION:=1d2928626fd42abab07440df24d62f101455e50c
-PKG_MIRROR_HASH:=0781de5b640c35d84aa22006bd39687ab72455854f3bbb911221cba5dd25a481
 CMAKE_INSTALL:=1
 
-PKG_LICENSE:=LGPL-2.1
+PKG_LICENSE:=LGPL-2.1-or-later
+PKG_LICENSE_FILES:=LICENSES/LGPL-2.1.txt
+
+PKG_SOURCE_PROTO:=git
+PKG_SOURCE_VERSION:=v1.3.0
+PKG_SOURCE_URL=https://github.com/rafaelsteil/libcgi.git
 
 include $(INCLUDE_DIR)/package.mk
 include $(INCLUDE_DIR)/cmake.mk
 
 define Package/libcgi
-  SECTION:=libs
-  CATEGORY:=Libraries
-  TITLE:=C library to build CGI applications
+	SECTION:=libs
+	CATEGORY:=Libraries
+	TITLE:=C library to build CGI applications
 endef
 
 define Package/libcgi/description
-  LibCGI is a simple to use yet powerful library written from scratch to \
-  assist in the making of CGI appliactions in C
+	LibCGI is a simple to use yet powerful library written from scratch to \
+	assist in the making of CGI appliactions in C
 endef
 
 define Build/InstallDev

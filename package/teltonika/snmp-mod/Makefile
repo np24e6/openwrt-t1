@@ -2,10 +2,10 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=snmp-mod
-PKG_VERSION:=2024-03-28
+PKG_VERSION:=2024-06-18
 PKG_RELEASE:=1
 
-PKG_SOURCE_VERSION:=3.6
+PKG_SOURCE_VERSION:=3.8
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_SOURCE_VERSION)-$(PKG_VERSION)
 PKG_SOURCE:=$(PKG_SOURCE_SUBDIR).tar.gz
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_SOURCE_SUBDIR)
@@ -24,7 +24,7 @@ define Package/snmp
 	$(call Package/snmp-mod/Default)
 	DEPENDS+=+snmpd +snmp-mib +snmp-mod-chilli +snmp-mod-device \
 			+GPS_SUPPORT:snmp-mod-gps +MOBILE_SUPPORT:snmp-mod-gsm +IO_SUPPORT:snmp-mod-io \
-			+snmp-mod-sqm +snmp-mod-vlan +WIFI_SUPPORT:snmp-mod-wireless +snmp-mod-port +snmptrap +snmp-mod-iface
+			+snmp-mod-sqm +snmp-mod-vlan +WIFI_SUPPORT:snmp-mod-wireless +snmp-mod-port +snmptrap
 	TITLE:=SNMP Meta package
 endef
 
@@ -75,11 +75,6 @@ define Package/snmp-mod-vlan
 	$(call Package/snmp-mod/Default)
 	DEPENDS+=+libuci
 	TITLE:=SNMP VLAN module
-endef
-
-define Package/snmp-mod-iface
-	$(call Package/snmp-mod/Default)
-	TITLE:=SNMP IFACE module
 endef
 
 define Package/snmp-mod-sqm
@@ -134,6 +129,5 @@ $(eval $(call BuildPlugin,gsm))
 $(eval $(call BuildPlugin,io))
 $(eval $(call BuildPlugin,wireless))
 $(eval $(call BuildPlugin,vlan))
-$(eval $(call BuildPlugin,iface))
 $(eval $(call BuildPlugin,sqm))
 $(eval $(call BuildPlugin,port))

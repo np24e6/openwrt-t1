@@ -1,0 +1,6 @@
+#!/sbin/openrc-run
+
+stop() {
+	sync
+	/bin/umount -a -d -r
+}

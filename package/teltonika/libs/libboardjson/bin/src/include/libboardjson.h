@@ -14,6 +14,7 @@ extern "C" {
 
 // filepaths
 #define BJSON_FILEPATH "/etc/board.json"
+#define BJSON_FILEPATH_TEMP "/tmp/board.json"
 
 // ubus values
 #define BJSON_UBUS_OBJECT "boardjson"
@@ -145,7 +146,8 @@ struct lbjson_hwinfo {
 	bool soft_port_mirror : 1;
 	bool gigabit_port     : 1;
 	bool gigabit_port_2_5 : 1;
-	bool esim	      : 1;
+	bool esim             : 1;
+	bool custom_usbcfg    : 1;
 };
 
 ///////////////////////////////////////////////
@@ -177,12 +179,18 @@ struct lbjson_flow_control {
 	bool available;
 };
 
+struct lbjson_duplex {
+	char type[16];
+	bool available;
+};
+
 struct lbjson_serial_device {
 	struct lbjson_baudrate bauds[24];
 	struct lbjson_data_bits data_bits[4];
 	struct lbjson_stop_bits stop_bits[2];
 	struct lbjson_parity parity[5];
 	struct lbjson_flow_control flow_control[3];
+	struct lbjson_duplex duplex[3];
 
 	char device[64];
 	char path[64];

@@ -12,9 +12,11 @@ PKG_NAME:=tinc
 PKG_VERSION:=1.0.36
 PKG_RELEASE:=3
 
-PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
-PKG_SOURCE_URL:=https://www.tinc-vpn.org/packages
 PKG_HASH:=40f73bb3facc480effe0e771442a706ff0488edea7a5f2505d4ccb2aa8163108
+
+PKG_SOURCE_VERSION:=1.0.36
+PKG_SOURCE=tinc-$(PKG_SOURCE_VERSION).tar.gz
+PKG_SOURCE_URL:=https://www.tinc-vpn.org/packages
 
 PKG_CPE_ID:=cpe:/a:tinc:tinc
 
@@ -22,6 +24,7 @@ PKG_BUILD_PARALLEL:=1
 PKG_INSTALL:=1
 
 PKG_LICENSE:=GPL-2.0-or-later
+PKG_LICENSE_FILES:=COPYING
 
 include $(INCLUDE_DIR)/package.mk
 

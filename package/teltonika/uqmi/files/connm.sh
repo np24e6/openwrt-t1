@@ -57,27 +57,21 @@ proto_connm_setup() {
 	[ -n "$delay" ] || [ "$pdp" = "1" ] && delay=0 || delay=3
 	sleep "$delay"
 
-	[ -z "$sim" ] && sim=$(get_config_sim "$interface")
-
-#~ Parameters part------------------------------------------------------
-
-	service_name="wds"
-
-	get_simcard_parameters() {
-		local section="$1"
-		local mdm
-		config_get position "$section" position
-		config_get mdm "$section" modem
-
-		[ "$modem" = "$mdm" ] && \
-		[ "$position" = "$active_sim" ] && {
-			config_get deny_roaming "$section" deny_roaming "0"
-		}
+	local gsm_modem="$(find_mdm_ubus_obj "$modem")"
+	[ -z "$gsm_modem" ] && {
+			echo "Failed to find gsm modem ubus object, exiting."
+			return 1
 	}
 
-	config_load simcard
-	config_foreach get_simcard_parameters "sim"
-
+#~ Parameters part------------------------------------------------------
+	[ -z "$sim" ] && sim=$(get_config_sim "$interface")
+	active_sim=$(get_active_sim "$interface" "$old_cb" "$gsm_modem")
+	esim_profile_index=$(get_active_esim_profile_index "$modem")
+	# verify active sim by return value(non zero means that the check failed)
+	verify_active_sim "$sim" "$active_sim" "$interface" || return
+	# verify active esim profile index by return value(non zero means that the check failed)
+	verify_active_esim "$esim_profile_index" "$interface" || return
+	deny_roaming=$(get_deny_roaming "$active_sim" "$modem" "$esim_profile_index")
 #~ ---------------------------------------------------------------------
 
 	device="/dev/cdc-wdm0"

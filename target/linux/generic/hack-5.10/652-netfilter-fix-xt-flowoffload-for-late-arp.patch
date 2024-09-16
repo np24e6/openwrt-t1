@@ -3,10 +3,8 @@ runs before the mac address for the destination host is known, leading to malfor
 flowoffload entries and no offloading. Add error propagation to skip offloading under
 this scenario, effectively deferring offloading until the neighbor entry is filled.
 
-Index: linux-5.10.210/net/netfilter/xt_FLOWOFFLOAD.c
-===================================================================
---- linux-5.10.210.orig/net/netfilter/xt_FLOWOFFLOAD.c
-+++ linux-5.10.210/net/netfilter/xt_FLOWOFFLOAD.c
+--- a/net/netfilter/xt_FLOWOFFLOAD.c
++++ b/net/netfilter/xt_FLOWOFFLOAD.c
 @@ -400,7 +400,7 @@ out:
  	return dev_fill_forward_path(dev, ha, stack);
  }

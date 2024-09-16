@@ -2,11 +2,11 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=dnp3
-PKG_VERSION:=2024-04-02
+PKG_VERSION:=2024-06-25
 PKG_RELEASE:=1
 
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
-PKG_SOURCE_VERSION:=7.7
+PKG_SOURCE_VERSION:=7.8
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_SOURCE_SUBDIR)
 PKG_LICENSE:=Teltonika-closed
@@ -59,6 +59,9 @@ define Package/dnp3/install
 	$(INSTALL_DIR) $(1)/etc/init.d
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/files/dnp3_client.init $(1)/etc/init.d/dnp3_client
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/files/dnp3_outstation.init $(1)/etc/init.d/dnp3_outstation
+
+	$(INSTALL_DIR) $(1)/etc/uci-defaults/7.8/
+	$(CP) $(PKG_BUILD_DIR)/files/migrations/7.8/99_dnp3_add_global_section $(1)/etc/uci-defaults/7.8/
 endef
 
 define Package/dnp3/postinst

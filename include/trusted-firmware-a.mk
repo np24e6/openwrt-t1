@@ -1,11 +1,6 @@
 PKG_NAME ?= trusted-firmware-a
 PKG_CPE_ID ?= cpe:/a:arm:arm_trusted_firmware
 
-ifndef PKG_SOURCE_PROTO
-PKG_SOURCE = trusted-firmware-a-$(PKG_VERSION).tar.gz
-PKG_SOURCE_URL:=https://git.trustedfirmware.org/TF-A/trusted-firmware-a.git/snapshot
-endif
-
 PKG_BUILD_DIR = $(BUILD_DIR)/$(PKG_NAME)-$(BUILD_VARIANT)/$(PKG_NAME)-$(PKG_VERSION)
 
 PKG_TARGETS := bin

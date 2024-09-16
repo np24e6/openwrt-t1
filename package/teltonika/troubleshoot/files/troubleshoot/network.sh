@@ -89,6 +89,11 @@ interfaces_hook() {
 
 	troubleshoot_init_log "ARP Data" "$log_file"
 	troubleshoot_add_log "$(cat /proc/net/arp)" "$log_file"
+
+	ubus list network.interface &>/dev/null && {
+		troubleshoot_init_log "Network interface dump" "$log_file"
+		troubleshoot_add_log "$(ubus -t 30 call network.interface dump)" "$log_file"
+	}
 }
 
 vpns_hook() {

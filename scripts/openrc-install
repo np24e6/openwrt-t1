@@ -1,0 +1,16 @@
+#!/bin/sh
+
+runlevel="$1"
+name="$2"
+service="$3"
+root="$4"
+
+if echo "${OPENRC_RUNLEVELS}" | grep -wq "${runlevel}"; then
+	${INSTALL_DIR} "${root}/etc/init.d"
+	${INSTALL_DIR} "${root}/etc/runlevels/${runlevel}"
+	${INSTALL_BIN} "${service}" "${root}/etc/init.d/${name}"
+	${LN} -r "${root}/etc/init.d/${name}" "${root}/etc/runlevels/${runlevel}"
+else
+	echo "Error: Invalid runlevel '${runlevel}' specified."
+	exit 1
+fi

@@ -20,7 +20,7 @@ create_mobile_iface() {
 
 	# just like this for now
 	# probably we should merge connm with wwan
-	if [ ! -e /dev/smd9 ]; then
+	if [ ! -e /dev/smd7 ]; then
 		uci_set network $intf proto "wwan"
 	else
 		uci_set network $intf proto "connm"

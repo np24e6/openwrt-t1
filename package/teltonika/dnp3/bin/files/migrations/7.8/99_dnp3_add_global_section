@@ -1,0 +1,10 @@
+#!/bin/sh
+. /lib/functions.sh
+CONFIG="dnp3_client"
+
+uci_add "$CONFIG" "global" "global"
+uci_set "$CONFIG" "$CONFIG_SECTION" "enabled" "1"
+
+uci_commit "$CONFIG"
+
+exit 0

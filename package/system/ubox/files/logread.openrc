@@ -1,0 +1,13 @@
+#!/sbin/openrc-run
+
+command="/sbin/logread"
+command_background="yes"
+pidfile="/run/${RC_SVCNAME}.pid"
+command_args="-f -i -p $pidfile"
+supervisor=supervise-daemon
+respawn_delay=1
+respawn_max=0
+
+depend() {
+	need ubusd logd
+}

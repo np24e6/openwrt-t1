@@ -4,7 +4,7 @@
  			blobmsg_close_table(&buf, d);
  		}
  	}
-+	else if (iw->scanlist(ifname, res, &len))
++	else
 +	{
 +		d = blobmsg_open_table(&buf, NULL);
 +

@@ -5,6 +5,7 @@ import os
 import subprocess
 import json
 import re
+import argparse
 from os import path
 from subprocess import Popen
 
@@ -16,7 +17,7 @@ dump_list = False
 def empty_none_value(value):
     if value is None:
         return ''
-    
+
     return value
 
 def is_match(regex, text):
@@ -29,10 +30,10 @@ def type_cast(value):
 
 def recursive_insert(dct, keys, value):
     if len(keys) == 1:
-        if ";" in value:
+        if ';' in value:
             value = value.split(';')
             stripped_values = [v.strip() for v in value if v]
-           
+
             if keys[0] in dct and isinstance(dct[keys[0]], list):
                 current = dct[keys[0]]
                 dct[keys[0]] = list(set(current + stripped_values))
@@ -56,7 +57,7 @@ class Target:
     def __init__(self, name):
         self.name = name
         self.features = []
-    
+
     def target(self):
         data = self.name.split('/')
         return data[0]
@@ -87,9 +88,27 @@ class Profile:
         self.features = []
         self.cached_packages = {}
 
-    def parse(self, file):
-        hw = {}
+    def recursive_insert(self, dct, keys, value):
+        kname = keys[0].replace('_', ' ')
+        if len(keys) == 1:
+            dct[kname] = value
+        else:
+            if kname not in dct:
+                dct[kname] = {}
+            self.recursive_insert(dct[kname], keys[1:], value)
 
+    def convert_to_array_format(self, dct):
+        result = []
+        for key, value in dct.items():
+            entry = {"title": key}
+            if isinstance(value, dict):
+                entry["detail"] = [{"key": subkey, "value": subvalue} for subkey, subvalue in value.items()]
+            else:
+                entry["detail"] = [value]
+            result.append(entry)
+        return result
+
+    def parse(self, file):
         for l in file:
             if is_match('^@@$', l):
                 break
@@ -99,13 +118,14 @@ class Profile:
                 self.features = set(l[25:-1].split())
                 self.features.update(self.target.features)
             elif 'Target-Profile-HARDWARE-' in l:
-                if len(l.strip()[24:].split(": ")) != 2:
+                if len(l.strip()[24:].split(': ')) != 2:
                     continue
 
-                key, value = l.strip()[24:].split(": ")
-                key_parts = key.lower().split('-')
-                recursive_insert(hw, key_parts, value)
-                self.hw = hw
+                key, value = l.strip()[24:].split(': ')
+                key_parts = key.split('-')
+                self.recursive_insert(self.hw, key_parts, value)
+
+        self.hw = self.convert_to_array_format(self.hw)
 
     def prepare_dotconfig(self):
         f = open('.config', 'w')
@@ -122,14 +142,16 @@ class Profile:
         with open('.config', 'r') as config_file:
             for line in config_file:
                 line = line.strip()
-                if line.endswith("is not set"):
-                    self.conf[line.split(" ")[1].split("CONFIG_")[1]] = False
-                elif "=" in line:
-                    option, value = line.split("=", 1)
-                    self.conf[option.split("CONFIG_")[1]] = True if value == 'y' else value
-    
+                if line.endswith('is not set'):
+                    self.conf[line.split(' ')[1].split('CONFIG_')[1]] = False
+                elif '=' in line:
+                    option, value = line.split('=', 1)
+                    self.conf[option.split('CONFIG_')[1]] = True if value == 'y' else value
+
     def fetch_features(self):
         self.features = [f for f in list_features if f.name in self.conf]
+        for feature in self.features:
+            feature.external = (self.conf[feature.name] == 'm')
 
     def find_package_deps(self, deps):
         packages = []
@@ -143,7 +165,7 @@ class Profile:
                 continue
 
             pkg = find_pkg_by_name(d)
-        
+
             info = {
                 'name': pkg.name,
                 'title': pkg.title,
@@ -159,28 +181,31 @@ class Profile:
 
         return packages
 
-    def json(self):
+    def json(self, descriptions_only=False):
         data = {
-            'name': self.name,
-            'target': {
-                'name': self.target.target(),
-                'subtarget': self.target.subtarget(),
-                'profile': self.profile
-            },
-            'hardware': self.hw,
-            'features': [],
+            "hardware": self.hw,
         }
+        if not descriptions_only:
+            data = {
+                "name": self.name,
+                "target": {"name": self.target.target(), "subtarget": self.target.subtarget(), "profile": self.profile},
+                "hardware": self.hw,
+                "features": [],
+            }
 
         self.prepare_dotconfig()
         self.read_config()
         self.fetch_features()
 
-        data['features'] = dump_features(self.features)
+        data["features"] = dump_features(self.features, descriptions_only)
 
         return json.dumps(data, indent=2)
 
-def initialize_targets():
+def initialize_targets(targetDevice=None, targetFamily=None):
     ti = 'tmp/.targetinfo'
+
+
+    print('Initializing targets...')
 
     if not path.exists(ti):
         print('Target info does not exist, running defconfig...')
@@ -198,9 +223,21 @@ def initialize_targets():
             target = Target(line[8:-1])
             target.parse(f)
         elif is_match('^Target-Profile:', line):
-            profile = Profile(line[16:-1], target)
-            profile.parse(f)
-            list_profiles.append(profile)
+            if targetDevice is not None:
+                if targetDevice in line[33:-1]:
+                    profile = Profile(line[16:-1], target)
+                    profile.parse(f)
+                    list_profiles.append(profile)
+                    break
+            elif targetFamily is not None:
+                if targetFamily in line[33:-1]:
+                    profile = Profile(line[16:-1], target)
+                    profile.parse(f)
+                    list_profiles.append(profile)
+            else:
+                profile = Profile(line[16:-1], target)
+                profile.parse(f)
+                list_profiles.append(profile)
 
     f.close()
 
@@ -209,9 +246,34 @@ class Feature:
         self.name = empty_none_value(name)
         self.title = ''
         self.maintainer = ''
+        self.external = False
         self.packages = []
         self.desc = ''
         self.detail = ''
+
+    def parse_detail(self, data):
+        if data == '':
+            return []
+
+        lines = data.split('\n')
+
+        formatted_data = []
+        current_key = None
+
+        for line in lines:
+            if ':' in line:
+                key, value = line.split(':', 1)
+                current_key = key.strip()
+                value = value.strip()
+                formatted_data.append({'key': current_key, 'value': value})
+            else:
+                continued_value = line.strip()
+                if len(formatted_data) == 0:
+                    formatted_data.append({'key': '', 'value': continued_value})
+                else:
+                    formatted_data[-1]['value'] += ' ' + continued_value
+
+        return formatted_data
 
     def parse(self, file):
         help_parse = False
@@ -250,6 +312,9 @@ class Feature:
                 help_parse = False
                 detail_parse = False
                 self.maintainer = l[13:-2]
+            elif 'depends on ' in l:
+                help_parse = False
+                detail_parse = False
             elif 'detail' in l:
                 help_parse = False
                 detail_parse = True
@@ -258,6 +323,8 @@ class Feature:
                 help_parse = True
                 detail_parse = False
                 self.desc = l[5:]
+            elif l.lstrip().startswith('#'):
+                continue
             else:
                 if help_parse is True:
                     self.desc = self.desc + l
@@ -269,6 +336,7 @@ class Feature:
 
         self.detail = ''.join(self.detail.split('\n\t', 1))
         self.detail = ''.join(self.detail.split('\t')).strip()
+        self.detail = self.parse_detail(self.detail)
 
 
 def initialize_features():
@@ -276,6 +344,8 @@ def initialize_features():
         'config/Config-tlt.in',
         'target/Config.in'
     ]
+
+    print('Initializing features...')
 
     for c in confs:
         f = open(c)
@@ -293,18 +363,25 @@ def initialize_features():
 
         f.close()
 
-def dump_features(data):
+def dump_features(data, descriptions_only=False):
     features = []
 
     for f in data:
         info = {
-            'name': f.name,
-            'title': f.title,
-            'maintainer': f.maintainer,
-            'description': f.desc,
-            'detail': f.detail,
-            'packages': []
+            "title": f.title,
+            "description": f.desc,
+            "detail": f.detail,
         }
+
+        if descriptions_only:
+            if f.title or f.desc or f.detail:
+                features.append(info)
+            continue
+
+        info["name"] = f.name
+        info["maintainer"] = f.maintainer
+        info["external"] = f.external
+        info["packages"] = list()
 
         for i in f.packages:
             pkg = find_pkg_by_name(i)
@@ -320,7 +397,7 @@ def dump_features(data):
                 'detail': pkg.detail,
                 'depends': pkg.deps, #self.find_package_deps(pkg.deps),
             }
-            info['packages'].append(info2)
+            info["packages"].append(info2)
 
         features.append(info)
 
@@ -341,12 +418,10 @@ class Package:
 
         for d in deps:
             name = d
-            is_not = False
 
             if '!' in d[1]:
                 name = d[1:]
-                is_not = True
-            
+
             if '+' in name[0]:
                 name = name[1:]
 
@@ -369,10 +444,16 @@ class Package:
             elif is_match('^Maintainer: ', l):
                 self.maint = l[12:-1]
             elif is_match('^Detail-Description: ', l):
-                self.detail = l[20:-1].strip()
+                tmp = l[20:-1].strip()
+                if tmp == self.title:
+                    continue
                 detail_parse = True
+                self.detail = tmp
             elif is_match('^Description: ', l):
-                self.desc = l[13:-1].strip()
+                tmp = l[13:-1].strip()
+                if tmp == self.title:
+                    continue
+                self.desc = tmp
                 help_parse = True
                 detail_parse = False
             elif is_match('^Depends: ', l):
@@ -384,8 +465,10 @@ class Package:
                     self.detail = self.detail + l
 
 def initialize_packageinfo():
+    print('Initializing packageinfo...')
+
     for file in os.listdir('tmp/info'):
-        if not '.packageinfo-' in file:
+        if ".packageinfo-" not in file:
             continue
 
         f = open(f'tmp/info/{file}')
@@ -399,17 +482,70 @@ def initialize_packageinfo():
         f.close()
 
 
-if len(sys.argv) >= 1 and 'dump' in sys.argv:
-    dump_list = True
+def generate_device_features(dump=False, descriptions_only=False, target=None, family=None):
+    default_dir='out'
+    default_name='features.json'
+    dump_list = False
 
-if not dump_list:
-    initialize_targets()
+    print('Generating device features...')
 
-initialize_features()
-initialize_packageinfo()
+    if dump:
+        print('Dumping all possible device features.')
+        dump_list = True
+    if target:
+        print(f'Generating features for target device: {target}')
+        default_name = f'{target}.json'
+    if family:
+        print(f'Generating features for device family: {family}')
+        default_name = f'{family}.json'
 
-if dump_list:
-    print(json.dumps(dump_features(list_features), indent=2))
-else:
-    for i in list_profiles:
-        print(i.json() + ',')
+    if not dump_list:
+        initialize_targets(targetDevice=target, targetFamily=family)
+
+    initialize_features()
+    initialize_packageinfo()
+
+    if not os.path.exists(default_dir):
+        os.makedirs(default_dir)
+
+    if dump_list:
+        json_data = json.dumps(dump_features(list_features, descriptions_only), indent=2)
+    else:
+        data = []
+        for p in list_profiles:
+            print(f'Generating {p.name}...')
+            data.append(p.json(descriptions_only))
+
+        json_data = ',\n'.join(data)
+
+    if len(json_data) == 0:
+        print('Unable to generate json data!')
+        print('Target, family is invalid or project files are corrupted!')
+        return
+
+    default_path = os.path.join(default_dir, default_name)
+    with open(default_path, 'w') as file:
+        file.write(json_data)
+
+    print(f'Data written to {default_path} path.')
+
+def main():
+    parser = argparse.ArgumentParser(description='Generate device features.')
+    parser.add_argument("--descriptions-only", action="store_true", help="Generate only descriptions of features")
+
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument('--dump', action='store_true', help='Generate all possible device features')
+    group.add_argument('--target', type=str, help='Generate device features for a specific target device')
+    group.add_argument('--family', type=str, help='Generate device features for a specific device family')
+
+    args = parser.parse_args()
+
+    if not any([args.dump, args.target, args.family]):
+        parser.print_help()
+        sys.exit(1)
+
+    generate_device_features(args.dump, args.descriptions_only, args.target, args.family)
+
+
+if __name__ == '__main__':
+    main()

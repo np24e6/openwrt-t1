@@ -1,20 +1,24 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=netifd
-PKG_RELEASE:=2
+PKG_RELEASE:=3
 
-PKG_SOURCE_PROTO:=git
-PKG_SOURCE_URL=$(PROJECT_GIT)/project/netifd.git
 PKG_SOURCE_DATE:=2024-01-04
-PKG_SOURCE_VERSION:=c18cc79d50002ab8529c21184aceb016c61ac61c
-PKG_MIRROR_HASH:=0a1080ade51dc4a55249c8899d4d384f665e0d21075adab24ea23a2808165e05
 PKG_MAINTAINER:=Felix Fietkau <nbd@nbd.name>
 
-PKG_LICENSE:=GPL-2.0
+PKG_LICENSE:=GPL-2.0-only
 PKG_LICENSE_FILES:=
 
 PKG_BUILD_PARALLEL:=1
 PKG_BUILD_FLAGS:=lto
+
+PKG_CONFIG_DEPENDS += \
+	CONFIG_USE_PROCD \
+	CONFIG_USE_OPENRC
+
+PKG_SOURCE_PROTO:=git
+PKG_SOURCE_URL=$(PROJECT_GIT)/project/netifd.git
+PKG_SOURCE_VERSION:=c18cc79d50002ab8529c21184aceb016c61ac61c
 
 include $(INCLUDE_DIR)/package.mk
 include $(INCLUDE_DIR)/cmake.mk
@@ -60,7 +64,9 @@ define Package/netifd/install
 	$(if $(CONFIG_PPP_MOBILE_SUPPORT),, \
 		$(RM) $(1)/lib/netifd/proto/pppmobile.sh)
 
-
+	$(if $(CONFIG_USE_OPENRC),\
+		$(OPENRC_INSTALL) boot network ./files/etc/init.d/network.openrc $(1))
+	$(RM) $(1)/etc/init.d/network.openrc
 endef
 
 $(eval $(call BuildPackage,netifd))

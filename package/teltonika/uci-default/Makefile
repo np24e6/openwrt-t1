@@ -9,8 +9,7 @@ PKG_VERSION:=2023-04-25
 PKG_RELEASE:=1
 
 PKG_LICENSE:=BSD-3-Clause
-
-GPL_INCLUDE_SRC:=1
+PKG_LICENSE_FILES:=LICENSE
 
 include $(INCLUDE_DIR)/package.mk
 include $(INCLUDE_DIR)/migrations.mk

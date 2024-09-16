@@ -1,0 +1,8 @@
+#!/sbin/openrc-run
+
+command="/sbin/ubusd"
+command_background="yes"
+pidfile="/run/${RC_SVCNAME}.pid"
+supervisor=supervise-daemon
+respawn_delay=1
+respawn_max=0

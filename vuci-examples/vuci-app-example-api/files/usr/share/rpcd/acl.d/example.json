@@ -3,14 +3,12 @@
     "description": "Example App permissions",
     "read": {
       "api": [
-        "/example_f/*",
-        "/example_c/*"
+        "/example_f/*"
       ]
     },
     "write": {
       "api": [
-        "/example_f/*",
-        "/example_c/*"
+        "/example_f/*"
       ]
     }
   }

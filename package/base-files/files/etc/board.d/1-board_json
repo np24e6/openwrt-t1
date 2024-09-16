@@ -31,7 +31,7 @@ setup_json() {
 		ucidef_set_interfaces_lan_wan "eth0" "eth1"
 		ucidef_add_switch "switch0" \
 			"0u@eth0" "2:lan:1" "3:lan:2" "4:lan:3" "0u@eth1" "5:wan"
-		ucidef_add_static_modem_info "$model" "3-1" "2" "primary" "gps_out"
+		ucidef_add_static_modem_info "$model" "3-1" "primary" "gps_out"
 		ucidef_set_usb_jack "/usb1/1-1/"
 		ucidef_set_hwinfo dual_sim usb gps mobile ethernet ios hw_nat nat_offloading multi_tag port_link gigabit_port
 		ucidef_set_network_options "vlans" 128 "max_mtu" 9000 "readonly_vlans" 2
@@ -52,7 +52,7 @@ setup_json() {
 			"0u@eth0" "2:lan:1" "3:lan:2" "4:lan:3" "0u@eth1" "5:wan"
 		ucidef_add_wlan_bssid_limit "wlan0" 16
 		ucidef_add_wlan_bssid_limit "wlan1" 16
-		ucidef_add_static_modem_info "$model" "3-1" "2" "primary" "gps_out"
+		ucidef_add_static_modem_info "$model" "3-1" "primary" "gps_out"
 		ucidef_set_usb_jack "/usb1/1-1/"
 		ucidef_set_hwinfo dual_sim usb gps mobile wifi dual_band_ssid bluetooth ethernet ios hw_nat nat_offloading multi_tag port_link \
 			gigabit_port
@@ -64,7 +64,7 @@ setup_json() {
 			"0u@eth0" "1:lan" "2:lan" "3:lan" "4:lan" "0u@eth1" "5:wan#s"
 		ucidef_add_wlan_bssid_limit "wlan0" 16
 		ucidef_add_wlan_bssid_limit "wlan1" 16
-		ucidef_add_static_modem_info "$model" "3-1" "2" "primary"
+		ucidef_add_static_modem_info "$model" "3-1" "primary"
 		ucidef_set_hwinfo dual_sim usb mobile wifi dual_band_ssid ethernet sfp_port sfp_switch console hw_nat nat_offloading multi_tag \
 			port_link gigabit_port
 		ucidef_set_usb_jack "/usb1/1-1/1-1.2/"
@@ -74,6 +74,7 @@ setup_json() {
 			"rts/cts xon/xoff none" \
 			"1 2" \
 			"even odd mark space none" \
+			"none" \
 			"/usb1/1-1/1-1.3/"
 		ucidef_set_release_version "2.3.1"
 		ucidef_set_network_options "vlans" 128 "max_mtu" 9000 "readonly_vlans" 2
@@ -85,8 +86,8 @@ setup_json() {
 		ucidef_add_wlan_bssid_limit "wlan0" 16
 		ucidef_add_wlan_bssid_limit "wlan1" 16
 		# builtin and primary should be first modem
-		ucidef_add_static_modem_info "$model" "3-1" "1" "primary" "gps_out"
-		ucidef_add_static_modem_info "$model" "1-1.2" "1"
+		ucidef_add_static_modem_info "$model" "3-1" "primary" "gps_out"
+		ucidef_add_static_modem_info "$model" "1-1.2"
 		ucidef_set_usb_jack "/usb1/1-1/1-1.3/"
 		ucidef_set_hwinfo usb gps mobile wifi dual_band_ssid bluetooth ethernet ios dual_modem hw_nat nat_offloading multi_tag port_link \
 			gigabit_port
@@ -99,7 +100,7 @@ setup_json() {
 			"0u@eth0" "1:lan" "2:lan" "3:lan" "4:lan" "0u@eth1" "5:wan"
 		ucidef_add_wlan_bssid_limit "wlan0" 16
 		ucidef_add_wlan_bssid_limit "wlan1" 16
-		ucidef_add_static_modem_info "$model" "1-1" "2" "primary" "gps_out"
+		ucidef_add_static_modem_info "$model" "1-1" "primary" "gps_out"
 		ucidef_set_usb_jack "/usb3/3-1/"
 		ucidef_set_hwinfo usb gps dual_sim mobile wifi dual_band_ssid bluetooth ethernet ios at_sim hw_nat nat_offloading multi_tag \
 			port_link gigabit_port
@@ -112,7 +113,7 @@ setup_json() {
 			"0u@eth0" "1:lan" "2:lan" "3:lan" "4:lan" "0u@eth1" "5:wan"
 		ucidef_add_wlan_bssid_limit "wlan0" 16
 		ucidef_add_wlan_bssid_limit "wlan1" 16
-		ucidef_add_static_modem_info "$model" "2-1" "2" "primary" "gps_out"
+		ucidef_add_static_modem_info "$model" "2-1" "primary" "gps_out"
 		ucidef_set_usb_jack "/usb1/1-1/"
 		ucidef_set_hwinfo usb gps dual_sim mobile wifi dual_band_ssid bluetooth ethernet ios hw_nat nat_offloading multi_tag port_link \
 			gigabit_port
@@ -124,7 +125,7 @@ setup_json() {
 			"0u@eth0" "1:lan" "2:lan" "3:lan" "4:lan" "0u@eth1" "5:wan"
 		ucidef_add_wlan_bssid_limit "wlan0" 16
 		ucidef_add_wlan_bssid_limit "wlan1" 16
-		ucidef_add_static_modem_info "$model" "2-1" "2" "primary" "gps_out"
+		ucidef_add_static_modem_info "$model" "2-1" "primary" "gps_out"
 		ucidef_set_usb_jack "/usb3/3-1/"
 		ucidef_set_hwinfo dual_sim usb gps mobile wifi dual_band_ssid ethernet ios at_sim hw_nat nat_offloading multi_tag port_link \
 			gigabit_port
@@ -135,13 +136,14 @@ setup_json() {
 	TRB255*)
 		ucidef_set_led_switch "lan" "LAN" "eth_led" "switch0" "0x04"
 		ucidef_set_interface_lan "eth0"
-		ucidef_add_static_modem_info "$model" "1-1.4" "2" "primary" "gps_out"
+		ucidef_add_static_modem_info "$model" "1-1.4" "primary" "gps_out"
 		ucidef_add_serial_capabilities "rs232" \
 			"300 600 1200 2400 4800 9600 19200 38400 57600 115200" \
 			"7 8" \
 			"rts/cts xon/xoff none" \
 			"1 2" \
 			"even odd mark space none" \
+			"none" \
 			"/usb1/1-1/1-1.3/"
 		ucidef_add_serial_capabilities "rs485" \
 			"300 600 1200 2400 4800 9600 19200 38400 57600 115200 \
@@ -150,6 +152,7 @@ setup_json() {
 			"none" \
 			"1 2" \
 			"even odd mark space none" \
+			"half full" \
 			"/usb1/1-1/1-1.2/"
 		ucidef_set_hwinfo dual_sim mobile gps ethernet ios rs232 rs485 nat_offloading
 		ucidef_set_network_options "vlans" 16 "max_mtu" 1500
@@ -159,24 +162,25 @@ setup_json() {
 		ucidef_set_led_switch "lan" "LAN" "eth_led" "switch0" "0x01"
 		ucidef_set_interface_lan "eth0"
 		ucidef_usbcheck "/sys/bus/usb/drivers/usb/1-1/1-1.4"
-		ucidef_add_static_modem_info "$model" "1-1.4" "2" "primary" "gps_out"
+		ucidef_add_static_modem_info "$model" "1-1.4" "primary" "gps_out"
 		ucidef_add_serial_capabilities "rs232" \
 			"300 600 1200 2400 4800 9600 19200 38400 57600 115200" \
 			"7 8" \
 			"rts/cts xon/xoff none" \
 			"1 2" \
 			"even odd mark space none" \
+			"none" \
 			"/usb1/1-1/1-1.3/"
 		ucidef_add_serial_capabilities "rs485" \
-			"300 600 1200 2400 4800 9600 19200 38400 57600 115200 \
-			 230400 460800 921600 1000000 3000000" \
-			"7 8" \
-			"none" \
+			"300 600 1200 2400 4800 9600 19200 38400 57600 115200 230400" \
+			"5 6 7 8" \
+			"xon/xoff none" \
 			"1 2" \
 			"even odd mark space none" \
+			"half full" \
 			"/tty/ttyS1"
 		ucidef_set_hwinfo dual_sim mobile gps ethernet ios rs232 rs485 sw_rst_on_init
-		ucidef_set_network_options "vlans" 16 "max_mtu" 1500
+		ucidef_set_network_options "vlans" 16 "max_mtu" 1500 "vlan0" true
 		;;
 	RUT14*)
 		ucidef_set_led_switch "lan" "LAN" "eth1_led" "switch0" "0x2"
@@ -193,11 +197,12 @@ setup_json() {
 				"rts/cts xon/xoff none" \
 				"1 2" \
 				"even odd mark space none" \
+				"none" \
 				"/usb1/1-1/1-1:1.0/"
 		else
 			ucidef_set_hwinfo wifi nat_offloading ethernet port_link
 		fi
-		ucidef_set_network_options "vlans" 16 "max_mtu" 1500 "readonly_vlans" 2
+		ucidef_set_network_options "vlans" 16 "max_mtu" 1500 "readonly_vlans" 2 "vlan0" true
 		;;
 	RUT361* |\
 	RUT200* |\
@@ -210,13 +215,48 @@ setup_json() {
 		ucidef_add_wlan_bssid_limit "wlan0" 4
 		ucidef_set_interface_default_macaddr "lan" "$(mtd_get_mac_binary config 0x0)"
 		ucidef_set_interface_default_macaddr "wan" "$(macaddr_add "$(mtd_get_mac_binary config 0x0)" 1)"
-		ucidef_add_static_modem_info "$model" "1-1" "1" "primary"
+		ucidef_add_static_modem_info "$model" "1-1" "primary"
 		opt_io="ios"
+		opt_sim=""
 		[ "${model:3:1}" = "3" ] && [ "${model:7:1}" = "1" ] && opt_io=""
 		[ "${model:3:1}" = "2" ] && [ "${model:6:1}" = "1" ] && opt_io=""
-		ucidef_set_hwinfo mobile wifi ethernet nat_offloading port_link "$opt_io"
 		[ "${model:4:2}" = "60" ] && ucidef_set_release_version "7.4.1"
+		[ "${model:6:1}" = "2" ] && [ "${model::6}" = "RUT241" ] && {
+			ucidef_set_esim
+			opt_sim="dual_sim"
+		}
 		ucidef_set_network_options "vlans" 16 "max_mtu" 1500 "readonly_vlans" 2
+		ucidef_set_hwinfo mobile wifi ethernet nat_offloading port_link "$opt_io" "$opt_sim"
+		[ "${model::4}" = "RUT2" ] && ucidef_check_dual_sim
+		;;
+	RUT206*)
+		ucidef_set_led_switch "lan" "LAN" "eth1_led" "switch0" "0x2"
+		ucidef_set_led_switch "wan" "WAN" "eth2_led" "switch0" "0x1"
+		ucidef_add_switch "switch0" "1:lan" "0:wan:2" "6@eth0"
+		ucidef_usbcheck "/sys/bus/usb/drivers/usb/1-1"
+		ucidef_add_wlan_bssid_limit "wlan0" 4
+		ucidef_set_interface_default_macaddr "lan" "$(mtd_get_mac_binary config 0x0)"
+		ucidef_set_interface_default_macaddr "wan" "$(macaddr_add "$(mtd_get_mac_binary config 0x0)" 1)"
+		ucidef_add_static_modem_info "$model" "1-1.2" "2" "primary"
+		ucidef_set_hwinfo mobile wifi ethernet nat_offloading port_link dual_sim sd_card rs232 rs485
+		ucidef_set_network_options "vlans" 16 "max_mtu" 1500 "readonly_vlans" 2 "vlan0" true
+		ucidef_add_serial_capabilities "rs232" \
+			"300 600 1200 2400 4800 9600 19200 38400 57600 115200 230400" \
+			"5 6 7 8" \
+			"xon/xoff none" \
+			"1 2" \
+			"even odd mark space none" \
+			"none" \
+			"/tty/ttyS1"
+		ucidef_add_serial_capabilities "rs485" \
+			"300 600 1200 2400 4800 9600 19200 38400 57600 115200 \
+			 230400 460800 921600 1500000 2000000" \
+			"5 6 7 8" \
+			"none" \
+			"1 2" \
+			"even odd mark space none" \
+			"half" \
+			"usb1/1-1/1-1.4/1-1.4:1.0/"
 		;;
 	RUT300*)
 		ucidef_set_led_switch "lan1" "LAN1" "eth1_led" "switch0" "0x02"
@@ -242,14 +282,14 @@ setup_json() {
 		ucidef_set_usb_jack "/usb2/2-1/"
 		ucidef_set_interface_default_macaddr "wan" "$(macaddr_add "$(mtd_get_mac_binary config 0x0)" 1)"
 		ucidef_set_hwinfo usb ethernet ios nat_offloading port_link
-		ucidef_set_network_options "vlans" 16 "max_mtu" 1500 "readonly_vlans" 2
+		ucidef_set_network_options "vlans" 16 "max_mtu" 1500 "readonly_vlans" 2 "vlan0" true
 		;;
 	RUT360*)
 		ucidef_set_led_switch "lan" "LAN" "eth1_led" "switch0" "0x10"
 		ucidef_set_led_netdev "wan" "WAN" "eth2_led" "eth1"
 		ucidef_set_interfaces_lan_wan "eth0" "eth1"
 		ucidef_add_wlan_bssid_limit "wlan0" 8
-		ucidef_add_static_modem_info "$model" "1-1" "1" "primary"
+		ucidef_add_static_modem_info "$model" "1-1" "primary"
 		ucidef_set_hwinfo mobile wifi dual_band_ssid ethernet ios nat_offloading
 		ucidef_set_network_options "vlans" 16 "max_mtu" 1500
 		;;
@@ -264,11 +304,11 @@ setup_json() {
 		ucidef_set_interface_default_macaddr "wan" "$(macaddr_add "$(mtd_get_mac_binary config 0x0)" 1)"
 		ucidef_add_wlan_bssid_limit "wlan0" 4
 		ucidef_usbcheck "/sys/bus/usb/drivers/usb/1-1"
-		ucidef_add_static_modem_info "$model" "1-1" "2" "primary"
+		ucidef_add_static_modem_info "$model" "1-1" "primary"
 		[ "${model:7:1}" = "6" ] && ucidef_set_hwinfo dual_sim mobile nat_offloading port_link \
 		wifi ethernet || ucidef_set_hwinfo dual_sim mobile wifi ethernet ios nat_offloading port_link
 		[ "${model:4:2}" = "01" ] && ucidef_set_release_version "7.3.1"
-		ucidef_set_network_options "vlans" 16 "max_mtu" 1500 "readonly_vlans" 2
+		ucidef_set_network_options "vlans" 16 "max_mtu" 1500 "readonly_vlans" 2 "vlan0" true
 		[ "${model:7:1}" = "1" ] && [ "${model::6}" = "RUT901" ] && ucidef_set_esim
 		;;
 	RUT906* |\
@@ -283,7 +323,7 @@ setup_json() {
 		ucidef_set_interface_default_macaddr "wan" "$(macaddr_add "$(mtd_get_mac_binary config 0x0)" 1)"
 		ucidef_add_wlan_bssid_limit "wlan0" 4
 		ucidef_usbcheck "/sys/bus/usb/drivers/usb/1-1"
-		ucidef_add_static_modem_info "$model" "1-1.4" "2" "primary" "gps_out"
+		ucidef_add_static_modem_info "$model" "1-1.4" "primary" "gps_out"
 		[ "$hw_ver" -gt 4 ] && sd_opt="sd_card" || sd_opt=""
 		[ "${model:7:1}" = "6" ] && io_opt="" || io_opt="ios"
 		ucidef_set_hwinfo dual_sim usb gps nat_offloading port_link \
@@ -295,6 +335,7 @@ setup_json() {
 			"rts/cts xon/xoff none" \
 			"1 2" \
 			"even odd mark space none" \
+			"none" \
 			"/usb1/1-1/1-1.3/"
 		ucidef_add_serial_capabilities "rs485" \
 			"300 600 1200 2400 4800 9600 19200 38400 57600 115200 230400" \
@@ -302,8 +343,9 @@ setup_json() {
 			"xon/xoff none" \
 			"1 2" \
 			"even odd mark space none" \
+			"half full" \
 			"/tty/ttyS1"
-		ucidef_set_network_options "vlans" 16 "max_mtu" 1500 "readonly_vlans" 2
+		ucidef_set_network_options "vlans" 16 "max_mtu" 1500 "readonly_vlans" 2 "vlan0" true
 		;;
 	TRB140*)
 		ucidef_set_interface_lan "eth0 rndis0"
@@ -323,6 +365,7 @@ setup_json() {
 			"none" \
 			"1" \
 			"even" \
+			"half" \
 			"/tty/ttyHS0"
 		if [ "${model:6:1}" = "4" ]; then
 			ucidef_set_release_version "7.4.3"
@@ -340,14 +383,15 @@ setup_json() {
 		;;
 	TRB142*)
 		ucidef_set_interface_lan "rndis0"
-		[ "${model:7:1}" = "2" ] && ucidef_set_hwinfo mobile rs232 micro_usb || \
-			ucidef_set_hwinfo mobile ios rs232 micro_usb
+		[ "${model:7:1}" = "2" ] && ucidef_set_hwinfo mobile rs232 rs232_control micro_usb || \
+			ucidef_set_hwinfo mobile ios rs232 rs232_control micro_usb
 		ucidef_add_serial_capabilities "rs232" \
 			"300 600 1200 2400 4800 9600 19200 38400 57600 115200" \
 			"5 6 7 8" \
 			"rts/cts xon/xoff none" \
 			"1 2" \
 			"even odd mark space none" \
+			"none" \
 			"/tty/ttyHS0"
 		if [ "${model:6:1}" = "3" ]; then
 			ucidef_set_release_version "7.1"
@@ -367,6 +411,7 @@ setup_json() {
 			"xon/xoff none" \
 			"1 2" \
 			"even odd mark space none" \
+			"half full" \
 			"/tty/ttyHS0"
 		if [ "${model:6:1}" = "2" ]; then
 			ucidef_set_release_version "7.1"
@@ -383,7 +428,7 @@ setup_json() {
 		ucidef_add_wlan_bssid_limit "wlan1" 8
 		ucidef_set_interface guest proto static type bridge \
 		guest 1 _wireless true _dhcp true
-		ucidef_add_static_modem_info "$model" "1-1" "1" "primary"
+		ucidef_add_static_modem_info "$model" "1-1" "primary"
 		ucidef_set_hwinfo mobile wifi dual_band_ssid wps ethernet nat_offloading
 		ucidef_set_release_version "7.2.4"
 		ucidef_set_network_options "vlans" 16 "max_mtu" 1500
@@ -394,19 +439,19 @@ setup_json() {
 		ucidef_add_switch "switch0" "4:lan:1" "1:lan:2" "6@eth0"
 		ucidef_set_interface_default_macaddr "lan" "$(mtd_get_mac_binary config 0x0)"
 		ucidef_set_interface "lan" "default_ip" "%%LAN_IP%%"
-		ucidef_add_static_modem_info "$model" "1-1" "2" "primary"
+		ucidef_add_static_modem_info "$model" "1-1" "primary"
 		ucidef_set_poe "i2c-0" 2 15400 1 "_lan1" "3" 15400
 		ucidef_set_poe_chip "0X77" "0:_lan1"
 		ucidef_set_poe_chip "0X2F" "1:_lan1"
 		ucidef_set_hwinfo dual_sim mobile ethernet nat_offloading poe port_link
-		ucidef_set_network_options "vlans" 16 "max_mtu" 1500 "readonly_vlans" 1
+		ucidef_set_network_options "vlans" 16 "max_mtu" 1500 "readonly_vlans" 1 "vlan0" true
 		;;
 	OTD500*)
 		ucidef_set_interface_lan "lan1 lan2"
 		ucidef_set_poe "i2c-0" 2 15400 1 "_lan2" "3" 15400
 		ucidef_set_poe_chip "0X77" "0:_lan2"
 		ucidef_set_poe_chip "0X2F" "1:_lan2"
-		ucidef_add_static_modem_info "$model" "2-1" "2" "primary"
+		ucidef_add_static_modem_info "$model" "2-1" "primary"
 		ucidef_set_hwinfo ethernet mobile dual_sim at_sim dsa hw_nat nat_offloading multi_tag \
 			port_link gigabit_port poe
 		ucidef_set_network_options "vlans" 4094 "max_mtu" 2030 "readonly_vlans" 1
@@ -466,7 +511,7 @@ setup_json() {
 			hw_opt="gps"
 			gps="gps_out"
 		fi
-		ucidef_add_static_modem_info "$model" "2-1" "2" "primary" "$gps"
+		ucidef_add_static_modem_info "$model" "2-1" "primary" "$gps"
 		ucidef_set_hwinfo usb ethernet ios mobile wifi dual_band_ssid dual_sim at_sim dsa hw_nat nat_offloading multi_tag \
 			port_link soft_port_mirror gigabit_port "$hw_opt"
 		ucidef_set_network_options "vlans" 4094 "max_mtu" 2030 "readonly_vlans" 1
@@ -476,7 +521,7 @@ setup_json() {
 		ucidef_set_usb_jack "/usb1/1-2/"
 		ucidef_add_wlan_bssid_limit "wlan0" 4
 		ucidef_add_wlan_bssid_limit "wlan1" 4
-		ucidef_add_static_modem_info "$model" "2-1" "2" "primary"
+		ucidef_add_static_modem_info "$model" "2-1" "primary"
 		ucidef_set_hwinfo usb ethernet ios mobile wifi dual_band_ssid dual_sim at_sim dsa hw_nat nat_offloading multi_tag \
 			soft_port_mirror port_link gigabit_port
 		ucidef_set_network_options "vlans" 4094 "max_mtu" 2030 "readonly_vlans" 1
@@ -486,10 +531,10 @@ setup_json() {
 		ucidef_set_interfaces_lan_wan "lan1 lan2 lan3 lan4" "wan"
 		ucidef_add_wlan_bssid_limit "wlan0" 4
 		ucidef_add_wlan_bssid_limit "wlan1" 4
-		ucidef_add_static_modem_info "$model" "2-1.1" "1" "primary"
-		ucidef_add_static_modem_info "$model" "2-1.2" "1"
+		ucidef_add_static_modem_info "$model" "2-1.1" "primary"
+		ucidef_add_static_modem_info "$model" "2-1.2"
 		ucidef_set_hwinfo gps ethernet ios mobile wifi dual_band_ssid at_sim dsa hw_nat nat_offloading multi_tag \
-			soft_port_mirror port_link gigabit_port dual_modem
+			soft_port_mirror port_link gigabit_port dual_modem custom_usbcfg
 		ucidef_set_network_options "vlans" 4094 "max_mtu" 2030 "readonly_vlans" 1
 		ucidef_set_release_version "7.7"
 		;;
@@ -498,7 +543,7 @@ setup_json() {
 		ucidef_set_usb_jack "/usb1/1-2/"
 		ucidef_add_wlan_bssid_limit "wlan0" 4
 		ucidef_add_wlan_bssid_limit "wlan1" 4
-		ucidef_add_static_modem_info "$model" "2-1" "2" "primary" "gps_out"
+		ucidef_add_static_modem_info "$model" "2-1" "primary" "gps_out"
 		ucidef_set_hwinfo usb ethernet power_ios gps mobile wifi dual_band_ssid dual_sim at_sim dsa hw_nat nat_offloading multi_tag \
 			port_link soft_port_mirror gigabit_port sd_card
 		ucidef_set_network_options "vlans" 4094 "max_mtu" 2030 "readonly_vlans" 1
@@ -509,7 +554,7 @@ setup_json() {
 		ucidef_add_wlan_bssid_limit "wlan1" 4
 		ucidef_set_usb_jack "/usb1/1-1/1-1.3/"
 		ucidef_usbhubcheck "2-1 1-1" "pcie_reset"
-		ucidef_add_static_modem_info "$model" "2-1.1" "2" "primary" "gps_out"
+		ucidef_add_static_modem_info "$model" "2-1.1" "primary" "gps_out"
 		ucidef_set_hwinfo usb ethernet ios gps mobile wifi dual_sim at_sim dual_band_ssid dsa hw_nat nat_offloading port_link soft_port_mirror \
 			gigabit_port multi_tag
 		ucidef_set_network_options "vlans" 4094 "max_mtu" 2022 "readonly_vlans" 1
@@ -523,7 +568,7 @@ setup_json() {
 		;;
 	RUTM09*)
 		ucidef_set_interfaces_lan_wan "lan1 lan2 lan3" "wan"
-		ucidef_add_static_modem_info "$model" "1-2" "2" "primary" "gps_out"
+		ucidef_add_static_modem_info "$model" "1-2" "primary" "gps_out"
 		ucidef_set_usb_jack "/usb1/1-1/"
 		ucidef_set_hwinfo usb ethernet ios gps mobile dual_sim dsa hw_nat nat_offloading multi_tag port_link soft_port_mirror \
 			gigabit_port
@@ -545,7 +590,7 @@ setup_json() {
 		ucidef_set_usb_jack "/usb1/1-1/"
 		ucidef_add_wlan_bssid_limit "wlan0" 4
 		ucidef_add_wlan_bssid_limit "wlan1" 4
-		ucidef_add_static_modem_info "$model" "1-2" "2" "primary" "gps_out"
+		ucidef_add_static_modem_info "$model" "1-2" "primary" "gps_out"
 		ucidef_set_hwinfo usb ethernet ios gps mobile wifi dual_band_ssid dual_sim dsa hw_nat nat_offloading multi_tag \
 			port_link soft_port_mirror gigabit_port
 		ucidef_set_network_options "vlans" 4094 "max_mtu" 2030 "readonly_vlans" 1
@@ -555,10 +600,10 @@ setup_json() {
 		ucidef_set_interfaces_lan_wan "lan1 lan2 lan3 lan4" "wan"
 		ucidef_add_wlan_bssid_limit "wlan0" 4
 		ucidef_add_wlan_bssid_limit "wlan1" 4
-		ucidef_add_static_modem_info "$model" "1-1" "1" "primary" "gps_out"
-		ucidef_add_static_modem_info "$model" "1-2.2" "1"
+		ucidef_add_static_modem_info "$model" "1-1" "primary" "gps_out"
+		ucidef_add_static_modem_info "$model" "1-2.2"
 		ucidef_set_hwinfo ethernet ios gps mobile wifi dual_band_ssid dual_modem dsa hw_nat nat_offloading multi_tag \
-			port_link soft_port_mirror gigabit_port
+			port_link soft_port_mirror gigabit_port custom_usbcfg
 		ucidef_set_network_options "vlans" 4094 "max_mtu" 2030 "readonly_vlans" 1
 		ucidef_set_release_version "7.6.1"
 		;;
@@ -567,7 +612,7 @@ setup_json() {
 		ucidef_set_usb_jack "/usb1/1-1/"
 		ucidef_add_wlan_bssid_limit "wlan0" 4
 		ucidef_add_wlan_bssid_limit "wlan1" 4
-		ucidef_add_static_modem_info "$model" "1-2" "2" "primary" "gps_out"
+		ucidef_add_static_modem_info "$model" "1-2" "primary" "gps_out"
 		ucidef_set_hwinfo usb ethernet ios gps mobile wifi dual_band_ssid dual_sim dsa hw_nat nat_offloading multi_tag \
 			port_link soft_port_mirror gigabit_port
 		ucidef_set_network_options "vlans" 4094 "max_mtu" 2030 "readonly_vlans" 1
@@ -598,6 +643,7 @@ platform="$(cat /proc/device-tree/platform)" 2>/dev/null
 board_config_update
 setup_json
 ucidef_set_board_platform "$platform"
+ucidef_check_esim
 board_config_flush
 
 exit 0

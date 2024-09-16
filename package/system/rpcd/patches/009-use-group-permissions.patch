@@ -1,0 +1,57 @@
+--- a/session.c
++++ b/session.c
+@@ -853,6 +853,7 @@ rpc_login_test_login(struct uci_context
+ 		return false;
+ 	}
+ 
++	const char *user_group = NULL;
+ 	uci_foreach_element(&p->sections, e)
+ 	{
+ 		s = uci_to_section(e);
+@@ -878,8 +879,14 @@ rpc_login_test_login(struct uci_context
+ 
+ 		/* If password is NULL, we're restoring ACLs for an existing session,
+ 		 * in this case do not check the password again. */
+-		if (!password)
+-			return ptr.s;
++		if (!password) {
++			ptr.option = "group";
++			ptr.o = NULL;
++
++			if (!uci_lookup_ptr(uci, &ptr, NULL, true) && ptr.o && ptr.o->type == UCI_TYPE_STRING)
++				user_group = ptr.o->v.string;
++			break;
++		}
+ 
+ 		/* test for matching password */
+ 		ptr.option = "password";
+@@ -891,8 +898,27 @@ rpc_login_test_login(struct uci_context
+ 		if (ptr.o->type != UCI_TYPE_STRING)
+ 			continue;
+ 
+-		if (rpc_login_test_password(ptr.o->v.string, password))
+-			return ptr.s;
++		if (rpc_login_test_password(ptr.o->v.string, password)) {
++			ptr.option = "group";
++			ptr.o = NULL;
++
++			if (!uci_lookup_ptr(uci, &ptr, NULL, true) && ptr.o && ptr.o->type == UCI_TYPE_STRING)
++				user_group = ptr.o->v.string;
++			break;
++		}
++	}
++
++	if (user_group) {
++		uci_foreach_element(&p->sections, e)
++		{
++			s = uci_to_section(e);
++			if (strcmp(s->type, "group"))
++				continue;
++
++			if (!strcmp(s->e.name, user_group)) {
++				return s;
++			}
++		}
+ 	}
+ 
+ 	return NULL;

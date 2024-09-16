@@ -6,7 +6,7 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=speedtest
-PKG_VERSION:=2024-03-07
+PKG_VERSION:=2024-02-06
 PKG_RELEASE:=3
 
 PKG_SOURCE_VERSION:=1.7

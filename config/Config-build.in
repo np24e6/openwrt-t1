@@ -19,6 +19,19 @@ config EXPERIMENTAL
 
 menu "Global build settings"
 
+	choice
+		prompt "Default Init system"
+		default USE_PROCD
+		help
+		  Choose default init and service system manager
+		config USE_PROCD
+			bool "procd"
+			select PACKAGE_procd-init
+		config USE_OPENRC
+			bool "OpenRC"
+			select PACKAGE_openrc
+	endchoice
+
 	config JSON_OVERVIEW_IMAGE_INFO
 		bool "Create JSON info file overview per target"
 		default BUILDBOT

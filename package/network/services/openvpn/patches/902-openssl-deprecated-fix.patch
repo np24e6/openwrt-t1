@@ -1,0 +1,130 @@
+Index: openvpn-2.6.9/src/openvpn/ssl_openssl.c
+===================================================================
+--- openvpn-2.6.9.orig/src/openvpn/ssl_openssl.c
++++ openvpn-2.6.9/src/openvpn/ssl_openssl.c
+@@ -986,7 +986,11 @@ tls_ctx_load_cert_file(struct tls_root_c
+ 
+     if (in == NULL)
+     {
++#if OPENSSL_VERSION_NUMBER < 0x30000000L
+         SSLerr(SSL_F_SSL_CTX_USE_CERTIFICATE_FILE, ERR_R_SYS_LIB);
++#else
++        ERR_raise(ERR_LIB_SSL, ERR_R_SYS_LIB);
++#endif
+         goto end;
+     }
+ 
+@@ -995,7 +999,11 @@ tls_ctx_load_cert_file(struct tls_root_c
+                           SSL_CTX_get_default_passwd_cb_userdata(ctx->ctx));
+     if (x == NULL)
+     {
++#if OPENSSL_VERSION_NUMBER < 0x30000000L
+         SSLerr(SSL_F_SSL_CTX_USE_CERTIFICATE_FILE, ERR_R_PEM_LIB);
++#else
++        ERR_raise(ERR_LIB_SSL, ERR_R_PEM_LIB);
++#endif
+         goto end;
+     }
+ 
+@@ -1309,7 +1317,12 @@ tls_ctx_use_external_rsa_key(struct tls_
+     rsa = RSA_new();
+     if (rsa == NULL)
+     {
++
++#if OPENSSL_VERSION_NUMBER < 0x30000000L
+         SSLerr(SSL_F_SSL_USE_PRIVATEKEY, ERR_R_MALLOC_FAILURE);
++#else
++        ERR_raise(ERR_LIB_SSL, ERR_R_MALLOC_FAILURE);
++#endif
+         goto err;
+     }
+ 
+@@ -2187,7 +2200,7 @@ print_details(struct key_state_ssl *ks_s
+                      SSL_get_version(ks_ssl->ssl),
+                      SSL_CIPHER_get_version(ciph),
+                      SSL_CIPHER_get_name(ciph));
+-    X509 *cert = SSL_get_peer_certificate(ks_ssl->ssl);
++    X509 *cert = SSL_get1_peer_certificate(ks_ssl->ssl);
+ 
+     if (cert)
+     {
+Index: openvpn-2.6.9/src/openvpn/xkey_provider.c
+===================================================================
+--- openvpn-2.6.9.orig/src/openvpn/xkey_provider.c
++++ openvpn-2.6.9/src/openvpn/xkey_provider.c
+@@ -41,6 +41,10 @@
+ #include <openssl/store.h>
+ #include <openssl/evp.h>
+ #include <openssl/err.h>
++#if OPENSSL_VERSION_NUMBER >= 0x30000000L
++#include <openssl/rsa.h>
++#endif
++
+ 
+ /* A descriptive name */
+ static const char *provname = "OpenVPN External Key Provider";
+Index: openvpn-2.6.9/src/openvpn/crypto_openssl.c
+===================================================================
+--- openvpn-2.6.9.orig/src/openvpn/crypto_openssl.c
++++ openvpn-2.6.9/src/openvpn/crypto_openssl.c
+@@ -891,8 +891,17 @@ cipher_ctx_mode_cbc(const cipher_ctx_t *
+     {
+         return false;
+     }
+-
++#if OPENSSL_VERSION_NUMBER < 0x30000000L
+     int flags = EVP_CIPHER_CTX_flags(ctx);
++#else
++    const EVP_CIPHER *cipher = EVP_CIPHER_CTX_get0_cipher(ctx);
++    if (!cipher)
++    {
++        return false;
++    }
++
++    unsigned long flags = EVP_CIPHER_flags(cipher);
++#endif
+     int mode = EVP_CIPHER_CTX_mode(ctx);
+ 
+     return mode == EVP_CIPH_CBC_MODE
+@@ -910,12 +919,21 @@ cipher_ctx_mode_ofb_cfb(const cipher_ctx
+     {
+         return false;
+     }
+-
++#if OPENSSL_VERSION_NUMBER < 0x30000000L
++    int flags = EVP_CIPHER_CTX_flags(ctx);
++#else
++    const EVP_CIPHER *cipher = EVP_CIPHER_CTX_get0_cipher(ctx);
++    if (!cipher)
++    {
++        return false;
++    }
++    unsigned long flags = EVP_CIPHER_flags(cipher);
++#endif
+     int mode = EVP_CIPHER_CTX_get_mode(ctx);
+ 
+     return (mode == EVP_CIPH_OFB_MODE || mode == EVP_CIPH_CFB_MODE)
+            /* Exclude AEAD cipher modes, they require a different API */
+-           && !(EVP_CIPHER_CTX_flags(ctx) & EVP_CIPH_FLAG_AEAD_CIPHER);
++           && !(flags & EVP_CIPH_FLAG_AEAD_CIPHER);
+ }
+ 
+ bool
+@@ -923,7 +941,17 @@ cipher_ctx_mode_aead(const cipher_ctx_t
+ {
+     if (ctx)
+     {
++#if OPENSSL_VERSION_NUMBER < 0x30000000L
+         int flags = EVP_CIPHER_CTX_flags(ctx);
++#else
++        const EVP_CIPHER *cipher = EVP_CIPHER_CTX_get0_cipher(ctx);
++        if (!cipher)
++        {
++            return false;
++        }
++
++        unsigned long flags = EVP_CIPHER_flags(cipher);
++#endif
+         if (flags & EVP_CIPH_FLAG_AEAD_CIPHER)
+         {
+             return true;

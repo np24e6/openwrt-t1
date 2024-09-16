@@ -11,10 +11,11 @@ PKG_NAME:=sstp-client
 PKG_VERSION:=1.0.19
 PKG_RELEASE:=2
 
-
-PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
-PKG_SOURCE_URL:=https://gitlab.com/sstp-project/sstp-client/-/archive/1.0.19/
 PKG_HASH:=e2652365f69f5037102e78f4e115ff764a390b27bb3fd513a8a50b10a61bb613
+
+PKG_SOURCE_VERSION:=1.0.19
+PKG_SOURCE=sstp-client-$(PKG_SOURCE_VERSION).tar.gz
+PKG_SOURCE_URL:=https://gitlab.com/sstp-project/sstp-client/-/archive/$(PKG_SOURCE_VERSION)/
 
 PKG_MAINTAINER:=Federico Di Marco <fededim@gmail.com>
 PKG_LICENSE:=GPL-2.0-or-later

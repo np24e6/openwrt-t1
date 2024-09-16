@@ -1,0 +1,36 @@
+From 462a770035bc3f5a964b692254ffd301d0320790 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Joris=20Vai=C5=A1vila?= <joris.vaisvila@teltonika.lt>
+Date: Tue, 16 Apr 2024 18:50:13 +0300
+Subject: [PATCH] fixed segfault on sigterm before client is up
+
+---
+ src/sstp-stream.c | 12 +++++++-----
+ 1 file changed, 7 insertions(+), 5 deletions(-)
+
+diff --git a/src/sstp-stream.c b/src/sstp-stream.c
+index f6e283c..3cca733 100644
+--- a/src/sstp-stream.c
++++ b/src/sstp-stream.c
+@@ -872,12 +872,14 @@ status_t sstp_stream_destroy(sstp_stream_st *stream)
+         goto done;
+     }
+ 
+-    /* Shutdown the server */
+-    SSL_shutdown(stream->ssl);
++    if(stream->ssl) {
++        /* Shutdown the server */
++        SSL_shutdown(stream->ssl);
+ 
+-    /* Free resources */
+-    SSL_free(stream->ssl);
+-    stream->ssl = NULL;
++        /* Free resources */
++        SSL_free(stream->ssl);
++        stream->ssl = NULL;
++    }
+ 
+     if (stream->ssock)
+         close(stream->ssock);
+-- 
+2.44.0
+

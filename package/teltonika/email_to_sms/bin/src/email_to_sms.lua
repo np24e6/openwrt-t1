@@ -68,6 +68,10 @@ local function send_big_sms(phone_number, text, limit, modem_query)
 	end
 
 	res = util.ubus(modem_query, "send_sms", { number = phone_number, text = text }) or {}
+	if not res.sms_used or res.sms_used > limit then
+		perror("Max SMS count is %s messages" % limit)
+		return false
+	end
 	if res.errno then
 		perror("Failed to send SMS (errno=%s)" % res.errno)
 		return false

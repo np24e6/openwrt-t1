@@ -130,7 +130,8 @@ validate_section_dropbear()
 		'MaxAuthTries:uinteger:3' \
 		'RecvWindowSize:uinteger:0' \
 		'mdns:bool:1' \
-		'pam:bool:0'
+		'pam:bool:0' \
+		'pam_privilege_lvl:uinteger:0'
 }
 
 dropbear_instance()
@@ -179,7 +180,10 @@ dropbear_instance()
 	[ "${RecvWindowSize}" -gt 0 -a "${RecvWindowSize}" -le 1048576 ] && \
 		procd_append_param command -W "${RecvWindowSize}"
 	[ "${mdns}" -ne 0 ] && procd_add_mdns "ssh" "tcp" "$Port" "daemon=dropbear"
-	[ "${pam}" -eq 1 ] && procd_append_param command -M
+	[ "${pam}" -eq 1 ] && {
+		procd_append_param command -M
+		[ "${pam_privilege_lvl}" -gt 0 ] && procd_append_param command -X "${pam_privilege_lvl}"
+	}
 	procd_set_param respawn
 	procd_close_instance
 }

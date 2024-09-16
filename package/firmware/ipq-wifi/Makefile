@@ -82,6 +82,8 @@ define ipq-wifi-install-one
 endef
 # Blank line required at end of above define due to foreach context
 
+
+
 define generate-ipq-wifi-package
   define Package/ipq-wifi-$(1)
     $(call Package/ipq-wifi-default)
@@ -105,6 +107,7 @@ Do not install it for any other device!
     $$$$(foreach IPQ_WIFI_BOARD_FILE,$$$$(wildcard board-$(1).*),\
       $$$$(call ipq-wifi-install-one,$$$$(IPQ_WIFI_BOARD_FILE),$$(1)))
   endef
+
 
   PREV_BOARD+=ipq-wifi-$(1)
 endef

@@ -102,7 +102,7 @@ ifeq ($(RECURSIVE_DEP_IS_ERROR),1)
   KCONF_FLAGS=--fatalrecursive
 endif
 ifneq ($(DISTRO_PKG_CONFIG),)
-scripts/config/%onf: export PATH:=$(dir $(DISTRO_PKG_CONFIG)):$(PATH)
+scripts/config/%onf: export PATH:=$(if $(INSIDE_DOCKER),$(PATH),$(dir $(DISTRO_PKG_CONFIG)):$(PATH))
 endif
 scripts/config/%onf: CFLAGS+= -O2
 scripts/config/%onf:
@@ -153,6 +153,7 @@ xconfig: scripts/config/qconf prepare-tmpinfo FORCE
 	fi
 	$< Config.in
 
+ifndef INSIDE_DOCKER
 prepare_kernel_conf: .config toolchain/install FORCE
 
 ifeq ($(wildcard staging_dir/host/bin/quilt),)
@@ -161,14 +162,17 @@ ifeq ($(wildcard staging_dir/host/bin/quilt),)
 else
   prepare_kernel_conf: ;
 endif
+else
+prepare_kernel_conf: ;
+endif # INSIDE_DOCKER
 
 kernel_oldconfig: prepare_kernel_conf
 	$(_SINGLE)$(NO_TRACE_MAKE) -C target/linux oldconfig
 
 ifneq ($(DISTRO_PKG_CONFIG),)
-kernel_menuconfig: export PATH:=$(dir $(DISTRO_PKG_CONFIG)):$(PATH)
-kernel_nconfig: export PATH:=$(dir $(DISTRO_PKG_CONFIG)):$(PATH)
-kernel_xconfig: export PATH:=$(dir $(DISTRO_PKG_CONFIG)):$(PATH)
+kernel_menuconfig: export PATH:=$(if $(INSIDE_DOCKER),$(PATH),$(dir $(DISTRO_PKG_CONFIG)):$(PATH))
+kernel_nconfig: export PATH:=$(if $(INSIDE_DOCKER),$(PATH),$(dir $(DISTRO_PKG_CONFIG)):$(PATH))
+kernel_xconfig: export PATH:=$(if $(INSIDE_DOCKER),$(PATH),$(dir $(DISTRO_PKG_CONFIG)):$(PATH))
 endif
 kernel_menuconfig: prepare_kernel_conf
 	$(_SINGLE)$(NO_TRACE_MAKE) -C target/linux menuconfig
@@ -179,6 +183,7 @@ kernel_nconfig: prepare_kernel_conf
 kernel_xconfig: prepare_kernel_conf
 	$(_SINGLE)$(NO_TRACE_MAKE) -C target/linux xconfig
 
+ifndef INSIDE_DOCKER
 staging_dir/host/.prereq-build: include/prereq-build.mk
 	mkdir -p tmp
 	@$(_SINGLE)$(NO_TRACE_MAKE) -j1 -r -s -f $(TOPDIR)/include/prereq-build.mk prereq 2>/dev/null || { \
@@ -192,6 +197,12 @@ staging_dir/host/.prereq-build: include/prereq-build.mk
 	}
   endif
 	touch $@
+else
+staging_dir/host/.prereq-build:
+	mkdir -p tmp
+	mkdir -p staging_dir/host
+	touch $@
+endif # INSIDE_DOCKER
 
 printdb: FORCE
 	@$(_SINGLE)$(NO_TRACE_MAKE) -p $@ V=99 DUMP_TARGET_DB=1 2>&1
@@ -202,7 +213,7 @@ else
   DOWNLOAD_DIRS = package/download
 endif
 
-download: .config FORCE $(if $(wildcard $(TOPDIR)/staging_dir/host/bin/flock),,tools/flock/compile)
+download: .config FORCE $(if $(INSIDE_DOCKER),,$(if $(wildcard $(TOPDIR)/staging_dir/host/bin/flock),,tools/flock/compile))
 	@+$(foreach dir,$(DOWNLOAD_DIRS),$(SUBMAKE) $(dir);)
 
 clean dirclean: .config

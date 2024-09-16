@@ -11,7 +11,7 @@ PKG_NAME:=swconfig
 PKG_RELEASE:=12
 
 PKG_MAINTAINER:=Felix Fietkau <nbd@nbd.name>
-PKG_LICENSE:=GPL-2.0
+PKG_LICENSE:=GPL-2.0-only
 PKG_ORIGIN_URL:=https://github.com/openwrt/openwrt/tree/openwrt-21.02/package/network/config/swconfig
 
 PKG_BUILD_FLAGS:=lto

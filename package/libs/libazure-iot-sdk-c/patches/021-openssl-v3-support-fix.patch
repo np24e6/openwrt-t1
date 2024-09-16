@@ -1,0 +1,352 @@
+Index: libazure-iot-sdk-c-2023-01-05/c-utility/adapters/tlsio_openssl.c
+===================================================================
+--- libazure-iot-sdk-c-2023-01-05.orig/c-utility/adapters/tlsio_openssl.c
++++ libazure-iot-sdk-c-2023-01-05/c-utility/adapters/tlsio_openssl.c
+@@ -452,7 +452,7 @@ static const IO_INTERFACE_DESCRIPTION tl
+ 
+ static LOCK_HANDLE * openssl_locks = NULL;
+ 
+-
++#if (OPENSSL_VERSION_NUMBER < 0x30000000L)
+ static void openssl_lock_unlock_helper(LOCK_HANDLE lock, int lock_mode, const char* file, int line)
+ {
+ #ifdef NO_LOGGING
+@@ -476,6 +476,7 @@ static void openssl_lock_unlock_helper(L
+         }
+     }
+ }
++#endif
+ 
+ static void log_ERR_get_error(const char* message)
+ {
+@@ -529,6 +530,7 @@ static STATIC_VAR_UNUSED struct CRYPTO_d
+     return result;
+ }
+ 
++#if (OPENSSL_VERSION_NUMBER < 0x30000000L)
+ static STATIC_VAR_UNUSED void openssl_dynamic_locks_lock_unlock_cb(int lock_mode, struct CRYPTO_dynlock_value* dynlock_value, const char* file, int line)
+ {
+     openssl_lock_unlock_helper(dynlock_value->lock, lock_mode, file, line);
+@@ -544,7 +546,7 @@ static STATIC_VAR_UNUSED void openssl_dy
+ 
+ static void openssl_dynamic_locks_uninstall(void)
+ {
+-#if (OPENSSL_VERSION_NUMBER >= 0x00906000)
++#if (OPENSSL_VERSION_NUMBER >= 0x00906000 && OPENSSL_VERSION_NUMBER < 0x30000000L)
+     CRYPTO_set_dynlock_create_callback(NULL);
+     CRYPTO_set_dynlock_lock_callback(NULL);
+     CRYPTO_set_dynlock_destroy_callback(NULL);
+@@ -645,6 +647,7 @@ static int openssl_static_locks_install(
+     }
+     return result;
+ }
++#endif
+ 
+ static void indicate_error(TLS_IO_INSTANCE* tls_io_instance)
+ {
+@@ -755,6 +758,7 @@ static void send_handshake_bytes(TLS_IO_
+     }
+ }
+ 
++#if (OPENSSL_VERSION_NUMBER < 0x30000000L)
+ void engine_destroy(TLS_IO_INSTANCE* tls)
+ {
+     if(tls->engine != NULL)
+@@ -782,6 +786,7 @@ int engine_load(TLS_IO_INSTANCE* tls)
+ 
+     return result;
+ }
++#endif
+ 
+ static void close_openssl_instance(TLS_IO_INSTANCE* tls_io_instance)
+ {
+@@ -1052,7 +1057,21 @@ static int create_openssl_instance(TLS_I
+ 
+     const SSL_METHOD* method = NULL;
+ 
+-#if (OPENSSL_VERSION_NUMBER < 0x10100000L) || (OPENSSL_VERSION_NUMBER >= 0x20000000L)
++#if (OPENSSL_VERSION_NUMBER >= 0x30000000L)
++    method = TLS_method();
++    if (tlsInstance->tls_version == VERSION_1_2)
++    {
++        SSL_CTX_set_min_proto_version(tlsInstance->ssl_context, TLS1_2_VERSION);
++    }
++    else if (tlsInstance->tls_version == VERSION_1_1)
++    {
++        SSL_CTX_set_min_proto_version(tlsInstance->ssl_context, TLS1_1_VERSION);
++    }
++    else
++    {
++        SSL_CTX_set_min_proto_version(tlsInstance->ssl_context, TLS1_VERSION);
++    }
++#elif (OPENSSL_VERSION_NUMBER < 0x10100000L) || (OPENSSL_VERSION_NUMBER >= 0x20000000L)
+     if (tlsInstance->tls_version == VERSION_1_2)
+     {
+         method = TLSv1_2_method();
+@@ -1077,8 +1096,11 @@ static int create_openssl_instance(TLS_I
+         log_ERR_get_error("Failed allocating OpenSSL context.");
+         result = MU_FAILURE;
+     }
+-    else if ((tlsInstance->engine_id != NULL) &&
+-             (engine_load(tlsInstance) != 0))
++    else if ((tlsInstance->engine_id != NULL)
++#if (OPENSSL_VERSION_NUMBER < 0x30000000L)
++            && (engine_load(tlsInstance) != 0)
++#endif
++            )
+     {
+         SSL_CTX_free(tlsInstance->ssl_context);
+         tlsInstance->ssl_context = NULL;
+@@ -1087,7 +1109,9 @@ static int create_openssl_instance(TLS_I
+     else if ((tlsInstance->cipher_list != NULL) &&
+              (SSL_CTX_set_cipher_list(tlsInstance->ssl_context, tlsInstance->cipher_list)) != 1)
+     {
++#if (OPENSSL_VERSION_NUMBER < 0x30000000L)
+         engine_destroy(tlsInstance);
++#endif
+         SSL_CTX_free(tlsInstance->ssl_context);
+         tlsInstance->ssl_context = NULL;
+         log_ERR_get_error("unable to set cipher list.");
+@@ -1095,7 +1119,9 @@ static int create_openssl_instance(TLS_I
+     }
+     else if (add_certificate_to_store(tlsInstance, tlsInstance->certificate) != 0)
+     {
++#if (OPENSSL_VERSION_NUMBER < 0x30000000L)
+         engine_destroy(tlsInstance);
++#endif
+         SSL_CTX_free(tlsInstance->ssl_context);
+         tlsInstance->ssl_context = NULL;
+         log_ERR_get_error("unable to add_certificate_to_store.");
+@@ -1113,7 +1139,9 @@ static int create_openssl_instance(TLS_I
+             tlsInstance->engine) != 0)
+         )
+     {
++#if (OPENSSL_VERSION_NUMBER < 0x30000000L)
+         engine_destroy(tlsInstance);
++#endif
+         SSL_CTX_free(tlsInstance->ssl_context);
+         tlsInstance->ssl_context = NULL;
+         log_ERR_get_error("unable to use x509 authentication");
+@@ -1126,7 +1154,9 @@ static int create_openssl_instance(TLS_I
+         tlsInstance->in_bio = BIO_new(BIO_s_mem());
+         if (tlsInstance->in_bio == NULL)
+         {
++#if (OPENSSL_VERSION_NUMBER < 0x30000000L)
+             engine_destroy(tlsInstance);
++#endif
+             SSL_CTX_free(tlsInstance->ssl_context);
+             tlsInstance->ssl_context = NULL;
+             log_ERR_get_error("Failed BIO_new for in BIO.");
+@@ -1138,7 +1168,9 @@ static int create_openssl_instance(TLS_I
+             if (tlsInstance->out_bio == NULL)
+             {
+                 (void)BIO_free(tlsInstance->in_bio);
++#if (OPENSSL_VERSION_NUMBER < 0x30000000L)
+                 engine_destroy(tlsInstance);
++#endif
+                 SSL_CTX_free(tlsInstance->ssl_context);
+                 tlsInstance->ssl_context = NULL;
+                 log_ERR_get_error("Failed BIO_new for out BIO.");
+@@ -1151,7 +1183,9 @@ static int create_openssl_instance(TLS_I
+                 {
+                     (void)BIO_free(tlsInstance->in_bio);
+                     (void)BIO_free(tlsInstance->out_bio);
++#if (OPENSSL_VERSION_NUMBER < 0x30000000L)
+                     engine_destroy(tlsInstance);
++#endif
+                     SSL_CTX_free(tlsInstance->ssl_context);
+                     tlsInstance->ssl_context = NULL;
+                     LogError("Failed BIO_set_mem_eof_return.");
+@@ -1174,7 +1208,9 @@ static int create_openssl_instance(TLS_I
+                     {
+                         (void)BIO_free(tlsInstance->in_bio);
+                         (void)BIO_free(tlsInstance->out_bio);
++#if (OPENSSL_VERSION_NUMBER < 0x30000000L)
+                         engine_destroy(tlsInstance);
++#endif
+                         SSL_CTX_free(tlsInstance->ssl_context);
+                         tlsInstance->ssl_context = NULL;
+                         log_ERR_get_error("Failed creating OpenSSL instance.");
+@@ -1186,7 +1222,9 @@ static int create_openssl_instance(TLS_I
+                         tlsInstance->ssl = NULL;
+                         (void)BIO_free(tlsInstance->in_bio);
+                         (void)BIO_free(tlsInstance->out_bio);
++#if (OPENSSL_VERSION_NUMBER < 0x30000000L)
+                         engine_destroy(tlsInstance);
++#endif
+                         SSL_CTX_free(tlsInstance->ssl_context);
+                         tlsInstance->ssl_context = NULL;
+                         log_ERR_get_error("Failed setting SNI hostname hint.");
+@@ -1218,6 +1256,13 @@ static int create_openssl_instance(TLS_I
+ 
+ int tlsio_openssl_init(void)
+ {
++#if (OPENSSL_VERSION_NUMBER >= 0x30000000L)
++    if (OPENSSL_init_ssl(0, NULL) != 1)
++    {
++        LogError("Failed to initialize OpenSSL");
++        return MU_FAILURE;
++    }
++#else
+     (void)SSL_library_init();
+ 
+     SSL_load_error_strings();
+@@ -1231,11 +1276,18 @@ int tlsio_openssl_init(void)
+     }
+ 
+     openssl_dynamic_locks_install();
++#endif
+     return 0;
+ }
+ 
+ void tlsio_openssl_deinit(void)
+ {
++#if (OPENSSL_VERSION_NUMBER >= 0x30000000L)
++#if (FIPS_mode_set)
++    FIPS_mode_set(0);
++#endif
++    OPENSSL_cleanup();
++#else
+     openssl_dynamic_locks_uninstall();
+     openssl_static_locks_uninstall();
+ #if  (OPENSSL_VERSION_NUMBER >= 0x00907000L) && (FIPS_mode_set)
+@@ -1255,6 +1307,7 @@ void tlsio_openssl_deinit(void)
+     SSL_COMP_free_compression_methods();
+ #endif
+     CRYPTO_cleanup_all_ex_data();
++#endif
+ }
+ 
+ CONCRETE_IO_HANDLE tlsio_openssl_create(void* io_create_parameters)
+@@ -1363,8 +1416,9 @@ void tlsio_openssl_destroy(CONCRETE_IO_H
+     else
+     {
+         TLS_IO_INSTANCE* tls_io_instance = (TLS_IO_INSTANCE*)tls_io;
++#if (OPENSSL_VERSION_NUMBER < 0x30000000L)
+         engine_destroy(tls_io_instance);
+-
++#endif
+         if (tls_io_instance->certificate != NULL)
+         {
+             free(tls_io_instance->certificate);
+@@ -1721,8 +1775,9 @@ int tlsio_openssl_setoption(CONCRETE_IO_
+         }
+         else if (strcmp(OPTION_OPENSSL_ENGINE, optionName) == 0)
+         {
++#if (OPENSSL_VERSION_NUMBER < 0x30000000L)
+             ENGINE_load_builtin_engines();
+-
++#endif
+             if (mallocAndStrcpy_s((char**)&tls_io_instance->engine_id, value) != 0)
+             {
+                 LogError("unable to mallocAndStrcpy_s %s", optionName);
+Index: libazure-iot-sdk-c-2023-01-05/c-utility/adapters/x509_openssl.c
+===================================================================
+--- libazure-iot-sdk-c-2023-01-05.orig/c-utility/adapters/x509_openssl.c
++++ libazure-iot-sdk-c-2023-01-05/c-utility/adapters/x509_openssl.c
+@@ -137,8 +137,7 @@ static int load_key_RSA(SSL_CTX* ssl_ctx
+ {
+     int result;
+     /*Codes_SRS_X509_OPENSSL_02_005: [ x509_openssl_add_credentials shall use PEM_read_bio_RSAPrivateKey to read the x509 private key. ]*/
+-    RSA* privatekey = EVP_PKEY_get1_RSA(evp_key);
+-    if (privatekey == NULL)
++    if (evp_key == NULL)
+     {
+         /*Codes_SRS_X509_OPENSSL_02_009: [ Otherwise x509_openssl_add_credentials shall fail and return a non-zero number. ]*/
+         log_ERR_get_error("Failure reading RSA private key");
+@@ -147,10 +146,10 @@ static int load_key_RSA(SSL_CTX* ssl_ctx
+     else
+     {
+         /*Codes_SRS_X509_OPENSSL_02_007: [ x509_openssl_add_credentials shall use SSL_CTX_use_RSAPrivateKey to load the private key into the SSL context. ]*/
+-        if (SSL_CTX_use_RSAPrivateKey(ssl_ctx, privatekey) != 1)
++        if (SSL_CTX_use_PrivateKey(ssl_ctx, evp_key) != 1)
+         {
+             /*Codes_SRS_X509_OPENSSL_02_009: [ Otherwise x509_openssl_add_credentials shall fail and return a non-zero number. ]*/
+-            log_ERR_get_error("Failure calling SSL_CTX_use_RSAPrivateKey");
++            log_ERR_get_error("Failure calling SSL_CTX_use_PrivateKey");
+             result = MU_FAILURE;
+         }
+         else
+@@ -159,7 +158,6 @@ static int load_key_RSA(SSL_CTX* ssl_ctx
+             /*Codes_SRS_X509_OPENSSL_02_008: [ If no error occurs, then x509_openssl_add_credentials shall succeed and return 0. ]*/
+             result = 0;
+         }
+-        RSA_free(privatekey);
+     }
+     return result;
+ }
+@@ -219,52 +217,39 @@ int x509_openssl_add_pem_file_key(SSL_CT
+     return result;
+ }
+ 
+-int x509_openssl_add_engine_key(SSL_CTX* ssl_ctx, const char* x509privatekey_id, ENGINE* engine)
++int x509_openssl_add_engine_key(SSL_CTX* ssl_ctx, const char* x509privatekey_id)
+ {
+     int result;
+ 
+-    // Engine functional reference is short-lived, only within this function.
+-    if (!ENGINE_init(engine))
++    FILE* fp = fopen(x509privatekey_id, "r");
++    if (fp == NULL)
+     {
+-        log_ERR_get_error("unable to initialize ENGINE.");
++        log_ERR_get_error("unable to open private key file.");
+         result = MU_FAILURE;
+     }
+     else
+     {
+-        if (!ENGINE_set_default(engine, ENGINE_METHOD_ALL))
++        EVP_PKEY* evp_key = PEM_read_PrivateKey(fp, NULL, NULL, NULL);
++        fclose(fp);
++
++        if (evp_key == NULL)
+         {
+-            log_ERR_get_error("unable to configure ENGINE.");
++            log_ERR_get_error("unable to load private key.");
+             result = MU_FAILURE;
+         }
+         else
+         {
+-            EVP_PKEY* evp_key = ENGINE_load_private_key(engine, x509privatekey_id, NULL, NULL);
+-
+-            if (evp_key == NULL)
++            if (load_ecc_key(ssl_ctx, evp_key) != 0)
+             {
+-                log_ERR_get_error("unable to load private key from ENGINE.");
++                LogError("unable to configure private key.");
+                 result = MU_FAILURE;
+             }
+             else
+             {
+-                if (load_ecc_key(ssl_ctx, evp_key) != 0)
+-                {
+-                    LogError("unable to configure private key from ENGINE.");
+-                    result = MU_FAILURE;
+-                }
+-                else
+-                {
+-                    result = 0;
+-                }
+-
+-                EVP_PKEY_free(evp_key);
++                result = 0;
+             }
+-        }
+ 
+-        if (!ENGINE_finish(engine))  // Release functional reference.
+-        {
+-            log_ERR_get_error("unable to release ENGINE functional reference.");
+-            result = MU_FAILURE;
++            EVP_PKEY_free(evp_key);
+         }
+     }
+ 
+@@ -299,7 +284,7 @@ int x509_openssl_add_credentials(
+         }
+         else if (x509privatekeytype == KEY_TYPE_ENGINE)
+         {
+-            result = x509_openssl_add_engine_key(ssl_ctx, x509privatekey, engine);
++            result = x509_openssl_add_engine_key(ssl_ctx, x509privatekey);
+         }
+         else
+         {

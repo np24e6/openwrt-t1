@@ -1,5 +1,5 @@
-diff --recursive --unified --new-file --no-dereference orig/.gitignore src/.gitignore
---- orig/.gitignore	2023-11-09 07:11:45.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/.gitignore src/.gitignore
+--- upstream/.gitignore	2022-05-04 00:18:17.000000000 +0000
 +++ src/.gitignore	2024-04-25 07:20:16.000000000 +0000
 @@ -1,10 +1 @@
 -uqmi
@@ -14,8 +14,8 @@ diff --recursive --unified --new-file --no-dereference orig/.gitignore src/.giti
 -qmi-errors.c
 +.vscode/
 \ No newline at end of file
-diff --recursive --unified --new-file --no-dereference orig/.gitlab-ci.yml src/.gitlab-ci.yml
---- orig/.gitlab-ci.yml	1970-01-01 00:00:00.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/.gitlab-ci.yml src/.gitlab-ci.yml
+--- upstream/.gitlab-ci.yml	1970-01-01 00:00:00.000000000 +0000
 +++ src/.gitlab-ci.yml	2024-04-25 07:20:16.000000000 +0000
 @@ -0,0 +1,20 @@
 +include:
@@ -39,8 +39,8 @@ diff --recursive --unified --new-file --no-dereference orig/.gitlab-ci.yml src/.
 +  needs:
 +    - job: semgrep_errors
 \ No newline at end of file
-diff --recursive --unified --new-file --no-dereference orig/CMakeLists.txt src/CMakeLists.txt
---- orig/CMakeLists.txt	2023-11-09 07:11:45.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/CMakeLists.txt src/CMakeLists.txt
+--- upstream/CMakeLists.txt	2022-05-04 00:18:17.000000000 +0000
 +++ src/CMakeLists.txt	2024-04-25 07:20:16.000000000 +0000
 @@ -4,11 +4,11 @@
  
@@ -96,8 +96,8 @@ diff --recursive --unified --new-file --no-dereference orig/CMakeLists.txt src/C
 +	LIBRARY DESTINATION lib
  	RUNTIME DESTINATION sbin
  )
-diff --recursive --unified --new-file --no-dereference orig/commands-dms.c src/commands-dms.c
---- orig/commands-dms.c	2023-11-09 07:17:16.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/commands-dms.c src/commands-dms.c
+--- upstream/commands-dms.c	2022-05-04 00:18:17.000000000 +0000
 +++ src/commands-dms.c	2024-04-25 07:20:16.000000000 +0000
 @@ -49,6 +49,7 @@
  		[QMI_DMS_RADIO_INTERFACE_GSM] = "gsm",
@@ -107,8 +107,8 @@ diff --recursive --unified --new-file --no-dereference orig/commands-dms.c src/c
  	};
  	const char *service_cap[] = {
  		[QMI_DMS_DATA_SERVICE_CAPABILITY_NONE] = "none",
-diff --recursive --unified --new-file --no-dereference orig/commands-nas.c src/commands-nas.c
---- orig/commands-nas.c	2023-11-09 07:17:16.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/commands-nas.c src/commands-nas.c
+--- upstream/commands-nas.c	2022-05-04 00:18:17.000000000 +0000
 +++ src/commands-nas.c	2024-04-25 07:20:16.000000000 +0000
 @@ -924,6 +924,18 @@
  		[QMI_NAS_REGISTRATION_STATE_REGISTRATION_DENIED] = "registering_denied",
@@ -158,8 +158,8 @@ diff --recursive --unified --new-file --no-dereference orig/commands-nas.c src/c
  	blobmsg_close_table(&status, c);
  }
  
-diff --recursive --unified --new-file --no-dereference orig/commands-uim.c src/commands-uim.c
---- orig/commands-uim.c	2023-11-09 07:17:16.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/commands-uim.c src/commands-uim.c
+--- upstream/commands-uim.c	2022-05-04 00:18:17.000000000 +0000
 +++ src/commands-uim.c	2024-04-25 07:20:16.000000000 +0000
 @@ -19,6 +19,8 @@
   * Boston, MA 02110-1301 USA.
@@ -270,8 +270,8 @@ diff --recursive --unified --new-file --no-dereference orig/commands-uim.c src/c
 +	qmi_set_uim_power_on_sim_request(msg, &data);
 +	return QMI_CMD_REQUEST;
 +}
-diff --recursive --unified --new-file --no-dereference orig/commands-uim.h src/commands-uim.h
---- orig/commands-uim.h	2023-11-09 07:17:16.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/commands-uim.h src/commands-uim.h
+--- upstream/commands-uim.h	2022-05-04 00:18:17.000000000 +0000
 +++ src/commands-uim.h	2024-04-25 07:20:16.000000000 +0000
 @@ -20,13 +20,20 @@
   */
@@ -296,8 +296,8 @@ diff --recursive --unified --new-file --no-dereference orig/commands-uim.h src/c
 +		"  --uim-power-on:                   Power on SIM card\n" \
 +		"    --uim-slot:                     SIM slot [1-2]\n" \
  
-diff --recursive --unified --new-file --no-dereference orig/commands-wda.c src/commands-wda.c
---- orig/commands-wda.c	2023-11-09 07:17:16.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/commands-wda.c src/commands-wda.c
+--- upstream/commands-wda.c	2022-05-04 00:18:17.000000000 +0000
 +++ src/commands-wda.c	2024-04-25 07:20:16.000000000 +0000
 @@ -31,30 +31,231 @@
  	{ "raw-ip", QMI_WDA_LINK_LAYER_PROTOCOL_RAW_IP },
@@ -557,8 +557,8 @@ diff --recursive --unified --new-file --no-dereference orig/commands-wda.c src/c
  }
  
  static enum qmi_cmd_result
-diff --recursive --unified --new-file --no-dereference orig/commands-wda.h src/commands-wda.h
---- orig/commands-wda.h	2023-11-09 07:11:45.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/commands-wda.h src/commands-wda.h
+--- upstream/commands-wda.h	2022-05-04 00:18:17.000000000 +0000
 +++ src/commands-wda.h	2024-04-25 07:20:16.000000000 +0000
 @@ -20,11 +20,32 @@
   */
@@ -596,8 +596,8 @@ diff --recursive --unified --new-file --no-dereference orig/commands-wda.h src/c
 +		"    --dl-min-padding <size>:  	     Set downlink minimum padding (number)\n" \
  		"  --wda-get-data-format:            Get data format\n" \
  
-diff --recursive --unified --new-file --no-dereference orig/commands-wds.c src/commands-wds.c
---- orig/commands-wds.c	2023-11-09 07:17:16.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/commands-wds.c src/commands-wds.c
+--- upstream/commands-wds.c	2022-05-04 00:18:17.000000000 +0000
 +++ src/commands-wds.c	2024-04-25 07:20:16.000000000 +0000
 @@ -20,44 +20,120 @@
   */
@@ -1542,8 +1542,8 @@ diff --recursive --unified --new-file --no-dereference orig/commands-wds.c src/c
 +
 +	blobmsg_close_table(&status, p);
  }
-diff --recursive --unified --new-file --no-dereference orig/commands-wds.h src/commands-wds.h
---- orig/commands-wds.h	2023-11-09 07:17:16.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/commands-wds.h src/commands-wds.h
+--- upstream/commands-wds.h	2022-05-04 00:18:17.000000000 +0000
 +++ src/commands-wds.h	2024-04-25 07:20:16.000000000 +0000
 @@ -19,36 +19,73 @@
   * Boston, MA 02110-1301 USA.
@@ -1650,8 +1650,8 @@ diff --recursive --unified --new-file --no-dereference orig/commands-wds.h src/c
 -		"  --get-current-settings:           Get current connection settings\n" \
 -
 +void cmd_wds_start_network_cb(struct qmi_dev *qmi, struct qmi_request *req, struct qmi_msg *msg);
-diff --recursive --unified --new-file --no-dereference orig/commands.c src/commands.c
---- orig/commands.c	2023-11-09 07:11:45.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/commands.c src/commands.c
+--- upstream/commands.c	2022-05-04 00:18:17.000000000 +0000
 +++ src/commands.c	2024-04-25 07:20:16.000000000 +0000
 @@ -19,11 +19,13 @@
   * Boston, MA 02110-1301 USA.
@@ -1856,8 +1856,8 @@ diff --recursive --unified --new-file --no-dereference orig/commands.c src/comma
  
  bool uqmi_run_commands(struct qmi_dev *qmi)
  {
-diff --recursive --unified --new-file --no-dereference orig/commands.h src/commands.h
---- orig/commands.h	2023-11-09 07:11:45.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/commands.h src/commands.h
+--- upstream/commands.h	2022-05-04 00:18:17.000000000 +0000
 +++ src/commands.h	2024-04-25 07:20:16.000000000 +0000
 @@ -59,6 +59,7 @@
  	__uqmi_command(set_client_id, set-client-id, required, CMD_TYPE_OPTION), \
@@ -1874,8 +1874,8 @@ diff --recursive --unified --new-file --no-dereference orig/commands.h src/comma
 +int uqmi_overwrite_error(const char *msg);
  
  #endif
-diff --recursive --unified --new-file --no-dereference orig/data/gen-verbose-error-list.pl src/data/gen-verbose-error-list.pl
---- orig/data/gen-verbose-error-list.pl	1970-01-01 00:00:00.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/data/gen-verbose-error-list.pl src/data/gen-verbose-error-list.pl
+--- upstream/data/gen-verbose-error-list.pl	1970-01-01 00:00:00.000000000 +0000
 +++ src/data/gen-verbose-error-list.pl	2024-04-25 07:20:16.000000000 +0000
 @@ -0,0 +1,116 @@
 +#!/usr/bin/env perl
@@ -1994,8 +1994,8 @@ diff --recursive --unified --new-file --no-dereference orig/data/gen-verbose-err
 +close(RH);
 +close(WF);
 +
-diff --recursive --unified --new-file --no-dereference orig/data/qmi-service-wda.json src/data/qmi-service-wda.json
---- orig/data/qmi-service-wda.json	2023-11-09 07:17:16.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/data/qmi-service-wda.json src/data/qmi-service-wda.json
+--- upstream/data/qmi-service-wda.json	2022-05-04 00:18:17.000000000 +0000
 +++ src/data/qmi-service-wda.json	2024-04-25 07:20:16.000000000 +0000
 @@ -80,10 +80,25 @@
                       "since"         : "1.18",
@@ -2026,8 +2026,8 @@ diff --recursive --unified --new-file --no-dereference orig/data/qmi-service-wda
       "output"  : [ { "common-ref" : "Operation Result" },
                     { "name"          : "QoS Format",
                       "id"            : "0x10",
-diff --recursive --unified --new-file --no-dereference orig/dev.c src/dev.c
---- orig/dev.c	2023-11-09 07:11:45.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/dev.c src/dev.c
+--- upstream/dev.c	2022-05-04 00:18:17.000000000 +0000
 +++ src/dev.c	2024-04-25 07:20:16.000000000 +0000
 @@ -28,6 +28,11 @@
  #include "qmi-errors.h"
@@ -2166,8 +2166,8 @@ diff --recursive --unified --new-file --no-dereference orig/dev.c src/dev.c
  
  	return 0;
  }
-diff --recursive --unified --new-file --no-dereference orig/libuqmi.c src/libuqmi.c
---- orig/libuqmi.c	1970-01-01 00:00:00.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/libuqmi.c src/libuqmi.c
+--- upstream/libuqmi.c	1970-01-01 00:00:00.000000000 +0000
 +++ src/libuqmi.c	2024-04-25 07:20:16.000000000 +0000
 @@ -0,0 +1,57 @@
 +#include <stdio.h>
@@ -2228,8 +2228,8 @@ diff --recursive --unified --new-file --no-dereference orig/libuqmi.c src/libuqm
 +	handle_exit_signal(0);
 +}
 \ No newline at end of file
-diff --recursive --unified --new-file --no-dereference orig/libuqmi.h src/libuqmi.h
---- orig/libuqmi.h	1970-01-01 00:00:00.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/libuqmi.h src/libuqmi.h
+--- upstream/libuqmi.h	1970-01-01 00:00:00.000000000 +0000
 +++ src/libuqmi.h	2024-04-25 07:20:16.000000000 +0000
 @@ -0,0 +1,16 @@
 +#ifndef __LIBUQMI_H
@@ -2248,8 +2248,8 @@ diff --recursive --unified --new-file --no-dereference orig/libuqmi.h src/libuqm
 +void keep_client_id(struct qmi_dev *qmi, const char *optarg);
 +void release_client_id(struct qmi_dev *qmi, const char *optarg);
 +#endif
-diff --recursive --unified --new-file --no-dereference orig/main.c src/main.c
---- orig/main.c	2023-11-09 07:11:45.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/main.c src/main.c
+--- upstream/main.c	2022-05-04 00:18:17.000000000 +0000
 +++ src/main.c	2024-04-25 07:20:16.000000000 +0000
 @@ -28,9 +28,11 @@
  #include <errno.h>
@@ -2365,8 +2365,8 @@ diff --recursive --unified --new-file --no-dereference orig/main.c src/main.c
  
  	return ret;
  }
-diff --recursive --unified --new-file --no-dereference orig/qmi-enums-wds.h src/qmi-enums-wds.h
---- orig/qmi-enums-wds.h	2023-11-09 07:17:16.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/qmi-enums-wds.h src/qmi-enums-wds.h
+--- upstream/qmi-enums-wds.h	2022-05-04 00:18:17.000000000 +0000
 +++ src/qmi-enums-wds.h	2024-04-25 07:20:16.000000000 +0000
 @@ -37,14 +37,14 @@
  
@@ -3181,8 +3181,8 @@ diff --recursive --unified --new-file --no-dereference orig/qmi-enums-wds.h src/
   */
  typedef enum {  /*< since=1.28 >*/
      QMI_WDS_IP_SUPPORT_TYPE_IPV4   = 0,
-diff --recursive --unified --new-file --no-dereference orig/qmi-message.c src/qmi-message.c
---- orig/qmi-message.c	2023-11-09 07:11:45.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/qmi-message.c src/qmi-message.c
+--- upstream/qmi-message.c	2022-05-04 00:18:17.000000000 +0000
 +++ src/qmi-message.c	2024-04-25 07:20:16.000000000 +0000
 @@ -24,6 +24,15 @@
  #include <stdlib.h>
@@ -3234,8 +3234,8 @@ diff --recursive --unified --new-file --no-dereference orig/qmi-message.c src/qm
 +	}
 +	return NULL;
 +}
-diff --recursive --unified --new-file --no-dereference orig/qmi-message.h src/qmi-message.h
---- orig/qmi-message.h	2023-11-09 07:11:45.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/qmi-message.h src/qmi-message.h
+--- upstream/qmi-message.h	2022-05-04 00:18:17.000000000 +0000
 +++ src/qmi-message.h	2024-04-25 07:20:16.000000000 +0000
 @@ -122,5 +122,6 @@
  int qmi_complete_request_message(struct qmi_msg *qm);
@@ -3244,8 +3244,8 @@ diff --recursive --unified --new-file --no-dereference orig/qmi-message.h src/qm
 +char *qmi_wds_verbose_call_end_reason_get_string (QmiWdsVerboseCallEndReasonType type, uint16_t reason);
  
  #endif
-diff --recursive --unified --new-file --no-dereference orig/uqmi.h src/uqmi.h
---- orig/uqmi.h	2023-11-09 07:11:45.000000000 +0000
+diff --recursive --unified --new-file --no-dereference upstream/uqmi.h src/uqmi.h
+--- upstream/uqmi.h	2022-05-04 00:18:17.000000000 +0000
 +++ src/uqmi.h	2024-04-25 07:20:16.000000000 +0000
 @@ -65,6 +65,12 @@
  };

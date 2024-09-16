@@ -8,19 +8,25 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=uhttpd
-PKG_RELEASE:=1
+PKG_RELEASE:=2
 
-PKG_SOURCE_PROTO:=git
-PKG_SOURCE_URL=$(PROJECT_GIT)/project/uhttpd.git
+PKG_SOURCE_VERSION=15346de8d3ba422002496526ee24c62a3601ab8c
 PKG_SOURCE_DATE:=2021-03-21
-PKG_SOURCE_VERSION:=15346de8d3ba422002496526ee24c62a3601ab8c
-PKG_MIRROR_HASH:=819424d071ed7c8888f9ca66f679907831becc59a67dd4a5ec521d5fba0a3171
 PKG_MAINTAINER:=Felix Fietkau <nbd@nbd.name>
 PKG_LICENSE:=ISC
+PKG_LICENSE_FILES:=LICENSE
 
 PKG_ASLR_PIE_REGULAR:=1
 PKG_BUILD_DEPENDS = ustream-ssl
-PKG_CONFIG_DEPENDS:= CONFIG_uhttpd_lua
+
+PKG_CONFIG_DEPENDS += \
+	CONFIG_uhttpd_lua \
+	CONFIG_USE_PROCD \
+	CONFIG_USE_OPENRC
+
+PKG_SOURCE_PROTO:=git
+PKG_SOURCE_URL=$(PROJECT_GIT)/project/uhttpd.git
+PKG_SOURCE_VERSION:=15346de8d3ba422002496526ee24c62a3601ab8c
 
 include $(INCLUDE_DIR)/package.mk
 include $(INCLUDE_DIR)/cmake.mk
@@ -99,6 +105,9 @@ define Package/uhttpd/install
 
 	$(INSTALL_DIR) $(1)/usr/share/uhttpd
 	$(INSTALL_BIN) ./files/91-trigger-vuci-routes-reload.hotplug $(1)/usr/share/uhttpd/91-trigger-vuci-routes-reload.hotplug
+
+	$(if $(CONFIG_USE_OPENRC), \
+		$(OPENRC_INSTALL) boot uhttpd ./files/uhttpd.openrc $(1))
 endef
 
 define Package/uhttpd-mod-lua/install

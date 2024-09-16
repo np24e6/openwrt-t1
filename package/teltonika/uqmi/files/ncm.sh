@@ -124,43 +124,34 @@ proto_ncm_setup() {
 
 	json_get_vars mtu method device modem pdptype sim dhcp dhcpv6 delay ip4table ip6table $PROTO_DEFAULT_OPTIONS
 
-        local gsm_modem="$(find_mdm_ubus_obj "$modem")"
-
-        [ -z "$gsm_modem" ] && {
-                echo "Failed to find gsm modem ubus object, exiting."
-                return 1
-        }
-
-	mdm_ubus_obj="$(find_mdm_ubus_obj "$modem")"
+	local mdm_ubus_obj="$(find_mdm_ubus_obj "$modem")"
 	[ -z "$mdm_ubus_obj" ] && echo "gsm.modem object not found. Downing $interface interface" && ifdown $interface
 
 	pdp=$(get_pdp "$interface")
 
 	[ -n "$delay" ] || [ "$pdp" = "1" ] && delay=0 || delay=3
 	sleep "$delay"
-
+	
+#~ Parameters part------------------------------------------------------
 	[ -z "$sim" ] && sim=$(get_config_sim "$interface")
+	active_sim=$(get_active_sim "$interface" "$old_cb" "$mdm_ubus_obj")
+	esim_profile_index=$(get_active_esim_profile_index "$modem")
+	# verify active sim by return value(non zero means that the check failed)
+	verify_active_sim "$sim" "$active_sim" "$interface" || return
+	# verify active esim profile index by return value(non zero means that the check failed)
+	verify_active_esim "$esim_profile_index" "$interface" || return
+	deny_roaming=$(get_deny_roaming "$active_sim" "$modem" "$esim_profile_index")
+#~ ---------------------------------------------------------------------
 
-	echo "Quering active sim position"
-	json_set_namespace gobinet old_cb
-	json_load "$(ubus call $gsm_modem get_sim_slot)"
-	json_get_var active_sim index
-	json_set_namespace $old_cb
-
-# 	Restart if check failed
-	if [ "$active_sim" -lt 1 ] || [ "$active_sim" -gt 2 ]; then
-		echo "Bad active sim: $active_sim."
-		return
+	if [ "$deny_roaming" = "1" ]; then
+		reg_stat_str=$(jsonfilter -s "$(ubus call $mdm_ubus_obj info)" -e '@.cache.reg_stat_str')
+		if [ "$reg_stat_str" = "Roaming" ]; then
+			echo "Roaming detected. Stopping connection"
+			proto_notify_error "$interface" "Roaming detected"
+			proto_block_restart "$interface"
+			return
+		fi
 	fi
-
-	# check if current sim and interface sim match
-	[ "$active_sim" = "$sim" ] || {
-		echo "Active sim: $active_sim. \
-		This interface uses different simcard: $sim."
-		proto_notify_error "$interface" WRONG_SIM
-		proto_block_restart "$interface"
-		return
-	}
 
 	echo "Connection setup for ${interface} starting!"
 
@@ -311,7 +302,6 @@ proto_ncm_teardown() {
 
 	#Kill udhcpc instance
 	proto_kill_command "$interface"
-
 	ubus call network.interface."${interface}_4" remove 2>/dev/null
 	ubus call network.interface."${interface}_6" remove 2>/dev/null
 

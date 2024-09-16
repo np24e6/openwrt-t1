@@ -1,0 +1,40 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+update_dhcpv6_options() {
+	local section="$1"
+	local dhcpv6 ra ra_management ra_flags
+
+	config_get dhcpv6 "$section" dhcpv6 ""
+	config_get ra "$section" ra ""
+	config_get ra_management "$section" ra_management ""
+	config_get ra_flags "$section" ra_flags ""
+
+	[ -n "$ra_management" ] && uci_remove "dhcp" "$section" "ra_management"
+
+	[ -n "$ra_flags" ] && return
+
+	[ "$dhcpv6" = "server" ] || [ "$ra" = "server" ] || return
+
+	case "$ra_management" in
+		0)
+			uci_set "dhcp" "$section" "ra_slaac" "1"
+			uci_add_list "dhcp" "$section" "ra_flags" "other-config"
+			;;
+		1 | "")
+			uci_set "dhcp" "$section" "ra_slaac" "1"
+			uci_add_list "dhcp" "$section" "ra_flags" "managed-config"
+			;;
+		2)
+			uci_set "dhcp" "$section" "ra_slaac" "0"
+			uci_add_list "dhcp" "$section" "ra_flags" "managed-config"
+			;;
+	esac
+}
+
+config_load dhcp
+config_foreach update_dhcpv6_options "dhcp"
+uci_commit dhcp
+
+exit 0

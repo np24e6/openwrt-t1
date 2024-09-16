@@ -1,11 +1,13 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=libdlms
+
 PKG_SOURCE_PROTO:=git
-PKG_SOURCE_URL:=https://github.com/Gurux/GuruxDLMS.c.git
 PKG_SOURCE_VERSION:=fa855d2e82db1a7d27c419d09ed7a11fe86b86f0
-PKG_MIRROR_HASH:=bdd2e9444419a300d18f77bce58bac6cc011b7330638a8e165ec440775912ea9
-PKG_LICENSE:=GPL-2.0
+PKG_SOURCE_URL:=https://github.com/Gurux/GuruxDLMS.c.git
+
+PKG_LICENSE:=GPL-2.0-only
+PKG_LICENSE_FILES:=LICENSE
 
 MAKE_PATH:=development
 

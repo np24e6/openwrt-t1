@@ -1,0 +1,80 @@
+#!/bin/sh
+
+[ -e "/etc/config/dot1x" ] && exit 0
+
+. /lib/functions.sh
+. /usr/share/libubox/jshn.sh
+
+generate_dot1x_tap() {
+	uci -q batch <<-EOF
+		set dot1x.lan1='client'
+		set dot1x.lan1.enabled='0'
+		set dot1x.lan1.iface='lan1'
+	EOF
+}
+
+generate_dot1x_rutm() {
+	json_select network
+	json_select lan
+	json_get_values values ports
+	json_select ports
+	for i in $values; do
+		uci -q batch <<-EOF
+			set dot1x._$i='client'
+			set dot1x._$i.enabled='0'
+			set dot1x._$i.iface='$i'
+		EOF
+		json_select ..
+	done
+	uci -q batch <<-EOF
+		set dot1x._wan='client'
+		set dot1x._wan.enabled='0'
+		set dot1x._wan.iface='wan'
+	EOF
+}
+
+generate_dot1x_rutx() {
+	json_select switch
+	json_select switch0
+	json_get_keys keys ports
+	json_select ports
+	for i in $keys; do
+		json_select "$i"
+		json_get_var index "index"
+		json_get_var num "num"
+		json_get_var role "role"
+		[ -z "$index" ] && index="$num"
+		[ -n "$role" ] && {
+			port_name="$role"
+			[ "$role" = "lan" ] && port_name="$port_name$index"
+			port_section="_$role$num"
+			uci -q batch <<-EOF
+				set dot1x.$port_section='client'
+				set dot1x.$port_section.enabled='0'
+				set dot1x.$port_section.iface='$port_name'
+			EOF
+		}
+		json_select ..
+	done
+}
+
+json_init
+json_load_file "/etc/board.json"
+touch /etc/config/dot1x
+
+json_select model
+json_get_var platform platform
+json_select ..
+case "$platform" in
+	TAP200 | TAP100)
+		generate_dot1x_tap
+		;;
+	RUTM | RUTC)
+		generate_dot1x_rutm
+		;;
+	RUTX)
+		generate_dot1x_rutx
+		;;
+esac
+
+uci commit dot1x

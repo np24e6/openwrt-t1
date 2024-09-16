@@ -1,0 +1,137 @@
+#!/bin/sh
+. /lib/functions.sh
+
+CONFIG="rpcd"
+
+format_rules() {
+	for rule in $@; do
+		[ "$rule" != "+" ] && rule="${rule}+"
+		echo "${tmp_rules} ${rule}"
+	done
+}
+
+has_all_rule() {
+	for rule in $@; do
+		[ "$rule" == "+" ] && return 0
+	done
+	return 1
+}
+
+parse_rules() {
+	local access=""
+	[ "$1" = "deny" ] && access="!"
+	shift
+
+	for rule in $@; do
+		echo "${access}${rule}"
+	done
+}
+
+add_ending_rule() {
+	local access="$1"
+	local reverse="$2"
+	local acl="core"
+	case "$access" in
+	deny) [ "$reverse" -eq 1 ] || acl="+" ;;
+	allow) [ "$reverse" -eq 1 ] && acl="+" ;;
+	esac
+	echo "$acl"
+}
+
+migrate_group() {
+	local section="$1"
+	local privilege_lvl=""
+
+	config_get privilege_lvl "$section" "privilege_lvl"
+	[ -n "$privilege_lvl" ] && return 0
+
+	case "$section" in
+		root)
+			uci_set "$CONFIG" "$section" "privilege_lvl" "3"
+		;;
+		admin)
+			uci_set "$CONFIG" "$section" "privilege_lvl" "2" 
+		;;
+		user)
+			uci_set "$CONFIG" "$section" "privilege_lvl" "1"
+		;;
+	esac
+
+	config_get read "$section" "read"
+	config_get write "$section" "write"
+
+	local read_rules=$(format_rules "${read//\*/+}")
+	local write_rules=$(format_rules "${write//\*/+}")
+
+	config_get read_access "$section" "target_read"
+	config_get write_access "$section" "target_write"
+
+	local read_all write_all
+	has_all_rule "$read_rules" && read_all=1 || read_all=0
+	has_all_rule "$write_rules" && write_all=1 || write_all=0
+	[ "$section" == "root" ] && su="superuser" || su="!superuser"
+
+	local parsed_read_rules=$(parse_rules "$read_access" "$read_rules")
+	parsed_read_rules="$([ "$read_all" -eq 0 ] && echo "${parsed_read_rules}") ${su} $(add_ending_rule "$read_access" "$read_all")"
+
+	local parsed_write_rules=$(parse_rules "$write_access" "$write_rules")
+	if [ "$read_all" -eq 1 ] && [ "$write_all" -eq 1 ]; then
+		if [ "$read_access" = "deny" ] || [ "$write_access" = "deny" ]; then
+			parsed_write_rules="${su} core"
+		else
+			parsed_write_rules="${su} +"
+		fi
+	elif [ "$read_all" -eq 1 ]; then
+		if [ "$read_access" = "deny" ] && [ "$write_access" = "deny" ]; then
+			parsed_write_rules="${su} core"
+		elif [ "$read_access" = "deny" ] || [ "$write_access" = "allow" ]; then
+			parsed_write_rules="${parsed_write_rules} ${su} core"
+		else
+			parsed_write_rules="${parsed_write_rules} ${su} +"
+		fi
+	elif [ "$write_all" -eq 1 ]; then
+		if [ "$write_access" = "deny" ]; then
+			parsed_write_rules="${su} core"
+		else
+			parsed_write_rules="$parsed_read_rules"
+		fi
+	else
+		if [ "$write_access" = "deny" ]; then
+			parsed_write_rules="${parsed_write_rules} $(parse_rules "$read_access" "$read_rules")"
+		fi
+
+		if [ "$read_access" = "deny" ] && [ "$write_access" = "deny" ]; then
+			parsed_write_rules="${parsed_write_rules} ${su} +"
+		else
+			parsed_write_rules="${parsed_write_rules} ${su} core"
+		fi
+	fi
+
+	uci_remove "$CONFIG" "$section" "read"
+	uci_remove "$CONFIG" "$section" "write"
+
+	for element in $parsed_read_rules; do
+		uci_add_list "$CONFIG" "$section" "read" "${element//+/\*}"
+	done
+	for element in $parsed_write_rules; do
+		uci_add_list "$CONFIG" "$section" "write" "${element//+/\*}"
+	done
+}
+
+migrate_user() {
+	local section="$1"
+
+	uci_remove "$CONFIG" "$section" "read"
+	uci_remove "$CONFIG" "$section" "write"
+
+	config_get group "$section" "group"
+	[ -z "$group" ] && uci_set "$CONFIG" "$section" group "root"
+}
+
+config_load "$CONFIG"
+config_foreach migrate_group "group"
+config_foreach migrate_user "login"
+config_foreach migrate_user "superuser"
+uci_commit "$CONFIG"
+
+exit 0

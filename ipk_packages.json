@@ -10,8 +10,8 @@
 		"name": "python3"
 	},
 	"vuci-app-azure-iothub-ui": {
-		"vuci_dep": "vuci-app-azure-iothub-api",
-		"base_dep": "libuuid1 libazure-iot-sdk-c azure_iothub",
+		"vuci_dep": "vuci-app-azure-iothub-api data-sender-api-mod-azure",
+		"base_dep": "libazure-iot-sdk-c azure_iothub libmnfinfo liblua libtlt_uci libuuid1",
 		"name": "azure_iot_hub"
 	},
 	"vuci-app-cumulocity-ui": {
@@ -20,20 +20,26 @@
 		"kmod_dep": "libstdcpp6",
 		"name": "cumulocity_-_cloud_of_things"
 	},
+	"vuci-app-https-dns-proxy-ui": {
+		"vuci_dep": "vuci-app-https-dns-proxy-api",
+		"base_dep": "https-dns-proxy ca-bundle libcares libcurl",
+		"packages_dep":"libev",
+		"name": "https_dns_proxy"
+	},
 	"vuci-app-greengrass-ui": {
 		"base_dep": "bash libncurses6 libreadline8 terminfo greengrass",
 		"vuci_dep": "vuci-app-greengrass-api",
 		"name": "aws_greengrass_core"
 	},
 	"vuci-app-dnp3-ui": {
-		"vuci_dep": "vuci-app-dnp3-api",
-		"base_dep": "dnp3 opendnp3 data-sender-mod-dnp3 libtlt_termios",
+		"vuci_dep": "vuci-app-dnp3-api data-sender-api-mod-dnp3",
+		"base_dep": "dnp3 opendnp3 data-sender-mod-dnp3 libtlt_termios1.0",
 		"kmod_dep": "libstdcpp6",
 		"name": "dnp3"
 	},
 	"vuci-app-ntrip-ui": {
 		"vuci_dep": "vuci-app-ntrip-api",
-		"base_dep": "ntrip_client_v2 libtlt_termios",
+		"base_dep": "ntrip_client_v2 libtlt_termios1.0",
 		"kmod_dep": "libstdcpp6",
 		"name": "ntrip"
 	},
@@ -99,7 +105,7 @@
 	},
 	"vuci-app-snmp-ui": {
 		"vuci_dep": "vuci-app-snmp-api",
-		"base_dep": "snmp snmpd libpcre libnetsnmp snmp-mib snmp-mod-sqm snmp-mod-wireless snmp-mod-vlan snmp-mod-chilli snmp-mod-device snmp-mod-gps snmp-mod-gsm snmp-mod-io snmp-mod-port snmp-mod-iface libtltchilli snmptrap libpci",
+		"base_dep": "snmp snmpd libpcre libnetsnmp snmp-mib snmp-mod-sqm snmp-mod-wireless snmp-mod-vlan snmp-mod-chilli snmp-mod-device snmp-mod-gps snmp-mod-gsm snmp-mod-io snmp-mod-port libtltchilli snmptrap libpci",
 		"name": "snmp"
 	},
 	"vuci-app-samba-ui": {
@@ -119,7 +125,7 @@
 		"name": "wake_on_lan"
 	},
 	"vuci-app-coovachilli-ui": {
-		"base_dep": "libtltchilli coova-chilli libjson-c",
+		"base_dep": "libtltchilli coova-chilli libjson-c libcurl",
 		"vuci_dep": "vuci-app-coovachilli-api vuci-app-landingpage tlt_hs_theme_default",
 		"name": "hotspot"
 	},
@@ -157,7 +163,7 @@
 	"vuci-app-ddns-ui": {
 		"vuci_dep": "vuci-app-ddns-api",
 		"base_dep": "tlt-ddns ddns-scripts ddns-scripts_nsupdate ddns-scripts_no-ip_com ddns-scripts_cloudflare.com-v4 curl",
-		"packages_dep": "bind-client bind-libs libuv",
+		"packages_dep": "snsupdate",
 		"kmod_dep": "libatomic1",
 		"name": "ddns"
 	},
@@ -170,27 +176,27 @@
 		"name": "traffic_logging"
 	},
 	"vuci-app-modbus-server-ui": {
-		"base_dep": "modbus_server libmodbus data-sender-mod-modbus libtlt_termios",
-		"vuci_dep": "vuci-app-modbus-server-api",
+		"base_dep": "modbus_server libmodbus data-sender-mod-modbus libtlt_termios1.0",
+		"vuci_dep": "vuci-app-modbus-server-api data-sender-api-mod-modbus",
 		"name": "modbus_server"
 	},
 	"vuci-app-modbus-gateway-ui": {
-		"base_dep": "mqtt-modbus-gateway libmodbus libtlt_termios",
+		"base_dep": "mqtt-modbus-gateway libmodbus libtlt_termios1.0",
 		"vuci_dep": "vuci-app-modbus-gateway-api",
 		"name": "mqtt_modbus_gateway"
 	},
 	"vuci-app-modbus-client-ui": {
-		"base_dep": "modbus_client libmodbus data-sender-mod-modbus data-sender-mod-modbus_alarm libtlt_termios",
-		"vuci_dep": "vuci-app-modbus-client-api vuci-app-modbus-serial-ui vuci-app-modbus-serial-api",
+		"base_dep": "modbus_client libmodbus data-sender-mod-modbus data-sender-mod-modbus_alarm libtlt_termios1.0",
+		"vuci_dep": "vuci-app-modbus-client-api vuci-app-modbus-serial-ui vuci-app-modbus-serial-api data-sender-api-mod-modbus data-sender-api-mod-modbus-alarm",
 		"name": "modbus_client"
 	},
 	"vuci-app-wifi-scanner-ui": {
-		"vuci_dep": "vuci-app-wifi-scanner-api",
+		"vuci_dep": "vuci-app-wifi-scanner-api data-sender-api-mod-wifiscan",
 		"base_dep": "wifi_scanner data-sender-mod-wifiscan",
 		"name": "wifi_scanner"
 	},
 	"vuci-app-opcua-ui": {
-		"vuci_dep": "vuci-app-opcua-api",
+		"vuci_dep": "vuci-app-opcua-api data-sender-api-mod-opcua",
 		"base_dep": "opcua_client open62541 libtlt_utils data-sender-mod-opcua",
 		"name": "opc_ua_client"
 	},
@@ -200,8 +206,8 @@
 		"name": "opc_ua_server"
 	},
 	"vuci-app-dlms-ui": {
-		"vuci_dep": "vuci-app-dlms-api",
-		"base_dep": "dlms_client libdlms data-sender-mod-dlms libtlt_termios",
+		"vuci_dep": "vuci-app-dlms-api data-sender-api-mod-dlms",
+		"base_dep": "dlms_client libdlms libtlt_utils libtlt_termios1.0 data-sender-mod-dlms",
 		"name": "dlms_client"
 	},
 	"vuci-app-mwan3-ui": {

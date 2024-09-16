@@ -45,8 +45,13 @@ json_file_status="/tmp/dfota_status.json"
 LAST_ERROR=""
 LAST_ERROR_CODE=""
 UPDATE_FAILED="0"
+SKIP_REBOOT=0
+# Ignores failed state on RX52X modems and attempts to update anyway
+IGNORE_FAILED_STATE=0
 
 TOTAL_LIST_RETRIES=10
+
+legacy_AT_commands=1
 
 get_from_info() {
 	ubus call "$1" info | grep "$2" | cut -d'"' -f 4
@@ -109,6 +114,7 @@ while [ -n "$1" ]; do
 		-s)
 			export_status=1
 		;;
+		-i) IGNORE_FAILED_STATE=1;;
 		-*)
 			print_help
 			exit 1
@@ -328,6 +334,37 @@ check_modem_status() {
 	return 0
 }
 
+wait_for_abfota_sys_ready()
+{
+	local modem_id="$1"
+
+	state_str=""
+	retry_count=0
+	print_output "Waiting for modem to be ready"
+	while [ "$state_str" != "succeed" ]; do
+		[ "$retry_count" -ge 10 ] && {
+			print_error "Modem is not ready FOTA update(state: $state_str)" "$EC_NOT_READY"
+			return 1
+		}
+		retry_count=$((retry_count+1))
+
+		ret=$(ubus call "$modem_id" get_qabfota_state)
+		state_str=$(get_value_from_json "$ret" "state_str")
+		[ "$state_str" = "succeed" ] && break
+
+		[ "$state_str" = "failed" ] && {
+			[ $IGNORE_FAILED_STATE = 1 ] && break
+			print_error "Modem is in failed dfota state and backup partition is not available.
+To ignore this and attempt to update anyway add \"-i\" option." "$EC_NOT_READY"
+			return 1
+		}
+		debug "Waiting for modem to be ready (current state: $state_str)"
+		sleep 30
+	done
+	print_output "Modem is ready for update"
+	return 0
+}
+
 check_update() {
 	[ -n "$MODE" ] && print_output "Skipping update checking because direct file or link provided" && return
 
@@ -398,6 +435,16 @@ do_update() {
 	fi
 	cmd_port=$(get_from_info "$modem_id" "tty_port")
 	echo "Found cmd port: $cmd_port"
+	modem_model=$(get_from_info "$modem_id" "firmware" | head -c 6)
+
+	[ "$modem_model" = "RG520N" ] && [ "$legacy_AT_commands" -eq 0 ] &&  {
+		wait_for_abfota_sys_ready "$modem_id" || {
+			# don't need to reboot because modem is busy, reboot will reset the backup progress
+			SKIP_REBOOT=1
+			print_error "Modem is not ready for FOTA update" "$EC_NOT_READY"
+			return 1
+		}
+	}
 
 	notify_webui "start"
 
@@ -410,7 +457,6 @@ do_update() {
 		if [ "$MODE" = "link" ]; then
 			download_link="$MODE_PATH"
 		fi
-		modem_model=$(get_from_info "$modem_id" "firmware" | head -c 6)
 
 		if [ "$modem_model" = "RG500U" ]; then
 			dfota_path="/tmp/modem_fw"
@@ -458,6 +504,26 @@ do_update() {
 		[ "$dl_file_size" -eq "$firmware_size" ] && {
 		print_output "Firmware update was successfully downloaded!"
 		print_output "Sending update command!"
+
+		if [ "$modem_model" = "RG520N" ] && [ "$legacy_AT_commands" -eq 0 ]; then
+			# Set package path
+			ret=$(ubus call "$modem_id" set_qabfota_package "{\"path\":\"dfota.zip\"}")
+			ret=$(get_value_from_json "$ret" "status")
+			[ "$ret" != "OK" ] && {
+				print_error "Failed to set AB FOTA package path" "$EC_UPD_VERIFY_FAILED"
+				return 1
+			}
+			sleep 5
+			# Start the update
+			print_output "Starting FOTA update"
+			ret=$(ubus call "$modem_id" qabfota_update)
+			ret=$(get_value_from_json "$ret" "status")
+			[ "$ret" != "OK" ] && {
+				print_error "Failed to start FOTA update" "$EC_UPD_START_FAILED"
+				return 1
+			}
+			return 0
+		fi
 
 		ret=$(ubus call "$modem_id" dfota_upgrade "{\"path\":\"/data/ufs/dfota.zip\"}")
 		ret=$(get_value_from_json "$ret" "status")
@@ -562,6 +628,7 @@ do_update_mobile_only() {
 track_update_status() {
 	local modem_id="$1"
 	local ret
+	local cnt=0
 	print_output "Waiting for the update to start..."
 	json_update_modem_status "$modem_id" "waiting"
 	modem_usb_id=$(get_from_info "$modem_id" "usb_id")
@@ -586,12 +653,15 @@ track_update_status() {
 
 	json_update_modem_status "$modem_id" "updating"
 	while true; do
+		cnt=$((cnt+1))
 		ret=$(get_firmware "$modem_id") > /dev/null 2>&1
 
 		[ -z "$ret" ] || [ "$ret" = "Command failed: Not found" ] || break
 		debug "Update status result: $ret"
-		print_output "Update is in progress..."
-		sleep 10
+		if [ $((cnt % 5)) -eq 0 ]; then
+			print_output "Update is in progress..."
+		fi
+		sleep 2
 	done;
 	print_output "Update finished! Firmware version - \"$ret\""
 	json_update_modem_status "$modem_id" "finished"
@@ -603,7 +673,8 @@ reset_on_fail() {
 	#Hack if modem fails to leave data state :/
 	local st="$1"
 	[ "$st" = "$UPDATE_ERROR" ] || return
-	print_output "Reseting modems due error!"
+	[ $SKIP_REBOOT = 1 ] && return
+	print_output "Reseting modems due to error!"
 	mctl -r -m "modem" > /dev/null 2>&1
 	mctl -r -m "modem2" > /dev/null 2>&1
 }
@@ -648,7 +719,6 @@ _json_update_modem_status(){
 
 	json_init
 	[ -f "$json_file_status" ] && json_load_file "$json_file_status"
-	json_add_string status "$status"
 
 	json_find_modem "$modem_id"
 	#Inside <modem_id> object
@@ -741,9 +811,18 @@ update_loop(){
 			debug "Update flag found!"
 			control_services "stop"
 			modem_model=$(get_from_info "$m_id" "firmware" | head -c 6)
+
+			if [ "$modem_model" = "RG520N" ]; then
+				ret=$(ubus call "$m_id" get_qabfota_state)
+				state_str=$(get_value_from_json "$ret" "state_str")
+				[ "$state_str" = "succeed" ] && legacy_AT_commands=0
+			fi
 			if [ "$modem_model" = "EC200A" ]; then
 				max_wait=250
 				func=do_update_mobile_only
+			elif [ "$modem_model" = "RG520N" ] && [ "$legacy_AT_commands" -eq 0 ]; then
+				max_wait=240
+				func=do_update
 			else
 				max_wait=30
 				func=do_update
@@ -756,7 +835,6 @@ update_loop(){
 			}
 
 			track_update_status "$m_id"
-			sleep 15
 		fi
 	done
 

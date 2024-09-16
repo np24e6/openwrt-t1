@@ -1,31 +1,245 @@
 #!/bin/sh
 
 . /lib/functions.sh
-[ ! -f "/lib/functions/modem.sh" ] && return 0
-. /lib/functions/modem.sh
 
-import_mwan(){
-	config_get name "$1" "name"
-	if [ "$name" = "wan" ]; then
-		config_get network "$1" "network"
-		for n in $network ; do
-			metric=$(uci_get network "$n" metric)
-			if [ -n "$metric" ]; then
-				create_multiwan_iface "$n" "$metric"
-				uci_reorder "mwan3" "$n" "$metric"
-			fi
-		done
-	fi
+NETWORKS=""
+FOUND=0
+MEMBER_MWAN=0
+MEMBER_BAL=0
+MWAN_DEF=0
+BAL_DEF=0
+
+reset_mwan_def_list() {
+
+	local interface="$1"
+
+	uci_remove_list "mwan3" "mwan_default" "use_member" "${interface}_member_mwan"
+	uci_add_list "mwan3" "mwan_default" "use_member" "${interface}_member_mwan"
 }
 
-uci_remove "mwan3" "wan"
-uci_remove "mwan3" "wan_member_mwan"
-uci_remove "mwan3" "wan_member_balance"
-uci_remove_list "mwan3" "mwan_default" "use_member" "wan_member_mwan"
-uci_remove_list "mwan3" "balance_default" "use_member" "wan_member_balance"
-uci_remove "mwan3" "@condition[0]"
+reset_balance_def_list() {
+
+	local interface="$1"
+
+	uci_remove_list "mwan3" "balance_default" "use_member" "${interface}_member_balance"
+	uci_add_list "mwan3" "balance_default" "use_member" "${interface}_member_balance"
+}
+
+get_mwan_networks() {
+
+	local section="$1"
+
+	config_get name "$section" "name"	
+	[ "$name" != "wan" ] && return 1
+
+	config_get network "$section" "network"
+	
+	# wan6 is not supported in mwan atm
+	NETWORKS="${network/wan6}"
+}
+
+policy_cb() {
+	
+	local section="$1"
+	local network="$2"
+
+	[ "$BAL_DEF" -eq 1 ] && [ "$MWAN_DEF" -eq 1 ] && return 0
+
+	[ "$section" == "balance_default" ] && BAL_DEF=1
+	[ "$section" == "mwan_default" ] && MWAN_DEF=1
+	
+	return 0
+}
+
+interfaces_cb() {
+	
+	local section="$1"
+	local network="$2"
+	
+	[ "$FOUND" -eq 1 ] && return 0
+
+	[ "$section" == "$network" ] && FOUND=1
+
+	return 0
+}
+
+condition_cb() {
+	
+	local section="$1"
+	local network="$2"
+
+	[ "$FOUND" -eq 1 ] && return 0
+
+	config_get ifname "$section" "interface"
+	
+	[ "$ifname" == "$network" ] && FOUND=1
+
+	return 0
+}
+
+member_cb() {
+
+	local section="$1"
+	local network="$2"
+	
+	[ "$MEMBER_MWAN" -eq 1 ] && [ "$MEMBER_BAL" -eq 1 ] && return 0
+
+	local member_mwan="${network}_member_mwan"
+	local member_bal="${network}_member_balance"
+
+	[ "$section" == "$member_mwan" ] && MEMBER_MWAN=1
+	[ "$section" == "$member_bal" ] && MEMBER_BAL=1
+	
+	return 0
+
+}
+
+add_interface_section() {
+
+	local section="$1"
+	
+	uci -q batch <<-EOF
+		set mwan3.$section='interface'
+		set mwan3.$section.interval='3'
+		set mwan3.$section.enabled='0'
+		set mwan3.$section.family='ipv4'
+	EOF
+
+	return 0
+}
+
+add_condition_section() {
+
+	local network="$1"
+	uci -q batch <<-EOF
+		add mwan3 condition
+		set mwan3.@condition[-1].interface='$network'
+		set mwan3.@condition[-1].track_method='ping'
+		add_list mwan3.@condition[-1].track_ip='1.1.1.1'
+		add_list mwan3.@condition[-1].track_ip='8.8.8.8'
+		set mwan3.@condition[-1].reliability='1'
+		set mwan3.@condition[-1].count='1'
+		set mwan3.@condition[-1].timeout='2'
+		set mwan3.@condition[-1].down='3'
+		set mwan3.@condition[-1].up='3'
+	EOF
+
+	return 0
+}
+
+add_member_mwan_section() {
+	
+	local network="$1"
+	local metric="$2"
+	local section="${network}_member_mwan"
+
+	[ -z "$metric" ] && return 1
+
+	uci -q batch <<-EOF
+		set mwan3.$section='member'
+		set mwan3.$section.interface='$network'
+		set mwan3.$section.metric='$metric'
+	EOF
+
+}
+
+add_member_balance_section() {
+
+	local network="$1"
+	local section="${network}_member_balance"
+
+	uci -q batch <<-EOF
+		set mwan3.$section='member'
+		set mwan3.$section.interface='$network'
+		set mwan3.$section.weight='1'
+	EOF
+
+	return 0
+}
+
+remove_wan_cb() {
+
+	local section="$1"
+
+	config_get ifname "$section" "interface"
+
+	[ "$ifname" != "wan" ] && return 1
+
+	uci -q delete mwan3."${section}"
+
+	return 0
+
+}
+
+remove_wan() {
+
+	for i in $NETWORKS;
+	do
+		[ "$i" == "wan" ] && return 1
+	done
+
+	uci_remove "mwan3" "wan"
+	uci_remove "mwan3" "wan_member_mwan"
+	uci_remove "mwan3" "wan_member_balance"
+	uci_remove_list "mwan3" "mwan_default" "use_member" "wan_member_mwan"
+	uci_remove_list "mwan3" "balance_default" "use_member" "wan_member_balance"
+
+	config_foreach remove_wan_cb "condition"
+
+	return 0
+}
+
+check_interfaces() {
+
+	local metric=""
+
+	for n in $NETWORKS;
+	do
+		metric=$(uci_get network "$n" metric)
+		
+		config_foreach interfaces_cb "interface" "$n"
+		[ "$FOUND" -eq 0 ] && add_interface_section "$n"
+		FOUND=0
+
+		config_foreach condition_cb "condition" "$n"
+		[ "$FOUND" -eq 0 ] && add_condition_section "$n"
+		FOUND=0
+
+		config_foreach member_cb "member" "$n"
+		[ "$MEMBER_MWAN" -eq 0 ] && add_member_mwan_section "$n" "$metric"
+		[ "$MEMBER_BAL" -eq 0 ] && add_member_balance_section "$n"
+
+		MEMBER_MWAN=0
+		MEMBER_BAL=0
+
+		config_foreach policy_cb "policy" "$n"
+		[ "$MWAN_DEF" -eq 0 ] && { 
+			uci_add "mwan3" "policy" "mwan_default" 
+			MWAN_DEF=1
+		}
+
+		[ "$BAL_DEF" -eq 0 ] && {
+			uci_add "mwan3" "policy" "balance_default"
+			BAL_DEF=1
+		}
+
+		[ "$MWAN_DEF" -eq 1 ] && reset_mwan_def_list "$n"
+		[ "$BAL_DEF" -eq 1 ] && reset_balance_def_list "$n"
+		
+		[ -z "$metric" ] && continue
+
+		uci_reorder "mwan3" "$n" "$metric"
+		
+	done
+}
+
 config_load "firewall"
-config_foreach import_mwan "zone"
-uci_commit "mwan3"
+config_foreach get_mwan_networks "zone"
+
+config_load "mwan3"
+remove_wan
+check_interfaces
+
+uci_commit mwan3
 
 exit 0

@@ -47,6 +47,10 @@ config COOVACHILLI_UBUS
     bool "Enable UBUS support"
     default y
 
+config COOVACHILLI_CURL
+    bool "Enable CURL support"
+    default y
+
 choice
 	prompt "SSL library"
 	default COOVACHILLI_OPENSSL

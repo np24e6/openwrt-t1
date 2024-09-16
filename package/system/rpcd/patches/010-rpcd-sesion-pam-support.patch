@@ -1,0 +1,310 @@
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -9,6 +9,7 @@ INCLUDE_DIRECTORIES(include)
+ OPTION(FILE_SUPPORT "File plugin support" ON)
+ OPTION(IWINFO_SUPPORT "libiwinfo plugin support" ON)
+ OPTION(RPCSYS_SUPPORT "rpc-sys plugin support" ON)
++OPTION(PAM_SUPPORT	"Include PAM support" OFF)
+ 
+ SET(CMAKE_SHARED_LIBRARY_LINK_C_FLAGS "")
+ 
+@@ -22,6 +23,10 @@ IF(HAVE_SHADOW)
+   ADD_DEFINITIONS(-DHAVE_SHADOW)
+ ENDIF()
+ 
++IF(PAM_SUPPORT)
++    ADD_DEFINITIONS(-DENABLE_PAM_SUPPORT)
++ENDIF()
++
+ FIND_LIBRARY(uci NAMES uci)
+ FIND_LIBRARY(ubus NAMES ubus)
+ FIND_LIBRARY(ubox NAMES ubox)
+--- a/include/rpcd/session.h
++++ b/include/rpcd/session.h
+@@ -36,6 +36,22 @@
+ #define RPC_SESSION_DIRECTORY	"/var/run/rpcd/sessions"
+ #define RPC_SESSION_ACL_DIR		"/usr/share/rpcd/acl.d"
+ 
++#ifdef ENABLE_PAM_SUPPORT
++enum {
++    AUTH_TYPE_NONE,
++    AUTH_TYPE_SHADOW,
++    AUTH_TYPE_PAM
++};
++enum {
++    PAM_LOCALUSERS,
++    PAM_ALL_USERS
++};
++struct auth_cb_data {
++    bool access;
++    int privilege;
++};
++#endif
++
+ extern char apply_sid[RPC_SID_LEN + 1];
+ 
+ struct rpc_session {
+--- a/session.c
++++ b/session.c
+@@ -35,6 +35,10 @@
+ 
+ #include <rpcd/session.h>
+ 
++#ifdef ENABLE_PAM_SUPPORT
++#define UBUS_TIMEOUT 10000
++#endif //ENABLE_PAM_SUPPORT
++
+ static struct avl_tree sessions;
+ static struct blob_buf buf;
+ 
+@@ -832,6 +836,150 @@ rpc_login_test_password(const char *hash
+ 	return (crypt_hash && !strcmp(crypt_hash, hash));
+ }
+ 
++#ifdef ENABLE_PAM_SUPPORT
++static const char*
++rpc_pam_users_type(struct uci_context *uci, struct uci_package *p, int *ret)
++{
++	const char* default_group = NULL;
++	struct uci_section *s = NULL;
++	struct uci_element *e = NULL;
++	uci_foreach_element(&p->sections, e)
++	{
++		s = uci_to_section(e);
++		if (strcmp(s->type, "rpcd"))
++			continue;
++
++		char *pam_all_users = (char *)uci_lookup_option_string(uci, s, "pam_all_users");
++		if (pam_all_users && pam_all_users[0] == '1') {
++			*ret = PAM_ALL_USERS;
++		}
++
++		default_group = (char *)uci_lookup_option_string(uci, s, "pam_default_group");
++		break;
++	}
++	return default_group;
++}
++
++static int
++rpc_login_test_auth_type(struct uci_context *uci, struct uci_section *s)
++{
++	struct uci_ptr ptr = { .package = "rpcd", .section = s->e.name, .option = "auth_type"};
++	int auth_type = AUTH_TYPE_NONE;
++
++	ptr.o = NULL;
++	if (!uci_lookup_ptr(uci, &ptr, NULL, true)) {
++		if (!ptr.o || ptr.o->type != UCI_TYPE_STRING) {
++			return auth_type;
++        }
++
++        if (!strncmp(ptr.o->v.string, "shadow", sizeof("shadow") - 1)) {
++            auth_type = AUTH_TYPE_SHADOW;
++        } else if (!strncmp(ptr.o->v.string, "pam", sizeof("pam") - 1)) {
++            auth_type = AUTH_TYPE_PAM;
++        }
++	}
++
++	return auth_type;
++}
++
++enum {
++	PAM_AUTH_ACCESS,
++	PAM_AUTH_PRIVILEGE,
++	__PAM_AUTH_MAX
++};
++
++static const struct blobmsg_policy pam_auth_policy[__PAM_AUTH_MAX] = {
++	[PAM_AUTH_ACCESS] = { "access", BLOBMSG_TYPE_BOOL },
++	[PAM_AUTH_PRIVILEGE] = { "privilege", BLOBMSG_TYPE_INT32 },
++};
++
++
++static void auth_cb(struct ubus_request *req, int type, struct blob_attr *msg)
++{
++	(void)type;
++
++	struct auth_cb_data *data = (struct auth_cb_data *)req->priv;
++	struct blob_attr *tb[__PAM_AUTH_MAX];
++
++	blobmsg_parse(pam_auth_policy, __PAM_AUTH_MAX, tb, blob_data(msg),
++			blob_len(msg));
++
++	if (tb[PAM_AUTH_ACCESS]) {
++		data->access = blobmsg_get_bool(tb[PAM_AUTH_ACCESS]);
++	}
++
++	if (tb[PAM_AUTH_PRIVILEGE]) {
++        data->privilege = blobmsg_get_u32(tb[PAM_AUTH_PRIVILEGE]);
++    }
++}
++
++static bool
++rpc_pam_auth(const char *username, const char *password, int *privilege)
++{
++	struct ubus_context *ctx = ubus_connect(NULL);
++	static struct blob_buf b = { 0 };
++	uint32_t id = 0;
++	struct auth_cb_data data = {0};
++
++	if (!ctx || ubus_lookup_id(ctx, "pam", &id)) {
++		printf("Failed to lookup UBUS object 'pam'\n");
++
++		return false;
++	}
++
++	blob_buf_init(&b, 0);
++ 	blobmsg_add_string(&b, "username", username);
++	blobmsg_add_string(&b, "password", password);
++	blobmsg_add_string(&b, "service", "rpcd");
++	if (ubus_invoke(ctx, id, "auth", b.head, auth_cb, &data, UBUS_TIMEOUT)) {
++		printf("RPCD session PAM auth UBUS error.\n");
++	} else if (privilege != NULL) {
++		*privilege = data.privilege;
++	}
++
++	blob_buf_free(&b);
++	ubus_free(ctx);
++
++	return data.access;
++}
++#endif //ENABLE_PAM_SUPPORT
++
++static struct uci_section *
++rpc_login_group_search(struct uci_context *uci, struct uci_package *p, struct uci_section *s,
++						struct uci_element *e, const char *user_group, int privilege)
++{
++	if (user_group) {
++		uci_foreach_element(&p->sections, e)
++		{
++			s = uci_to_section(e);
++			if (strcmp(s->type, "group"))
++				continue;
++
++			if (!strcmp(s->e.name, user_group))
++				return s;
++		}
++	}
++#ifdef ENABLE_PAM_SUPPORT
++	else if (privilege) {
++		uci_foreach_element(&p->sections, e)
++		{
++			s = uci_to_section(e);
++			if (strcmp(s->type, "group"))
++				continue;
++
++			const char *privilege_lvl = uci_lookup_option_string(uci, s, "privilege_lvl");
++			if (privilege_lvl && privilege_lvl[0] != '\0') {
++				int privilege_lvl_int = (int)strtol(privilege_lvl, NULL, 10);
++				if (privilege_lvl_int == privilege)
++					return s;
++			}
++		}
++	}
++#endif
++
++	return NULL;
++}
++
+ static struct uci_section *
+ rpc_login_test_login(struct uci_context *uci,
+                      const char *username, const char *password)
+@@ -854,6 +1002,24 @@ rpc_login_test_login(struct uci_context
+ 	}
+ 
+ 	const char *user_group = NULL;
++	int privilege_lvl = 0;
++#ifdef ENABLE_PAM_SUPPORT
++	bool authorized = false;
++	int pam_user_type = PAM_LOCALUSERS;
++
++	const char* default_group = rpc_pam_users_type(uci, p, &pam_user_type);
++	if (pam_user_type == PAM_ALL_USERS) {
++		authorized = rpc_pam_auth(username, password, &privilege_lvl);
++		if (authorized && privilege_lvl) {
++			return rpc_login_group_search(uci, p, s, e, user_group, privilege_lvl);
++		} else if (authorized && default_group) {
++			user_group = default_group;
++			return rpc_login_group_search(uci, p, s, e, user_group, privilege_lvl);
++		} else if (!authorized) {
++			return NULL;
++		}
++	}
++#endif
+ 	uci_foreach_element(&p->sections, e)
+ 	{
+ 		s = uci_to_section(e);
+@@ -898,30 +1064,32 @@ rpc_login_test_login(struct uci_context
+ 		if (ptr.o->type != UCI_TYPE_STRING)
+ 			continue;
+ 
+-		if (rpc_login_test_password(ptr.o->v.string, password)) {
+-			ptr.option = "group";
+-			ptr.o = NULL;
++#ifdef ENABLE_PAM_SUPPORT
++		int auth_type = rpc_login_test_auth_type(uci, s);
++		if (auth_type & AUTH_TYPE_PAM) {
++			if (authorized || rpc_pam_auth(username, password, NULL)) {
++				ptr.option = "group";
++				ptr.o = NULL;
+ 
+-			if (!uci_lookup_ptr(uci, &ptr, NULL, true) && ptr.o && ptr.o->type == UCI_TYPE_STRING)
+-				user_group = ptr.o->v.string;
+-			break;
+-		}
+-	}
+-
+-	if (user_group) {
+-		uci_foreach_element(&p->sections, e)
+-		{
+-			s = uci_to_section(e);
+-			if (strcmp(s->type, "group"))
+-				continue;
++				if (!uci_lookup_ptr(uci, &ptr, NULL, true) && ptr.o && ptr.o->type == UCI_TYPE_STRING)
++					user_group = ptr.o->v.string;
++				break;
++			}
++		} else if (auth_type == AUTH_TYPE_NONE || auth_type & AUTH_TYPE_SHADOW)
++#endif
++        {
++			if (rpc_login_test_password(ptr.o->v.string, password)) {
++				ptr.option = "group";
++				ptr.o = NULL;
+ 
+-			if (!strcmp(s->e.name, user_group)) {
+-				return s;
++				if (!uci_lookup_ptr(uci, &ptr, NULL, true) && ptr.o && ptr.o->type == UCI_TYPE_STRING)
++					user_group = ptr.o->v.string;
++				break;
+ 			}
+ 		}
+ 	}
+ 
+-	return NULL;
++	return rpc_login_group_search(uci, p, s, e, user_group, privilege_lvl);
+ }
+ 
+ static bool
+@@ -1155,6 +1323,7 @@ rpc_handle_login(struct ubus_context *ct
+                  struct ubus_request_data *req, const char *method,
+                  struct blob_attr *msg)
+ {
++	static struct blob_buf buf = { 0 };
+ 	struct uci_context *uci = NULL;
+ 	struct uci_section *login;
+ 	struct rpc_session *ses;
+@@ -1212,6 +1381,15 @@ rpc_handle_login(struct ubus_context *ct
+ 	rpc_login_setup_acls(ses, login);
+ 
+ 	rpc_session_set(ses, tb[RPC_L_USERNAME]);
++
++	if (login->e.name) {
++		blob_buf_init(&buf, 0);
++		blobmsg_add_string(&buf, "group", login->e.name);
++		struct blob_attr *group_attr = blob_data(buf.head);
++		rpc_session_set(ses, group_attr);
++		blob_buf_free(&buf);
++	}
++
+ 	rpc_session_dump(ses, ctx, req);
+ 
+ out:

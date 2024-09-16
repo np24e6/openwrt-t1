@@ -28,12 +28,14 @@
 
 curdir:=toolchain
 
+ifeq ($(BUILD_SKIP_TOOLCHAIN),)
+ifneq ($(CONFIG_TARGET_mdm9x07)$(CONFIG_TARGET_sdxprairie)$(CONFIG_TARGET_sdxlemur)$(CONFIG_TARGET_sdxnightjar),)
+  BUILD_ALL_TOOLCHAIN = y
+endif
+
 # subdirectories to descend into
 $(curdir)/builddirs := $(if $(CONFIG_GDB),gdb) $(if $(CONFIG_EXTERNAL_TOOLCHAIN),wrapper,kernel-headers binutils gcc/initial gcc/final $(LIBC) fortify-headers) $(if $(CONFIG_NASM),nasm)
-$(curdir)/builddirs += $(if $(CONFIG_TARGET_sdxprairie),python2)
-$(curdir)/builddirs += $(if $(CONFIG_TARGET_mdm9x07),python2)
-$(curdir)/builddirs += $(if $(CONFIG_TARGET_sdxlemur),python2)
-$(curdir)/builddirs += $(if $(CONFIG_TARGET_sdxnightjar),python2)
+$(curdir)/builddirs += $(if $(BUILD_ALL_TOOLCHAIN),python2)
 
 # builddir dependencies
 ifeq ($(CONFIG_EXTERNAL_TOOLCHAIN),)
@@ -52,6 +54,15 @@ ifeq ($(CONFIG_EXTERNAL_TOOLCHAIN),)
   $(curdir)/$(LIBC)/compile:=$(curdir)/gcc/initial/compile
   $(curdir)/gcc/final/compile:=$(curdir)/$(LIBC)/compile $(curdir)/kernel-headers/compile
   $(curdir)/$(LIBC)/utils/compile:=$(curdir)/gcc/final/compile
+endif
+
+ifneq ($(BUILD_SKIP_TOOLS),)
+# preparatory work which is usually being done by tools
+# but if tools are skipped, then we need to do it here
+$(STAGING_DIR)/.prepared: $(TMP_DIR)/.build
+	$(call PrepareStaging,$(STAGING_DIR))
+	mkdir -p $(BUILD_DIR)/stamp
+	touch $@
 endif
 
 ifndef DUMP_TARGET_DB
@@ -94,6 +105,11 @@ endif
 
 $(curdir)/install: $(curdir)/compile
 
+$(eval $(call stampfile,$(curdir),toolchain,compile,$(TOOLCHAIN_DIR)/stamp/.gcc-initial_installed,,$(TOOLCHAIN_DIR)))
+$(eval $(call stampfile,$(curdir),toolchain,check,$(TMP_DIR)/.build))
+$(eval $(call subdir,$(curdir)))
+endif # BUILD_SKIP_TOOLCHAIN
+
 GPL_TOOLCHAIN_DIR:=$(GPL_BUILD_DIR)/toolchain
 
 $(curdir)/gpl:
@@ -110,8 +126,3 @@ $(curdir)/gpl:
 			esac \
 		done \
 	)
-
-$(eval $(call stampfile,$(curdir),toolchain,compile,$(TOOLCHAIN_DIR)/stamp/.gcc-initial_installed,,$(TOOLCHAIN_DIR)))
-$(eval $(call stampfile,$(curdir),toolchain,check,$(TMP_DIR)/.build))
-$(eval $(call subdir,$(curdir)))
-

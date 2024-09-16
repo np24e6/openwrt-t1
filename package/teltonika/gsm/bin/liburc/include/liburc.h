@@ -138,6 +138,11 @@ typedef enum {
 	LURC_ERROR,
 } lurc_err_t;
 
+typedef enum {
+	MODEM_STATE_VAL,
+	MODEM_STATE_T_MAX,
+} urc_modem_state_t;
+
 struct pin_state_t {
 	enum pin_state_id state;
 	const char *modem_id;

@@ -11,12 +11,15 @@ PKG_NAME:=net-snmp
 PKG_VERSION:=5.9.1
 PKG_RELEASE:=$(AUTORELEASE)
 
-PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
-PKG_SOURCE_URL:=@SF/net-snmp
 PKG_HASH:=eb7fd4a44de6cddbffd9a92a85ad1309e5c1054fb9d5a7dd93079c8953f48c3f
 PKG_MAINTAINER:=Stijn Tintel <stijn@linux-ipv6.be>
-PKG_LICENSE:=MIT BSD-3-Clause-Clear
+PKG_LICENSE:=BSD-3-Clause-Clear
+PKG_LICENSE_FILES:=COPYING
 PKG_CPE_ID:=cpe:/a:net-snmp:net-snmp
+
+PKG_SOURCE_URL:=@SF/$(PKG_NAME)
+PKG_SOURCE_VERSION:=5.9.1
+PKG_SOURCE:=$(PKG_NAME)-$(PKG_SOURCE_VERSION).tar.gz
 
 PKG_FIXUP:=autoreconf
 
@@ -128,7 +131,7 @@ SNMP_MIB_MODULES_INCLUDED = \
 	host/hr_proc \
 	host/hr_storage \
 	host/hr_system \
-	ieee802dot11 \
+	host/hr_swrun \
 	if-mib/ifXTable \
 	ip-mib/inetNetToMediaTable \
 	mibII/at \
@@ -182,7 +185,7 @@ SNMP_TRANSPORTS_INCLUDED = Callback UDP Unix
 
 SNMP_TRANSPORTS_EXCLUDED = TCP TCPIPv6
 
-TARGET_CFLAGS += $(FPIC)
+TARGET_CFLAGS += $(FPIC) -DHAVE_AES=1
 TARGET_CPPFLAGS += -I$(STAGING_DIR)/usr/include/libnl-tiny
 TARGET_LDFLAGS += -L$(TOOLCHAIN_DIR)/usr/lib -lubus -lubox
 
@@ -196,7 +199,7 @@ CONFIGURE_ARGS += \
 	--with-default-snmp-version=1 \
 	--with-sys-contact=root@localhost \
 	--with-sys-location=Unknown \
-	--enable-applications \
+	--disable-applications \
 	--disable-debugging \
 	--disable-manuals \
 	--disable-scripts \

@@ -1,120 +1,83 @@
 #!/bin/sh
 
 (
-	. /lib/functions.sh
-	. /usr/share/libubox/jshn.sh
+. /lib/functions.sh
+. /usr/share/libubox/jshn.sh
 
-	get_iostatus_message() {
-		# DO NOT CHANGE TO %gX. Different devices have different codes
-		local msg_in="DIN - %di, Isolated DIN - %ii"
-		local msg_in_pin="4Pin DIN - %pi"
-		local msg_out="Analog input - %aiV, DOUT OC - %oc, Relay DOUT - %ro"
-		local msg_out_pin="4Pin DOUT - %po"
-		local msg_rut2="DIN - %di, DOUT - %oc"
+migrate_io() {
+	config_get action "$1" "action"
+	[ "$action" = "send_status" ] || [ "$action" = "io_set" ] || return
 
-		local name=$(mnf_info -n | cut -c -6)
-		local four_pin ten_pin
+	while which iomand && [ -z "$io_list" ]; do
+		io_list=$(ubus list ioman.*)
+		sleep 1
+	done
 
-		case "$name" in
-		RUT9*)
-			[ "$name" = "RUT955" ] || [ "$name" = "RUT956" ] || [ "$name" = "RUT906" ] && ten_pin="1"
-			four_pin="1"
-			IO_MAP="$IO_MAP_RUT9"
-			IOSTATUS_MESSAGE="${ten_pin:+"$msg_in"}${four_pin:+"${ten_pin:+", "}$msg_in_pin"}${ten_pin:+", $msg_out"}${four_pin:+", $msg_out_pin"}"
-			;;
-		RUT2*)
-			IO_MAP="$IO_MAP_RUT2"
-			IOSTATUS_MESSAGE="$msg_rut2"
-			;;
-		*)
-			IO_MAP="$IO_MAP_RUTOS"
-			IOSTATUS_MESSAGE=""
-			;;
-		esac
-	}
+	config_get smstext "$1" "smstext"
+	[ "$smstext" = "iostatus" ] && migrate_io_status "$1" "$io_list"
+	[ "$smstext" = "ioset" ] && migrate_io_set "$1" "$io_list"
+}
 
-	migrate_io() {
-		local action message io_var
+migrate_io_status() {
+	local section_id="$1"
+	local io_list="$2"
+	local message=""
 
-		config_get action "$1" "action"
-		[ "$action" = "send_status" ] || return
-
-		config_get smstext "$1" "smstext"
-		[ "$smstext" = "iostatus" ] || return
-
-		config_get message "$1" "message" "$IOSTATUS_MESSAGE"
-
-		while which iomand && [ -z "$io_list" ]; do
-			io_list=$(ubus list ioman.*)
-			sleep 1
+	for io_ubus in $io_list; do
+		local call=$(ubus call "$io_ubus" location)
+		json_load "$call"
+		json_get_var io_param io_param
+		json_get_var io_name io_name
+		[ -z "$io_param" ] || [ -z "$io_name" ] || ! json_is_a block_pins array && continue
+		json_select block_pins
+		message="${message:+$message}"$io_name" ("
+		json_get_keys keys
+		for var in $keys; do
+			json_get_var pin "$var"
+			message="${message:+$message}"$pin","
 		done
+		message="${message:+${message::-1}}) - %"$io_param"; "
+	done
 
-		local n="0"
-		for io_ubus in $io_list; do
-			json_get_var io_var "$io_ubus"
-			[ -n "$io_var" ] && message=${message//%"$io_var"/%g"$n"}
-			n=$((n + 1))
-		done
+	message=$(echo ${message::-1})
 
-		uci_set "sms_utils" "$1" "message" "$message"
-		uci_commit "sms_utils"
+	uci_set "sms_utils" "$section_id" "message" "$message"
+	uci_commit "sms_utils"
+}
 
-		# temporary workaround, entire script will be re-written with 7.8
-		local name=$(mnf_info -n | cut -c -6)
-		[ "$name" = "TRB501" ] || [ "$name" = "TRB160" ] && {
-			message="Configurable Input/Output (3) - %g0; Configurable Input/Output (4) - %g1; Analog Input () - %g2"
-			uci_set "sms_utils" "$1" "message" "$message"
-			uci_commit "sms_utils"
-		}
+migrate_io_set() {
+	local section_id="$1"
+	local io_list="$2"
+	local pin=""
 
-		# update config file in default profile template
-		local profiles="/etc/profiles"
-		local config="/etc/config/sms_utils"
+	for io_ubus in $io_list; do
+		local call=$(ubus call "$io_ubus" status)
+		json_load "$call"
+		json_get_var direction direction
+		[[ -z "$direction" || "$direction" != "out" ]] && continue
+		pin=$(echo "$io_ubus" | cut -d '.' -f 3)
+		break
+	done
 
-		tar xzf "${profiles}/template.tar.gz" -C "$profiles"
-		cp "$config" "${profiles}${config}"
-		tar czf "${profiles}/template.tar.gz" etc -C "$profiles"
-		rm -rf "${profiles}/etc"
+	[ -z "$pin" ] && return
 
-		sed -i '/\/etc\/config\/sms_utils/d' "${profiles}/template.md5"
-		md5sum "$config" >> "${profiles}/template.md5"
-	}
+	uci_set "sms_utils" "$section_id" "io" "$pin"
+	uci_commit "sms_utils"
+}
 
-	IO_MAP_RUTOS='{
-	"ioman.acl.acl0": "cl",
-	"ioman.adc.adc0": "ad",
-	"ioman.dwi.dwi0": "dw",
-	"ioman.dwi.dwi1": "wd",
-	"ioman.gpio.dio0": "pi",
-	"ioman.gpio.dio1": "po",
-	"ioman.gpio.dio2": "pt",
-	"ioman.gpio.iio": "ii",
-	"ioman.gpio.din1": "di",
-	"ioman.gpio.dout1": "do",
-	"ioman.relay.relay0": "rb",
-	"ioman.relay.relay1": "rl"
-}'
+config_load "sms_utils"
+config_foreach migrate_io "rule"
 
-	IO_MAP_RUT9='{
-	"ioman.acl.acl0": "cl",
-	"ioman.adc.adc0": "ai",
-	"ioman.gpio.din1": "pi",
-	"ioman.gpio.din2": "di",
-	"ioman.gpio.dout2": "oc",
-	"ioman.gpio.dout1": "po",
-	"ioman.gpio.iio": "ii",
-	"ioman.relay.relay0": "ro"
-}'
+# update config file in default profile template
+profiles="/etc/profiles"
+config="/etc/config/sms_utils"
 
-	IO_MAP_RUT2='{
-	"ioman.gpio.din1": "di",
-	"ioman.gpio.dout1": "oc"
-}'
+tar xzf "${profiles}/template.tar.gz" -C "$profiles"
+cp "$config" "${profiles}${config}"
+tar czf "${profiles}/template.tar.gz" etc -C "$profiles"
+rm -rf "${profiles}/etc"
 
-	get_iostatus_message
-	json_load "$IO_MAP"
-
-	config_load "sms_utils"
-	config_foreach migrate_io "rule"
+sed -i '/\/etc\/config\/sms_utils/d' "${profiles}/template.md5"
+md5sum "$config" >> "${profiles}/template.md5"
 ) </dev/null >/dev/null 2>&1 &
 # launch script in a subshell in background to not hang up the device if ioman is not yet available through ubus

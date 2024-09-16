@@ -16,12 +16,14 @@ PKG_VERSION:=$(PYTHON3_VERSION).$(PYTHON3_VERSION_MICRO)
 
 PKG_SOURCE:=Python-$(PKG_VERSION).tar.xz
 PKG_SOURCE_URL=$(TLT_PACKAGE_API)/$(PKG_NAME)/$(PKG_VERSION)
-PKG_UPSTREAM_URL:=https://www.python.org/ftp/python/$(PKG_VERSION)
+PKG_UPSTREAM_VERSION:=3.9.7
+PKG_UPSTREAM_URL:=https://www.python.org/ftp/python/$(PKG_UPSTREAM_VERSION)
+PKG_UPSTREAM_URL_FILE:=Python-$(PKG_UPSTREAM_VERSION).tar.xz
 # FIXME: if updating, get rid of [1] & [2] asap
 PKG_HASH:=f8145616e68c00041d1a6399b76387390388f8359581abc24432bb969b5e3c57
 
 PKG_MAINTAINER:=Alexandru Ardelean <ardeleanalex@gmail.com>, Jeffery To <jeffery.to@gmail.com>
-PKG_LICENSE:=Python/2.0
+PKG_LICENSE:=Python-2.0
 PKG_LICENSE_FILES:=LICENSE Doc/copyright.rst Doc/license.rst Modules/_ctypes/darwin/LICENSE Modules/_ctypes/libffi_osx/LICENSE Modules/expat/COPYING
 PKG_CPE_ID:=cpe:/a:python:python
 

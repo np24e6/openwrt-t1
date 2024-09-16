@@ -1,0 +1,726 @@
+diff --recursive --unified --new-file --no-dereference upstream/pppd/plugins/pppoe/common.c src/pppd/plugins/pppoe/common.c
+--- upstream/pppd/plugins/pppoe/common.c	2021-01-04 23:43:57.000000000 +0000
++++ src/pppd/plugins/pppoe/common.c	2021-01-04 23:06:37.000000000 +0000
+@@ -160,42 +160,6 @@
+     info("Sent PADT");
+ }
+ 
+-static void
+-pppoe_printpkt_hex(void (*printer)(void *, char *, ...), void *arg, unsigned char const *buf, int len)
+-{
+-    int i;
+-    int base;
+-
+-    /* do NOT dump PAP packets */
+-    if (len >= 2 && buf[0] == 0xC0 && buf[1] == 0x23) {
+-	printer(arg, "(PAP Authentication Frame -- Contents not dumped)\n");
+-	return;
+-    }
+-
+-    for (base=0; base<len; base += 16) {
+-	for (i=base; i<base+16; i++) {
+-	    if (i < len) {
+-		printer(arg, "%02x ", (unsigned) buf[i]);
+-	    } else {
+-		printer(arg, "   ");
+-	    }
+-	}
+-	printer(arg, "  ");
+-	for (i=base; i<base+16; i++) {
+-	    if (i < len) {
+-		if (isprint(buf[i])) {
+-		    printer(arg, "%c", buf[i]);
+-		} else {
+-		    printer(arg, ".");
+-		}
+-	    } else {
+-		break;
+-	    }
+-	}
+-	printer(arg, "\n");
+-    }
+-}
+-
+ #define EH(x)	(x)[0], (x)[1], (x)[2], (x)[3], (x)[4], (x)[5]
+ 
+ /* Print out a PPPOE packet for debugging */
+@@ -203,7 +167,7 @@
+ 		    void (*printer)(void *, char *, ...), void *arg)
+ {
+     int len = ntohs(packet->length);
+-    int i, j, tag, tlen, text;
++    int i, tag, tlen, text;
+ 
+     switch (ntohs(packet->ethHdr.h_proto)) {
+     case ETH_PPPOE_DISCOVERY:
+@@ -243,8 +207,6 @@
+ 
+     printer(arg, " dst %02x:%02x:%02x:%02x:%02x:%02x ", EH(packet->ethHdr.h_dest));
+     printer(arg, " src %02x:%02x:%02x:%02x:%02x:%02x\n", EH(packet->ethHdr.h_source));
+-    if (pppoe_verbose >= 2)
+-	pppoe_printpkt_hex(printer, arg, packet->payload, ntohs(packet->length));
+     if (ntohs(packet->ethHdr.h_proto) != ETH_PPPOE_DISCOVERY)
+ 	return;
+ 
+@@ -300,13 +262,12 @@
+ 	}
+ 	if (tlen) {
+ 	    if (text)
+-		printer(arg, " %.*s", tlen, &packet->payload[i]);
+-	    else {
+-		for (j = 0; j < tlen && j < 32; j++)
+-		    printer(arg, " %02x", (unsigned) *(&packet->payload[i]+j));
+-		if (j < tlen)
+-		    printer(arg, "... (length %d)", tlen);
+-	    }
++		printer(arg, " %.*v", tlen, &packet->payload[i]);
++	    else if (tlen <= 32)
++		printer(arg, " %.*B", tlen, &packet->payload[i]);
++	    else
++		printer(arg, " %.32B... (length %d)",
++			&packet->payload[i], tlen);
+ 	}
+ 	printer(arg, "]");
+     }
+diff --recursive --unified --new-file --no-dereference upstream/pppd/plugins/pppoe/discovery.c src/pppd/plugins/pppoe/discovery.c
+--- upstream/pppd/plugins/pppoe/discovery.c	2021-01-04 23:43:57.000000000 +0000
++++ src/pppd/plugins/pppoe/discovery.c	2021-01-04 23:06:37.000000000 +0000
+@@ -138,7 +138,7 @@
+     switch(type) {
+     case TAG_AC_NAME:
+ 	pc->seenACName = 1;
+-	if (pppoe_verbose >= 1) {
++	if (conn->printACNames) {
+ 	    info("Access-Concentrator: %.*s", (int) len, data);
+ 	}
+ 	if (conn->acName && len == strlen(conn->acName) &&
+@@ -148,60 +148,30 @@
+ 	break;
+     case TAG_SERVICE_NAME:
+ 	pc->seenServiceName = 1;
+-	if (pppoe_verbose >= 1 && len > 0) {
+-	    info("Service-Name: %.*s", (int) len, data);
+-	}
+ 	if (conn->serviceName && len == strlen(conn->serviceName) &&
+ 	    !strncmp((char *) data, conn->serviceName, len)) {
+ 	    pc->serviceNameOK = 1;
+ 	}
+ 	break;
+     case TAG_AC_COOKIE:
+-	if (pppoe_verbose >= 1) {
+-	    char buffer[100];
+-	    char *ptr = buffer;
+-	    ptr += sprintf(ptr, "Cookie:");
+-	    /* Print first 20 bytes of cookie */
+-	    for (i=0; i<len && i < 20; i++) {
+-		ptr += sprintf(ptr, " %02x", (unsigned) data[i]);
+-	    }
+-	    if (i < len) ptr += sprintf(ptr, "...");
+-	    info(buffer);
+-	}
+-	if (conn->discoveryState != STATE_RECEIVED_PADO) {
+-	    conn->cookie.type = htons(type);
+-	    conn->cookie.length = htons(len);
+-	    memcpy(conn->cookie.payload, data, len);
+-	}
++	conn->cookie.type = htons(type);
++	conn->cookie.length = htons(len);
++	memcpy(conn->cookie.payload, data, len);
+ 	break;
+     case TAG_RELAY_SESSION_ID:
+-	if (pppoe_verbose >= 1) {
+-	    char buffer[100];
+-	    char *ptr = buffer;
+-	    ptr += sprintf(ptr, "Relay-ID:");
+-	    /* Print first 20 bytes of relay ID */
+-	    for (i=0; i<len && i < 20; i++) {
+-		ptr += printf(ptr, " %02x", (unsigned) data[i]);
+-	    }
+-	    if (i < len) ptr += printf(ptr, "...");
+-	    info(buffer);
+-	}
+-	if (conn->discoveryState != STATE_RECEIVED_PADO) {
+-	    conn->relayId.type = htons(type);
+-	    conn->relayId.length = htons(len);
+-	    memcpy(conn->relayId.payload, data, len);
+-	}
++	conn->relayId.type = htons(type);
++	conn->relayId.length = htons(len);
++	memcpy(conn->relayId.payload, data, len);
+ 	break;
+     case TAG_PPP_MAX_PAYLOAD:
+ 	if (len == sizeof(mru)) {
+ 	    memcpy(&mru, data, sizeof(mru));
+ 	    mru = ntohs(mru);
+-	    info("Max-Payload: %u", (unsigned) mru);
+-	    if (mru >= ETH_PPPOE_MTU && conn->discoveryState != STATE_RECEIVED_PADO) {
+-		if (conn->mtu > mru)
+-		    conn->mtu = mru;
+-		if (conn->mru > mru)
+-		    conn->mru = mru;
++	    if (mru >= ETH_PPPOE_MTU) {
++		if (lcp_allowoptions[0].mru > mru)
++		    lcp_allowoptions[0].mru = mru;
++		if (lcp_wantoptions[0].mru > mru)
++		    lcp_wantoptions[0].mru = mru;
+ 		conn->seenMaxPayload = 1;
+ 	    }
+ 	}
+@@ -241,19 +211,17 @@
+     UINT16_t mru;
+     switch(type) {
+     case TAG_SERVICE_NAME:
+-	if (pppoe_verbose >= 1 && len > 0) {
+-	    info("PADS: Service-Name: '%.*s'", (int) len, data);
+-	}
++	dbglog("PADS: Service-Name: '%.*s'", (int) len, data);
+ 	break;
+     case TAG_PPP_MAX_PAYLOAD:
+ 	if (len == sizeof(mru)) {
+ 	    memcpy(&mru, data, sizeof(mru));
+ 	    mru = ntohs(mru);
+ 	    if (mru >= ETH_PPPOE_MTU) {
+-		if (conn->mtu > mru)
+-		    conn->mtu = mru;
+-		if (conn->mru > mru)
+-		    conn->mru = mru;
++		if (lcp_allowoptions[0].mru > mru)
++		    lcp_allowoptions[0].mru = mru;
++		if (lcp_wantoptions[0].mru > mru)
++		    lcp_wantoptions[0].mru = mru;
+ 		conn->seenMaxPayload = 1;
+ 	    }
+ 	}
+@@ -338,9 +306,9 @@
+     }
+ 
+     /* Add our maximum MTU/MRU */
+-    if (MIN(conn->mtu, conn->mru) > ETH_PPPOE_MTU) {
++    if (MIN(lcp_allowoptions[0].mru, lcp_wantoptions[0].mru) > ETH_PPPOE_MTU) {
+ 	PPPoETag maxPayload;
+-	UINT16_t mru = htons(MIN(conn->mtu, conn->mru));
++	UINT16_t mru = htons(MIN(lcp_allowoptions[0].mru, lcp_wantoptions[0].mru));
+ 	maxPayload.type = htons(TAG_PPP_MAX_PAYLOAD);
+ 	maxPayload.length = htons(sizeof(mru));
+ 	memcpy(maxPayload.payload, &mru, sizeof(mru));
+@@ -383,6 +351,7 @@
+     pc.seenACName    = 0;
+     pc.seenServiceName = 0;
+     conn->seenMaxPayload = 0;
++    conn->error = 0;
+ 
+     if (get_time(&expire_at) < 0) {
+ 	error("get_time (waitForPADO): %m");
+@@ -410,7 +379,6 @@
+ 		return;		/* Timed out */
+ 	}
+ 
+-	conn->error = 0;
+ 	/* Get the packet */
+ 	receivePacket(conn->discoverySocket, &packet, &len);
+ 
+@@ -440,9 +408,9 @@
+ 		continue;
+ 	    }
+ 	    if (parsePacket(&packet, parsePADOTags, &pc) < 0)
+-		continue;
++		return;
+ 	    if (conn->error)
+-		continue;
++		return;
+ 	    if (!pc.seenACName) {
+ 		error("Ignoring PADO packet with no AC-Name tag");
+ 		continue;
+@@ -451,23 +419,14 @@
+ 		error("Ignoring PADO packet with no Service-Name tag");
+ 		continue;
+ 	    }
+-	    if (pppoe_verbose >= 1) {
+-		info("AC-Ethernet-Address: %02x:%02x:%02x:%02x:%02x:%02x",
+-		       (unsigned) packet.ethHdr.h_source[0],
+-		       (unsigned) packet.ethHdr.h_source[1],
+-		       (unsigned) packet.ethHdr.h_source[2],
+-		       (unsigned) packet.ethHdr.h_source[3],
+-		       (unsigned) packet.ethHdr.h_source[4],
+-		       (unsigned) packet.ethHdr.h_source[5]);
+-		info("--------------------------------------------------");
+-	    }
+ 	    conn->numPADOs++;
+-	    if (pc.acNameOK && pc.serviceNameOK && conn->discoveryState != STATE_RECEIVED_PADO) {
++	    if (pc.acNameOK && pc.serviceNameOK) {
+ 		memcpy(conn->peerEth, packet.ethHdr.h_source, ETH_ALEN);
+ 		conn->discoveryState = STATE_RECEIVED_PADO;
++		break;
+ 	    }
+ 	}
+-    } while (pppoe_verbose >= 1 || conn->discoveryState != STATE_RECEIVED_PADO);
++    } while (conn->discoveryState != STATE_RECEIVED_PADO);
+ }
+ 
+ /***********************************************************************
+@@ -520,9 +479,9 @@
+     }
+ 
+     /* Add our maximum MTU/MRU */
+-    if (MIN(conn->mtu, conn->mru) > ETH_PPPOE_MTU) {
++    if (MIN(lcp_allowoptions[0].mru, lcp_wantoptions[0].mru) > ETH_PPPOE_MTU) {
+ 	PPPoETag maxPayload;
+-	UINT16_t mru = htons(MIN(conn->mtu, conn->mru));
++	UINT16_t mru = htons(MIN(lcp_allowoptions[0].mru, lcp_wantoptions[0].mru));
+ 	maxPayload.type = htons(TAG_PPP_MAX_PAYLOAD);
+ 	maxPayload.length = htons(sizeof(mru));
+ 	memcpy(maxPayload.payload, &mru, sizeof(mru));
+@@ -646,18 +605,19 @@
+ }
+ 
+ /**********************************************************************
+-*%FUNCTION: discovery1
++*%FUNCTION: discovery
+ *%ARGUMENTS:
+ * conn -- PPPoE connection info structure
+ *%RETURNS:
+ * Nothing
+ *%DESCRIPTION:
+-* Performs the PPPoE discovery phase 1
++* Performs the PPPoE discovery phase
+ ***********************************************************************/
+ void
+-discovery1(PPPoEConnection *conn)
++discovery(PPPoEConnection *conn)
+ {
+     int padiAttempts = 0;
++    int padrAttempts = 0;
+     int timeout = conn->discoveryTimeout;
+ 
+     do {
+@@ -674,23 +634,8 @@
+ 
+ 	timeout *= 2;
+     } while (conn->discoveryState == STATE_SENT_PADI);
+-}
+-
+-/**********************************************************************
+-*%FUNCTION: discovery2
+-*%ARGUMENTS:
+-* conn -- PPPoE connection info structure
+-*%RETURNS:
+-* Nothing
+-*%DESCRIPTION:
+-* Performs the PPPoE discovery phase 2
+-***********************************************************************/
+-void
+-discovery2(PPPoEConnection *conn)
+-{
+-    int padrAttempts = 0;
+-    int timeout = conn->discoveryTimeout;
+ 
++    timeout = conn->discoveryTimeout;
+     do {
+ 	padrAttempts++;
+ 	if (got_sigterm || padrAttempts > conn->discoveryAttempts) {
+@@ -707,10 +652,10 @@
+ 
+     if (!conn->seenMaxPayload) {
+ 	/* RFC 4638: MUST limit MTU/MRU to 1492 */
+-	if (conn->mtu > ETH_PPPOE_MTU)
+-	    conn->mtu = ETH_PPPOE_MTU;
+-	if (conn->mru > ETH_PPPOE_MTU)
+-	    conn->mru = ETH_PPPOE_MTU;
++	if (lcp_allowoptions[0].mru > ETH_PPPOE_MTU)
++	    lcp_allowoptions[0].mru = ETH_PPPOE_MTU;
++	if (lcp_wantoptions[0].mru > ETH_PPPOE_MTU)
++	    lcp_wantoptions[0].mru = ETH_PPPOE_MTU;
+     }
+ 
+     /* We're done. */
+diff --recursive --unified --new-file --no-dereference upstream/pppd/plugins/pppoe/plugin.c src/pppd/plugins/pppoe/plugin.c
+--- upstream/pppd/plugins/pppoe/plugin.c	2021-01-04 23:43:57.000000000 +0000
++++ src/pppd/plugins/pppoe/plugin.c	2021-01-04 23:06:37.000000000 +0000
+@@ -64,7 +64,7 @@
+ char *pppd_pppoe_service = NULL;
+ static char *acName = NULL;
+ static char *existingSession = NULL;
+-int pppoe_verbose = 0;
++static int printACNames = 0;
+ static char *pppoe_reqd_mac = NULL;
+ unsigned char pppoe_reqd_mac_addr[6];
+ static char *pppoe_host_uniq;
+@@ -89,9 +89,9 @@
+       "Attach to existing session (sessid:macaddr)" },
+     { "rp_pppoe_sess",    o_string, &existingSession,
+       "Legacy alias for pppoe-sess", OPT_ALIAS },
+-    { "pppoe-verbose", o_int, &pppoe_verbose,
++    { "pppoe-verbose", o_int, &printACNames,
+       "Be verbose about discovered access concentrators" },
+-    { "rp_pppoe_verbose", o_int, &pppoe_verbose,
++    { "rp_pppoe_verbose", o_int, &printACNames,
+       "Legacy alias for pppoe-verbose", OPT_ALIAS },
+     { "pppoe-mac", o_string, &pppoe_reqd_mac,
+       "Only connect to specified MAC address" },
+@@ -128,6 +128,7 @@
+     conn->ifName = devnam;
+     conn->discoverySocket = -1;
+     conn->sessionSocket = -1;
++    conn->printACNames = printACNames;
+     conn->discoveryTimeout = pppoe_padi_timeout;
+     conn->discoveryAttempts = pppoe_padi_attempts;
+     return 1;
+@@ -161,8 +162,8 @@
+     }
+ 
+     /* Restore configuration */
+-    lcp_allowoptions[0].mru = conn->mtu = conn->storedmtu;
+-    lcp_wantoptions[0].mru = conn->mru = conn->storedmru;
++    lcp_allowoptions[0].mru = conn->mtu;
++    lcp_wantoptions[0].mru = conn->mru;
+ 
+     /* Update maximum MRU */
+     s = socket(AF_INET, SOCK_DGRAM, 0);
+@@ -179,9 +180,9 @@
+     close(s);
+ 
+     if (lcp_allowoptions[0].mru > ifr.ifr_mtu - TOTAL_OVERHEAD)
+-	lcp_allowoptions[0].mru = conn->mtu = ifr.ifr_mtu - TOTAL_OVERHEAD;
++	lcp_allowoptions[0].mru = ifr.ifr_mtu - TOTAL_OVERHEAD;
+     if (lcp_wantoptions[0].mru > ifr.ifr_mtu - TOTAL_OVERHEAD)
+-	lcp_wantoptions[0].mru = conn->mru = ifr.ifr_mtu - TOTAL_OVERHEAD;
++	lcp_wantoptions[0].mru = ifr.ifr_mtu - TOTAL_OVERHEAD;
+ 
+     if (pppoe_host_uniq) {
+ 	if (!parseHostUniq(pppoe_host_uniq, &conn->hostUniq))
+@@ -216,20 +217,9 @@
+ 	    error("Failed to create PPPoE discovery socket: %m");
+ 	    goto errout;
+ 	}
+-	discovery1(conn);
+-	/* discovery1() may update conn->mtu and conn->mru */
+-	lcp_allowoptions[0].mru = conn->mtu;
+-	lcp_wantoptions[0].mru = conn->mru;
+-	if (conn->discoveryState != STATE_RECEIVED_PADO) {
+-	    error("Unable to complete PPPoE Discovery phase 1");
+-	    goto errout;
+-	}
+-	discovery2(conn);
+-	/* discovery2() may update conn->mtu and conn->mru */
+-	lcp_allowoptions[0].mru = conn->mtu;
+-	lcp_wantoptions[0].mru = conn->mru;
++	discovery(conn);
+ 	if (conn->discoveryState != STATE_SESSION) {
+-	    error("Unable to complete PPPoE Discovery phase 2");
++	    error("Unable to complete PPPoE Discovery");
+ 	    goto errout;
+ 	}
+     }
+@@ -458,8 +448,8 @@
+ 	lcp_wantoptions[0].mru = MAX_PPPOE_MTU;
+ 
+     /* Save configuration */
+-    conn->storedmtu = lcp_allowoptions[0].mru;
+-    conn->storedmru = lcp_wantoptions[0].mru;
++    conn->mtu = lcp_allowoptions[0].mru;
++    conn->mru = lcp_wantoptions[0].mru;
+ 
+     ccp_allowoptions[0].deflate = 0;
+     ccp_wantoptions[0].deflate = 0;
+diff --recursive --unified --new-file --no-dereference upstream/pppd/plugins/pppoe/pppoe-discovery.c src/pppd/plugins/pppoe/pppoe-discovery.c
+--- upstream/pppd/plugins/pppoe/pppoe-discovery.c	2021-01-04 23:43:57.000000000 +0000
++++ src/pppd/plugins/pppoe/pppoe-discovery.c	2021-01-04 23:06:37.000000000 +0000
+@@ -45,105 +45,22 @@
+ #include <net/if_arp.h>
+ #endif
+ 
+-int debug;
+-int got_sigterm;
+-int pppoe_verbose;
++char *xstrdup(const char *s);
++void usage(void);
+ 
+-void
+-fatal(char *fmt, ...)
+-{
+-    va_list pvar;
+-    va_start(pvar, fmt);
+-    vfprintf(stderr, fmt, pvar);
+-    va_end(pvar);
+-    fputc('\n', stderr);
+-    exit(1);
+-}
+-
+-void fatalSys(char const *str)
++void die(int status)
+ {
+-    perror(str);
+-    exit(1);
++	exit(status);
+ }
+ 
+-void
+-error(char *fmt, ...)
++void error(char *fmt, ...)
+ {
+     va_list pvar;
+     va_start(pvar, fmt);
+     vfprintf(stderr, fmt, pvar);
+-    fputc('\n', stderr);
+     va_end(pvar);
+ }
+ 
+-void
+-warn(char *fmt, ...)
+-{
+-    va_list pvar;
+-    va_start(pvar, fmt);
+-    vfprintf(stderr, fmt, pvar);
+-    fputc('\n', stderr);
+-    va_end(pvar);
+-}
+-
+-void
+-info(char *fmt, ...)
+-{
+-    va_list pvar;
+-    va_start(pvar, fmt);
+-    vprintf(fmt, pvar);
+-    putchar('\n');
+-    va_end(pvar);
+-}
+-
+-void
+-init_pr_log(const char *prefix, int level)
+-{
+-}
+-
+-void
+-end_pr_log(void)
+-{
+-}
+-
+-void
+-pr_log(void *arg, char *fmt, ...)
+-{
+-}
+-
+-size_t
+-strlcpy(char *dest, const char *src, size_t len)
+-{
+-    size_t ret = strlen(src);
+-
+-    if (len != 0) {
+-	if (ret < len)
+-	    strcpy(dest, src);
+-	else {
+-	    strncpy(dest, src, len - 1);
+-	    dest[len-1] = 0;
+-	}
+-    }
+-    return ret;
+-}
+-
+-static char *
+-xstrdup(const char *s)
+-{
+-    char *ret = strdup(s);
+-    if (!ret) {
+-        perror("strdup");
+-        exit(1);
+-    }
+-    return ret;
+-}
+-
+-int
+-get_time(struct timeval *tv)
+-{
+-    return gettimeofday(tv, NULL);
+-}
+-
+ /* Initialize frame types to RFC 2516 values.  Some broken peers apparently
+    use different frame types... sigh... */
+ 
+@@ -458,7 +375,7 @@
+     switch(type) {
+     case TAG_AC_NAME:
+ 	pc->seenACName = 1;
+-	if (pppoe_verbose >= 1) {
++	if (conn->printACNames) {
+ 	    printf("Access-Concentrator: %.*s\n", (int) len, data);
+ 	}
+ 	if (conn->acName && len == strlen(conn->acName) &&
+@@ -468,7 +385,7 @@
+ 	break;
+     case TAG_SERVICE_NAME:
+ 	pc->seenServiceName = 1;
+-	if (pppoe_verbose >= 1 && len > 0) {
++	if (conn->printACNames && len > 0) {
+ 	    printf("       Service-Name: %.*s\n", (int) len, data);
+ 	}
+ 	if (conn->serviceName && len == strlen(conn->serviceName) &&
+@@ -477,7 +394,7 @@
+ 	}
+ 	break;
+     case TAG_AC_COOKIE:
+-	if (pppoe_verbose >= 1) {
++	if (conn->printACNames) {
+ 	    printf("Got a cookie:");
+ 	    /* Print first 20 bytes of cookie */
+ 	    for (i=0; i<len && i < 20; i++) {
+@@ -491,7 +408,7 @@
+ 	memcpy(conn->cookie.payload, data, len);
+ 	break;
+     case TAG_RELAY_SESSION_ID:
+-	if (pppoe_verbose >= 1) {
++	if (conn->printACNames) {
+ 	    printf("Got a Relay-ID:");
+ 	    /* Print first 20 bytes of relay ID */
+ 	    for (i=0; i<len && i < 20; i++) {
+@@ -505,17 +422,17 @@
+ 	memcpy(conn->relayId.payload, data, len);
+ 	break;
+     case TAG_SERVICE_NAME_ERROR:
+-	if (pppoe_verbose >= 1) {
++	if (conn->printACNames) {
+ 	    printf("Got a Service-Name-Error tag: %.*s\n", (int) len, data);
+ 	}
+ 	break;
+     case TAG_AC_SYSTEM_ERROR:
+-	if (pppoe_verbose >= 1) {
++	if (conn->printACNames) {
+ 	    printf("Got a System-Error tag: %.*s\n", (int) len, data);
+ 	}
+ 	break;
+     case TAG_GENERIC_ERROR:
+-	if (pppoe_verbose >= 1) {
++	if (conn->printACNames) {
+ 	    printf("Got a Generic-Error tag: %.*s\n", (int) len, data);
+ 	}
+ 	break;
+@@ -671,7 +588,7 @@
+ 	    conn->numPADOs++;
+ 	    if (pc.acNameOK && pc.serviceNameOK) {
+ 		memcpy(conn->peerEth, packet.ethHdr.h_source, ETH_ALEN);
+-		if (pppoe_verbose >= 1) {
++		if (conn->printACNames) {
+ 		    printf("AC-Ethernet-Address: %02x:%02x:%02x:%02x:%02x:%02x\n",
+ 			   (unsigned) conn->peerEth[0], 
+ 			   (unsigned) conn->peerEth[1],
+@@ -721,14 +638,6 @@
+     } while (!conn->numPADOs);
+ }
+ 
+-static void
+-term_handler(int signum)
+-{
+-    got_sigterm = 1;
+-}
+-
+-static void usage(void);
+-
+ int main(int argc, char *argv[])
+ {
+     int opt;
+@@ -740,7 +649,7 @@
+ 
+     memset(conn, 0, sizeof(PPPoEConnection));
+ 
+-    pppoe_verbose = 1;
++    conn->printACNames = 1;
+     conn->discoveryTimeout = PADI_TIMEOUT;
+     conn->discoveryAttempts = MAX_PADI_ATTEMPTS;
+ 
+@@ -804,7 +713,7 @@
+ 	    conn->ifName = xstrdup(optarg);
+ 	    break;
+ 	case 'Q':
+-	    pppoe_verbose = 0;
++	    conn->printACNames = 0;
+ 	    break;
+ 	case 'V':
+ 	case 'h':
+@@ -831,8 +740,31 @@
+ 	exit(0);
+ }
+ 
+-static void
+-usage(void)
++void fatal(char * fmt, ...)
++{
++    va_list ap;
++    va_start(ap, fmt);
++    vfprintf(stderr, fmt, ap);
++    va_end(ap);
++    fputc('\n', stderr);
++    exit(1);
++}
++
++void fatalSys(char const *str)
++{
++    perror(str);
++    exit(1);
++}
++
++char *xstrdup(const char *s)
++{
++    register char *ret = strdup(s);
++    if (!ret)
++	fatalSys("strdup");
++    return ret;
++}
++
++void usage(void)
+ {
+     fprintf(stderr, "Usage: pppoe-discovery [options]\n");
+     fprintf(stderr, "Options:\n");
+diff --recursive --unified --new-file --no-dereference upstream/pppd/plugins/pppoe/pppoe.h src/pppd/plugins/pppoe/pppoe.h
+--- upstream/pppd/plugins/pppoe/pppoe.h	2021-01-04 23:43:57.000000000 +0000
++++ src/pppd/plugins/pppoe/pppoe.h	2021-01-04 23:06:37.000000000 +0000
+@@ -233,18 +233,18 @@
+     char *acName;		/* Desired AC name, if any */
+     int synchronous;		/* Use synchronous PPP */
+     PPPoETag hostUniq;		/* Use Host-Uniq tag */
++    int printACNames;		/* Just print AC names */
+     FILE *debugFile;		/* Debug file for dumping packets */
+     int numPADOs;		/* Number of PADO packets received */
+     PPPoETag cookie;		/* We have to send this if we get it */
+     PPPoETag relayId;		/* Ditto */
+     int error;			/* Error packet received */
++    int debug;			/* Set to log packets sent and received */
+     int discoveryTimeout;       /* Timeout for discovery packets */
+     int discoveryAttempts;      /* Number of discovery attempts */
+     int seenMaxPayload;
+-    int storedmtu;		/* Stored MTU */
+-    int storedmru;		/* Stored MRU */
+-    int mtu;
+-    int mru;
++    int mtu;			/* Stored MTU */
++    int mru;			/* Stored MRU */
+ } PPPoEConnection;
+ 
+ /* Structure used to determine acceptable PADO or PADS packet */
+@@ -278,12 +278,10 @@
+ void clampMSS(PPPoEPacket *packet, char const *dir, int clampMss);
+ UINT16_t computeTCPChecksum(unsigned char *ipHdr, unsigned char *tcpHdr);
+ UINT16_t pppFCS16(UINT16_t fcs, unsigned char *cp, int len);
+-void discovery1(PPPoEConnection *conn);
+-void discovery2(PPPoEConnection *conn);
++void discovery(PPPoEConnection *conn);
+ unsigned char *findTag(PPPoEPacket *packet, UINT16_t tagType,
+ 		       PPPoETag *tag);
+ 
+-extern int pppoe_verbose;
+ void pppoe_printpkt(PPPoEPacket *packet,
+ 		    void (*printer)(void *, char *, ...), void *arg);
+ void pppoe_log_packet(const char *prefix, PPPoEPacket *packet);
+diff --recursive --unified --new-file --no-dereference upstream/pppd/pppd.8 src/pppd/pppd.8
+--- upstream/pppd/pppd.8	2021-01-04 23:43:57.000000000 +0000
++++ src/pppd/pppd.8	2021-01-04 23:06:37.000000000 +0000
+@@ -1243,9 +1243,8 @@
+ \fBrp_pppoe_sess\fP option name is supported.
+ .TP
+ .B pppoe-verbose \fIn
+-Be verbose about discovered access concentrators. When set to 2 or bigger
+-value then dump also discovery packets. For backward compatibility also
+-\fBrp_pppoe_verbose\fP option name is supported.
++Be verbose about discovered access concentrators. For backward
++compatibility also \fBrp_pppoe_verbose\fP option name is supported.
+ .TP
+ .B pppoe-mac \fImacaddr
+ Connect to specified MAC address.

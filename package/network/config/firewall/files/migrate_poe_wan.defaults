@@ -1,0 +1,54 @@
+#! /bin/sh
+. /lib/functions.sh
+. /lib/functions/board.sh
+
+WAN=0
+WANSIX=0
+
+interface_cb() {
+	
+	local section="$1"
+
+	[ "$section" == "wan" ] && WAN=1
+	[ "$section" == "wan6" ] && WANSIX=1
+
+	return 0
+}
+
+config_load network
+config_foreach interface_cb "interface"
+
+zone_cb() {
+	
+	local section="$1"
+
+	config_get zone "$section" "name"
+
+	[ "$zone" != "wan" ] && return 1
+
+	config_get network "$section" "network"
+	
+	for i in $network;
+	do
+		[ "$WAN" -eq 0 ] && [ "$i" == "wan" ] && continue
+		[ "$WANSIX" -eq 0 ] && [ "$i" == "wan6" ] && continue
+
+		append updated_net "$i"
+	done
+	
+	[ -z "$updated_net" ] && {
+		uci_remove "firewall" "$section" "network"
+		return 0
+	}
+
+	uci_set firewall "$section" "network" "$updated_net"
+	
+	return 0
+}
+
+config_load firewall
+config_foreach zone_cb "zone"
+
+uci_commit firewall
+
+exit 0

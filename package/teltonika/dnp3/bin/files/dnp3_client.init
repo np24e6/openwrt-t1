@@ -8,6 +8,8 @@ CONFIG="dnp3_client"
 
 start_service() {
 	config_load "$CONFIG"
+	config_get enabled "global" "enabled" "0"
+	[ "$enabled" = "0" ] && return
 
 	procd_open_instance
 	procd_set_param command /usr/sbin/dnp3_client

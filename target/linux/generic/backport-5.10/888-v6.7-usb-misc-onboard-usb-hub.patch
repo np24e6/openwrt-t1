@@ -34,10 +34,8 @@ Signed-off-by: Matthias Kaehlcke
 Link: https://lore.kernel.org/r/20220630123445.v24.3.I7c9a1f1d6ced41dd8310e8a03da666a32364e790@changeid
 Signed-off-by: Greg Kroah-Hartman 
 
-Index: linux-5.10.206/Documentation/ABI/testing/sysfs-bus-platform-onboard-usb-hub
-===================================================================
 --- /dev/null
-+++ linux-5.10.206/Documentation/ABI/testing/sysfs-bus-platform-onboard-usb-hub
++++ b/Documentation/ABI/testing/sysfs-bus-platform-onboard-usb-hub
 @@ -0,0 +1,8 @@
 +What:		/sys/bus/platform/devices/<dev>/always_powered_in_suspend
 +Date:		June 2022
@@ -48,10 +46,8 @@ Index: linux-5.10.206/Documentation/ABI/testing/sysfs-bus-platform-onboard-usb-h
 +		(RW) Controls whether the USB hub remains always powered
 +		during system suspend or not.
 \ No newline at end of file
-Index: linux-5.10.206/MAINTAINERS
-===================================================================
---- linux-5.10.206.orig/MAINTAINERS
-+++ linux-5.10.206/MAINTAINERS
+--- a/MAINTAINERS
++++ b/MAINTAINERS
 @@ -12978,6 +12978,13 @@ T:	git git://linuxtv.org/media_tree.git
  F:	Documentation/devicetree/bindings/media/i2c/ov9650.txt
  F:	drivers/media/i2c/ov9650.c
@@ -66,10 +62,8 @@ Index: linux-5.10.206/MAINTAINERS
  ONENAND FLASH DRIVER
  M:	Kyungmin Park <kyungmin.park@samsung.com>
  L:	linux-mtd@lists.infradead.org
-Index: linux-5.10.206/drivers/usb/core/Makefile
-===================================================================
---- linux-5.10.206.orig/drivers/usb/core/Makefile
-+++ linux-5.10.206/drivers/usb/core/Makefile
+--- a/drivers/usb/core/Makefile
++++ b/drivers/usb/core/Makefile
 @@ -12,6 +12,10 @@ usbcore-$(CONFIG_OF)		+= of.o
  usbcore-$(CONFIG_USB_PCI)		+= hcd-pci.o
  usbcore-$(CONFIG_ACPI)		+= usb-acpi.o
@@ -81,10 +75,8 @@ Index: linux-5.10.206/drivers/usb/core/Makefile
  obj-$(CONFIG_USB)		+= usbcore.o
  
  obj-$(CONFIG_USB_LEDS_TRIGGER_USBPORT)	+= ledtrig-usbport.o
-Index: linux-5.10.206/drivers/usb/misc/Kconfig
-===================================================================
---- linux-5.10.206.orig/drivers/usb/misc/Kconfig
-+++ linux-5.10.206/drivers/usb/misc/Kconfig
+--- a/drivers/usb/misc/Kconfig
++++ b/drivers/usb/misc/Kconfig
 @@ -275,3 +275,19 @@ config USB_CHAOSKEY
  
  	  To compile this driver as a module, choose M here: the
@@ -105,19 +97,15 @@ Index: linux-5.10.206/drivers/usb/misc/Kconfig
 +	  this config will enable the driver and it will automatically
 +	  match the state of the USB subsystem. If this driver is a
 +	  module it will be called onboard_usb_hub.
-Index: linux-5.10.206/drivers/usb/misc/Makefile
-===================================================================
---- linux-5.10.206.orig/drivers/usb/misc/Makefile
-+++ linux-5.10.206/drivers/usb/misc/Makefile
+--- a/drivers/usb/misc/Makefile
++++ b/drivers/usb/misc/Makefile
 @@ -31,3 +31,4 @@ obj-$(CONFIG_USB_CHAOSKEY)		+= chaoskey.
  
  obj-$(CONFIG_USB_SISUSBVGA)		+= sisusbvga/
  obj-$(CONFIG_USB_LINK_LAYER_TEST)	+= lvstest.o
 +obj-$(CONFIG_USB_ONBOARD_HUB)		+= onboard_usb_hub.o
-Index: linux-5.10.206/drivers/usb/misc/onboard_usb_hub.c
-===================================================================
 --- /dev/null
-+++ linux-5.10.206/drivers/usb/misc/onboard_usb_hub.c
++++ b/drivers/usb/misc/onboard_usb_hub.c
 @@ -0,0 +1,487 @@
 +// SPDX-License-Identifier: GPL-2.0-only
 +/*
@@ -606,10 +594,8 @@ Index: linux-5.10.206/drivers/usb/misc/onboard_usb_hub.c
 +MODULE_AUTHOR("Matthias Kaehlcke <mka@chromium.org>");
 +MODULE_DESCRIPTION("Driver for discrete onboard USB hubs");
 +MODULE_LICENSE("GPL v2");
-Index: linux-5.10.206/drivers/usb/misc/onboard_usb_hub.h
-===================================================================
 --- /dev/null
-+++ linux-5.10.206/drivers/usb/misc/onboard_usb_hub.h
++++ b/drivers/usb/misc/onboard_usb_hub.h
 @@ -0,0 +1,77 @@
 +/* SPDX-License-Identifier: GPL-2.0+ */
 +/*
@@ -688,10 +674,8 @@ Index: linux-5.10.206/drivers/usb/misc/onboard_usb_hub.h
 +};
 +
 +#endif /* _USB_MISC_ONBOARD_USB_HUB_H */
-Index: linux-5.10.206/drivers/usb/misc/onboard_usb_hub_pdevs.c
-===================================================================
 --- /dev/null
-+++ linux-5.10.206/drivers/usb/misc/onboard_usb_hub_pdevs.c
++++ b/drivers/usb/misc/onboard_usb_hub_pdevs.c
 @@ -0,0 +1,143 @@
 +// SPDX-License-Identifier: GPL-2.0-only
 +/*
@@ -836,10 +820,8 @@ Index: linux-5.10.206/drivers/usb/misc/onboard_usb_hub_pdevs.c
 +	}
 +}
 +EXPORT_SYMBOL_GPL(onboard_hub_destroy_pdevs);
-Index: linux-5.10.206/include/linux/usb/onboard_hub.h
-===================================================================
 --- /dev/null
-+++ linux-5.10.206/include/linux/usb/onboard_hub.h
++++ b/include/linux/usb/onboard_hub.h
 @@ -0,0 +1,18 @@
 +/* SPDX-License-Identifier: GPL-2.0 */
 +

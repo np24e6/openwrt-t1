@@ -24,6 +24,12 @@ PKG_INSTALL:=1
 PKG_BUILD_DEPENDS:=!USE_GLIBC:argp-standalone
 HOST_BUILD_DEPENDS:=bzip2/host zlib/host
 
+# we need to build argp-standalone/host on musl-c host systems
+# here we attempt to determine host libc
+ifneq ($(shell ldd $$(which ls) | grep musl),)
+  HOST_BUILD_DEPENDS+=argp-standalone/host
+endif
+
 include $(INCLUDE_DIR)/package.mk
 include $(INCLUDE_DIR)/host-build.mk
 include $(INCLUDE_DIR)/nls.mk
@@ -67,10 +73,14 @@ CONFIGURE_ARGS += \
 	--without-lzma
 
 HOST_CONFIGURE_ARGS += \
+	--disable-nls        \
+	--program-prefix=eu- \
 	--disable-debuginfod \
+	--without-lzma
 
 TARGET_CFLAGS += -D_GNU_SOURCE -Wno-unused-result -Wno-format-nonliteral
 HOST_CFLAGS += -Wno-array-parameter
+HOST_LDFLAGS += -L/usr/lib
 
 define Build/InstallDev
 	$(INSTALL_DIR) $(1)/usr/include

@@ -11,12 +11,14 @@ PKG_NAME:=openssh
 PKG_VERSION:=9.6p1
 PKG_RELEASE:=1
 
-PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
+PKG_SOURCE_VERSION:=9.6p1
+PKG_SOURCE:=$(PKG_NAME)-$(PKG_SOURCE_VERSION).tar.gz
 PKG_SOURCE_URL:=https://ftp.openbsd.org/pub/OpenBSD/OpenSSH/portable/ \
 		https://ftp.spline.de/pub/OpenBSD/OpenSSH/portable/
+
 PKG_HASH:=910211c07255a8c5ad654391b40ee59800710dd8119dd5362de09385aa7a777c
 
-PKG_LICENSE:=BSD ISC
+PKG_LICENSE:=SSH-OpenSSH
 PKG_LICENSE_FILES:=LICENCE
 PKG_CPE_ID:=cpe:/a:openssh:openssh
 
@@ -27,7 +29,7 @@ include $(INCLUDE_DIR)/package.mk
 define Package/openssh/Default
 	SECTION:=net
 	CATEGORY:=Network
-	DEPENDS:=+libopenssl +zlib
+	DEPENDS:=+zlib
 	TITLE:=OpenSSH
 	MAINTAINER:=Peter Wagner <tripolar@gmx.at>
 	URL:=http://www.openssh.com/
@@ -58,7 +60,7 @@ CONFIGURE_ARGS += \
 	--without-bsd-auth \
 	--without-kerberos5 \
 	--with-stackprotect \
-	--with$(if $(CONFIG_OPENSSL_ENGINE),,out)-ssl-engine
+	--without-openssl
 
 ifeq ($(BUILD_VARIANT),with-pam)
 CONFIGURE_ARGS += \

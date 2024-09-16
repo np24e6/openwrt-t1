@@ -1,22 +1,51 @@
 #!/bin/sh
 . /lib/functions/network.sh
+. /lib/functions.sh
+
+EXCLUDE_PROTOS="relay sstp pptp gre l2tp l2tpv3 wireguard mirror vrf"
+MWAN_TRACK_DIR="/var/run/mwan3track"
+MIN_METRIC=999999
+MIN_WANIF=""
+
+parse_mwan3_wan(){
+	local section="$1"
+
+	! echo "$section" | grep -q "_member_mwan" && return
+
+	config_get metric "$section" metric "999999"
+	config_get iface "$section" interface ""
+	network_get_protocol proto "$iface"
+	local is_online=0
+
+	[ "$(cat ${MWAN_TRACK_DIR}/${interface}/STATUS 2>/dev/null)" = "online" ] && is_online=1
+
+	[ $is_online -eq 0 ] || [ "$metric" -gt "$MIN_METRIC" ] || [ -z "$proto" ]  || [[ "$EXCLUDE_PROTOS" == *"$proto"* ]] && return;
+	MIN_METRIC="$metric"
+	MIN_WANIF="$iface"
+}
 
 if ! network_find_wan wanif "" 10; then
 	echo "$cfg" "NO_WAN_LINK"
 	exit
 fi
 
-min_wanif=$(echo "$wanif" | awk '{print $1;}')
-network_get_metric min_metric "$min_wanif"
-for i in $wanif
-do
+[ -d "$MWAN_TRACK_DIR" ] && {
+	config_load mwan3
+	config_foreach parse_mwan3_wan member
+}
+
+if [ -z $MIN_WANIF ]; then
+	for i in $wanif
+	do
         network_get_metric metric "$i"
-        if [ "$metric" -lt "$min_metric" ]; then
-                min_metric="$metric"
-                min_wanif="$i"
-        fi
-done
-wanif="$min_wanif"
+        network_get_protocol proto "$i"
+        [ "$metric" -gt "$MIN_METRIC" ] || [ -z "$proto" ]  || [[ "$EXCLUDE_PROTOS" == *"$proto"* ]] && continue;
+		MIN_METRIC="$metric"
+		MIN_WANIF="$i"
+	done
+fi
+
+wanif="$MIN_WANIF"
 
 case "$1" in
 	"ip")

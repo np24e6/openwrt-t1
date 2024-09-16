@@ -8,7 +8,7 @@ first_uqmi_call()
 	local cmd="$1"
 
 	local count="0"
-	local max_try="15"
+	local max_try="6"
 	local timeout="2"
 	local ret
 	logger -t "netifd" "$cmd"
@@ -17,13 +17,16 @@ first_uqmi_call()
 		ret=$($cmd)
 		if [ "$ret" = "" ] || [ "$ret" = "\"Failed to connect to service\"" ] || \
                 [ "$ret" = "\"Request canceled\"" ] || [ "$ret" = "\"Unknown error\"" ] ; then
+
 			count=$((count+1))
 			sleep $timeout
 		else
 			break
 		fi
 		if [ "$count" = "$max_try" ]; then
-			qmi_error_handle "$ret" "$error_cnt" "$modem" || return 1
+			gsm_hard_reset "$modem"
+			kill_uqmi_processes "$device"
+			return 1
 		fi
 	done
 }

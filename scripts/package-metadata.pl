@@ -485,6 +485,12 @@ sub gen_package_mk() {
 				next if $srcname.$suffix eq $dep.$depsuffix;
 
 				my $src_dep = $srcpackage{$dep};
+
+				# skip host-build packages on docker build system
+				if ($depsuffix =~ m/\/host$/ && exists $ENV{'INSIDE_DOCKER'}) {
+					next;
+				}
+
 				unless (defined($src_dep) && (!$deptype || grep { $_ eq $deptype } @{$src_dep->{buildtypes}})) {
 					warn sprintf "WARNING: Makefile '%s' has a build dependency on '%s', which does not exist\n",
 						$src->{makefile}, $dep.$depsuffix;

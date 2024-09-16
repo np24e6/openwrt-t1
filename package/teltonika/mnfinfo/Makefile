@@ -6,7 +6,7 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=mnfinfo
 
-PKG_SOURCE_VERSION:=2.16.1
+PKG_SOURCE_VERSION:=2.18
 
 PKG_LICENSE:=Teltonika-closed
 
@@ -48,7 +48,6 @@ define Package/mnfinfo/install
 	$(if $(CONFIG_x86_64),\
 		$(INSTALL_DIR) $(1)/lib/firmware/mnfinfo; \
 		$(CP) $(PKG_BUILD_DIR)/x86_data/* $(1)/lib/firmware/mnfinfo/; \
-		printf 2 >$(1)/lib/firmware/mnfinfo/sim_count; \
 	)
 endef
 

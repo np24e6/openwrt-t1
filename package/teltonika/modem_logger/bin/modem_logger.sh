@@ -5,9 +5,11 @@ DEBUG_ECHO="0"
 SSHFS_PATH="/usr/bin/sshfs"
 DEFAULT_FILTER_FILE_PATH="/etc/modem_logger_default.cfg"
 DEFAULT_UNISOC_FILTER_FILE_PATH="/etc/unisoc_ps_dsp_important_log.conf"
+DEFAULT_TELIT_FILTER_FILE_PATH="/etc/QXDM_Mask_default_telit.dmc"
 LOGGER_PATH="" # Logger selection in set_logger
-LOGGERS="qlog diag_saver diag_mdlog"
+LOGGERS="qlog diag_saver diag_mdlog qc_trace_collector"
 HOSTNAME="https://modemfota.teltonika-networks.com"
+DEVICE_PATH="/sys/bus/usb/devices/"
 START="0"
 
 PLATFORM="$(cat /etc/board.json | jsonfilter -e "@.model.platform")" # TRB1, TRB5, RUTX....
@@ -21,6 +23,7 @@ MOUNT_RMT_DIR=""
 
 FORCE_LOGGER=""
 FORCE_AT_TTY=""
+FORCE_COREDUMP_LOG=""
 
 FILTER_PATH=""
 
@@ -71,7 +74,7 @@ exec_forced_at(){
     local at="$1"
     local tty="$2"
     echo "CMD: echo -ne \"$at\r\n\" > $tty"
-    echo -ne "$cmd\r\n" > "$tty"
+    echo -ne "$at\r\n" > "$tty"
 }
 
 # Executes at command by sending it to gsmctl
@@ -184,6 +187,7 @@ started_logging(){
         echo "[INFO] Run logger directly with [LOGGER_START] to see more info. Exiting."
         exit 1
     }
+    [ "$FORCE_COREDUMP_LOG" != "" ] && return 0
     [ $LOG_DIR != "9000" ] && {
         local OPEN_FILES=$(ls -l "/proc/$PID/fd" 2>/dev/null | grep -Ei ".*(\.qmdl.*|\.sdl|\.logel)$")
         [ "$OPEN_FILES" != "" ] && return 0
@@ -229,6 +233,10 @@ set_logger(){
                     LOGGER_PATH="/usr/bin/qlog" # Meig seems to ask for logs taken with qlog and using a filter.
                     #LOGGER_PATH="/usr/bin/diag_saver"
                     #[ -z "$LOG_DEV" ] && find_modem_log_port "$tty_port"
+                    return
+                ;;
+                FN990*)
+                    LOGGER_PATH="/usr/bin/qc_trace_collector"
                     return
                 ;;
                 *)
@@ -326,6 +334,21 @@ start_logger(){
             }
             echo "[LOGGER_START]: $LOGGER_PATH" ${FILTER_PATH:+-f "$FILTER_PATH"} -o "$LOG_DIR"
             "$LOGGER_PATH" ${FILTER_PATH:+-f "$FILTER_PATH"} -o "$LOG_DIR" &>/dev/null &
+        ;;
+        /usr/bin/qc_trace_collector)
+            local modems="$(ubus list gsm.modem* | tr "\n" " ")"
+            for modem in $modems; do
+                local info="$(ubus call "$modem" info)"
+                local model="$(echo "$info" | jsonfilter -e "@.model")"
+                local usb_id="$(echo "$info" | jsonfilter -e "@.usb_id")"
+                [ -n "$MODEM_ID" ] && [ "$usb_id" != "$MODEM_ID" ] && continue
+                [ "$model" == "FN990-A28" ] && [ -z "$FILTER_PATH" ] && [ -f "$DEFAULT_TELIT_FILTER_FILE_PATH" ] && FILTER_PATH="$DEFAULT_TELIT_FILTER_FILE_PATH"
+                [ -z "$MODEM_ID" ] && MODEM_ID="$usb_id"
+            done
+            [ "$FORCE_COREDUMP_LOG" != "" ] && LOG_TYPE="--coreonly" || LOG_TYPE="--traceonly"
+            LOG_DEV="/dev/$(ls $DEVICE_PATH/$MODEM_ID:1.0 | grep ttyUSB)"
+            echo "[LOGGER_START]: $LOGGER_PATH" --port "$LOG_DEV" --dmc "$FILTER_PATH" --path "$LOG_DIR" "$LOG_TYPE"
+            "$LOGGER_PATH" --port "$LOG_DEV" ${FILTER_PATH:+--dmc "$FILTER_PATH"} --path "$LOG_DIR" "$LOG_TYPE" &>/dev/null &
         ;;
         *) ;;
     esac
@@ -505,6 +528,7 @@ helpFunction() {
     echo -e "\t-c --config \t <cfg_path> filter cfg or mask file for logger."
     echo -e "\t-f --force_logger \t <modem_logger> Forces this modem logger to use. ex.: $LOGGERS."
     echo -e "\t-t --at_port \t <tty_path> at tty to send commands to. Required when using forced logger."
+    echo -e "\t-l --coredump \t Force only coredump collection (Only for Telit modems)"
     #echo -e "\t-p --tty \t <diag port> Specify modem ttyport, a port from which the logger will collect the logs from (SLM770A only)."
 }
 
@@ -565,6 +589,10 @@ while [ -n "$1" ]; do
         -g|--get_modems)
             get_modems
             exit 1
+        ;;
+        -l|--type)
+            shift
+            FORCE_COREDUMP_LOG="1"
         ;;
         -r|--requirements)
             echo "Command is no longer supported. Please use the following command to install this package:"

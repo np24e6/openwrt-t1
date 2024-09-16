@@ -28,6 +28,7 @@ find $TARGETS -type f -a -exec file {} \; | \
   IFS=":"
   while read F S; do
     echo "$SELF: $F: $S"
+	[[ -z "${STRIP_ONLY_DIR}" || "$path" == *"/${STRIP_ONLY_DIR}/"* ]] || continue
 	[ "${S}" = "relocatable" ] && {
 		eval "$STRIP_KMOD $F"
 	} || {

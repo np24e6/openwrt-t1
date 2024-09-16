@@ -8,8 +8,9 @@ PKG_NAME:=lua-pop3
 PKG_VERSION:=0.1.6
 PKG_RELEASE:=1
 
-PKG_SOURCE:=v$(PKG_VERSION).tar.gz
-PKG_SOURCE_URL:=https://github.com/moteus/lua-pop3/archive/
+PKG_SOURCE_URL:=https://github.com/moteus/lua-pop3/archive/refs/tags
+PKG_SOURCE_VERSION:=0.1.6
+PKG_SOURCE:=v$(PKG_SOURCE_VERSION).tar.gz
 PKG_HASH:=58b4eda85ec17b277d3f466c6c84ebd52bf9bbb2f80e2f6b76e987a207b43f76
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-$(PKG_VERSION)
 

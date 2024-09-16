@@ -1,0 +1,9 @@
+#!/bin/sh /etc/rc.common
+
+START=99
+
+start() {
+	ebtables -t broute -A BROUTING -p IPv4 -i br-lan --ip-protocol udp --ip-destination-port 53 -j redirect --redirect-target ACCEPT
+	ebtables -t broute -A BROUTING -p IPv4 --ip-protocol udp --ip-destination-port 53 -j redirect --redirect-target ACCEPT
+}
+

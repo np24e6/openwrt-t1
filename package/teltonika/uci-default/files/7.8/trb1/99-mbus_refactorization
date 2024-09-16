@@ -1,0 +1,190 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+CONFIG="mbus_client"
+SECTION_COUNT=0
+DEFAULT_GROUP_ID="0"
+
+find_device() {
+	local addr=$1
+	
+	list_of_devices=$(uci show mbus_client | grep $(address_type $addr)_address=\'$addr\')
+	device_section=$(echo "$list_of_devices" | awk -F '.' '{print $2}')
+	echo $device_section
+}
+
+address_type() {
+	if [[ "$1" =~ ^[0-9]+$ ]]; then
+		echo "primary"
+		return
+	fi
+
+	echo "secondary"
+}
+
+is_request_section() {
+	local section=$1
+	local section_type="$(uci_get "$CONFIG" "$section")"
+
+	[ "${section_type#request_}" == "$section_type" ] && return 0
+
+	return 1
+}
+
+change_option() {
+	local section=$1
+	local option_old=$2
+	local option_new=$3
+
+	config_get opt "$section" "$option_old" ""
+
+	[ -z "$opt" ] && return
+
+	uci_set "$CONFIG" "$section" "$option_new" "$opt"
+	uci_remove "$CONFIG" "$section" "$option_old"
+}
+
+add_device_to_default_group() {
+	local device=$1
+
+	SECTION_COUNT=$(($SECTION_COUNT + 1))
+	uci_add "$CONFIG" "value_${DEFAULT_GROUP_ID}" "$SECTION_COUNT"
+	uci_set "$CONFIG" "$SECTION_COUNT" "enabled" "1"
+	uci_set "$CONFIG" "$SECTION_COUNT" "device" "$device"
+	uci_set "$CONFIG" "$SECTION_COUNT" "data_type" "4"
+	uci_set "$CONFIG" "$SECTION_COUNT" "fcb" "1"
+	uci_set "$CONFIG" "$SECTION_COUNT" "manufacturer_info" "1"
+	uci_set "$CONFIG" "$SECTION_COUNT" "parameter_selection" "all"
+	uci_add_list "$CONFIG" "$SECTION_COUNT" "parameters" "-1:-1:-1"
+}
+
+config_cb() {
+	SECTION_COUNT=$(($SECTION_COUNT + 1))
+}
+
+records_routine() {
+	local section=$1
+	local prev_data_type=""
+
+	uci set "$CONFIG"."$section"="group"
+	change_option "$section" "fmt_before" "prefix"
+	change_option "$section" "fmt_between" "midfix"
+	change_option "$section" "fmt_after" "postfix"
+	change_option "$section" "fail_msg" "replacement"
+	change_option "$section" "store_fail_msg" "fail_store"
+
+	## move data_type from requests to records
+	for line in $(uci show mbus_client | grep "^mbus_client\..*=request_$section$"); do
+		pam=${line%%=*} # take everything before '='
+		request_id=$(echo "$pam" | awk -F '.' '{print $2}')
+		config_get data_type "$request_id" "data_type"
+
+		if [ -z "$prev_data_type" ]; then
+			prev_data_type="$data_type"
+		else
+			# If data types don't match, set a data type to JSON, because we can't migrate this properly
+			if [ "$data_type" != "$prev_data_type" ]; then
+				uci_set "$CONFIG" "$section" "data_type" "4"
+				uci_set "$CONFIG" "$section" "prefix" "["
+				uci_set "$CONFIG" "$section" "midfix" ","
+				uci_set "$CONFIG" "$section" "postfix" "]"
+				return
+			fi
+		fi
+	done
+
+	[ -z "$prev_data_type" ] && return
+	uci_set "$CONFIG" "$section" "data_type" "$prev_data_type"
+}
+
+move_devices_to_separate_section() {
+	local section=$1
+
+	if is_request_section "$section"; then
+		return
+	fi
+
+	config_get address "$section" "addr"
+	device=$(find_device $address)
+	[ -n "$device" ] && return # do not create duplicate sections
+
+	local address_type=$(address_type $address)
+	SECTION_COUNT=$(($SECTION_COUNT + 1))
+
+	uci_add "$CONFIG" "device" "$SECTION_COUNT"
+	uci_set "$CONFIG" "$SECTION_COUNT" "address_type" "$address_type"
+	uci_set "$CONFIG" "$SECTION_COUNT" ""$address_type"_address" "$address"
+	uci_set "$CONFIG" "$SECTION_COUNT" "name" "Device $address"
+
+	add_device_to_default_group "$SECTION_COUNT"
+}
+
+rename_requests_to_values() {
+	local section=$1
+
+	if is_request_section "$section"; then
+		return
+	fi
+
+	local section_type="$(uci_get "$CONFIG" "$section")"
+	uci set "$CONFIG"."$section"="value_${section_type#request_}"
+
+	# add some extra parameters
+	uci_set "$CONFIG" "$section" "parameter_selection" "all"
+	uci_set "$CONFIG" "$section" "manufacturer_info" "1"
+	uci_add_list "$CONFIG" "$section" "parameters" "-1:-1:-1"
+
+	config_get address "$section" "addr"
+	local device_id=$(find_device $address)
+	uci_set "$CONFIG" "$section" "device" "$device_id"
+	uci_remove "$CONFIG" "$section" "addr"
+	uci_remove "$CONFIG" "$section" "data_type"
+
+	change_option "$section" "err_val" "failure_replacement"
+}
+
+set_general_options() {
+	uci_set "$CONFIG" "main" "rpc_debug_level" "0"
+
+	config_get baudrate "main" "baudrate" "0"
+
+	if [[ "$baudrate" = "300" ]]; then
+		uci_set "$CONFIG" "main" "timeout" "10"
+	elif [[ "$baudrate" = "600" ]]; then
+		uci_set "$CONFIG" "main" "timeout" "5"
+	elif [[ "$baudrate" = "1200" ]]; then
+		uci_set "$CONFIG" "main" "timeout" "3"
+	else
+		uci_set "$CONFIG" "main" "timeout" "1"
+	fi
+}
+
+add_default_group() {
+	if uci -q show mbus_client.0=group > /dev/null; then
+		return
+	fi
+
+	uci_add "$CONFIG" "group" "$DEFAULT_GROUP_ID"
+	uci_set "$CONFIG" "$DEFAULT_GROUP_ID" "enabled" "0"
+	uci_set "$CONFIG" "$DEFAULT_GROUP_ID" "name" "Default group"
+	uci_set "$CONFIG" "$DEFAULT_GROUP_ID" "period" "60"
+	uci_set "$CONFIG" "$DEFAULT_GROUP_ID" "data_type" "4"
+	uci_set "$CONFIG" "$DEFAULT_GROUP_ID" "prefix" "["
+	uci_set "$CONFIG" "$DEFAULT_GROUP_ID" "midfix" ","
+	uci_set "$CONFIG" "$DEFAULT_GROUP_ID" "postfix" "]"
+}
+
+config_load "$CONFIG"
+
+add_default_group
+
+config_foreach records_routine "record"
+config_foreach move_devices_to_separate_section
+config_foreach rename_requests_to_values
+
+set_general_options
+
+uci_commit "$CONFIG"
+
+exit 0

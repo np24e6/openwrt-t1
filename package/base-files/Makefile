@@ -17,7 +17,8 @@ PKG_RELEASE:=$(COMMITCOUNT)
 
 PKG_FILE_DEPENDS:=$(PLATFORM_DIR)/ $(GENERIC_PLATFORM_DIR)/base-files/
 PKG_BUILD_DEPENDS:=ucert/host
-PKG_LICENSE:=GPL-2.0
+PKG_LICENSE:=GPL-2.0-only
+PKG_LICENSE_FILES:=LICENSES/GPL-2.0
 
 PKG_ORIGIN_URL:=https://github.com/openwrt/openwrt/blob/openwrt-21.02/package/base-files
 
@@ -28,6 +29,8 @@ PKG_CONFIG_DEPENDS += \
 	CONFIG_NAND_SUPPORT \
 	CONFIG_CLEAN_IPKG \
 	CONFIG_PER_FEED_REPO \
+	CONFIG_USE_PROCD \
+	CONFIG_USE_OPENRC \
 	$(foreach feed,$(FEEDS_AVAILABLE),CONFIG_FEED_$(feed))
 
 include $(INCLUDE_DIR)/package.mk
@@ -99,6 +102,11 @@ ifdef CONFIG_INSTALL_LOCAL_KEY
   endef
 endif
 
+ifneq ($(CONFIG_USE_OPENRC),)
+OPENRC_RUNLEVEL_DEFAULT:=rclocal done
+OPENRC_RUNLEVEL_SHUTDOWN:=umount
+endif
+
 define Package/base-files/install
 	$(CP) ./files/* $(1)/
 	$(Package/base-files/install-local-key)
@@ -153,6 +161,7 @@ define Package/base-files/install
 
 	chmod 0600 $(1)/etc/shadow
 	chmod 1777 $(1)/tmp
+	chmod 755 $(1)/usr/libexec/rpcd/lan_info
 
 	$(call Package/base-files/install-target,$(1))
 	for conffile in $(1)/etc/config/*; do \
@@ -213,7 +222,6 @@ define Package/base-files/install
 	if [ ! $(CONFIG_SERIAL_SUPPORT) ]; then \
 		$(RM) $(1)/etc/hotplug.d/tty/01-serial-symlink.sh; \
 		$(RM) $(1)/etc/init.d/rs_console $(1)/etc/config/rs_console; \
-		$(RM) $(1)/sbin/usb_serial_adapters.sh; \
 	fi;
 
 	if [ ! $(CONFIG_NAND_SUPPORT) ]; then \
@@ -233,6 +241,17 @@ define Package/base-files/install
 	if [ ! $(CONFIG_SMP_SUPPORT) ]; then \
 		$(RM) $(1)/lib/functions/smp.sh; \
 	fi;
+
+	for svc in $(1)/etc/init.d/*.openrc; do \
+		$(if $(CONFIG_USE_OPENRC), \
+			svc_name="$$$$(basename $$$${svc} .openrc)"; \
+			runlevel="sysinit"; \
+			echo "$(OPENRC_RUNLEVEL_DEFAULT)" | grep -q "$$$${svc_name}" && runlevel="default"; \
+			echo "$(OPENRC_RUNLEVEL_SHUTDOWN)" | grep -q "$$$${svc_name}" && runlevel="shutdown"; \
+			$(OPENRC_INSTALL) $$$${runlevel} $$$${svc_name} $$$${svc} $(1); \
+		) \
+		$(RM) $$$${svc}; \
+	done
 endef
 
 ifneq ($(DUMP),1)

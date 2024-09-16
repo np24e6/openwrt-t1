@@ -4,6 +4,7 @@ askpass
 auth
 auth_retry
 auth_user_pass
+auth_user_pass_verify
 bcast_buffers
 bind_dev
 ca
@@ -27,7 +28,6 @@ dev
 dev_node
 dev_type
 dh
-down
 ecdh_curve
 echo
 engine
@@ -54,8 +54,6 @@ iroute_ipv6
 keepalive
 key
 key_direction
-key_method
-keysize
 learn_address
 link_mtu
 lladdr
@@ -72,7 +70,6 @@ mssfix
 mtu_disc
 mute
 nice
-ns_cert_type
 ping
 ping_exit
 ping_restart
@@ -105,7 +102,6 @@ route_metric
 route_pre_down
 route_up
 rport
-script_security
 secret
 server
 server_bridge
@@ -133,7 +129,6 @@ tran_window
 tun_mtu
 tun_mtu_extra
 txqueuelen
-up
 user
 verb
 verify_client_cert
@@ -154,6 +149,7 @@ client
 client_to_client
 comp_noadapt
 disable
+disable_dco
 disable_occ
 down_pre
 duplicate_cn
@@ -181,6 +177,7 @@ persist_remote_ip
 persist_tun
 ping_timer_rem
 pull
+push_peer_info
 push_reset
 remote_random
 rmtun

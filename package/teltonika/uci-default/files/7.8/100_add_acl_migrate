@@ -1,0 +1,45 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+CONFIG="rpcd"
+
+default_read_values="!system/admin/multiusers/users_configuration* !system/flashops* !system/maintenance/backup* !system/admin/access_control* !system/maintenance/cli* !system/maintenance/uscripts* !system/package_manager* !network* !system/wizard* !status/wireless/channel_analysis* !services/hotspot/general/userscripts* !services/mobile_utilities/sms_messages/send* !superuser *"
+default_write_values="system/admin/multiusers/change_password* !superuser core"
+minimal_read_values="!superuser core"
+minimal_write_values="!superuser core"
+
+check_config_match() {
+	local section="$1"
+
+	actual_read=$(uci_get "$CONFIG" "$section" "read")
+	actual_write=$(uci_get "$CONFIG" "$section" "write")
+	actual_privilege=$(uci_get "$CONFIG" "$section" "privilege_lvl")
+	actual_target_write=$(uci_get "$CONFIG" "$section" "target_write")
+	actual_target_read=$(uci_get "$CONFIG" "$section" "target_read")
+
+	if [ "$actual_read" == "$read_values" ] && \
+	   [ "$actual_write" == "$read_values" ] && \
+	   [ "$actual_target_write" == "deny" ] && \
+	   [ "$actual_target_read" == "deny" ]; then
+		uci_set "$CONFIG" "$section" "read" "!superuser"
+		uci_set "$CONFIG" "$section" "write" "!superuser"
+		return
+	fi
+
+	if [ "$actual_read" != "$default_read_values" ] || \
+	   [ "$actual_write" != "$default_write_values" ] || \
+	   [ "$actual_privilege" != "1" ] || \
+	   [ "$actual_target_write" != "allow" ] || \
+	   [ "$actual_target_read" != "deny" ]; then
+		return
+	fi
+
+	uci_add_list "$CONFIG" "$section" "read" "!system/maintenance/troubleshoot*"
+}
+
+config_load "$CONFIG"
+config_foreach check_config_match "group"
+uci_commit "$CONFIG"
+
+exit 0

@@ -466,4 +466,29 @@ uci_apply_defaults() {
 	uci commit
 }
 
+ucidef_check_esim() {
+	local simcfg="$(cat /sys/mnf_info/sim_cfg)"
+	json_select_object hwinfo
+	json_get_vars mobile
+	[ "$mobile" = "1" ] && {
+		for i in $(seq 2 8 26); do
+			[ "$i" -gt "${#simcfg}" ] && break
+  			if [ "${simcfg:i:1}" = "2" ]; then
+				json_add_boolean "esim" 1
+    			break
+  			fi
+		done
+	}
+	json_select ..
+}
+
+ucidef_check_dual_sim() {
+	json_select_object hwinfo
+	json_get_vars mobile
+	[ "$mobile" = "1" ] && [ "$(cat /sys/mnf_info/sim_count)" -gt "1" ] && {
+		json_add_boolean "dual_sim" 1
+	}
+	json_select ..
+}
+
 [ -z "$IPKG_INSTROOT" ] && [ -f /lib/config/uci.sh ] && . /lib/config/uci.sh

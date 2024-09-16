@@ -1,0 +1,43 @@
+Index: mosquitto-2.0.17/src/net.c
+===================================================================
+--- mosquitto-2.0.17.orig/src/net.c
++++ mosquitto-2.0.17/src/net.c
+@@ -421,6 +421,29 @@ int net__tls_server_ctx(struct mosquitto
+ #endif
+ 
+ 	if(listener->dhparamfile){
++#if OPENSSL_VERSION_NUMBER >= 0x30000000L
++		EVP_PKEY *dhparam = NULL;
++		BIO *bio = BIO_new_file(listener->dhparamfile, "r");
++		if (!bio) {
++			return MOSQ_ERR_TLS;
++		}
++
++		dhparam = EVP_PKEY_new();
++		if (!PEM_read_bio_Parameters(bio, &dhparam)) {
++			BIO_free(bio);
++			return MOSQ_ERR_TLS;
++		}
++
++		if (!SSL_CTX_set0_tmp_dh_pkey(listener->ssl_ctx, dhparam)) {
++			log__printf(NULL, MOSQ_LOG_ERR, "Error loading dhparamfile \"%s\".", listener->dhparamfile);
++			net__print_ssl_error(NULL);
++			BIO_free(bio);
++			return MOSQ_ERR_TLS;
++		}
++
++		BIO_free(bio);
++#else
++		DH *dhparam = NULL;
+ 		dhparamfile = mosquitto__fopen(listener->dhparamfile, "r", true);
+ 		if(!dhparamfile){
+ 			log__printf(NULL, MOSQ_LOG_ERR, "Error loading dhparamfile \"%s\".", listener->dhparamfile);
+@@ -434,6 +457,7 @@ int net__tls_server_ctx(struct mosquitto
+ 			net__print_ssl_error(NULL);
+ 			return MOSQ_ERR_TLS;
+ 		}
++#endif
+ 	}
+ 	return MOSQ_ERR_SUCCESS;
+ }
+ 

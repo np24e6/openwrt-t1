@@ -12,7 +12,7 @@ PKG_VERSION:=2.10.12
 PKG_RELEASE:=1
 PKG_MAINTAINER:=Florian Eckert <fe@dev.tdt.de>, \
 		Aaron Goodman <aaronjg@alumni.stanford.edu>
-PKG_LICENSE:=GPL-2.0
+PKG_LICENSE:=GPL-2.0-only
 PKG_CONFIG_DEPENDS:=CONFIG_IPV6
 
 PKG_ORIGIN_URL:=https://github.com/openwrt/packages/tree/openwrt-21.02/net/mwan3

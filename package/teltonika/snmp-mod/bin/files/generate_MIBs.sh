@@ -95,7 +95,6 @@ unset port_vlan
 unset if_vlan
 unset sqm
 unset port
-unset iface
 
 device=1
 # To support external modems, mobile MIB should also be included
@@ -104,7 +103,6 @@ device=1
 is_installed mdcollectd && mdcollect=1
 is_true "gps" && gps=1
 traps=1
-iface=1
 # Hotspot is available on all devices except TSW switches
 ( ! is_switch ) && ( ! is_swm ) && hotspot=1
 is_true "ios" && ios=1
@@ -130,7 +128,6 @@ hotspot_mib=$(cat $MODULES_DIR/hotspot.mib)
 io_mib=$(cat $MODULES_DIR/io.mib)
 wireless_mib=$(cat $MODULES_DIR/wireless.mib)
 if_vlan_mib=$(cat $MODULES_DIR/vlan_if.mib)
-iface_mib=$(cat $MODULES_DIR/iface.mib)
 
 if is_switch; then
 	port_vlan_mib=$(cat $MODULES_DIR/vlan_port_switch.mib)
@@ -180,7 +177,6 @@ ${wireless:+wireless		OBJECT IDENTIFIER ::= { teltonika 7 \}\n}\
 ${vlan_gen:+vlan			OBJECT IDENTIFIER ::= { teltonika 8 \}\n}\
 ${sqm:+sqm			OBJECT IDENTIFIER ::= { teltonika 9 \}\n}\
 ${port:+port			OBJECT IDENTIFIER ::= { teltonika 10 \}\n}\
-${iface:+iface			OBJECT IDENTIFIER ::= { teltonika 11 \}\n}\
 
 ${device:+$device_mib\n\n}\
 ${mobile:+$mobile_mib\n\n}\
@@ -205,7 +201,6 @@ ${if_vlan:+$if_vlan_mib\n\n}\
 ${port_vlan:+$port_vlan_mib\n\n}\
 ${sqm:+$sqm_mib\n\n}\
 ${port:+$port_mib\n\n}\
-${iface:+$iface_mib\n\n}\
 
 ${end_mib}" >"$MIB_file"
 

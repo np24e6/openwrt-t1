@@ -28,8 +28,8 @@
 
 			gpio_sim_select {
 				gpio-export,name = "sim_sel";
-				gpio-export,output = <1>;
-				gpios = <&stm32_io 22 GPIO_ACTIVE_LOW>;
+				gpio-export,output = <0>;
+				gpios = <&stm32_io 22 GPIO_ACTIVE_HIGH>;
 			};
 		};
 
@@ -148,10 +148,16 @@
 			GPIO_122 {
 				compatible_versions = <0 5>;
 				line_name = "GPIO_SIM_SELECT";
-				active_low;
 			};
 		};
 	};
 
 	/delete-node/ ioman;
 };
+
+&mnfinfo {
+	sim_cfg {
+		default = "2111000_2112000";
+	};
+};
+

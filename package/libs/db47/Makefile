@@ -14,8 +14,9 @@ PKG_VERSION:=$(BASE_VERSION).4.NC
 PKG_RELEASE:=7
 
 PKG_BUILD_DIR:=$(BUILD_DIR)/db-$(BASE_VERSION).NC
-PKG_SOURCE:=db-$(BASE_VERSION).NC.tar.gz
-PKG_SOURCE_URL:=http://download.oracle.com/berkeley-db/
+PKG_SOURCE_URL:=http://download.oracle.com/berkeley-db
+PKG_SOURCE_VERSION:=4.7.25
+PKG_SOURCE:=db-$(PKG_SOURCE_VERSION).NC.tar.gz
 PKG_HASH:=cd39c711023ff44c01d3c8ff0323eef7318660772b24f287556e6bf676a12535
 
 PKG_MAINTAINER:=Marcel Denia <naoir@gmx.net>

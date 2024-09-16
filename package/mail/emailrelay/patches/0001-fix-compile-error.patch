@@ -1,0 +1,36 @@
+From bf61ff12f1f0a52d3f0c5afc6fe0b5ea5c38ff3e Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Joris=20Vai=C5=A1vila?= <joris.vaisvila@teltonika.lt>
+Date: Tue, 5 Mar 2024 18:52:25 +0200
+Subject: [PATCH] fix compile error
+
+---
+ src/glib/goptional.h | 6 +-----
+ 1 file changed, 1 insertion(+), 5 deletions(-)
+
+diff --git a/src/glib/goptional.h b/src/glib/goptional.h
+index 0b9ae61..85873a1 100644
+--- a/src/glib/goptional.h
++++ b/src/glib/goptional.h
+@@ -37,7 +37,7 @@ template <typename T>
+ class G::optional
+ {
+ public:
+-	optional() noexcept(noexcept(T())) ;
++	optional() noexcept(noexcept(T())) {}
+ 	explicit optional( const T & ) ;
+ 	optional( bool has_value , const T & value ) ; // not in std::optional()
+ 	void clear() ; // not in std::optional()
+@@ -62,10 +62,6 @@ private:
+ 	bool m_has_value {false} ;
+ } ;
+ 
+-template <typename T>
+-G::optional<T>::optional() noexcept(noexcept(T()))
+-= default ;
+-
+ template <typename T>
+ G::optional<T>::optional( const T & t ) :
+ 	m_value(t) ,
+-- 
+2.44.0
+
