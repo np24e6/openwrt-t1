@@ -177,13 +177,63 @@ is_legacy_profile() {
 		[ -e "/etc/config/data_limit" ]
 }
 
+__check_compatibility() {
+	local old_major="$1"
+	local old_minor="$2"
+	local dir="$3"
+	local version="${dir##*/}"
+	local uci_major="${version%%.*}"
+	local uci_minor="${version#*.}"
+
+	# ignore non-numeric directory names
+	case "$uci_minor" in
+		''|*[!0-9]*) uci_minor="" ;;
+		*) ;;
+	esac
+
+	[ "$version" = "$uci_minor" ] && uci_minor=""
+
+	[ -n "$uci_major" ] && [ -n "$uci_minor" ] || return 0
+	[ "$uci_major" -lt "$old_major" ] && return 1
+	[ "$uci_major" -eq "$old_major" ] && [ "$uci_minor" -lt "$old_minor" ] && return 1
+
+	return 0
+}
+
+__apply_defaults() {
+	local dir="$1"
+
+	for file in $(ls -v "$dir"); do
+		[ -d "${dir}/${file}" ] && continue
+		( . "${dir}/${file}" 2>/dev/null ) && rm -f "${dir}/${file}"
+	done
+}
+
 uci_apply_defaults() {
-	mkdir -p /tmp/uci-defaults
-	cp -r /rom/etc/uci-defaults/* /tmp/uci-defaults/
-	chmod -R +x /tmp/uci-defaults/
-	cd /tmp/uci-defaults || return 0
-	files="$(find . -type f | sort)"
-	[ -z "$files" ] && return 0
+	local top_dir="/tmp/uci-defaults"
+	mkdir -p "$top_dir"
+	cp -r /rom/etc/uci-defaults/* "$top_dir/"
+	chmod -R +x "$top_dir/"
+	[ -z "$(ls -A "$top_dir/")" ] && return 0
+
+	local old_version="$(cat "${TMP_DIR}${PROFILE_VERSION_FILE}")"
+	local new_version="$(cat /etc/version)"
+
+	[ -z "$old_version" ] && old_version="$new_version"
+
+	local old_major=$(echo "$old_version" | awk -F . '{ print $2 }')
+	local old_minor=$(echo "$old_version" | awk -F . '{ print $3 }')
+
+	rm -rf ${top_dir}/linux
+
+	# do not execute legacy scripts when coming from 7.x
+	[ "$old_major" -ge 7 ] && rm -rf ${top_dir}/001_rut*
+
+	# do not execute old scripts when coming from 8.x
+	[ "$old_major" -gt 7 ] && rm -rf ${top_dir}/old
+
+	# do not execute old scripts when coming from 7.4.x
+	[ "$old_major" -eq 7 ] && [ "$old_minor" -ge 4 ] && rm -rf ${top_dir}/old
 
 	#for legacy rut9/rut2 migration
 	is_legacy_profile && {
@@ -191,12 +241,14 @@ uci_apply_defaults() {
 		cp /rom/etc/migrate.conf/* /etc/migrate.conf/
 	}
 
-	for file in $files; do
-		(. "./$file" 2>/dev/null) && rm -f "$file"
+	for dir in $(ls -v $top_dir); do
+		[ -d "${top_dir}/$dir" ] || continue
+		__check_compatibility "$old_major" "$old_minor" "$dir" || continue
+		__apply_defaults "${top_dir}/$dir"
 	done
+	__apply_defaults "$top_dir"
 
-	cd /
-	rm -rf /tmp/uci-defaults/
+	rm -rf "$top_dir/"
 	rm -f /etc/migrate.conf/*
 }
 

@@ -5,6 +5,8 @@ STOP=50
 USE_PROCD=1
 
 start_service() {
+    [ -h "/etc/hotplug.d/gsm/5-remove-operlist" ] || ln -s /usr/share/gsm/5-remove-operlist /etc/hotplug.d/gsm/5-remove-operlist &>/dev/null
+
     procd_open_instance
     procd_set_param command "/usr/sbin/mobifd"
     procd_set_param file /etc/config/simcard /etc/config/sms_gateway
@@ -24,3 +26,8 @@ reload_service() {
 	ubus -t 180 call mobifd reload || ret=1
 	return $ret
 }
+
+stop_service() {
+    [ -h "/etc/hotplug.d/gsm/5-remove-operlist" ] && rm /etc/hotplug.d/gsm/5-remove-operlist &>/dev/null
+}
+

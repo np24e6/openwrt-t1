@@ -6,10 +6,10 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=gps
-PKG_VERSION:=2023-12-08
+PKG_VERSION:=2024-01-11
 PKG_RELEASE:=1
 
-PKG_SOURCE_VERSION:=7.6
+PKG_SOURCE_VERSION:=7.6.3
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_SOURCE_VERSION)-$(PKG_VERSION)
 PKG_SOURCE:=$(PKG_SOURCE_SUBDIR).tar.gz
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_SOURCE_SUBDIR)
@@ -22,7 +22,7 @@ define Package/gpsd
 	SECTION:=base
 	CATEGORY:=Base system
 	TITLE:=Deamon providing gps related functionality.
-	DEPENDS:=+lsqlite3 +libpthread +libuci +liblog +libubus +liburc +libgsm +zlib +libcurl +IO_SUPPORT:iomand +libmnfinfo
+	DEPENDS:=+lsqlite3 +libpthread +libuci +libtlt_uci  +liblog +libubus +liburc +libgsm +zlib +libcurl +IO_SUPPORT:iomand +libmnfinfo
 endef
 
 define Package/gpsctl
@@ -50,7 +50,7 @@ define Package/avl
 	SECTION:=base
 	CATEGORY:=Base system
 	TITLE:=Daemon for sending data to AVL server.
-	DEPENDS:=+libpthread +libuci +liblog +libubus +libgsm +zlib +libgps +iomand
+	DEPENDS:=+libpthread +libuci +liblog +libubus +libgsm +zlib +libgps +iomand +libtlt_uci
 endef
 
 define Package/avl/conffiles

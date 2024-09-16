@@ -12,6 +12,14 @@ PIDCOUNT=1
 start_service() {
     local pid_file="/var/run/${NAME}.${PIDCOUNT}.pid"
 
+    [ -h "/etc/hotplug.d/usb/05_gsmd.sh" ] || ln -s /usr/share/usb/05_gsmd.sh  /etc/hotplug.d/usb/05_gsmd.sh &>/dev/null
+    [ -h "/etc/hotplug.d/iface/89-gsm-event" ] || ln -s /usr/share/iface/89-gsm-event /etc/hotplug.d/iface/89-gsm-event &>/dev/null
+    [ -h "/etc/hotplug.d/gsm/1-check_vcert" ] || ln -s /usr/share/gsm/1-check_vcert /etc/hotplug.d/gsm/1-check_vcert &>/dev/null
+    [ -h "/etc/hotplug.d/gsm/2-fill-modem-info" ] || ln -s /usr/share/gsm/2-fill-modem-info /etc/hotplug.d/gsm/2-fill-modem-info &>/dev/null
+    [ -h "/etc/hotplug.d/gsm/4-notify-send-sms" ] || ln -s /usr/share/gsm/4-notify-send-sms /etc/hotplug.d/gsm/4-notify-send-sms &>/dev/null
+    [ -h "/etc/hotplug.d/gsm/4-notify-sim-state" ] || ln -s /usr/share/gsm/4-notify-sim-state /etc/hotplug.d/gsm/4-notify-sim-state &>/dev/null
+    [ -h "/etc/hotplug.d/gsm/5-validate-cefs" ] || [ -e "/usr/share/gsm/5-validate-cefs" ] && ln -s /usr/share/gsm/5-validate-cefs /etc/hotplug.d/gsm/5-validate-cefs &>/dev/null
+
     procd_open_instance
     procd_set_param command "$PROG" -c
 
@@ -22,4 +30,15 @@ start_service() {
     procd_set_param stdout 1 # forward stdout of the command to logd
     procd_set_param pidfile $pid_file # write a pid file on instance start and remote it on stop
     procd_close_instance
+
+}
+
+stop_service() {
+    [ -h "/etc/hotplug.d/usb/05_gsmd.sh" ] && rm /etc/hotplug.d/usb/05_gsmd.sh &>/dev/null
+    [ -h "/etc/hotplug.d/iface/89-gsm-event" ] && rm /etc/hotplug.d/iface/89-gsm-event &>/dev/null
+    [ -h "/etc/hotplug.d/gsm/1-check_vcert" ] && rm /etc/hotplug.d/gsm/1-check_vcert &>/dev/null
+    [ -h "/etc/hotplug.d/gsm/2-fill-modem-info" ] && rm /etc/hotplug.d/gsm/2-fill-modem-info &>/dev/null
+    [ -h "/etc/hotplug.d/gsm/4-notify-send-sms" ] && rm /etc/hotplug.d/gsm/4-notify-send-sms &>/dev/null
+    [ -h "/etc/hotplug.d/gsm/4-notify-sim-state" ] && rm /etc/hotplug.d/gsm/4-notify-sim-state &>/dev/null
+    [ -h "/etc/hotplug.d/gsm/5-validate-cefs" ] && rm /etc/hotplug.d/gsm/5-validate-cefs &>/dev/null
 }

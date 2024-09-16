@@ -1,0 +1,15 @@
+#!/bin/ash
+
+. /lib/functions.sh
+
+fix_hwmode() {
+	local hwmode
+
+	config_get hwmode "$1" hwmode
+
+	[ "$hwmode" = "11ng" ] && uci_set wireless "$1" hwmode "11g"
+}
+
+config_load wireless
+config_foreach fix_hwmode wifi-device
+uci_commit wireless

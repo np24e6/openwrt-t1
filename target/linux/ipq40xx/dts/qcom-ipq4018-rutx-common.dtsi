@@ -148,6 +148,12 @@
 			log;
 		};
 
+		branch {
+			reg = <&config 0x58 0x4>;
+			type = "ascii";
+			log;
+		};
+
 		wpass {
 			reg = <&config 0x90 0x10>;
 			type = "ascii";

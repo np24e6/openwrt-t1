@@ -7,7 +7,7 @@ include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=profiler
 
-PKG_SOURCE_VERSION:=2.12
+PKG_SOURCE_VERSION:=2.12.1
 
 include $(INCLUDE_DIR)/package.mk
 

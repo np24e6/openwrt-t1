@@ -6,9 +6,9 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=gkeepalive
-PKG_VERSION:=2023-10-03
+PKG_VERSION:=2024-01-03
 PKG_RELEASE:=1
-PKG_SOURCE_VERSION=1.0
+PKG_SOURCE_VERSION=1.1
 
 
 include $(INCLUDE_DIR)/package.mk

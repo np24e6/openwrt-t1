@@ -7,7 +7,7 @@ include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=gsm
 
-PKG_SOURCE_VERSION:=1.3.1
+PKG_SOURCE_VERSION:=1.3.3
 
 GPL_INCLUDE_HEADERS:=1
 
@@ -94,19 +94,18 @@ define Package/libgsm/install
 endef
 
 define Package/gsmd/install
-	$(INSTALL_DIR) $(1)/usr/sbin $(1)/etc/config/ $(1)/etc/init.d/ $(1)/etc/hotplug.d/usb/ \
-		$(1)/etc/hotplug.d/iface/ $(1)/etc/hotplug.d/gsm/
+	$(INSTALL_DIR) $(1)/usr/sbin $(1)/etc/config/ $(1)/etc/init.d/ $(1)/usr/share/usb/ \
+		$(1)/usr/share/iface/ $(1)/usr/share/gsm/
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/gsmd/gsmd $(1)/usr/sbin/gsmd
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/files/gsmd.init $(1)/etc/init.d/gsmd
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/files/gsmd.hotplug $(1)/etc/hotplug.d/usb/05_gsmd.sh
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/files/gsm_event.hotplug $(1)/etc/hotplug.d/iface/89-gsm-event
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/files/check_vcert.hotplug $(1)/etc/hotplug.d/gsm/1-check_vcert
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/files/fill_modem.hotplug $(1)/etc/hotplug.d/gsm/2-fill-modem-info
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/files/reload_simcard.hotplug $(1)/etc/hotplug.d/gsm/3-reload-simcard
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/files/notify_send_sms.hotplug $(1)/etc/hotplug.d/gsm/4-notify-send-sms
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/files/notify_sim_state.hotplug $(1)/etc/hotplug.d/gsm/4-notify-sim-state
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/files/gsmd.hotplug $(1)/usr/share/usb/05_gsmd.sh
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/files/gsm_event.hotplug $(1)/usr/share/iface/89-gsm-event
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/files/check_vcert.hotplug $(1)/usr/share/gsm/1-check_vcert
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/files/fill_modem.hotplug $(1)/usr/share/gsm/2-fill-modem-info
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/files/notify_send_sms.hotplug $(1)/usr/share/gsm/4-notify-send-sms
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/files/notify_sim_state.hotplug $(1)/usr/share/gsm/4-notify-sim-state
 	if [ $(CONFIG_MULTI_DEVICE_QUIRK) ]; then \
-		$(INSTALL_BIN) $(PKG_BUILD_DIR)/files/validate_cefs.hotplug $(1)/etc/hotplug.d/gsm/5-validate-cefs; \
+		$(INSTALL_BIN) $(PKG_BUILD_DIR)/files/validate_cefs.hotplug $(1)/usr/share/gsm/5-validate-cefs; \
 	fi;
 	$(INSTALL_CONF) /dev/null $(1)/etc/config/simcard
 endef

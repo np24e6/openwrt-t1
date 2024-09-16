@@ -11,14 +11,18 @@ class RutOSVersion:
 	def __init__(self, version, dev):
 		arr = version.split('_')
 
+		index = 3
+		if len(arr) == 3:
+			index = 2
+
 		self.dev = dev
 		self.name = arr[0]
 		self.type = arr[1]
 
-		if self.type in arr[1]:
+		if index == 3:
 			self.type = self.type + '_' + arr[2]
 
-		ver = arr[3].split('.')
+		ver = arr[index].split('.')
 
 		self.client = ver[0]
 		self.major = ver[1]
@@ -91,28 +95,14 @@ def upload_fw_gen_files(lab: machine.linux.LinuxShell) -> None:
 	lab.exec0('rm', '-rf', '/tmp/genfw')
 	lab.exec0('mkdir', '/tmp/genfw')
 
-	shell._scp_copy(
-		local_path=machine.linux.Path(lab.host, Path(__file__).parent/'genfw.sh'),
-		remote_path=machine.linux.Path(lab, '/tmp/genfw'),
-		copy_to_remote=True,
-		username=lab.username,
-		hostname=lab.hostname,
-		ignore_hostkey=True,
-		port=lab.port,
-		ssh_config=lab.ssh_config,
-		authenticator=lab.authenticator,
+	shell.copy(
+		p1=machine.linux.Path(lab.host, Path(__file__).parent/'genfw.sh'),
+		p2=machine.linux.Path(lab, '/tmp/genfw'),
 	)
 
-	shell._scp_copy(
-		local_path=machine.linux.Path(lab.host, Path(__file__).parent/'sysupgrade.meta'),
-		remote_path=machine.linux.Path(lab, '/tmp/genfw'),
-		copy_to_remote=True,
-		username=lab.username,
-		hostname=lab.hostname,
-		ignore_hostkey=True,
-		port=lab.port,
-		ssh_config=lab.ssh_config,
-		authenticator=lab.authenticator,
+	shell.copy(
+		p1=machine.linux.Path(lab.host, Path(__file__).parent/'sysupgrade.meta'),
+		p2=machine.linux.Path(lab, '/tmp/genfw'),
 	)
 
 @testcase
@@ -198,16 +188,16 @@ def check_different_firmware_type(lab: machine.linux.LinuxShell) -> None:
 	# malformed
 
 	# this table is parsed as:
-	# when coming from T_F1234 to T_F/T_DEV allow_backup should be true
-	# when coming from T_H123 to T_F/T_H/T_R/T_DEV/R allow_backup should be true
+	# when coming from T_F1234 to T_F/T_H/T_R/T_DEV/R/R_GPL allow_backup should be true
+	# when coming from T_H123 to T_F/T_H/T_R/T_DEV/R/R_GPL allow_backup should be true
 	# ...
 	vt = {
 		# <from>   <allow_backup is true on these types>
-		'T_F1234': [ 'T_F',               'T_DEV',              ],
-		'T_F4567': [ 'T_F',               'T_DEV',              ],
+		'T_F1234': [ 'T_F', 'T_H', 'T_R', 'T_DEV', 'R', 'R_GPL' ],
+		'T_F4567': [ 'T_F', 'T_H', 'T_R', 'T_DEV', 'R', 'R_GPL' ],
 		'T_H123':  [ 'T_F', 'T_H', 'T_R', 'T_DEV', 'R', 'R_GPL' ],
 		'T_R96':   [ 'T_F', 'T_H', 'T_R', 'T_DEV', 'R', 'R_GPL' ],
-		'T_DEV':   [ 'T_F',               'T_DEV',              ],
+		'T_DEV':   [ 'T_F', 'T_H', 'T_R', 'T_DEV', 'R', 'R_GPL' ],
 		'R':       [ 'T_F', 'T_H', 'T_R', 'T_DEV', 'R', 'R_GPL' ],
 		'R_GPL':   [ 'T_F', 'T_H', 'T_R', 'T_DEV', 'R', 'R_GPL' ],
 		'AAFAKE':  [ 'T_F', 'T_H', 'T_R', 'T_DEV', 'R', 'R_GPL' ]
@@ -259,16 +249,16 @@ def check_newer_major_version(lab: machine.linux.LinuxShell) -> None:
 	# malformed
 
 	# this table is parsed as:
-	# when coming from T_F1234 to T_F/T_DEV allow_backup should be true
-	# when coming from T_H123 to T_F/T_H/T_R/T_DEV/R allow_backup should be true
+	# when coming from T_F1234 to T_F/T_H/T_R/T_DEV/R/R_GPL allow_backup should be true
+	# when coming from T_H123 to T_F/T_H/T_R/T_DEV/R/R_GPL allow_backup should be true
 	# ...
 	vt = {
 		# <from>   <allow_backup is true on these types>
-		'T_F1234': [ 'T_F',               'T_DEV',              ],
-		'T_F4567': [ 'T_F',               'T_DEV',              ],
+		'T_F1234': [ 'T_F', 'T_H', 'T_R', 'T_DEV', 'R', 'R_GPL' ],
+		'T_F4567': [ 'T_F', 'T_H', 'T_R', 'T_DEV', 'R', 'R_GPL' ],
 		'T_H123':  [ 'T_F', 'T_H', 'T_R', 'T_DEV', 'R', 'R_GPL' ],
 		'T_R96':   [ 'T_F', 'T_H', 'T_R', 'T_DEV', 'R', 'R_GPL' ],
-		'T_DEV':   [ 'T_F',               'T_DEV',              ],
+		'T_DEV':   [ 'T_F', 'T_H', 'T_R', 'T_DEV', 'R', 'R_GPL' ],
 		'R':       [ 'T_F', 'T_H', 'T_R', 'T_DEV', 'R', 'R_GPL' ],
 		'R_GPL':   [ 'T_F', 'T_H', 'T_R', 'T_DEV', 'R', 'R_GPL' ],
 		'AAFAKE':  [ 'T_F', 'T_H', 'T_R', 'T_DEV', 'R', 'R_GPL' ]
@@ -323,16 +313,16 @@ def check_newer_minor_version(lab: machine.linux.LinuxShell) -> None:
 	# malformed
 
 	# this table is parsed as:
-	# when coming from T_F1234 to T_F/T_DEV allow_backup should be true
-	# when coming from T_H123 to T_F/T_H/T_R/T_DEV/R allow_backup should be true
+	# when coming from T_F1234 to T_F/T_H/T_R/T_DEV/R/R_GPL allow_backup should be true
+	# when coming from T_H123 to T_F/T_H/T_R/T_DEV/R/R_GPL allow_backup should be true
 	# ...
 	vt = {
 		# <from>   <allow_backup is true on these types>
-		'T_F1234': [ 'T_F',               'T_DEV',              ],
-		'T_F4567': [ 'T_F',               'T_DEV',              ],
+		'T_F1234': [ 'T_F', 'T_H', 'T_R', 'T_DEV', 'R', 'R_GPL' ],
+		'T_F4567': [ 'T_F', 'T_H', 'T_R', 'T_DEV', 'R', 'R_GPL' ],
 		'T_H123':  [ 'T_F', 'T_H', 'T_R', 'T_DEV', 'R', 'R_GPL' ],
 		'T_R96':   [ 'T_F', 'T_H', 'T_R', 'T_DEV', 'R', 'R_GPL' ],
-		'T_DEV':   [ 'T_F',               'T_DEV',              ],
+		'T_DEV':   [ 'T_F', 'T_H', 'T_R', 'T_DEV', 'R', 'R_GPL' ],
 		'R':       [ 'T_F', 'T_H', 'T_R', 'T_DEV', 'R', 'R_GPL' ],
 		'R_GPL':   [ 'T_F', 'T_H', 'T_R', 'T_DEV', 'R', 'R_GPL' ],
 		'AAFAKE':  [ 'T_F', 'T_H', 'T_R', 'T_DEV', 'R', 'R_GPL' ]
@@ -387,16 +377,16 @@ def check_newer_patch_version(lab: machine.linux.LinuxShell) -> None:
 	# malformed
 
 	# this table is parsed as:
-	# when coming from T_F1234 to T_F/T_DEV allow_backup should be true
-	# when coming from T_H123 to T_F/T_H/T_R/T_DEV/R allow_backup should be true
+	# when coming from T_F1234 to T_F/T_H/T_R/T_DEV/R/R_GPL allow_backup should be true
+	# when coming from T_H123 to T_F/T_H/T_R/T_DEV/R/R_GPL allow_backup should be true
 	# ...
 	vt = {
 		# <from>   <allow_backup is true on these types>
-		'T_F1234': [ 'T_F',               'T_DEV',              ],
-		'T_F4567': [ 'T_F',               'T_DEV',              ],
+		'T_F1234': [ 'T_F', 'T_H', 'T_R', 'T_DEV', 'R', 'R_GPL' ],
+		'T_F4567': [ 'T_F', 'T_H', 'T_R', 'T_DEV', 'R', 'R_GPL' ],
 		'T_H123':  [ 'T_F', 'T_H', 'T_R', 'T_DEV', 'R', 'R_GPL' ],
 		'T_R96':   [ 'T_F', 'T_H', 'T_R', 'T_DEV', 'R', 'R_GPL' ],
-		'T_DEV':   [ 'T_F',               'T_DEV',              ],
+		'T_DEV':   [ 'T_F', 'T_H', 'T_R', 'T_DEV', 'R', 'R_GPL' ],
 		'R':       [ 'T_F', 'T_H', 'T_R', 'T_DEV', 'R', 'R_GPL' ],
 		'R_GPL':   [ 'T_F', 'T_H', 'T_R', 'T_DEV', 'R', 'R_GPL' ],
 		'AAFAKE':  [ 'T_F', 'T_H', 'T_R', 'T_DEV', 'R', 'R_GPL' ]
@@ -420,16 +410,16 @@ def check_older_patch_version(lab: machine.linux.LinuxShell) -> None:
 	# malformed
 
 	# this table is parsed as:
-	# when coming from T_F1234 to T_F/T_DEV allow_backup should be true
-	# when coming from T_H123 to T_F/T_H/T_R/T_DEV/R allow_backup should be true
+	# when coming from T_F1234 to T_F/T_H/T_R/T_DEV/R/R_GPL allow_backup should be true
+	# when coming from T_H123 to T_F/T_H/T_R/T_DEV/R/R_GPL allow_backup should be true
 	# ...
 	vt = {
 		# <from>   <allow_backup is true on these types>
-		'T_F1234': [ 'T_F',               'T_DEV',              ],
-		'T_F4567': [ 'T_F',               'T_DEV',              ],
+		'T_F1234': [ 'T_F', 'T_H', 'T_R', 'T_DEV', 'R', 'R_GPL' ],
+		'T_F4567': [ 'T_F', 'T_H', 'T_R', 'T_DEV', 'R', 'R_GPL' ],
 		'T_H123':  [ 'T_F', 'T_H', 'T_R', 'T_DEV', 'R', 'R_GPL' ],
 		'T_R96':   [ 'T_F', 'T_H', 'T_R', 'T_DEV', 'R', 'R_GPL' ],
-		'T_DEV':   [ 'T_F',               'T_DEV',              ],
+		'T_DEV':   [ 'T_F', 'T_H', 'T_R', 'T_DEV', 'R', 'R_GPL' ],
 		'R':       [ 'T_F', 'T_H', 'T_R', 'T_DEV', 'R', 'R_GPL' ],
 		'R_GPL':   [ 'T_F', 'T_H', 'T_R', 'T_DEV', 'R', 'R_GPL' ],
 		'AAFAKE':  [ 'T_F', 'T_H', 'T_R', 'T_DEV', 'R', 'R_GPL' ]

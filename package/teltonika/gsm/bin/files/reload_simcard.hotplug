@@ -1,5 +1,0 @@
-#!/bin/sh
-
-[ "$EVENT_NAME" = "gsm.new_modem" ] || exit 0
-
-[ -f "/etc/init.d/simcard" ] && /etc/init.d/simcard reload >/dev/null 2>/dev/null

@@ -7,7 +7,7 @@ include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=iomand
 
-PKG_SOURCE_VERSION:=2.15
+PKG_SOURCE_VERSION:=2.16
 
 include $(INCLUDE_DIR)/package.mk
 include $(INCLUDE_DIR)/migrations.mk

@@ -208,8 +208,10 @@ setup_json() {
 		ucidef_set_interface_default_macaddr "lan" "$(mtd_get_mac_binary config 0x0)"
 		ucidef_set_interface_default_macaddr "wan" "$(macaddr_add "$(mtd_get_mac_binary config 0x0)" 1)"
 		ucidef_add_static_modem_info "$model" "1-1" "1" "primary"
-		[ "${model:6:1}" = "1" ] && ucidef_set_hwinfo mobile wifi nat_offloading port_link \
-		ethernet || ucidef_set_hwinfo mobile wifi ethernet ios nat_offloading port_link
+		opt_io="ios"
+		[ "${model:3:1}" = "3" ] && [ "${model:7:1}" = "1" ] && opt_io=""
+		[ "${model:3:1}" = "2" ] && [ "${model:6:1}" = "1" ] && opt_io=""
+		ucidef_set_hwinfo mobile wifi ethernet nat_offloading port_link "$opt_io"
 		[ "${model:4:2}" = "60" ] && ucidef_set_release_version "7.4.1"
 		ucidef_set_network_options "vlans" 16 "max_mtu" 1500 "readonly_vlans" 2
 		;;

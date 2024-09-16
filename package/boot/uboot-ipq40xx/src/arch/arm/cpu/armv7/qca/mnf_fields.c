@@ -72,6 +72,7 @@ mnf_field_t mnf_fields[] = {
 	{ 's', "sn",        "Serial number",       0x30,  10, restore_num    },
 	{ 'b', "batch",     "Batch number",        0x40,   4, restore_num    },
 	{ 'H', "hwver",     "Hardware version",    0x50,   4, restore_num    },
+	{ 'B', "branch",    "Hardware branch",     0x58,   4, clear          },
 	{ 'W', "wifi_pass", "WiFi password",       0x90,  16, clear          },
 	{ 'x', "passwd",    "Linux password",      0xA0, 106, clear          },
 	{ '1', "sim1",      "SIM 1 PIN",        0x10000,   4, clear          },

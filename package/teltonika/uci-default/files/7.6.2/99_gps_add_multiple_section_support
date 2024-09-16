@@ -1,0 +1,57 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+CONFIG_GPS=gps
+CONFIG_AVL=avl
+
+NMEA_SECTION_NAME="nmea_forwarding"
+HTTPS_SECTION_NAME="https"
+AVL_SECTION_NAME="avl"
+
+HOST_INFO_OPT="host_info"
+
+merge_host() {
+	local CONFIG=$1
+	local SECTION_NAME=$2
+
+	config_load "$CONFIG" || return
+
+	config_get HOSTNAME "$SECTION_NAME" "hostname" ""
+	config_get PORT "$SECTION_NAME" "port" ""
+	config_get PROTOCOL "$SECTION_NAME" "proto" ""
+
+	uci_remove "$CONFIG" "$SECTION_NAME" "hostname"
+	uci_remove "$CONFIG" "$SECTION_NAME" "port"
+	uci_remove "$CONFIG" "$SECTION_NAME" "proto"
+
+	# WebUI displays default values without host_info, so just return.
+	[ -z "$HOSTNAME" ] || [ -z "$PORT" ] || [ -z "$PROTOCOL" ] && return
+
+	host_info="$HOSTNAME;$PORT;$PROTOCOL"
+
+	uci_add_list "$CONFIG" "$SECTION_NAME" "$HOST_INFO_OPT" "$host_info"
+}
+
+migrate_https_url_to_list() {
+	local CONFIG=$1
+	local SECTION_NAME=$2
+
+	config_load "$CONFIG" || return
+
+	config_get HOSTNAME "$SECTION_NAME" "hostname" ""
+
+	[ -z "$HOSTNAME" ] && return
+
+	uci_remove "$CONFIG" "$SECTION_NAME" "hostname"
+	uci_add_list "$CONFIG" "$SECTION_NAME" "hostname" "$HOSTNAME"
+}
+
+merge_host "$CONFIG_GPS" "$NMEA_SECTION_NAME"
+merge_host "$CONFIG_AVL" "$AVL_SECTION_NAME"
+migrate_https_url_to_list "$CONFIG_GPS" "$HTTPS_SECTION_NAME"
+
+uci_commit "$CONFIG_GPS"
+uci_commit "$CONFIG_AVL"
+
+exit 0

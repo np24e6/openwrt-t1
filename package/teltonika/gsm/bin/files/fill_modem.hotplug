@@ -1,5 +1,7 @@
 #!/bin/sh
 
+PROG=/etc/hotplug.d/gsm/2-fill-modem-info
+
 [ "$EVENT_NAME" = "gsm.new_modem" ] || exit 0
 
 CFG=/etc/board.json
@@ -25,4 +27,4 @@ for modem in $modems; do
     json_select ..
 done
 
-
+rm "$PROG"

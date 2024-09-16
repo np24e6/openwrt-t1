@@ -11,7 +11,7 @@ include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=uboot
 
-PKG_SOURCE_VERSION:=2.1
+PKG_SOURCE_VERSION:=2.2
 
 DEVICE_VENDOR='teltonika'
 

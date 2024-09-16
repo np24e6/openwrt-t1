@@ -12,6 +12,13 @@
 # when listing profiles.
 LIST_COUNT=0
 
+PID_FILE="/tmp/run/profiler.pid"
+
+clean_exit() {
+	rm -f "$PID_FILE"
+	exit $1
+}
+
 # used when listing profiles
 handle_profile() {
 	config="$1"
@@ -46,7 +53,7 @@ check_profile_exists() {
 
 	[ "$config" = "$new_name" ] && {
 		echo "{\"status\": 1, \"error\": \"profile '$new_name' already exists\"}"
-		exit 1
+		clean_exit 1
 	}
 }
 
@@ -57,14 +64,14 @@ check_name() {
 
 	[ $length -lt 1 ] && {
 		echo '{"status": 22, "error": "no argument provided"}'
-		exit 1
+		clean_exit 1
 	}
 
 	# check name len
 	# limit set to be the same as-is in the webUI.
 	[ $length -gt 20 ] && {
 		echo '{"status": 22, "error": "given profile name too long (limit: 20 characters)"}'
-		exit 1
+		clean_exit 1
 	}
 
 	# Sanitize input
@@ -77,7 +84,7 @@ check_name() {
 	# other scripts/programs
 	[ "$sanitized" != "$name" ] && {
 		echo '{"status": 22, "error": "invalid profile name"}'
-		exit 1
+		clean_exit 1
 	}
 }
 
@@ -88,7 +95,7 @@ check_default() {
 	# Check if names won't interfere with the default profile files in /etc/profiles
 	[ "$name" = "default" ] || [ "$name" = "template" ] && {
 		echo '{"status": 22, "error": "profile name cannot be '\''template'\'' or '\''default'\''"}'
-		exit 1
+		clean_exit 1
 	}
 }
 
@@ -150,7 +157,7 @@ call_handle_change() {
 		echo '{ "status": 0 }'
 	else
 		echo '{ "status": 2, "error": "profile not found"}'
-		exit 1
+		clean_exit 1
 	fi
 }
 
@@ -180,7 +187,7 @@ call_handle_update() {
 
 	[ -f "$prof_archive" ] || {
 		echo '{ "status": 3, "error": "error updating current profile"}'
-		exit 1
+		clean_exit 1
 	}
 
 	[ "$quiet" = "-q" ] || echo '{ "status": 0 }'
@@ -217,7 +224,7 @@ call_handle_remove() {
 
 	[ $err_chk -eq 1 ] && {
 		echo '{"status": 5, "error": "encountered errors while removing profile"}'
-		exit 1
+		clean_exit 1
 	}
 
 	uci_remove profiles "$name"
@@ -262,7 +269,7 @@ call_handle_diff() {
 		echo '{ "status": 0, "diff": ['
 		profile.sh -d "${profiles}${name}"*.md5 | sed 's/^/\"/; s/$/\",/'
 		echo ']}'
-		exit
+		return
 	}
 
 	if [ -f "$profiles$(uci_get profiles $name md5file \".\")" ]; then
@@ -271,7 +278,7 @@ call_handle_diff() {
 		echo ']}'
 	else
 		echo '{"status": 2, "error": "could not find profile"}'
-		exit 1
+		clean_exit 1
 	fi
 }
 
@@ -294,6 +301,14 @@ main() {
 		current="$(uci_get profiles general profile default)"
 		now="$(date +%s)" # unix time
 
+		[ "$2" == "list" ] || {
+			[ -f "$PID_FILE" ] && {
+				echo '{"status": 99, "error": "profile action already in progress"}'
+				exit 1
+			}
+			echo "$$" > "$PID_FILE"
+		}
+
 		case "$2" in
 		create)
 			call_handle_create "$profiles" "$current" "$now"
@@ -315,6 +330,7 @@ main() {
 			call_handle_diff "$profiles"
 			;;
 		esac
+		rm -f "$PID_FILE"
 		json_cleanup
 		;;
 	esac

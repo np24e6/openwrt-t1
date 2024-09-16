@@ -1,3 +1,32 @@
+# 2024-01-11 00.07.06.3
+
+### Improvements
+
+* DLMS Client: increased connection timeout for TCP sockets (ID: 16019)
+* Mobile: improved performance of scripts and events called by mobile services (ID: 14502)
+* GPS, AVL: added multiple hosts (ID: 15621)
+* Guest networks: added radio select field to mach SSID settings (ID: 15204)
+* System: improved keep-settings check with different firmware types (ID: 16020)
+
+### Fix
+
+* Kernel: patched CVE-2024-0193 vulnerability (ID: 16027)
+* Profiles: fixed profile migrations, added error handling for trying to change profile while it's still applying (ID: 16116)
+* Setup wizard: fixed wireless setup wizard showing guest network as second wireless config with starting config on tcr100 (ID: 16033)
+* WebUI: fixed an issue where mobile, wireless and port-based vlan pages were disappearing (ID: 16129)
+* WebUI: fixed broken events log sorting and search (ID: 16018)
+* OpenSSH: updated to 9.6p1 version to fix CVE-2023-51385 and CVE-2023-51384 (ID: 15994)
+* MQTT Modbus Gateway: fixed function 5 not working with high register numbers (ID: 15568)
+* Kernel: patched CVE-2023-51779 vulnerability (ID: 15995)
+* DLMS Client: fixed memory leak with profile generic COSEM class (ID: 15787)
+
+# 2024-01-04 00.07.06.2
+
+### Fix
+
+* Password: fixed password resseting to default password instead of unique default password for TRB1 family devices (ID: 16032)
+
+
 # 2024-01-02 00.07.06.1
 
 ### Fix

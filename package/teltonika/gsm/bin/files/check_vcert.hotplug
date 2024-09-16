@@ -1,13 +1,23 @@
 #!/bin/sh
 
+PROG=/etc/hotplug.d/gsm/1-check_vcert
+
 [ "$EVENT_NAME" = "gsm.new_modem" ] || return
 [ "$OBJECT_NAME" = "gsm.modem0" ] || [ "$OBJECT_NAME" = "gsm.modem1" ] || return
 
 vcert="$(jsonfilter -i /etc/board.json -e '$.hwinfo.vcert')"
-[ "$vcert" = "true" ] && return
+[ "$vcert" = "true" ] && {
+        rm "$PROG"
+        return
+}
 
 vc="$(jsonfilter -s "$(ubus call "$OBJECT_NAME" info)" -e '$.vcert')"
 
-[ "$vc" = "true" ] || return
+[ "$vc" = "true" ] || {
+        rm "$PROG"
+        return
+}
 
 [ "$vcert" != "$vc" ] && sed -i 's/"vcert": false/"vcert": true/' /etc/board.json
+
+rm "$PROG"

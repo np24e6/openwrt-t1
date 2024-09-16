@@ -344,15 +344,6 @@ fwtool_check_upgrade_type() {
 			;;
 	esac
 
-	# downgrade when coming from develop/feature to release/hotfix
-	case "$current_branch" in
-		DEV|F*)
-			case "$fw_branch" in
-				R*|H*|GPL*) return 1;;
-			esac
-		;;
-	esac
-
 	local current_client="$(echo "$current_fw" | awk -F _ '{ print $NF }')"
 	local fw_client="$(echo "$img_fw" | awk -F _ '{ print $NF }')"
 

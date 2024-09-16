@@ -1,11 +1,11 @@
 diff --recursive --unified --new-file --no-dereference orig/.gitignore src/.gitignore
 --- orig/.gitignore	1970-01-01 00:00:00.000000000 +0000
-+++ src/.gitignore	2023-11-16 08:43:18.000000000 +0000
++++ src/.gitignore	2024-01-10 07:48:57.000000000 +0000
 @@ -0,0 +1 @@
 +.vscode/
 diff --recursive --unified --new-file --no-dereference orig/.gitlab-ci.yml src/.gitlab-ci.yml
 --- orig/.gitlab-ci.yml	1970-01-01 00:00:00.000000000 +0000
-+++ src/.gitlab-ci.yml	2023-11-16 08:43:18.000000000 +0000
++++ src/.gitlab-ci.yml	2024-01-10 07:48:57.000000000 +0000
 @@ -0,0 +1,20 @@
 +include:
 +  - project: teltonika/ci-templates
@@ -30,14 +30,14 @@ diff --recursive --unified --new-file --no-dereference orig/.gitlab-ci.yml src/.
 \ No newline at end of file
 diff --recursive --unified --new-file --no-dereference orig/.gitmodules src/.gitmodules
 --- orig/.gitmodules	1970-01-01 00:00:00.000000000 +0000
-+++ src/.gitmodules	2023-11-16 08:43:18.000000000 +0000
++++ src/.gitmodules	2024-01-10 07:48:57.000000000 +0000
 @@ -0,0 +1,3 @@
 +[submodule "test/support"]
 +	path = test/support
 +	url = git@git.teltonika.lt:teltonika/packages/unit_test_stubs.git
 diff --recursive --unified --new-file --no-dereference orig/Makefile src/Makefile
 --- orig/Makefile	1970-01-01 00:00:00.000000000 +0000
-+++ src/Makefile	2023-11-16 08:43:18.000000000 +0000
++++ src/Makefile	2024-01-10 07:48:57.000000000 +0000
 @@ -0,0 +1,21 @@
 +TARGET = dlms_client
 +
@@ -62,7 +62,7 @@ diff --recursive --unified --new-file --no-dereference orig/Makefile src/Makefil
 +	$(RM) $(OBJS) $(TARGET)
 diff --recursive --unified --new-file --no-dereference orig/README.md src/README.md
 --- orig/README.md	1970-01-01 00:00:00.000000000 +0000
-+++ src/README.md	2023-11-16 08:43:18.000000000 +0000
++++ src/README.md	2024-01-10 07:48:57.000000000 +0000
 @@ -0,0 +1,378 @@
 +# DLMS Master
 +
@@ -705,13 +705,13 @@ diff --recursive --unified --new-file --no-dereference orig/VS/GuruxDLMSClientEx
 \ No newline at end of file
 diff --recursive --unified --new-file --no-dereference orig/files/dlms_client.conf src/files/dlms_client.conf
 --- orig/files/dlms_client.conf	1970-01-01 00:00:00.000000000 +0000
-+++ src/files/dlms_client.conf	2023-11-16 08:43:18.000000000 +0000
++++ src/files/dlms_client.conf	2024-01-10 07:48:57.000000000 +0000
 @@ -0,0 +1,2 @@
 +config main 'main'
 +	option enabled '0'
 diff --recursive --unified --new-file --no-dereference orig/files/dlms_client.init src/files/dlms_client.init
 --- orig/files/dlms_client.init	1970-01-01 00:00:00.000000000 +0000
-+++ src/files/dlms_client.init	2023-11-16 08:43:18.000000000 +0000
++++ src/files/dlms_client.init	2024-01-10 07:48:57.000000000 +0000
 @@ -0,0 +1,42 @@
 +#!/bin/sh /etc/rc.common
 +
@@ -1078,7 +1078,7 @@ diff --recursive --unified --new-file --no-dereference orig/makefile src/makefil
 \ No newline at end of file
 diff --recursive --unified --new-file --no-dereference orig/project.yml src/project.yml
 --- orig/project.yml	1970-01-01 00:00:00.000000000 +0000
-+++ src/project.yml	2023-11-16 08:43:18.000000000 +0000
++++ src/project.yml	2024-01-10 07:48:57.000000000 +0000
 @@ -0,0 +1,150 @@
 +---
 +# This sample demonstrates running a collection of unit tests.
@@ -1232,7 +1232,7 @@ diff --recursive --unified --new-file --no-dereference orig/project.yml src/proj
 +    :html_title: "REPORT"
 diff --recursive --unified --new-file --no-dereference orig/src/attribute_converter.c src/src/attribute_converter.c
 --- orig/src/attribute_converter.c	1970-01-01 00:00:00.000000000 +0000
-+++ src/src/attribute_converter.c	2023-11-16 08:43:18.000000000 +0000
++++ src/src/attribute_converter.c	2024-01-10 07:48:57.000000000 +0000
 @@ -0,0 +1,2634 @@
 +#include "master.h"
 +
@@ -3870,8 +3870,8 @@ diff --recursive --unified --new-file --no-dereference orig/src/attribute_conver
 +}
 diff --recursive --unified --new-file --no-dereference orig/src/communication.c src/src/communication.c
 --- orig/src/communication.c	2023-11-10 10:15:18.000000000 +0000
-+++ src/src/communication.c	2023-11-16 08:43:18.000000000 +0000
-@@ -1,1179 +1,948 @@
++++ src/src/communication.c	2024-01-10 07:48:57.000000000 +0000
+@@ -1,1179 +1,951 @@
 -//
 -// --------------------------------------------------------------------------
 -//  Gurux Ltd
@@ -5074,8 +5074,8 @@ diff --recursive --unified --new-file --no-dereference orig/src/communication.c 
 +{
 +	struct pollfd fds[1] = { [0] = { .fd = fd, .events = POLLOUT } };
 +	int tries	     = 0;
-+	while (tries < 25) {
-+		int rc = poll(fds, 1, 0);
++	while (tries < 10) {
++		int rc = poll(fds, 1, 100);
 +
 +		if (rc < 0) {
 +			log(L_ERROR,, "Poll error while trying to connect: %s\n", strerror(errno));
@@ -5083,13 +5083,16 @@ diff --recursive --unified --new-file --no-dereference orig/src/communication.c 
 +		}
 +
 +		if ((fds[0].revents & POLLERR) || !fds[0].revents) {
-+			usleep(25);
++			usleep(10000);
 +			tries++;
 +			continue;
 +		}
 +
 +		if (fds[0].revents & POLLOUT) {
-+			return 0; //!< connected
++			int err = -1;
++			socklen_t err_size = sizeof(int);
++			getsockopt(fd, SOL_SOCKET, SO_ERROR, &err, &err_size);
++			return err;
 +		}
 +	}
 +
@@ -5974,7 +5977,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/communication.c 
          uint16_t pos, count;
          if ((ret = cl_parseObjectCount(&reply.data, &count)) != 0)
          {
-@@ -1183,721 +952,60 @@
+@@ -1183,721 +955,60 @@
          for (pos = 0; pos != count; ++pos)
          {
              memset(&obj, 0, sizeof(gxObject));
@@ -6746,8 +6749,8 @@ diff --recursive --unified --new-file --no-dereference orig/src/communication.c 
 \ No newline at end of file
 diff --recursive --unified --new-file --no-dereference orig/src/config.c src/src/config.c
 --- orig/src/config.c	1970-01-01 00:00:00.000000000 +0000
-+++ src/src/config.c	2023-11-16 08:43:18.000000000 +0000
-@@ -0,0 +1,1167 @@
++++ src/src/config.c	2024-01-10 07:48:57.000000000 +0000
+@@ -0,0 +1,1168 @@
 +#include "master.h"
 +
 +#include <libtlt_uci.h>
@@ -7869,6 +7872,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/config.c src/src
 +	if (c->type == TCP) {
 +		free(c->parameters.tcp.host);
 +		pthread_mutex_destroy(c->mutex);
++		free(c->mutex);
 +	} else {
 +		free(c->parameters.serial.device);
 +		free(c->parameters.serial.parity);
@@ -8006,8 +8010,8 @@ diff --recursive --unified --new-file --no-dereference orig/src/connection.c src
 -}
 diff --recursive --unified --new-file --no-dereference orig/src/cosem_group.c src/src/cosem_group.c
 --- orig/src/cosem_group.c	1970-01-01 00:00:00.000000000 +0000
-+++ src/src/cosem_group.c	2023-11-16 08:43:18.000000000 +0000
-@@ -0,0 +1,207 @@
++++ src/src/cosem_group.c	2024-01-10 07:48:57.000000000 +0000
+@@ -0,0 +1,210 @@
 +#include "master.h"
 +
 +#define BUFFER_ATTRIBUTE_INDEX 2
@@ -8024,6 +8028,8 @@ diff --recursive --unified --new-file --no-dereference orig/src/cosem_group.c sr
 +	utl_append_to_str(&data, "{");
 +	for (size_t i = 0; i < group->cosem_object_count; i++) {
 +		cosem_object *cosem_object = group->cosem_objects[i];
++
++		log(L_DEBUG, "Reading object %zu/%zu", i + 1, group->cosem_object_count);
 +
 +		utl_append_obj_name(&data, cosem_object->name);
 +		utl_append_to_str(&data, "{");
@@ -8077,6 +8083,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/cosem_group.c sr
 +			utl_unlock_mutex_if_required(dev);
 +			utl_append_if_needed(&data, j, cosem_object->device_count - 1, ",");
 +			attr_free(&attrs);
++			oa_clear(&dev->settings.releasedObjects, 1);
 +		}
 +		utl_append_to_str(&data, "}");
 +		utl_append_if_needed(&data, i, group->cosem_object_count - 1, ",");
@@ -8272,7 +8279,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/getopt.c src/src
 -}
 diff --recursive --unified --new-file --no-dereference orig/src/main.c src/src/main.c
 --- orig/src/main.c	2023-11-10 10:15:18.000000000 +0000
-+++ src/src/main.c	2023-11-16 08:43:18.000000000 +0000
++++ src/src/main.c	2024-01-10 07:48:57.000000000 +0000
 @@ -1,785 +1,59 @@
 -//
 -// --------------------------------------------------------------------------
@@ -9115,8 +9122,8 @@ diff --recursive --unified --new-file --no-dereference orig/src/main.c src/src/m
 -
 diff --recursive --unified --new-file --no-dereference orig/src/master.c src/src/master.c
 --- orig/src/master.c	1970-01-01 00:00:00.000000000 +0000
-+++ src/src/master.c	2023-11-16 08:43:18.000000000 +0000
-@@ -0,0 +1,159 @@
++++ src/src/master.c	2024-01-10 07:48:57.000000000 +0000
+@@ -0,0 +1,161 @@
 +#include "master.h"
 +
 +#define SQL_TABLE	  "dlms_data"
@@ -9124,7 +9131,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/master.c src/src
 +#define DB_TIMEOUT	  30000
 +#define DB_MAX_PAGE_COUNT 1024 //!< Set maximum number of pages in database (each page is 4096B)
 +
-+#define DB_DELETE_COUNT   2000
++#define DB_DELETE_COUNT   100
 +#define DB_DELETE_QUERY   "DELETE FROM " SQL_TABLE " WHERE id IN (SELECT id FROM dlms_data ORDER BY id ASC LIMIT " UTL_STR(DB_DELETE_COUNT) ")"
 +#define DB_INSERT_QUERY	  "INSERT INTO " SQL_TABLE " VALUES (?, ?, ?, ?, ?)"
 +#define DB_QUERY_MAX_SIZE -1 //!< up to the first zero terminator
@@ -9221,6 +9228,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/master.c src/src
 +		mstr_write_group_data_to_db(group, data);
 +	end:
 +		free(data);
++		data = NULL;
 +		utl_smart_sleep(&t0, &tn, group->interval);
 +		TEST_BREAK
 +	}
@@ -9262,6 +9270,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/master.c src/src
 +		goto err;
 +	}
 +
++	log(L_DEBUG, "Record added to the database successfully");
 +err:
 +	sqlite3_reset(g_master->stmt_insert);
 +	sqlite3_clear_bindings(g_master->stmt_insert);
@@ -9278,7 +9287,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/master.c src/src
 +}
 diff --recursive --unified --new-file --no-dereference orig/src/master.h src/src/master.h
 --- orig/src/master.h	1970-01-01 00:00:00.000000000 +0000
-+++ src/src/master.h	2023-11-16 08:43:18.000000000 +0000
++++ src/src/master.h	2024-01-10 07:48:57.000000000 +0000
 @@ -0,0 +1,172 @@
 +#pragma once
 +
@@ -9454,7 +9463,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/master.h src/src
 +PUBLIC int com_get_association_view(connection *c, dlmsSettings *s);
 diff --recursive --unified --new-file --no-dereference orig/src/ubus.c src/src/ubus.c
 --- orig/src/ubus.c	1970-01-01 00:00:00.000000000 +0000
-+++ src/src/ubus.c	2023-11-16 08:43:18.000000000 +0000
++++ src/src/ubus.c	2024-01-10 07:48:57.000000000 +0000
 @@ -0,0 +1,590 @@
 +#include "master.h"
 +
@@ -10048,7 +10057,7 @@ diff --recursive --unified --new-file --no-dereference orig/src/ubus.c src/src/u
 +}
 diff --recursive --unified --new-file --no-dereference orig/src/utils.c src/src/utils.c
 --- orig/src/utils.c	1970-01-01 00:00:00.000000000 +0000
-+++ src/src/utils.c	2023-11-16 08:43:18.000000000 +0000
++++ src/src/utils.c	2024-01-10 07:48:57.000000000 +0000
 @@ -0,0 +1,175 @@
 +#include "master.h"
 +
@@ -10227,12 +10236,12 @@ diff --recursive --unified --new-file --no-dereference orig/src/utils.c src/src/
 +}
 diff --recursive --unified --new-file --no-dereference orig/test/include/config.h src/test/include/config.h
 --- orig/test/include/config.h	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/include/config.h	2023-11-16 08:43:18.000000000 +0000
++++ src/test/include/config.h	2024-01-10 07:48:57.000000000 +0000
 @@ -0,0 +1 @@
 +#include "master.h"
 diff --recursive --unified --new-file --no-dereference orig/test/include/config_info.h src/test/include/config_info.h
 --- orig/test/include/config_info.h	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/include/config_info.h	2023-11-16 08:43:18.000000000 +0000
++++ src/test/include/config_info.h	2024-01-10 07:48:57.000000000 +0000
 @@ -0,0 +1,71 @@
 +#include "master.h"
 +
@@ -10307,7 +10316,7 @@ diff --recursive --unified --new-file --no-dereference orig/test/include/config_
 +} dlms_cfg;
 diff --recursive --unified --new-file --no-dereference orig/test/include/cosem_group.h src/test/include/cosem_group.h
 --- orig/test/include/cosem_group.h	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/include/cosem_group.h	2023-11-16 08:43:18.000000000 +0000
++++ src/test/include/cosem_group.h	2024-01-10 07:48:57.000000000 +0000
 @@ -0,0 +1,6 @@
 +#include "master.h"
 +
@@ -10317,12 +10326,12 @@ diff --recursive --unified --new-file --no-dereference orig/test/include/cosem_g
 +PRIVATE int cg_format_group_data(char **data, object_attributes *attr, char *device_name);
 diff --recursive --unified --new-file --no-dereference orig/test/include/main.h src/test/include/main.h
 --- orig/test/include/main.h	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/include/main.h	2023-11-16 08:43:18.000000000 +0000
++++ src/test/include/main.h	2024-01-10 07:48:57.000000000 +0000
 @@ -0,0 +1 @@
 +#include "master.h"
 diff --recursive --unified --new-file --no-dereference orig/test/include/stub_config.h src/test/include/stub_config.h
 --- orig/test/include/stub_config.h	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/include/stub_config.h	2023-11-16 08:43:18.000000000 +0000
++++ src/test/include/stub_config.h	2024-01-10 07:48:57.000000000 +0000
 @@ -0,0 +1,15 @@
 +#include "config_info.h"
 +
@@ -10341,7 +10350,7 @@ diff --recursive --unified --new-file --no-dereference orig/test/include/stub_co
 +PRIVATE void cfg_free_dlms_cfg(dlms_cfg *dlms);
 diff --recursive --unified --new-file --no-dereference orig/test/include/stub_config_2.h src/test/include/stub_config_2.h
 --- orig/test/include/stub_config_2.h	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/include/stub_config_2.h	2023-11-16 08:43:18.000000000 +0000
++++ src/test/include/stub_config_2.h	2024-01-10 07:48:57.000000000 +0000
 @@ -0,0 +1,19 @@
 +#include "config_info.h"
 +
@@ -10364,7 +10373,7 @@ diff --recursive --unified --new-file --no-dereference orig/test/include/stub_co
 +PRIVATE void cfg_free_master(master *m);
 diff --recursive --unified --new-file --no-dereference orig/test/include/stub_config_free.h src/test/include/stub_config_free.h
 --- orig/test/include/stub_config_free.h	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/include/stub_config_free.h	2023-11-16 08:43:18.000000000 +0000
++++ src/test/include/stub_config_free.h	2024-01-10 07:48:57.000000000 +0000
 @@ -0,0 +1,11 @@
 +#include "config_info.h"
 +
@@ -10379,12 +10388,12 @@ diff --recursive --unified --new-file --no-dereference orig/test/include/stub_co
 +PRIVATE void cfg_free_physical_device(physical_device *d);
 diff --recursive --unified --new-file --no-dereference orig/test/include/stub_config_free_2.h src/test/include/stub_config_free_2.h
 --- orig/test/include/stub_config_free_2.h	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/include/stub_config_free_2.h	2023-11-16 08:43:18.000000000 +0000
++++ src/test/include/stub_config_free_2.h	2024-01-10 07:48:57.000000000 +0000
 @@ -0,0 +1 @@
 +#include "config_info.h"
 diff --recursive --unified --new-file --no-dereference orig/test/include/stub_cosem_group.h src/test/include/stub_cosem_group.h
 --- orig/test/include/stub_cosem_group.h	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/include/stub_cosem_group.h	2023-11-16 08:43:18.000000000 +0000
++++ src/test/include/stub_cosem_group.h	2024-01-10 07:48:57.000000000 +0000
 @@ -0,0 +1,24 @@
 +#include "master.h"
 +
@@ -10412,7 +10421,7 @@ diff --recursive --unified --new-file --no-dereference orig/test/include/stub_co
 +PUBLIC void utl_add_error_message(char **data, char *device_name, const char *err_msg, const int err_num);
 diff --recursive --unified --new-file --no-dereference orig/test/include/stub_cosem_group_2.h src/test/include/stub_cosem_group_2.h
 --- orig/test/include/stub_cosem_group_2.h	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/include/stub_cosem_group_2.h	2023-11-16 08:43:18.000000000 +0000
++++ src/test/include/stub_cosem_group_2.h	2024-01-10 07:48:57.000000000 +0000
 @@ -0,0 +1,14 @@
 +#include "master.h"
 +
@@ -10430,7 +10439,7 @@ diff --recursive --unified --new-file --no-dereference orig/test/include/stub_co
 +char *attr_to_json(object_attributes *attributes);
 diff --recursive --unified --new-file --no-dereference orig/test/include/stub_cosem_group_3.h src/test/include/stub_cosem_group_3.h
 --- orig/test/include/stub_cosem_group_3.h	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/include/stub_cosem_group_3.h	2023-11-16 08:43:18.000000000 +0000
++++ src/test/include/stub_cosem_group_3.h	2024-01-10 07:48:57.000000000 +0000
 @@ -0,0 +1,19 @@
 +#include "master.h"
 +
@@ -10453,7 +10462,7 @@ diff --recursive --unified --new-file --no-dereference orig/test/include/stub_co
 +PUBLIC int com_close(connection *c, dlmsSettings *s);
 diff --recursive --unified --new-file --no-dereference orig/test/include/stub_external.h src/test/include/stub_external.h
 --- orig/test/include/stub_external.h	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/include/stub_external.h	2023-11-16 08:43:18.000000000 +0000
++++ src/test/include/stub_external.h	2024-01-10 07:48:57.000000000 +0000
 @@ -0,0 +1,102 @@
 +#ifndef __STUB_EXTERNAL_H__  // pragma once generates warnings for this one for some reason
 +#define __STUB_EXTERNAL_H__  // so using traditional include guard instead
@@ -10559,7 +10568,7 @@ diff --recursive --unified --new-file --no-dereference orig/test/include/stub_ex
 +#endif
 diff --recursive --unified --new-file --no-dereference orig/test/include/stub_main.h src/test/include/stub_main.h
 --- orig/test/include/stub_main.h	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/include/stub_main.h	2023-11-16 08:43:18.000000000 +0000
++++ src/test/include/stub_main.h	2024-01-10 07:48:57.000000000 +0000
 @@ -0,0 +1,13 @@
 +#include "master.h"
 +
@@ -10576,7 +10585,7 @@ diff --recursive --unified --new-file --no-dereference orig/test/include/stub_ma
 +PUBLIC int utl_parse_args(int argc, char **argv, log_level_type *debug_lvl);
 diff --recursive --unified --new-file --no-dereference orig/test/include/stub_master_2.h src/test/include/stub_master_2.h
 --- orig/test/include/stub_master_2.h	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/include/stub_master_2.h	2023-11-16 08:43:18.000000000 +0000
++++ src/test/include/stub_master_2.h	2024-01-10 07:48:57.000000000 +0000
 @@ -0,0 +1,5 @@
 +#include "master.h"
 +
@@ -10585,14 +10594,14 @@ diff --recursive --unified --new-file --no-dereference orig/test/include/stub_ma
 +PUBLIC void mstr_write_group_data_to_db(cosem_group *group, char *data);
 diff --recursive --unified --new-file --no-dereference orig/test/include/stub_ubus.h src/test/include/stub_ubus.h
 --- orig/test/include/stub_ubus.h	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/include/stub_ubus.h	2023-11-16 08:43:18.000000000 +0000
++++ src/test/include/stub_ubus.h	2024-01-10 07:48:57.000000000 +0000
 @@ -0,0 +1,3 @@
 +#include "master.h"
 +
 +PRIVATE int validate_key(const char *key, size_t len);
 diff --recursive --unified --new-file --no-dereference orig/test/include/stub_ubus_2.h src/test/include/stub_ubus_2.h
 --- orig/test/include/stub_ubus_2.h	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/include/stub_ubus_2.h	2023-11-16 08:43:18.000000000 +0000
++++ src/test/include/stub_ubus_2.h	2024-01-10 07:48:57.000000000 +0000
 @@ -0,0 +1,15 @@
 +#include "master.h"
 +
@@ -10611,7 +10620,7 @@ diff --recursive --unified --new-file --no-dereference orig/test/include/stub_ub
 +PUBLIC void utl_unlock_mutex_if_required(physical_device *d);
 diff --recursive --unified --new-file --no-dereference orig/test/include/stub_ubus_3.h src/test/include/stub_ubus_3.h
 --- orig/test/include/stub_ubus_3.h	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/include/stub_ubus_3.h	2023-11-16 08:43:18.000000000 +0000
++++ src/test/include/stub_ubus_3.h	2024-01-10 07:48:57.000000000 +0000
 @@ -0,0 +1,5 @@
 +#include "master.h"
 +
@@ -10620,21 +10629,21 @@ diff --recursive --unified --new-file --no-dereference orig/test/include/stub_ub
 +PRIVATE cosem_object *parse_cosem_object(struct blob_attr *b);
 diff --recursive --unified --new-file --no-dereference orig/test/include/stub_utils.h src/test/include/stub_utils.h
 --- orig/test/include/stub_utils.h	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/include/stub_utils.h	2023-11-16 08:43:18.000000000 +0000
++++ src/test/include/stub_utils.h	2024-01-10 07:48:57.000000000 +0000
 @@ -0,0 +1,3 @@
 +#include "master.h"
 +
 +PUBLIC void utl_add_error_message(char **data, char *device_name, const char *err_msg, const int err_num);
 diff --recursive --unified --new-file --no-dereference orig/test/include/stub_utils_2.h src/test/include/stub_utils_2.h
 --- orig/test/include/stub_utils_2.h	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/include/stub_utils_2.h	2023-11-16 08:43:18.000000000 +0000
++++ src/test/include/stub_utils_2.h	2024-01-10 07:48:57.000000000 +0000
 @@ -0,0 +1,3 @@
 +#include "master.h"
 +
 +PUBLIC void utl_append_to_str(char **source, const char *values);
 diff --recursive --unified --new-file --no-dereference orig/test/include/stub_utils_3.h src/test/include/stub_utils_3.h
 --- orig/test/include/stub_utils_3.h	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/include/stub_utils_3.h	2023-11-16 08:43:18.000000000 +0000
++++ src/test/include/stub_utils_3.h	2024-01-10 07:48:57.000000000 +0000
 @@ -0,0 +1,4 @@
 +#include "master.h"
 +
@@ -10642,29 +10651,29 @@ diff --recursive --unified --new-file --no-dereference orig/test/include/stub_ut
 +PUBLIC void utl_append_obj_name(char **data, char *name);
 diff --recursive --unified --new-file --no-dereference orig/test/include/ubus.h src/test/include/ubus.h
 --- orig/test/include/ubus.h	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/include/ubus.h	2023-11-16 08:43:18.000000000 +0000
++++ src/test/include/ubus.h	2024-01-10 07:48:57.000000000 +0000
 @@ -0,0 +1 @@
 +#include "master.h"
 diff --recursive --unified --new-file --no-dereference orig/test/include/utils.h src/test/include/utils.h
 --- orig/test/include/utils.h	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/include/utils.h	2023-11-16 08:43:18.000000000 +0000
++++ src/test/include/utils.h	2024-01-10 07:48:57.000000000 +0000
 @@ -0,0 +1 @@
 +#include "master.h"
 diff --recursive --unified --new-file --no-dereference orig/test/support/.git src/test/support/.git
 --- orig/test/support/.git	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/support/.git	2023-11-16 08:43:18.000000000 +0000
++++ src/test/support/.git	2024-01-10 07:48:57.000000000 +0000
 @@ -0,0 +1 @@
 +gitdir: ../../.git/modules/test/support
 diff --recursive --unified --new-file --no-dereference orig/test/support/README.md src/test/support/README.md
 --- orig/test/support/README.md	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/support/README.md	2023-11-16 08:43:18.000000000 +0000
++++ src/test/support/README.md	2024-01-10 07:48:57.000000000 +0000
 @@ -0,0 +1,3 @@
 +# Stubs
 +
 +Stub headers that enable inline function mocking with Cmock.
 diff --recursive --unified --new-file --no-dereference orig/test/support/stub_blob.h src/test/support/stub_blob.h
 --- orig/test/support/stub_blob.h	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/support/stub_blob.h	2023-11-16 08:43:18.000000000 +0000
++++ src/test/support/stub_blob.h	2024-01-10 07:48:57.000000000 +0000
 @@ -0,0 +1,25 @@
 +#ifndef STUB_BLOB_H
 +#define STUB_BLOB_H
@@ -10693,7 +10702,7 @@ diff --recursive --unified --new-file --no-dereference orig/test/support/stub_bl
 +#endif // STUB_BLOB_H
 diff --recursive --unified --new-file --no-dereference orig/test/support/stub_blobmsg.h src/test/support/stub_blobmsg.h
 --- orig/test/support/stub_blobmsg.h	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/support/stub_blobmsg.h	2023-11-16 08:43:18.000000000 +0000
++++ src/test/support/stub_blobmsg.h	2024-01-10 07:48:57.000000000 +0000
 @@ -0,0 +1,41 @@
 +#ifndef STUB_BLOBMSG_H
 +#define STUB_BLOBMSG_H
@@ -10738,7 +10747,7 @@ diff --recursive --unified --new-file --no-dereference orig/test/support/stub_bl
 +#endif // STUB_BLOBMSG_H
 diff --recursive --unified --new-file --no-dereference orig/test/support/stub_libubus.h src/test/support/stub_libubus.h
 --- orig/test/support/stub_libubus.h	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/support/stub_libubus.h	2023-11-16 08:43:18.000000000 +0000
++++ src/test/support/stub_libubus.h	2024-01-10 07:48:57.000000000 +0000
 @@ -0,0 +1,47 @@
 +#ifndef STUB_LIBUBUS_H
 +#define STUB_LIBUBUS_H
@@ -10789,7 +10798,7 @@ diff --recursive --unified --new-file --no-dereference orig/test/support/stub_li
 +#endif // STUB_LIBUBUS_H
 diff --recursive --unified --new-file --no-dereference orig/test/support/stub_pthread.h src/test/support/stub_pthread.h
 --- orig/test/support/stub_pthread.h	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/support/stub_pthread.h	2023-11-16 08:43:18.000000000 +0000
++++ src/test/support/stub_pthread.h	2024-01-10 07:48:57.000000000 +0000
 @@ -0,0 +1,22 @@
 +#ifndef STUB_PTHREAD_H
 +#define STUB_PTHREAD_H
@@ -10815,7 +10824,7 @@ diff --recursive --unified --new-file --no-dereference orig/test/support/stub_pt
 +#endif
 diff --recursive --unified --new-file --no-dereference orig/test/support/stub_sqlite3.h src/test/support/stub_sqlite3.h
 --- orig/test/support/stub_sqlite3.h	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/support/stub_sqlite3.h	2023-11-16 08:43:18.000000000 +0000
++++ src/test/support/stub_sqlite3.h	2024-01-10 07:48:57.000000000 +0000
 @@ -0,0 +1,69 @@
 +#ifndef STUB_SQLITE3_H
 +#define STUB_SQLITE3_H
@@ -10888,7 +10897,7 @@ diff --recursive --unified --new-file --no-dereference orig/test/support/stub_sq
 +#endif
 diff --recursive --unified --new-file --no-dereference orig/test/support/stub_stat.h src/test/support/stub_stat.h
 --- orig/test/support/stub_stat.h	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/support/stub_stat.h	2023-11-16 08:43:18.000000000 +0000
++++ src/test/support/stub_stat.h	2024-01-10 07:48:57.000000000 +0000
 @@ -0,0 +1,16 @@
 +#ifndef STUB_STAT_H
 +#define STUB_STAT_H
@@ -10908,7 +10917,7 @@ diff --recursive --unified --new-file --no-dereference orig/test/support/stub_st
 +#endif // STUB_STAT_H
 diff --recursive --unified --new-file --no-dereference orig/test/support/stub_stdio.h src/test/support/stub_stdio.h
 --- orig/test/support/stub_stdio.h	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/support/stub_stdio.h	2023-11-16 08:43:18.000000000 +0000
++++ src/test/support/stub_stdio.h	2024-01-10 07:48:57.000000000 +0000
 @@ -0,0 +1,25 @@
 +#ifndef STUB_STDIO_H
 +#define STUB_STDIO_H
@@ -10937,7 +10946,7 @@ diff --recursive --unified --new-file --no-dereference orig/test/support/stub_st
 +#endif // STUB_STDIO_H
 diff --recursive --unified --new-file --no-dereference orig/test/support/stub_sysinfo.h src/test/support/stub_sysinfo.h
 --- orig/test/support/stub_sysinfo.h	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/support/stub_sysinfo.h	2023-11-16 08:43:18.000000000 +0000
++++ src/test/support/stub_sysinfo.h	2024-01-10 07:48:57.000000000 +0000
 @@ -0,0 +1,22 @@
 +#ifndef STUB_SYSINFO_H
 +#define STUB_SYSINFO_H
@@ -10963,7 +10972,7 @@ diff --recursive --unified --new-file --no-dereference orig/test/support/stub_sy
 +#endif
 diff --recursive --unified --new-file --no-dereference orig/test/support/stub_uci.h src/test/support/stub_uci.h
 --- orig/test/support/stub_uci.h	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/support/stub_uci.h	2023-11-16 08:43:18.000000000 +0000
++++ src/test/support/stub_uci.h	2024-01-10 07:48:57.000000000 +0000
 @@ -0,0 +1,43 @@
 +#ifndef STUB_UCI_H
 +#define STUB_UCI_H
@@ -11010,7 +11019,7 @@ diff --recursive --unified --new-file --no-dereference orig/test/support/stub_uc
 +#endif // STUB_UCI_H
 diff --recursive --unified --new-file --no-dereference orig/test/support/stub_uloop.h src/test/support/stub_uloop.h
 --- orig/test/support/stub_uloop.h	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/support/stub_uloop.h	2023-11-16 08:43:18.000000000 +0000
++++ src/test/support/stub_uloop.h	2024-01-10 07:48:57.000000000 +0000
 @@ -0,0 +1,25 @@
 +#ifndef STUB_ULOOP_H
 +#define STUB_ULOOP_H
@@ -11039,7 +11048,7 @@ diff --recursive --unified --new-file --no-dereference orig/test/support/stub_ul
 +#endif // STUB_ULOOP_H
 diff --recursive --unified --new-file --no-dereference orig/test/test_config.c src/test/test_config.c
 --- orig/test/test_config.c	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/test_config.c	2023-11-16 08:43:18.000000000 +0000
++++ src/test/test_config.c	2024-01-10 07:48:57.000000000 +0000
 @@ -0,0 +1,802 @@
 +#ifndef TEST
 +#define TEST
@@ -11845,7 +11854,7 @@ diff --recursive --unified --new-file --no-dereference orig/test/test_config.c s
 +#endif
 diff --recursive --unified --new-file --no-dereference orig/test/test_config_2.c src/test/test_config_2.c
 --- orig/test/test_config_2.c	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/test_config_2.c	2023-11-16 08:43:18.000000000 +0000
++++ src/test/test_config_2.c	2024-01-10 07:48:57.000000000 +0000
 @@ -0,0 +1,1266 @@
 +#ifndef TEST
 +#define TEST
@@ -13115,7 +13124,7 @@ diff --recursive --unified --new-file --no-dereference orig/test/test_config_2.c
 +#endif
 diff --recursive --unified --new-file --no-dereference orig/test/test_config_free.c src/test/test_config_free.c
 --- orig/test/test_config_free.c	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/test_config_free.c	2023-11-16 08:43:18.000000000 +0000
++++ src/test/test_config_free.c	2024-01-10 07:48:57.000000000 +0000
 @@ -0,0 +1,132 @@
 +#ifndef TEST
 +#define TEST
@@ -13251,7 +13260,7 @@ diff --recursive --unified --new-file --no-dereference orig/test/test_config_fre
 +#endif
 diff --recursive --unified --new-file --no-dereference orig/test/test_config_free_2.c src/test/test_config_free_2.c
 --- orig/test/test_config_free_2.c	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/test_config_free_2.c	2023-11-16 08:43:18.000000000 +0000
++++ src/test/test_config_free_2.c	2024-01-10 07:48:57.000000000 +0000
 @@ -0,0 +1,201 @@
 +#ifndef TEST
 +#define TEST
@@ -13456,7 +13465,7 @@ diff --recursive --unified --new-file --no-dereference orig/test/test_config_fre
 +#endif
 diff --recursive --unified --new-file --no-dereference orig/test/test_cosem_group.c src/test/test_cosem_group.c
 --- orig/test/test_cosem_group.c	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/test_cosem_group.c	2023-11-16 08:43:18.000000000 +0000
++++ src/test/test_cosem_group.c	2024-01-10 07:48:57.000000000 +0000
 @@ -0,0 +1,111 @@
 +#ifndef TEST
 +#define TEST
@@ -13571,7 +13580,7 @@ diff --recursive --unified --new-file --no-dereference orig/test/test_cosem_grou
 +#endif
 diff --recursive --unified --new-file --no-dereference orig/test/test_cosem_group_2.c src/test/test_cosem_group_2.c
 --- orig/test/test_cosem_group_2.c	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/test_cosem_group_2.c	2023-11-16 08:43:18.000000000 +0000
++++ src/test/test_cosem_group_2.c	2024-01-10 07:48:57.000000000 +0000
 @@ -0,0 +1,368 @@
 +#ifndef TEST
 +#define TEST
@@ -13943,7 +13952,7 @@ diff --recursive --unified --new-file --no-dereference orig/test/test_cosem_grou
 +#endif
 diff --recursive --unified --new-file --no-dereference orig/test/test_cosem_group_3.c src/test/test_cosem_group_3.c
 --- orig/test/test_cosem_group_3.c	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/test_cosem_group_3.c	2023-11-16 08:43:18.000000000 +0000
++++ src/test/test_cosem_group_3.c	2024-01-10 07:48:57.000000000 +0000
 @@ -0,0 +1,402 @@
 +#ifndef TEST
 +#define TEST
@@ -14350,7 +14359,7 @@ diff --recursive --unified --new-file --no-dereference orig/test/test_cosem_grou
 \ No newline at end of file
 diff --recursive --unified --new-file --no-dereference orig/test/test_main.c src/test/test_main.c
 --- orig/test/test_main.c	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/test_main.c	2023-11-16 08:43:18.000000000 +0000
++++ src/test/test_main.c	2024-01-10 07:48:57.000000000 +0000
 @@ -0,0 +1,158 @@
 +#ifndef TEST
 +#define TEST
@@ -14512,7 +14521,7 @@ diff --recursive --unified --new-file --no-dereference orig/test/test_main.c src
 +#endif
 diff --recursive --unified --new-file --no-dereference orig/test/test_master.c src/test/test_master.c
 --- orig/test/test_master.c	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/test_master.c	2023-11-16 08:43:18.000000000 +0000
++++ src/test/test_master.c	2024-01-10 07:48:57.000000000 +0000
 @@ -0,0 +1,427 @@
 +#ifndef TEST
 +#define TEST
@@ -14943,7 +14952,7 @@ diff --recursive --unified --new-file --no-dereference orig/test/test_master.c s
 +#endif
 diff --recursive --unified --new-file --no-dereference orig/test/test_master_2.c src/test/test_master_2.c
 --- orig/test/test_master_2.c	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/test_master_2.c	2023-11-16 08:43:18.000000000 +0000
++++ src/test/test_master_2.c	2024-01-10 07:48:57.000000000 +0000
 @@ -0,0 +1,87 @@
 +#ifndef TEST
 +#define TEST
@@ -15034,7 +15043,7 @@ diff --recursive --unified --new-file --no-dereference orig/test/test_master_2.c
 +#endif
 diff --recursive --unified --new-file --no-dereference orig/test/test_ubus.c src/test/test_ubus.c
 --- orig/test/test_ubus.c	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/test_ubus.c	2023-11-16 08:43:18.000000000 +0000
++++ src/test/test_ubus.c	2024-01-10 07:48:57.000000000 +0000
 @@ -0,0 +1,517 @@
 +#ifndef TEST
 +#define TEST
@@ -15555,7 +15564,7 @@ diff --recursive --unified --new-file --no-dereference orig/test/test_ubus.c src
 +#endif
 diff --recursive --unified --new-file --no-dereference orig/test/test_ubus_2.c src/test/test_ubus_2.c
 --- orig/test/test_ubus_2.c	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/test_ubus_2.c	2023-11-16 08:43:18.000000000 +0000
++++ src/test/test_ubus_2.c	2024-01-10 07:48:57.000000000 +0000
 @@ -0,0 +1,371 @@
 +#ifndef TEST
 +#define TEST
@@ -15930,7 +15939,7 @@ diff --recursive --unified --new-file --no-dereference orig/test/test_ubus_2.c s
 +#endif
 diff --recursive --unified --new-file --no-dereference orig/test/test_ubus_3.c src/test/test_ubus_3.c
 --- orig/test/test_ubus_3.c	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/test_ubus_3.c	2023-11-16 08:43:18.000000000 +0000
++++ src/test/test_ubus_3.c	2024-01-10 07:48:57.000000000 +0000
 @@ -0,0 +1,543 @@
 +#ifndef TEST
 +#define TEST
@@ -16477,7 +16486,7 @@ diff --recursive --unified --new-file --no-dereference orig/test/test_ubus_3.c s
 +#endif
 diff --recursive --unified --new-file --no-dereference orig/test/test_utils.c src/test/test_utils.c
 --- orig/test/test_utils.c	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/test_utils.c	2023-11-16 08:43:18.000000000 +0000
++++ src/test/test_utils.c	2024-01-10 07:48:57.000000000 +0000
 @@ -0,0 +1,207 @@
 +#ifndef TEST
 +#define TEST
@@ -16688,7 +16697,7 @@ diff --recursive --unified --new-file --no-dereference orig/test/test_utils.c sr
 +#endif
 diff --recursive --unified --new-file --no-dereference orig/test/test_utils_2.c src/test/test_utils_2.c
 --- orig/test/test_utils_2.c	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/test_utils_2.c	2023-11-16 08:43:18.000000000 +0000
++++ src/test/test_utils_2.c	2024-01-10 07:48:57.000000000 +0000
 @@ -0,0 +1,291 @@
 +#ifndef TEST
 +#define TEST
@@ -16983,7 +16992,7 @@ diff --recursive --unified --new-file --no-dereference orig/test/test_utils_2.c 
 +#endif
 diff --recursive --unified --new-file --no-dereference orig/test/test_utils_3.c src/test/test_utils_3.c
 --- orig/test/test_utils_3.c	1970-01-01 00:00:00.000000000 +0000
-+++ src/test/test_utils_3.c	2023-11-16 08:43:18.000000000 +0000
++++ src/test/test_utils_3.c	2024-01-10 07:48:57.000000000 +0000
 @@ -0,0 +1,40 @@
 +
 +#ifndef TEST
