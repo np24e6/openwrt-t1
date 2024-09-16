@@ -6,7 +6,7 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=stm32flasher
 
-PKG_SOURCE_VERSION:=2.6.2
+PKG_SOURCE_VERSION:=2.7
 
 include $(INCLUDE_DIR)/package.mk
 
@@ -14,7 +14,7 @@ define Package/stm32flasher
 	SECTION:=base
 	CATEGORY:=Base system
 	TITLE:=Flasher utility for STM32
-	DEPENDS:=+libubus +libubox +libblobmsg-json
+	DEPENDS:=+libgpiod
 endef
 
 

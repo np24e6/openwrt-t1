@@ -4,7 +4,14 @@ CFG=$1
 
 [ -n "$CFG" ] || CFG=/etc/board.json
 
-[ -d "/etc/board.d/" -a ! -s "$CFG" ] && {
+[ "$CFG" = "/etc/board.json" ] && [ -s "$CFG" ] && {
+	[ -z "$(jsonfilter -i "$CFG" -q -e '@.model.id' )" ] && {
+		echo  "board_detect: board.json corrupted. Reparing..." | tee /dev/kmsg
+		rm "$CFG"
+	}
+}
+
+[ -d "/etc/board.d/" ] && [ ! -s "$CFG" ] && {
 	for a in $(ls /etc/board.d/*); do
 		[ -x $a ] || continue;
 		$(. $a)

@@ -17,7 +17,7 @@ define KernelPackage/mmc-spi
   FILES:=\
 	$(if $(CONFIG_OF),$(LINUX_DIR)/drivers/mmc/host/of_mmc_spi.ko) \
 	$(LINUX_DIR)/drivers/mmc/host/mmc_spi.ko
-  AUTOLOAD_LATE:=$(call AutoProbe,$(if $(CONFIG_OF),of_mmc_spi) mmc_spi)
+  AUTOLOAD:=$(call AutoProbe,$(if $(CONFIG_OF),of_mmc_spi) mmc_spi,1)
 endef
 
 define KernelPackage/mmc-spi/description

@@ -441,7 +441,7 @@ proto_qmux_teardown() {
 
 	mif=$(cat "/var/run/${conn_proto}/${interface}.up" 2>/dev/null | head -1)
 	qmiif=$(cat "/var/run/${conn_proto}/${interface}.up" 2>/dev/null | tail -1)
-	remove_qmimux "$qmiif" "$mif"
+
 	rm -f "/var/run/${conn_proto}/${interface}.up" 2> /dev/null
 
 	clear_connection_values "$interface" "$device" 4 "$conn_proto"
@@ -461,6 +461,9 @@ proto_qmux_teardown() {
 		swconfig dev switch0 set soft_reset 5 &
 		rm -f "$braddr_f" 2> /dev/null
 	}
+
+	# Remove device after interfaces are down
+	remove_qmimux "$qmiif" "$mif"
 
 	#Clear passthrough and bridge params
 	iptables -t nat -F postrouting_rule

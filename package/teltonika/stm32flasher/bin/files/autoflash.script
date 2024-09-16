@@ -1,5 +1,5 @@
 #!/bin/sh
-# Copyright (C) 2022 Teltonika
+# Copyright (C) 2024 Teltonika-Networks
 
 PRX="STM32 AutoFlash:"
 IMAGE_FILE=/usr/share/stm32/firmware.bin
@@ -82,6 +82,9 @@ start_service() {
 		for led in /sys/class/leds/*; do
 			echo none > "$led/trigger"
 		done
+
+		# stop iomand to suppress kernel panic
+		[ -e /etc/init.d/ioman ] && /etc/init.d/ioman stop 2>/dev/null
 
 		while [ "$count" -lt 5 ]; do
 			stm32flasher $IMAGE_FILE >> /tmp/flash_history
