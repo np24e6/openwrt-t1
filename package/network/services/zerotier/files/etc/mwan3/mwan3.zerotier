@@ -1,0 +1,53 @@
+#!/bin/sh
+
+. /usr/share/libubox/jshn.sh
+. /lib/functions/network.sh
+
+#####################################################
+# MWAN3 script to blacklist backup WANs in Zerotier #
+#####################################################
+
+[ "$(uci -q get mwan3.globals.mode)" = "balance" ] && return 0
+
+ZEROTIER_DIRS=$(find /var/lib/ -type d -name "zerotier-one*")
+
+[ -z "$ZEROTIER_DIRS" ] && return 0
+
+[ "$ACTION" = "disconnected" ] || [ "$ACTION" = "connected" ] || return 0
+
+ACTIVE_WAN="$(cat /tmp/run/mwan3/active_wan)"
+MWAN_MEMBERS="$(ls /var/run/mwan3/iface_state/)"
+BLACKLIST_MEMBERS="${MWAN_MEMBERS//$ACTIVE_WAN}"
+
+for member in $BLACKLIST_MEMBERS; do
+	network_get_device active_wan_device "${member}"
+	[ "$active_wan_device" = "wwan0" ] && { network_get_device active_wan_device "${member}_4" || network_get_device active_wan_device "${member}_6"; }
+	BLACKLIST_DEVICES="${BLACKLIST_DEVICES}${active_wan_device} "
+done
+
+if [ -z "$BLACKLIST_DEVICES" ]; then
+	for dir in $ZEROTIER_DIRS; do
+		rm -f "${dir}/local.conf"
+	done
+	return 0
+fi
+
+json_init
+json_add_object "settings"
+	json_add_array "interfacePrefixBlacklist"
+		for device in $BLACKLIST_DEVICES; do
+			logger -t "Zerotier" "Blacklisting mwan3 backup device: ${device}"
+			json_add_string "" "${device}"
+		done
+		for dir in $ZEROTIER_DIRS; do
+			instance="$(echo "$dir" | cut -d'_' -f3-)"
+			bridge_to="$(uci -q get zerotier.${instance}.bridge_to)"
+			[ -z "$bridge_to" ] && continue
+			json_add_string "" "${bridge_to}"
+			logger -t "Zerotier" "Added $bridge_to"
+		done
+json_close_object
+
+for dir in $ZEROTIER_DIRS; do
+	json_dump > "${dir}/local.conf"
+done

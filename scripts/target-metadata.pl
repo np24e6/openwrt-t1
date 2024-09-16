@@ -441,8 +441,10 @@ EOF
 		foreach my $profile (@$profiles) {
 			next unless $profile->{gpl_prefix};
 			print "\tdefault \"$profile->{gpl_prefix}\" if TARGET_$target->{conf}_$profile->{id}\n";
+			print "\tdefault \"$profile->{gpl_prefix}\" if TARGET_DEVICE_$target->{conf}_$profile->{id}\n";
 		}
 	}
+	print "\tdefault \"SDK\"\n";
 
 	print <<EOF;
 

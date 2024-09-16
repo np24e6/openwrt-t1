@@ -1,0 +1,2668 @@
+--- a/conf/default.conf
++++ b/conf/default.conf
+@@ -1,8 +1,3 @@
+ @PLUGIN_NAME@ {
+-
+-    # Whether to load the plugin. Can also be an integer to increase the
+-    # priority of this plugin.
+     load = yes
+-
+ }
+-
+--- a/conf/options/aikgen.conf
++++ b/conf/options/aikgen.conf
+@@ -1,7 +1,2 @@
+ aikgen {
+-
+-    # Plugins to load in ipsec aikgen tool.
+-    # load =
+-
+ }
+-
+--- a/conf/options/attest.conf
++++ b/conf/options/attest.conf
+@@ -1,11 +1,2 @@
+ attest {
+-
+-    # File measurement information database URI. If it contains a password, make
+-    # sure to adjust the permissions of the config file accordingly.
+-    # database =
+-
+-    # Plugins to load in ipsec attest tool.
+-    # load =
+-
+ }
+-
+--- a/conf/options/charon-logging.conf
++++ b/conf/options/charon-logging.conf
+@@ -1,85 +1,6 @@
+ charon {
+-
+-    # Section to define file loggers, see LOGGER CONFIGURATION in
+-    # strongswan.conf(5).
+     filelog {
+-
+-        # <name> may be the full path to the log file if it only contains
+-        # characters permitted in section names. Is ignored if path is
+-        # specified.
+-        # <name> {
+-
+-            # Loglevel for a specific subsystem.
+-            # <subsystem> = <default>
+-
+-            # If this option is enabled log entries are appended to the existing
+-            # file.
+-            # append = yes
+-
+-            # Default loglevel.
+-            # default = 1
+-
+-            # Enabling this option disables block buffering and enables line
+-            # buffering.
+-            # flush_line = no
+-
+-            # Prefix each log entry with the connection name and a unique
+-            # numerical identifier for each IKE_SA.
+-            # ike_name = no
+-
+-            # Add the log level of each message after the subsystem (e.g.
+-            # [IKE2]).
+-            # log_level = no
+-
+-            # Optional path to the log file. Overrides the section name. Must be
+-            # used if the path contains characters that aren't allowed in
+-            # section names.
+-            # path =
+-
+-            # Adds the milliseconds within the current second after the
+-            # timestamp (separated by a dot, so time_format should end with %S
+-            # or %T).
+-            # time_add_ms = no
+-
+-            # Prefix each log entry with a timestamp. The option accepts a
+-            # format string as passed to strftime(3).
+-            # time_format =
+-
+-        # }
+-
+     }
+-
+-    # Section to define syslog loggers, see LOGGER CONFIGURATION in
+-    # strongswan.conf(5).
+     syslog {
+-
+-        # Identifier for use with openlog(3).
+-        # identifier =
+-
+-        # <facility> is one of the supported syslog facilities, see LOGGER
+-        # CONFIGURATION in strongswan.conf(5).
+-        # <facility> {
+-
+-            # Loglevel for a specific subsystem.
+-            # <subsystem> = <default>
+-
+-            # Default loglevel.
+-            # default = 1
+-
+-            # Prefix each log entry with the connection name and a unique
+-            # numerical identifier for each IKE_SA.
+-            # ike_name = no
+-
+-            # Add the log level of each message after the subsystem (e.g.
+-            # [IKE2]).
+-            # log_level = no
+-
+-            # Map strongSwan specific loglevels to syslog loglevels.
+-            # map_level = -1
+-
+-        # }
+-
+     }
+-
+ }
+-
+--- a/conf/options/charon-nm.conf
++++ b/conf/options/charon-nm.conf
+@@ -1,8 +1,2 @@
+ charon-nm {
+-
+-    # Directory from which to load CA certificates if no certificate is
+-    # configured.
+-    # ca_dir = <default>
+-
+ }
+-
+--- a/conf/options/charon-systemd.conf
++++ b/conf/options/charon-systemd.conf
+@@ -1,16 +1,4 @@
+ charon-systemd {
+-
+-    # Section to configure native systemd journal logger, very similar to the
+-    # syslog logger as described in LOGGER CONFIGURATION in strongswan.conf(5).
+     journal {
+-
+-        # Loglevel for a specific subsystem.
+-        # <subsystem> = <default>
+-
+-        # Default loglevel.
+-        # default = 1
+-
+     }
+-
+ }
+-
+--- a/conf/options/charon.conf
++++ b/conf/options/charon.conf
+@@ -1,414 +1,20 @@
+-# Options for the charon IKE daemon.
+ charon {
+-
+-    # Deliberately violate the IKE standard's requirement and allow the use of
+-    # private algorithm identifiers, even if the peer implementation is unknown.
+-    # accept_private_algs = no
+-
+-    # Accept unencrypted ID and HASH payloads in IKEv1 Main Mode.
+-    # accept_unencrypted_mainmode_messages = no
+-
+-    # Maximum number of half-open IKE_SAs (including unprocessed IKE_SA_INITs)
+-    # for a single peer IP.
+-    # block_threshold = 5
+-
+-    # Whether Certificate Revocation Lists (CRLs) fetched via HTTP or LDAP
+-    # should be saved under a unique file name derived from the public key of
+-    # the Certification Authority (CA) to /etc/ipsec.d/crls (stroke) or
+-    # /etc/swanctl/x509crl (vici), respectively.
+-    # cache_crls = no
+-
+-    # Whether relations in validated certificate chains should be cached in
+-    # memory.
+-    # cert_cache = yes
+-
+-    # Whether to use DPD to check if the current path still works after any
+-    # changes to interfaces/addresses.
+-    # check_current_path = no
+-
+-    # Send the Cisco FlexVPN vendor ID payload (IKEv2 only).
+-    # cisco_flexvpn = no
+-
+-    # Send Cisco Unity vendor ID payload (IKEv1 only).
+-    # cisco_unity = no
+-
+-    # Close the IKE_SA if setup of the CHILD_SA along with IKE_AUTH failed.
+-    # close_ike_on_child_failure = no
+-
+-    # Number of half-open IKE_SAs (including unprocessed IKE_SA_INITs) that
+-    # activate the cookie mechanism.
+-    # cookie_threshold = 30
+-
+-    # Number of half-open IKE_SAs (including unprocessed IKE_SA_INITs) for a
+-    # single peer IP that activate the cookie  mechanism.
+-    # cookie_threshold_ip = 3
+-
+-    # Delete CHILD_SAs right after they got successfully rekeyed (IKEv1 only).
+-    # delete_rekeyed = no
+-
+-    # Delay in seconds until inbound IPsec SAs are deleted after rekeyings
+-    # (IKEv2 only).
+-    # delete_rekeyed_delay = 5
+-
+-    # Use ANSI X9.42 DH exponent size or optimum size matched to cryptographic
+-    # strength.
+-    # dh_exponent_ansi_x9_42 = yes
+-
+-    # Use RTLD_NOW with dlopen when loading plugins and IMV/IMCs to reveal
+-    # missing symbols immediately.
+-    # dlopen_use_rtld_now = no
+-
+-    # DNS server assigned to peer via configuration payload (CP).
+-    # dns1 =
+-
+-    # DNS server assigned to peer via configuration payload (CP).
+-    # dns2 =
+-
+-    # Enable Denial of Service protection using cookies and aggressiveness
+-    # checks.
+-    # dos_protection = yes
+-
+-    # Free objects during authentication (might conflict with plugins).
+-    # flush_auth_cfg = no
+-
+-    # Whether to follow IKEv2 redirects (RFC 5685).
+-    # follow_redirects = yes
+-
+-    # Violate RFC 5998 and use EAP-only authentication even if the peer did not
+-    # send an EAP_ONLY_AUTHENTICATION notify during IKE_AUTH.
+-    # force_eap_only_authentication = no
+-
+-    # Maximum size (complete IP datagram size in bytes) of a sent IKE fragment
+-    # when using proprietary IKEv1 or standardized IKEv2 fragmentation, defaults
+-    # to 1280 (use 0 for address family specific default values, which uses a
+-    # lower value for IPv4).  If specified this limit is used for both IPv4 and
+-    # IPv6.
+-    # fragment_size = 1280
+-
+-    # Name of the group the daemon changes to after startup.
+-    # group =
+-
+-    # Timeout in seconds for connecting IKE_SAs (also see IKE_SA_INIT DROPPING).
+-    # half_open_timeout = 30
+-
+-    # Enable hash and URL support.
+-    # hash_and_url = no
+-
+-    # Allow IKEv1 Aggressive Mode with pre-shared keys as responder.
+-    # i_dont_care_about_security_and_use_aggressive_mode_psk = no
+-
+-    # Whether to ignore the traffic selectors from the kernel's acquire events
+-    # for IKEv2 connections (they are not used for IKEv1).
+-    # ignore_acquire_ts = no
+-
+-    # A space-separated list of routing tables to be excluded from route
+-    # lookups.
+-    # ignore_routing_tables =
+-
+-    # Maximum number of IKE_SAs that can be established at the same time before
+-    # new connection attempts are blocked.
+-    # ikesa_limit = 0
+-
+-    # Number of exclusively locked segments in the hash table.
+-    # ikesa_table_segments = 1
+-
+-    # Size of the IKE_SA hash table.
+-    # ikesa_table_size = 1
+-
+-    # Whether to close IKE_SA if the only CHILD_SA closed due to inactivity.
+-    # inactivity_close_ike = no
+-
+-    # Limit new connections based on the current number of half open IKE_SAs,
+-    # see IKE_SA_INIT DROPPING in strongswan.conf(5).
+-    # init_limit_half_open = 0
+-
+-    # Limit new connections based on the number of queued jobs.
+-    # init_limit_job_load = 0
+-
+-    # Causes charon daemon to ignore IKE initiation requests.
+-    # initiator_only = no
+-
+-    # Install routes into a separate routing table for established IPsec
+-    # tunnels.
+-    # install_routes = yes
+-
+-    # Install virtual IP addresses.
+-    # install_virtual_ip = yes
+-
+-    # The name of the interface on which virtual IP addresses should be
+-    # installed.
+-    # install_virtual_ip_on =
+-
+-    # Check daemon, libstrongswan and plugin integrity at startup.
+-    # integrity_test = no
+-
+-    # A comma-separated list of network interfaces that should be ignored, if
+-    # interfaces_use is specified this option has no effect.
+-    # interfaces_ignore =
+-
+-    # A comma-separated list of network interfaces that should be used by
+-    # charon. All other interfaces are ignored.
+-    # interfaces_use =
+-
+-    # NAT keep alive interval.
+-    # keep_alive = 20s
+-
+-    # Number of seconds the keep alive interval may be exceeded before a DPD is
+-    # sent instead of a NAT keep alive (0 to disable).  This is only useful if a
+-    # clock is used that includes time spent suspended (e.g. CLOCK_BOOTTIME).
+-    # keep_alive_dpd_margin = 0s
+-
+-    # Plugins to load in the IKE daemon charon.
+-    # load =
+-
+-    # Determine plugins to load via each plugin's load option.
+-    # load_modular = no
+-
+-    # Initiate IKEv2 reauthentication with a make-before-break scheme.
+-    # make_before_break = no
+-
+-    # Maximum number of IKEv1 phase 2 exchanges per IKE_SA to keep state about
+-    # and track concurrently.
+-    # max_ikev1_exchanges = 3
+-
+-    # Maximum packet size accepted by charon.
+-    # max_packet = 10000
+-
+-    # Enable multiple authentication exchanges (RFC 4739).
+-    # multiple_authentication = yes
+-
+-    # WINS servers assigned to peer via configuration payload (CP).
+-    # nbns1 =
+-
+-    # WINS servers assigned to peer via configuration payload (CP).
+-    # nbns2 =
+-
+-    # UDP port used locally. If set to 0 a random port will be allocated.
+-    # port = 500
+-
+-    # UDP port used locally in case of NAT-T. If set to 0 a random port will be
+-    # allocated.  Has to be different from charon.port, otherwise a random port
+-    # will be allocated.
+-    # port_nat_t = 4500
+-
+-    # Whether to prefer updating SAs to the path with the best route.
+-    # prefer_best_path = no
+-
+-    # Prefer locally configured proposals for IKE/IPsec over supplied ones as
+-    # responder (disabling this can avoid keying retries due to
+-    # INVALID_KE_PAYLOAD notifies).
+-    # prefer_configured_proposals = yes
+-
+-    # Controls whether permanent or temporary IPv6 addresses are used as source,
+-    # or announced as additional addresses if MOBIKE is used.
+-    # prefer_temporary_addrs = no
+-
+-    # Process RTM_NEWROUTE and RTM_DELROUTE events.
+-    # process_route = yes
+-
+-    # How RDNs in subject DNs of certificates are matched against configured
+-    # identities (strict, reordered, or relaxed).
+-    # rdn_matching = strict
+-
+-    # Delay in ms for receiving packets, to simulate larger RTT.
+-    # receive_delay = 0
+-
+-    # Delay request messages.
+-    # receive_delay_request = yes
+-
+-    # Delay response messages.
+-    # receive_delay_response = yes
+-
+-    # Specific IKEv2 message type to delay, 0 for any.
+-    # receive_delay_type = 0
+-
+-    # Size of the AH/ESP replay window, in packets.
+-    # replay_window = 32
+-
+-    # Base to use for calculating exponential back off, see IKEv2 RETRANSMISSION
+-    # in strongswan.conf(5).
+-    # retransmit_base = 1.8
+-
+-    # Maximum jitter in percent to apply randomly to calculated retransmission
+-    # timeout (0 to disable).
+-    # retransmit_jitter = 0
+-
+-    # Upper limit in seconds for calculated retransmission timeout (0 to
+-    # disable).
+-    # retransmit_limit = 0
+-
+-    # Timeout in seconds before sending first retransmit.
+-    # retransmit_timeout = 4.0
+-
+-    # Number of times to retransmit a packet before giving up.
+-    # retransmit_tries = 5
+-
+-    # Interval in seconds to use when retrying to initiate an IKE_SA (e.g. if
+-    # DNS resolution failed), 0 to disable retries.
+-    # retry_initiate_interval = 0
+-
+-    # Initiate CHILD_SA within existing IKE_SAs (always enabled for IKEv1).
+-    # reuse_ikesa = yes
+-
+-    # Numerical routing table to install routes to.
+-    # routing_table =
+-
+-    # Priority of the routing table.
+-    # routing_table_prio =
+-
+-    # Whether to use RSA with PSS padding instead of PKCS#1 padding by default.
+-    # rsa_pss = no
+-
+-    # Delay in ms for sending packets, to simulate larger RTT.
+-    # send_delay = 0
+-
+-    # Delay request messages.
+-    # send_delay_request = yes
+-
+-    # Delay response messages.
+-    # send_delay_response = yes
+-
+-    # Specific IKEv2 message type to delay, 0 for any.
+-    # send_delay_type = 0
+-
+-    # Send strongSwan vendor ID payload
+-    # send_vendor_id = no
+-
+-    # Whether to enable Signature Authentication as per RFC 7427.
+-    # signature_authentication = yes
+-
+-    # Whether to enable constraints against IKEv2 signature schemes.
+-    # signature_authentication_constraints = yes
+-
+-    # Value mixed into the local IKE SPIs after applying spi_mask.
+-    # spi_label = 0x0000000000000000
+-
+-    # Mask applied to local IKE SPIs before mixing in spi_label (bits set will
+-    # be replaced with spi_label).
+-    # spi_mask = 0x0000000000000000
+-
+-    # The upper limit for SPIs requested from the kernel for IPsec SAs.
+-    # spi_max = 0xcfffffff
+-
+-    # The lower limit for SPIs requested from the kernel for IPsec SAs.
+-    # spi_min = 0xc0000000
+-
+-    # Number of worker threads in charon.
+-    # threads = 16
+-
+-    # Name of the user the daemon changes to after startup.
+-    # user =
+-
+     crypto_test {
+-
+-        # Benchmark crypto algorithms and order them by efficiency.
+-        # bench = no
+-
+-        # Buffer size used for crypto benchmark.
+-        # bench_size = 1024
+-
+-        # Time in ms during which crypto algorithm performance is measured.
+-        # bench_time = 50
+-
+-        # Test crypto algorithms during registration (requires test vectors
+-        # provided by the test-vectors plugin).
+-        # on_add = no
+-
+-        # Test crypto algorithms on each crypto primitive instantiation.
+-        # on_create = no
+-
+-        # Strictly require at least one test vector to enable an algorithm.
+-        # required = no
+-
+-        # Whether to test RNG with TRUE quality; requires a lot of entropy.
+-        # rng_true = no
+-
+     }
+-
+     host_resolver {
+-
+-        # Maximum number of concurrent resolver threads (they are terminated if
+-        # unused).
+-        # max_threads = 3
+-
+-        # Minimum number of resolver threads to keep around.
+-        # min_threads = 0
+-
+     }
+-
+     leak_detective {
+-
+-        # Includes source file names and line numbers in leak detective output.
+-        # detailed = yes
+-
+-        # Threshold in bytes for leaks to be reported (0 to report all).
+-        # usage_threshold = 10240
+-
+-        # Threshold in number of allocations for leaks to be reported (0 to
+-        # report all).
+-        # usage_threshold_count = 0
+-
+     }
+-
+     processor {
+-
+-        # Section to configure the number of reserved threads per priority class
+-        # see JOB PRIORITY MANAGEMENT in strongswan.conf(5).
+         priority_threads {
+-
+         }
+-
+     }
+-
+-    # Section containing a list of scripts (name = path) that are executed when
+-    # the daemon is started.
+     start-scripts {
+-
+     }
+-
+-    # Section containing a list of scripts (name = path) that are executed when
+-    # the daemon is terminated.
+     stop-scripts {
+-
+     }
+-
+     tls {
+-
+-        # List of TLS encryption ciphers.
+-        # cipher =
+-
+-        # List of TLS key exchange groups.
+-        # ke_group =
+-
+-        # List of TLS key exchange methods.
+-        # key_exchange =
+-
+-        # List of TLS MAC algorithms.
+-        # mac =
+-
+-        # Whether to include CAs in a server's CertificateRequest message.
+-        # send_certreq_authorities = yes
+-
+-        # List of TLS signature schemes.
+-        # signature =
+-
+-        # List of TLS cipher suites.
+-        # suites =
+-
+-        # Maximum TLS version to negotiate.
+-        # version_max = 1.2
+-
+-        # Minimum TLS version to negotiate.
+-        # version_min = 1.2
+-
+     }
+-
+     x509 {
+-
+-        # Discard certificates with unsupported or unknown critical extensions.
+-        # enforce_critical = yes
+-
+     }
+-
+ }
+-
+--- a/conf/options/imcv.conf
++++ b/conf/options/imcv.conf
+@@ -1,63 +1,12 @@
+ charon {
+-
+-    # Defaults for options in this section can be configured in the libimcv
+-    # section.
+     imcv {
+-
+-        # Whether IMVs send a standard IETF Assessment Result attribute.
+-        # assessment_result = yes
+-
+-        # Global IMV policy database URI. If it contains a password, make sure
+-        # to adjust the permissions of the config file accordingly.
+-        # database =
+-
+-        # Script called for each TNC connection to generate IMV policies.
+-        # policy_script = ipsec _imv_policy
+-
+         os_info {
+-
+-            # Manually set whether a default password is enabled
+-            # default_password_enabled = no
+-
+-            # Manually set the name of the client OS (e.g. Ubuntu).
+-            # name =
+-
+-            # Manually set the version of the client OS (e.g. 12.04 i686).
+-            # version =
+-
+         }
+-
+     }
+-
+ }
+-
+ libimcv {
+-
+-    # Debug level for a stand-alone libimcv library.
+-    # debug_level = 1
+-
+-    # Plugins to load in IMC/IMVs with stand-alone libimcv library.
+-    # load = random nonce gmp pubkey x509
+-
+-    # Disable output to stderr with a stand-alone libimcv library.
+-    # stderr_quiet = no
+-
+     swid_gen {
+-
+-        # SWID generator command to be executed.
+-        # command = /usr/local/bin/swid_generator
+-
+         tag_creator {
+-
+-            # Name of the tagCreator entity.
+-            # name = strongSwan Project
+-
+-            # regid of the tagCreator entity.
+-            # regid = strongswan.org
+-
+         }
+-
+     }
+-
+ }
+-
+--- a/conf/options/imv_policy_manager.conf
++++ b/conf/options/imv_policy_manager.conf
+@@ -1,18 +1,2 @@
+ imv_policy_manager {
+-
+-    # Shell command to be executed with recommendation allow.
+-    # command_allow =
+-
+-    # Shell command to be executed with all other recommendations.
+-    # command_block =
+-
+-    # Database URI for the database that stores the package information. If it
+-    # contains a password, make sure to adjust the permissions of the config
+-    # file accordingly.
+-    # database =
+-
+-    # Plugins to load in IMV policy manager.
+-    # load = sqlite
+-
+ }
+-
+--- a/conf/options/manager.conf
++++ b/conf/options/manager.conf
+@@ -1,23 +1,2 @@
+ manager {
+-
+-    # Credential database URI for manager. If it contains a password, make sure
+-    # to adjust the permissions of the config file accordingly.
+-    # database =
+-
+-    # Enable debugging in manager.
+-    # debug = no
+-
+-    # Plugins to load in manager.
+-    # load =
+-
+-    # FastCGI socket of manager, to run it statically.
+-    # socket =
+-
+-    # Threads to use for request handling.
+-    # threads = 10
+-
+-    # Session timeout for manager.
+-    # timeout = 15m
+-
+ }
+-
+--- a/conf/options/medsrv.conf
++++ b/conf/options/medsrv.conf
+@@ -1,32 +1,2 @@
+ medsrv {
+-
+-    # Mediation server database URI. If it contains a password, make sure to
+-    # adjust the permissions of the config file accordingly.
+-    # database =
+-
+-    # Debugging in mediation server web application.
+-    # debug = no
+-
+-    # DPD timeout to use in mediation server plugin.
+-    # dpd = 5m
+-
+-    # Plugins to load in mediation server plugin.
+-    # load =
+-
+-    # Minimum password length required for mediation server user accounts.
+-    # password_length = 6
+-
+-    # Rekeying time on mediation connections in mediation server plugin.
+-    # rekey = 20m
+-
+-    # Run Mediation server web application statically on socket.
+-    # socket =
+-
+-    # Number of thread for mediation service web application.
+-    # threads = 5
+-
+-    # Session timeout for mediation service.
+-    # timeout = 15m
+-
+ }
+-
+--- a/conf/options/pki.conf
++++ b/conf/options/pki.conf
+@@ -1,7 +1,2 @@
+ pki {
+-
+-    # Plugins to load in ipsec pki tool.
+-    # load =
+-
+ }
+-
+--- a/conf/options/pool.conf
++++ b/conf/options/pool.conf
+@@ -1,12 +1,2 @@
+ pool {
+-
+-    # Database URI for the database that stores IP pools and configuration
+-    # attributes. If it contains a password, make        sure to adjust the
+-    # permissions of the config file accordingly.
+-    # database =
+-
+-    # Plugins to load in ipsec pool tool.
+-    # load =
+-
+ }
+-
+--- a/conf/options/scepclient.conf
++++ b/conf/options/scepclient.conf
+@@ -1,7 +1,2 @@
+ scepclient {
+-
+-    # Plugins to load in ipsec scepclient tool.
+-    # load =
+-
+ }
+-
+--- a/conf/options/sec-updater.conf
++++ b/conf/options/sec-updater.conf
+@@ -1,42 +1,8 @@
+-# Options for the sec-updater tool.
+ sec-updater {
+-
+-    # Global IMV policy database URI. If it contains a password, make sure to
+-    # adjust the permissions of the config file accordingly.
+-    # database =
+-
+-    # Plugins to load in sec-updater tool.
+-    # load =
+-
+-    # strongTNC manage.py command used to import SWID tags.
+-    # tnc_manage_command = /var/www/tnc/manage.py
+-
+     swid_gen {
+-
+-        # SWID generator command to be executed.
+-        # command = /usr/local/bin/swid_generator
+-
+         tag_creator {
+-
+-            # Name of the tagCreator entity.
+-            # name = strongSwan Project
+-
+-            # regid of the tagCreator entity.
+-            # regid = strongswan.org
+-
+         }
+-
+     }
+-
+     tmp {
+-
+-        # Temporary storage for downloaded deb package file.
+-        # deb_file = /tmp/sec-updater.deb
+-
+-        # Temporary storage for generated SWID tags.
+-        # tag_file = /tmp/sec-updater.tag
+-
+     }
+-
+ }
+-
+--- a/conf/options/starter.conf
++++ b/conf/options/starter.conf
+@@ -1,10 +1,2 @@
+ starter {
+-
+-    # Location of the ipsec.conf file
+-    # config_file = ${sysconfdir}/ipsec.conf
+-
+-    # Disable charon plugin load option warning.
+-    # load_warning = yes
+-
+ }
+-
+--- a/conf/options/sw-collector.conf
++++ b/conf/options/sw-collector.conf
+@@ -1,31 +1,4 @@
+-# Options for the sw-collector tool.
+ sw-collector {
+-
+-    # URI to software collector database containing event timestamps, software
+-    # creation and deletion events and collected software identifiers.
+-    # database =
+-
+-    # Path pointing to file created when the Linux OS was installed.
+-    # first_file = /var/log/bootstrap.log
+-
+-    # Time in UTC when the Linux OS was installed.
+-    # first_time = 0000-00-00T00:00:00Z
+-
+-    # Path pointing to apt history.log file.
+-    # history =
+-
+-    # Plugins to load in sw-collector tool.
+-    # load =
+-
+     rest_api {
+-
+-        # Timeout of REST API HTTP POST transaction.
+-        # timeout = 120
+-
+-        # HTTP URI of the central collector's REST API.
+-        # uri =
+-
+     }
+-
+ }
+-
+--- a/conf/options/swanctl.conf
++++ b/conf/options/swanctl.conf
+@@ -1,10 +1,2 @@
+ swanctl {
+-
+-    # Plugins to load in swanctl.
+-    # load =
+-
+-    # VICI socket to connect to by default.
+-    # socket = unix://${piddir}/charon.vici
+-
+ }
+-
+--- a/conf/options/tnc.conf
++++ b/conf/options/tnc.conf
+@@ -1,11 +1,4 @@
+ charon {
+-
+     tnc {
+-
+-        # TNC IMC/IMV configuration file.
+-        # tnc_config = /etc/tnc_config
+-
+     }
+-
+ }
+-
+--- a/conf/plugins/addrblock.conf
++++ b/conf/plugins/addrblock.conf
+@@ -1,14 +1,3 @@
+ addrblock {
+-
+-    # How deep towards the root CA to validate issuer cert addrblock extensions.
+-    # depth = -1
+-
+-    # Whether to load the plugin. Can also be an integer to increase the
+-    # priority of this plugin.
+     load = yes
+-
+-    # Whether to strictly require addrblock extension in subject certificates.
+-    # strict = yes
+-
+ }
+-
+--- a/conf/plugins/android_log.conf
++++ b/conf/plugins/android_log.conf
+@@ -1,11 +1,3 @@
+ android_log {
+-
+-    # Whether to load the plugin. Can also be an integer to increase the
+-    # priority of this plugin.
+     load = yes
+-
+-    # Loglevel for logging to Android specific logger.
+-    # loglevel = 1
+-
+ }
+-
+--- a/conf/plugins/attr-sql.conf
++++ b/conf/plugins/attr-sql.conf
+@@ -1,20 +1,3 @@
+ attr-sql {
+-
+-    # Release all online leases during startup.  Disable this to share the DB
+-    # between multiple VPN gateways.
+-    # crash_recovery = yes
+-
+-    # Database URI for attr-sql plugin used by charon. If it contains a
+-    # password, make sure to adjust the permissions of the config file
+-    # accordingly.
+-    # database =
+-
+-    # Enable logging of SQL IP pool leases.
+-    # lease_history = yes
+-
+-    # Whether to load the plugin. Can also be an integer to increase the
+-    # priority of this plugin.
+     load = yes
+-
+ }
+-
+--- a/conf/plugins/attr.conf
++++ b/conf/plugins/attr.conf
+@@ -1,14 +1,3 @@
+-# Section to specify arbitrary attributes that are assigned to a peer via
+-# configuration payload (CP).
+ attr {
+-
+-    # <attr> is an attribute name or an integer, values can be an IP address,
+-    # subnet or arbitrary value.
+-    # <attr> =
+-
+-    # Whether to load the plugin. Can also be an integer to increase the
+-    # priority of this plugin.
+     load = yes
+-
+ }
+-
+--- a/conf/plugins/bliss.conf
++++ b/conf/plugins/bliss.conf
+@@ -1,11 +1,3 @@
+ bliss {
+-
+-    # Whether to load the plugin. Can also be an integer to increase the
+-    # priority of this plugin.
+     load = yes
+-
+-    # Use the enhanced BLISS-B key generation and signature algorithm.
+-    # use_bliss_b = yes
+-
+ }
+-
+--- a/conf/plugins/botan.conf
++++ b/conf/plugins/botan.conf
+@@ -1,11 +1,3 @@
+ botan {
+-
+-    # Force the use of Botan's internal RNG.
+-    # internal_rng_only = no
+-
+-    # Whether to load the plugin. Can also be an integer to increase the
+-    # priority of this plugin.
+     load = yes
+-
+ }
+-
+--- a/conf/plugins/bypass-lan.conf
++++ b/conf/plugins/bypass-lan.conf
+@@ -1,17 +1,3 @@
+ bypass-lan {
+-
+-    # A comma-separated list of network interfaces for which connected subnets
+-    # should be ignored, if interfaces_use is specified this option has no
+-    # effect.
+-    # interfaces_ignore =
+-
+-    # A comma-separated list of network interfaces for which connected subnets
+-    # should be considered. All other interfaces are ignored.
+-    # interfaces_use =
+-
+-    # Whether to load the plugin. Can also be an integer to increase the
+-    # priority of this plugin.
+     load = yes
+-
+ }
+-
+--- a/conf/plugins/certexpire.conf
++++ b/conf/plugins/certexpire.conf
+@@ -1,38 +1,5 @@
+ certexpire {
+-
+-    # Whether to load the plugin. Can also be an integer to increase the
+-    # priority of this plugin.
+     load = yes
+-
+     csv {
+-
+-        # Cron style string specifying CSV export times.
+-        # cron =
+-
+-        # String to use in empty intermediate CA fields.
+-        # empty_string =
+-
+-        # Use a fixed intermediate CA field count.
+-        # fixed_fields = yes
+-
+-        # Force export of all trustchains we have a private key for.
+-        # force = yes
+-
+-        # strftime(3) format string to export expiration dates as.
+-        # format = %d:%m:%Y
+-
+-        # strftime(3) format string for the CSV file name to export local
+-        # certificates to.
+-        # local =
+-
+-        # strftime(3) format string for the CSV file name to export remote
+-        # certificates to.
+-        # remote =
+-
+-        # CSV field separator.
+-        # separator = ,
+-
+     }
+-
+ }
+-
+--- a/conf/plugins/coupling.conf
++++ b/conf/plugins/coupling.conf
+@@ -1,17 +1,3 @@
+ coupling {
+-
+-    # File to store coupling list to.
+-    # file =
+-
+-    # Hashing algorithm to fingerprint coupled certificates.
+-    # hash = sha1
+-
+-    # Whether to load the plugin. Can also be an integer to increase the
+-    # priority of this plugin.
+     load = yes
+-
+-    # Maximum number of coupling entries to create.
+-    # max = 1
+-
+ }
+-
+--- a/conf/plugins/curl.conf
++++ b/conf/plugins/curl.conf
+@@ -1,12 +1,3 @@
+ curl {
+-
+-    # Whether to load the plugin. Can also be an integer to increase the
+-    # priority of this plugin.
+     load = yes
+-
+-    # Maximum number of redirects followed by the plugin, set to 0 to disable
+-    # following redirects, set to -1 for no limit.
+-    # redir = -1
+-
+ }
+-
+--- a/conf/plugins/dhcp.conf
++++ b/conf/plugins/dhcp.conf
+@@ -1,25 +1,3 @@
+ dhcp {
+-
+-    # Always use the configured server address.
+-    # force_server_address = no
+-
+-    # Derive user-defined MAC address from hash of IKE identity and send client
+-    # identity DHCP option.
+-    # identity_lease = no
+-
+-    # Interface name the plugin uses for address allocation.
+-    # interface =
+-
+-    # Whether to load the plugin. Can also be an integer to increase the
+-    # priority of this plugin.
+     load = yes
+-
+-    # DHCP server unicast or broadcast IP address.
+-    # server = 255.255.255.255
+-
+-    # Use the DHCP server port (67) as source port when a unicast server address
+-    # is configured.
+-    # use_server_port = no
+-
+ }
+-
+--- a/conf/plugins/dnscert.conf
++++ b/conf/plugins/dnscert.conf
+@@ -1,11 +1,3 @@
+ dnscert {
+-
+-    # Enable fetching of CERT RRs via DNS.
+-    # enable = no
+-
+-    # Whether to load the plugin. Can also be an integer to increase the
+-    # priority of this plugin.
+     load = yes
+-
+ }
+-
+--- a/conf/plugins/drbg.conf
++++ b/conf/plugins/drbg.conf
+@@ -1,12 +1,3 @@
+ drbg {
+-
+-    # Whether to load the plugin. Can also be an integer to increase the
+-    # priority of this plugin.
+     load = yes
+-
+-    # Number of pseudo-random bit requests from the DRBG before an automatic
+-    # reseeding occurs.
+-    # max_drbg_requests = 4294967294
+-
+ }
+-
+--- a/conf/plugins/duplicheck.conf
++++ b/conf/plugins/duplicheck.conf
+@@ -1,14 +1,3 @@
+ duplicheck {
+-
+-    # Enable duplicheck plugin (if loaded).
+-    # enable = yes
+-
+-    # Whether to load the plugin. Can also be an integer to increase the
+-    # priority of this plugin.
+     load = yes
+-
+-    # Socket provided by the duplicheck plugin.
+-    # socket = unix://${piddir}/charon.dck
+-
+ }
+-
+--- a/conf/plugins/eap-aka-3gpp.conf
++++ b/conf/plugins/eap-aka-3gpp.conf
+@@ -1,12 +1,3 @@
+ eap-aka-3gpp {
+-
+-    # Whether to load the plugin. Can also be an integer to increase the
+-    # priority of this plugin.
+     load = yes
+-
+-    # Enable to activate sequence check of the AKA SQN values in order to
+-    # trigger resync cycles.
+-    # seq_check =
+-
+ }
+-
+--- a/conf/plugins/eap-aka-3gpp2.conf
++++ b/conf/plugins/eap-aka-3gpp2.conf
+@@ -1,12 +1,3 @@
+ eap-aka-3gpp2 {
+-
+-    # Whether to load the plugin. Can also be an integer to increase the
+-    # priority of this plugin.
+     load = yes
+-
+-    # Enable to activate sequence check of the AKA SQN values in order to
+-    # trigger resync cycles.
+-    # seq_check =
+-
+ }
+-
+--- a/conf/plugins/eap-aka.conf
++++ b/conf/plugins/eap-aka.conf
+@@ -1,10 +1,3 @@
+ eap-aka {
+-
+-    # Whether to load the plugin. Can also be an integer to increase the
+-    # priority of this plugin.
+     load = yes
+-
+-    # request_identity = yes
+-
+ }
+-
+--- a/conf/plugins/eap-dynamic.conf
++++ b/conf/plugins/eap-dynamic.conf
+@@ -1,14 +1,3 @@
+ eap-dynamic {
+-
+-    # Whether to load the plugin. Can also be an integer to increase the
+-    # priority of this plugin.
+     load = yes
+-
+-    # Prefer peer's proposed EAP methods.
+-    # prefer_user = no
+-
+-    # The preferred EAP method(s) to be used.
+-    # preferred =
+-
+ }
+-
+--- a/conf/plugins/eap-gtc.conf
++++ b/conf/plugins/eap-gtc.conf
+@@ -1,11 +1,3 @@
+ eap-gtc {
+-
+-    # XAuth backend to be used for credential verification.
+-    # backend = pam
+-
+-    # Whether to load the plugin. Can also be an integer to increase the
+-    # priority of this plugin.
+     load = yes
+-
+ }
+-
+--- a/conf/plugins/eap-peap.conf
++++ b/conf/plugins/eap-peap.conf
+@@ -1,30 +1,3 @@
+ eap-peap {
+-
+-    # Maximum size of an EAP-PEAP packet.
+-    # fragment_size = 1024
+-
+-    # Include length in non-fragmented EAP-PEAP packets.
+-    # include_length = no
+-
+-    # Whether to load the plugin. Can also be an integer to increase the
+-    # priority of this plugin.
+     load = yes
+-
+-    # Maximum number of processed EAP-PEAP packets (0 = no limit).
+-    # max_message_count = 32
+-
+-    # Phase2 EAP client authentication method.
+-    # phase2_method = mschapv2
+-
+-    # Phase2 EAP Identity request piggybacked by server onto TLS Finished
+-    # message.
+-    # phase2_piggyback = no
+-
+-    # Start phase2 EAP TNC protocol after successful client authentication.
+-    # phase2_tnc = no
+-
+-    # Request peer authentication based on a client certificate.
+-    # request_peer_auth = no
+-
+ }
+-
+--- a/conf/plugins/eap-radius.conf
++++ b/conf/plugins/eap-radius.conf
+@@ -1,111 +1,11 @@
+ eap-radius {
+-
+-    # Send RADIUS accounting information to RADIUS servers.
+-    # accounting = no
+-
+-    # Close the IKE_SA if there is a timeout during interim RADIUS accounting
+-    # updates.
+-    # accounting_close_on_timeout = yes
+-
+-    # Interval in seconds for interim RADIUS accounting updates, if not
+-    # specified by the RADIUS server in the Access-Accept message.
+-    # accounting_interval = 0
+-
+-    # If enabled, accounting is disabled unless an IKE_SA has at least one
+-    # virtual IP. Only for IKEv2, for IKEv1 a virtual IP is strictly necessary.
+-    # accounting_requires_vip = no
+-
+-    # If enabled, adds the Class attributes received in Access-Accept message to
+-    # the RADIUS accounting messages.
+-    # accounting_send_class = no
+-
+-    # Use class attributes in Access-Accept messages as group membership
+-    # information.
+-    # class_group = no
+-
+-    # Closes all IKE_SAs if communication with the RADIUS server times out. If
+-    # it is not set only the current IKE_SA is closed.
+-    # close_all_on_timeout = no
+-
+-    # Send EAP-Start instead of EAP-Identity to start RADIUS conversation.
+-    # eap_start = no
+-
+-    # Use filter_id attribute as group membership information.
+-    # filter_id = no
+-
+-    # Prefix to EAP-Identity, some AAA servers use a IMSI prefix to select the
+-    # EAP method.
+-    # id_prefix =
+-
+-    # Whether to load the plugin. Can also be an integer to increase the
+-    # priority of this plugin.
+     load = yes
+-
+-    # NAS-Identifier to include in RADIUS messages.
+-    # nas_identifier = strongSwan
+-
+-    # Port of RADIUS server (authentication).
+-    # port = 1812
+-
+-    # Base to use for calculating exponential back off.
+-    # retransmit_base = 1.4
+-
+-    # Timeout in seconds before sending first retransmit.
+-    # retransmit_timeout = 2.0
+-
+-    # Number of times to retransmit a packet before giving up.
+-    # retransmit_tries = 4
+-
+-    # Shared secret between RADIUS and NAS. If set, make sure to adjust the
+-    # permissions of the config file accordingly.
+-    # secret =
+-
+-    # IP/Hostname of RADIUS server.
+-    # server =
+-
+-    # Number of sockets (ports) to use, increase for high load.
+-    # sockets = 1
+-
+-    # Whether to include the UDP port in the Called- and Calling-Station-Id
+-    # RADIUS attributes.
+-    # station_id_with_port = yes
+-
+     dae {
+-
+-        # Enables support for the Dynamic Authorization Extension (RFC 5176).
+-        # enable = no
+-
+-        # Address to listen for DAE messages from the RADIUS server.
+-        # listen = 0.0.0.0
+-
+-        # Port to listen for DAE requests.
+-        # port = 3799
+-
+-        # Shared secret used to verify/sign DAE messages. If set, make sure to
+-        # adjust the permissions of the config file accordingly.
+-        # secret =
+-
+     }
+-
+     forward {
+-
+-        # RADIUS attributes to be forwarded from IKEv2 to RADIUS.
+-        # ike_to_radius =
+-
+-        # Same as ike_to_radius but from RADIUS to IKEv2.
+-        # radius_to_ike =
+-
+     }
+-
+-    # Section to specify multiple RADIUS servers.
+     servers {
+-
+     }
+-
+-    # Section to configure multiple XAuth authentication rounds via RADIUS.
+     xauth {
+-
+     }
+-
+ }
+-
+--- a/conf/plugins/eap-sim.conf
++++ b/conf/plugins/eap-sim.conf
+@@ -1,10 +1,3 @@
+ eap-sim {
+-
+-    # Whether to load the plugin. Can also be an integer to increase the
+-    # priority of this plugin.
+     load = yes
+-
+-    # request_identity = yes
+-
+ }
+-
+--- a/conf/plugins/eap-simaka-sql.conf
++++ b/conf/plugins/eap-simaka-sql.conf
+@@ -1,12 +1,3 @@
+ eap-simaka-sql {
+-
+-    # database =
+-
+-    # Whether to load the plugin. Can also be an integer to increase the
+-    # priority of this plugin.
+     load = yes
+-
+-    # remove_used = no
+-
+ }
+-
+--- a/conf/plugins/eap-tls.conf
++++ b/conf/plugins/eap-tls.conf
+@@ -1,17 +1,3 @@
+ eap-tls {
+-
+-    # Maximum size of an EAP-TLS packet.
+-    # fragment_size = 1024
+-
+-    # Include length in non-fragmented EAP-TLS packets.
+-    # include_length = yes
+-
+-    # Whether to load the plugin. Can also be an integer to increase the
+-    # priority of this plugin.
+     load = yes
+-
+-    # Maximum number of processed EAP-TLS packets (0 = no limit).
+-    # max_message_count = 32
+-
+ }
+-
+--- a/conf/plugins/eap-tnc.conf
++++ b/conf/plugins/eap-tnc.conf
+@@ -1,15 +1,3 @@
+ eap-tnc {
+-
+-    # Whether to load the plugin. Can also be an integer to increase the
+-    # priority of this plugin.
+     load = yes
+-
+-    # Maximum number of processed EAP-TNC packets (0 = no limit).
+-    # max_message_count = 10
+-
+-    # IF-TNCCS protocol version to be used (tnccs-1.1, tnccs-2.0,
+-    # tnccs-dynamic).
+-    # protocol = tnccs-2.0
+-
+ }
+-
+--- a/conf/plugins/eap-ttls.conf
++++ b/conf/plugins/eap-ttls.conf
+@@ -1,33 +1,3 @@
+ eap-ttls {
+-
+-    # Maximum size of an EAP-TTLS packet.
+-    # fragment_size = 1024
+-
+-    # Include length in non-fragmented EAP-TTLS packets.
+-    # include_length = yes
+-
+-    # Whether to load the plugin. Can also be an integer to increase the
+-    # priority of this plugin.
+     load = yes
+-
+-    # Maximum number of processed EAP-TTLS packets (0 = no limit).
+-    # max_message_count = 32
+-
+-    # Phase2 EAP client authentication method.
+-    # phase2_method = md5
+-
+-    # Phase2 EAP Identity request piggybacked by server onto TLS Finished
+-    # message.
+-    # phase2_piggyback = no
+-
+-    # Start phase2 EAP TNC protocol after successful client authentication.
+-    # phase2_tnc = no
+-
+-    # Phase2 EAP TNC transport protocol (pt as IETF standard or legacy tnc)
+-    # phase2_tnc_method = pt
+-
+-    # Request peer authentication based on a client certificate.
+-    # request_peer_auth = no
+-
+ }
+-
+--- a/conf/plugins/error-notify.conf
++++ b/conf/plugins/error-notify.conf
+@@ -1,11 +1,3 @@
+ error-notify {
+-
+-    # Whether to load the plugin. Can also be an integer to increase the
+-    # priority of this plugin.
+     load = yes
+-
+-    # Socket provided by the error-notify plugin.
+-    # socket = unix://${piddir}/charon.enfy
+-
+ }
+-
+--- a/conf/plugins/ext-auth.conf
++++ b/conf/plugins/ext-auth.conf
+@@ -1,11 +1,3 @@
+ ext-auth {
+-
+-    # Whether to load the plugin. Can also be an integer to increase the
+-    # priority of this plugin.
+     load = yes
+-
+-    # Shell script to invoke for peer authorization.
+-    # script =
+-
+ }
+-
+--- a/conf/plugins/forecast.conf
++++ b/conf/plugins/forecast.conf
+@@ -1,17 +1,3 @@
+ forecast {
+-
+-    # Multicast groups to join locally, allowing forwarding of them.
+-    # groups = 224.0.0.1,224.0.0.22,224.0.0.251,224.0.0.252,239.255.255.250
+-
+-    # Local interface to listen for broadcasts to forward.
+-    # interface =
+-
+-    # Whether to load the plugin. Can also be an integer to increase the
+-    # priority of this plugin.
+     load = yes
+-
+-    # CHILD_SA configurations names to perform multi/broadcast reinjection.
+-    # reinject =
+-
+ }
+-
+--- a/conf/plugins/gcrypt.conf
++++ b/conf/plugins/gcrypt.conf
+@@ -1,11 +1,3 @@
+ gcrypt {
+-
+-    # Whether to load the plugin. Can also be an integer to increase the
+-    # priority of this plugin.
+     load = yes
+-
+-    # Use faster random numbers in gcrypt; for testing only, produces weak keys!
+-    # quick_random = no
+-
+ }
+-
+--- a/conf/plugins/ha.conf
++++ b/conf/plugins/ha.conf
+@@ -1,35 +1,3 @@
+ ha {
+-
+-    # Interval in seconds to automatically balance handled segments between
+-    # nodes. Set to 0 to disable.
+-    # autobalance = 0
+-
+-    # Buffer size for received HA messages.
+-    # buflen = 2048
+-
+-    # fifo_interface = yes
+-
+-    # heartbeat_delay = 1000
+-
+-    # heartbeat_timeout = 2100
+-
+-    # Whether to load the plugin. Can also be an integer to increase the
+-    # priority of this plugin.
+     load = yes
+-
+-    # local =
+-
+-    # monitor = yes
+-
+-    # pools =
+-
+-    # remote =
+-
+-    # resync = yes
+-
+-    # secret =
+-
+-    # segment_count = 1
+-
+ }
+-
+--- a/conf/plugins/imc-attestation.conf
++++ b/conf/plugins/imc-attestation.conf
+@@ -1,8 +1,3 @@
+ imc-attestation {
+-
+-    # Whether to load the plugin. Can also be an integer to increase the
+-    # priority of this plugin.
+     load = yes
+-
+ }
+-
+--- a/conf/plugins/imc-hcd.conf
++++ b/conf/plugins/imc-hcd.conf
+@@ -1,8 +1,3 @@
+ imc-hcd {
+-
+-    # Whether to load the plugin. Can also be an integer to increase the
+-    # priority of this plugin.
+     load = yes
+-
+ }
+-
+--- a/conf/plugins/imc-os.conf
++++ b/conf/plugins/imc-os.conf
+@@ -1,8 +1,3 @@
+ imc-os {
+-
+-    # Whether to load the plugin. Can also be an integer to increase the
+-    # priority of this plugin.
+     load = yes
+-
+ }
+-
+--- a/conf/plugins/imc-scanner.conf
++++ b/conf/plugins/imc-scanner.conf
+@@ -1,8 +1,3 @@
+ imc-scanner {
+-
+-    # Whether to load the plugin. Can also be an integer to increase the
+-    # priority of this plugin.
+     load = yes
+-
+ }
+-
+--- a/conf/plugins/imc-swima.conf
++++ b/conf/plugins/imc-swima.conf
+@@ -1,8 +1,3 @@
+ imc-swima {
+-
+-    # Whether to load the plugin. Can also be an integer to increase the
+-    # priority of this plugin.
+     load = yes
+-
+ }
+-
+--- a/conf/plugins/imc-test.conf
++++ b/conf/plugins/imc-test.conf
+@@ -1,8 +1,3 @@
+ imc-test {
+-
+-    # Whether to load the plugin. Can also be an integer to increase the
+-    # priority of this plugin.
+     load = yes
+-
+ }
+-
+--- a/conf/plugins/imv-attestation.conf
++++ b/conf/plugins/imv-attestation.conf
+@@ -1,8 +1,3 @@
+ imv-attestation {
+-
+-    # Whether to load the plugin. Can also be an integer to increase the
+-    # priority of this plugin.
+     load = yes
+-
+ }
+-
+--- a/conf/plugins/imv-os.conf
++++ b/conf/plugins/imv-os.conf
+@@ -1,8 +1,3 @@
+ imv-os {
+-
+-    # Whether to load the plugin. Can also be an integer to increase the
+-    # priority of this plugin.
+     load = yes
+-
+ }
+-
+--- a/conf/plugins/imv-scanner.conf
++++ b/conf/plugins/imv-scanner.conf
+@@ -1,8 +1,3 @@
+ imv-scanner {
+-
+-    # Whether to load the plugin. Can also be an integer to increase the
+-    # priority of this plugin.
+     load = yes
+-
+ }
+-
+--- a/conf/plugins/imv-swima.conf
++++ b/conf/plugins/imv-swima.conf
+@@ -1,8 +1,3 @@
+ imv-swima {
+-
+-    # Whether to load the plugin. Can also be an integer to increase the
+-    # priority of this plugin.
+     load = yes
+-
+ }
+-
+--- a/conf/plugins/imv-test.conf
++++ b/conf/plugins/imv-test.conf
+@@ -1,8 +1,3 @@
+ imv-test {
+-
+-    # Whether to load the plugin. Can also be an integer to increase the
+-    # priority of this plugin.
+     load = yes
+-
+ }
+-
+--- a/conf/plugins/ipseckey.conf
++++ b/conf/plugins/ipseckey.conf
+@@ -1,11 +1,3 @@
+ ipseckey {
+-
+-    # Enable fetching of IPSECKEY RRs via DNS.
+-    # enable = no
+-
+-    # Whether to load the plugin. Can also be an integer to increase the
+-    # priority of this plugin.
+     load = yes
+-
+ }
+-
+--- a/conf/plugins/kernel-libipsec.conf
++++ b/conf/plugins/kernel-libipsec.conf
+@@ -1,11 +1,3 @@
+ kernel-libipsec {
+-
+-    # Allow that the remote traffic selector equals the IKE peer.
+-    # allow_peer_ts = no
+-
+-    # Whether to load the plugin. Can also be an integer to increase the
+-    # priority of this plugin.
+     load = yes
+-
+ }
+-
+--- a/conf/plugins/kernel-netlink.conf
++++ b/conf/plugins/kernel-netlink.conf
+@@ -1,90 +1,9 @@
+ kernel-netlink {
+-
+-    # Buffer size for received Netlink messages.
+-    # buflen = <min(PAGE_SIZE, 8192)>
+-
+-    # Force maximum Netlink receive buffer on Netlink socket.
+-    # force_receive_buffer_size = no
+-
+-    # Firewall mark to set on the routing rule that directs traffic to our
+-    # routing table.
+-    # fwmark =
+-
+-    # Interface to be used to find hardware offload feature flag on.
+-    # hw_offload_feature_interface = lo
+-
+-    # Whether to ignore errors potentially resulting from a retransmission.
+-    # ignore_retransmit_errors = no
+-
+-    # Whether to load the plugin. Can also be an integer to increase the
+-    # priority of this plugin.
+     load = yes
+-
+-    # MSS to set on installed routes, 0 to disable.
+-    # mss = 0
+-
+-    # MTU to set on installed routes, 0 to disable.
+-    # mtu = 0
+-
+-    # Whether to perform concurrent Netlink ROUTE queries on a single socket.
+-    # parallel_route = no
+-
+-    # Whether to perform concurrent Netlink XFRM queries on a single socket.
+-    # parallel_xfrm = no
+-
+-    # Whether to always use XFRM_MSG_UPDPOLICY to install policies.
+-    # policy_update = no
+-
+-    # Whether to use port or socket based IKE XFRM bypass policies.
+-    # port_bypass = no
+-
+-    # Whether to process changes in routing rules to trigger roam events.
+-    # process_rules = no
+-
+-    # Maximum Netlink socket receive buffer in bytes.
+-    # receive_buffer_size = 0
+-
+-    # Number of Netlink message retransmissions to send on timeout.
+-    # retries = 0
+-
+-    # Whether to trigger roam events when interfaces, addresses or routes
+-    # change.
+-    # roam_events = yes
+-
+-    # Whether to set protocol and ports in the selector installed on transport
+-    # mode IPsec SAs in the kernel.
+-    # set_proto_port_transport_sa = no
+-
+-    # Netlink message retransmission timeout, 0 to disable retransmissions.
+-    # timeout = 0
+-
+-    # Lifetime of XFRM acquire state and allocated SPIs in kernel.
+-    # xfrm_acq_expires = 165
+-
+-    # XFRM policy hashing threshold configuration for IPv4 and IPv6.
+     spdh_thresh {
+-
+         ipv4 {
+-
+-            # Local subnet XFRM policy hashing threshold for IPv4.
+-            # lbits = 32
+-
+-            # Remote subnet XFRM policy hashing threshold for IPv4.
+-            # rbits = 32
+-
+         }
+-
+         ipv6 {
+-
+-            # Local subnet XFRM policy hashing threshold for IPv6.
+-            # lbits = 128
+-
+-            # Remote subnet XFRM policy hashing threshold for IPv6.
+-            # rbits = 128
+-
+         }
+-
+     }
+-
+ }
+-
+--- a/conf/plugins/kernel-pfkey.conf
++++ b/conf/plugins/kernel-pfkey.conf
+@@ -1,14 +1,3 @@
+ kernel-pfkey {
+-
+-    # Size of the receive buffer for the event socket (0 for default size).
+-    # events_buffer_size = 0
+-
+-    # Whether to load the plugin. Can also be an integer to increase the
+-    # priority of this plugin.
+     load = yes
+-
+-    # Whether to use the internal or external interface in installed routes.
+-    # route_via_internal = no
+-
+ }
+-
+--- a/conf/plugins/kernel-pfroute.conf
++++ b/conf/plugins/kernel-pfroute.conf
+@@ -1,15 +1,3 @@
+ kernel-pfroute {
+-
+-    # Whether to load the plugin. Can also be an integer to increase the
+-    # priority of this plugin.
+     load = yes
+-
+-    # MTU to set on TUN devices created for virtual IPs.
+-    # mtu = 1400
+-
+-    # Time in ms to wait until virtual IP addresses appear/disappear before
+-    # failing.
+-    # vip_wait = 1000
+-
+ }
+-
+--- a/conf/plugins/led.conf
++++ b/conf/plugins/led.conf
+@@ -1,12 +1,3 @@
+ led {
+-
+-    # activity_led =
+-
+-    # blink_time = 50
+-
+-    # Whether to load the plugin. Can also be an integer to increase the
+-    # priority of this plugin.
+     load = yes
+-
+ }
+-
+--- a/conf/plugins/load-tester.conf
++++ b/conf/plugins/load-tester.conf
+@@ -1,142 +1,5 @@
+-# Section to configure the load-tester plugin, see LOAD TESTS in
+-# strongswan.conf(5) for details.
+ load-tester {
+-
+-    # Whether to keep dynamic addresses even after the associated SA got
+-    # terminated.
+-    # addrs_keep = no
+-
+-    # Network prefix length to use when installing dynamic addresses. If set to
+-    # -1 the full address is used (i.e. 32 or 128).
+-    # addrs_prefix = 16
+-
+-    # Directory to load (intermediate) CA certificates from.
+-    # ca_dir =
+-
+-    # Seconds to start CHILD_SA rekeying after setup.
+-    # child_rekey = 600
+-
+-    # URI to a CRL to include as certificate distribution point in generated
+-    # certificates.
+-    # crl =
+-
+-    # Delay between initiations for each thread.
+-    # delay = 0
+-
+-    # Delete an IKE_SA as soon as it has been established.
+-    # delete_after_established = no
+-
+-    # Digest algorithm used when issuing certificates.
+-    # digest = sha1
+-
+-    # DPD delay to use in load test.
+-    # dpd_delay = 0
+-
+-    # Base port to be used for requests (each client uses a different port).
+-    # dynamic_port = 0
+-
+-    # EAP secret to use in load test.
+-    # eap_password = default-pwd
+-
+-    # Enable the load testing plugin. WARNING: Never enable this plugin on
+-    # productive systems. It provides preconfigured credentials and allows an
+-    # attacker to authenticate as any user.
+-    # enable = no
+-
+-    # CHILD_SA proposal to use for load tests.
+-    # esp = aes128-sha1
+-
+-    # Fake the kernel interface to allow load-testing against self.
+-    # fake_kernel = no
+-
+-    # Seconds to start IKE_SA rekeying after setup.
+-    # ike_rekey = 0
+-
+-    # Global limit of concurrently established SAs during load test.
+-    # init_limit = 0
+-
+-    # Address to initiate from.
+-    # initiator = 0.0.0.0
+-
+-    # Authentication method(s) the initiator uses.
+-    # initiator_auth = pubkey
+-
+-    # Initiator ID used in load test.
+-    # initiator_id =
+-
+-    # Initiator ID to match against as responder.
+-    # initiator_match =
+-
+-    # Traffic selector on initiator side, as proposed by initiator.
+-    # initiator_tsi =
+-
+-    # Traffic selector on responder side, as proposed by initiator.
+-    # initiator_tsr =
+-
+-    # Number of concurrent initiator threads to use in load test.
+-    # initiators = 0
+-
+-    # Path to the issuer certificate (if not configured a hard-coded default
+-    # value is used).
+-    # issuer_cert =
+-
+-    # Path to private key that is used to issue certificates (if not configured
+-    # a hard-coded default value is used).
+-    # issuer_key =
+-
+-    # Number of IKE_SAs to initiate by each initiator in load test.
+-    # iterations = 1
+-
+-    # Whether to load the plugin. Can also be an integer to increase the
+-    # priority of this plugin.
+     load = yes
+-
+-    # IPsec mode to use, one of tunnel, transport, or beet.
+-    # mode = tunnel
+-
+-    # Provide INTERNAL_IPV4_ADDRs from a named pool.
+-    # pool =
+-
+-    # Preshared key to use in load test.
+-    # preshared_key = <default-psk>
+-
+-    # IKE proposal to use in load test.
+-    # proposal = aes128-sha1-modp768
+-
+-    # Request an INTERNAL_IPV4_ADDR and INTERNAL_IPV6_ADDR from the server.
+-    # request_virtual_ip = no
+-
+-    # Address to initiation connections to.
+-    # responder = 127.0.0.1
+-
+-    # Authentication method(s) the responder uses.
+-    # responder_auth = pubkey
+-
+-    # Responder ID used in load test.
+-    # responder_id =
+-
+-    # Traffic selector on initiator side, as narrowed by responder.
+-    # responder_tsi = initiator_tsi
+-
+-    # Traffic selector on responder side, as narrowed by responder.
+-    # responder_tsr = initiator_tsr
+-
+-    # Shutdown the daemon after all IKE_SAs have been established.
+-    # shutdown_when_complete = no
+-
+-    # Socket provided by the load-tester plugin.
+-    # socket = unix://${piddir}/charon.ldt
+-
+-    # IKE version to use (0 means use IKEv2 as initiator and accept any version
+-    # as responder).
+-    # version = 0
+-
+-    # Section that contains key/value pairs with address pools (in CIDR
+-    # notation) to use for a specific network interface e.g. eth0 =
+-    # 10.10.0.0/16.
+     addrs {
+-
+     }
+-
+ }
+-
+--- a/conf/plugins/lookip.conf
++++ b/conf/plugins/lookip.conf
+@@ -1,11 +1,3 @@
+ lookip {
+-
+-    # Whether to load the plugin. Can also be an integer to increase the
+-    # priority of this plugin.
+     load = yes
+-
+-    # Socket provided by the lookip plugin.
+-    # socket = unix://${piddir}/charon.lkp
+-
+ }
+-
+--- a/conf/plugins/ntru.conf
++++ b/conf/plugins/ntru.conf
+@@ -1,13 +1,3 @@
+ ntru {
+-
+-    # Whether to load the plugin. Can also be an integer to increase the
+-    # priority of this plugin.
+     load = yes
+-
+-    # The following parameter sets are available: x9_98_speed, x9_98_bandwidth,
+-    # x9_98_balance and optimum, the last set not being part of the X9.98
+-    # standard but having the best performance.
+-    # parameter_set = optimum
+-
+ }
+-
+--- a/conf/plugins/openssl.conf
++++ b/conf/plugins/openssl.conf
+@@ -1,20 +1,3 @@
+ openssl {
+-
+-    # ENGINE ID to use in the OpenSSL plugin.
+-    # engine_id = pkcs11
+-
+-    # Set OpenSSL FIPS mode: disabled(0), enabled(1), Suite B enabled(2).
+-    # fips_mode = 0
+-
+-    # Whether to load the plugin. Can also be an integer to increase the
+-    # priority of this plugin.
+     load = yes
+-
+-    # Load the legacy provider in OpenSSL 3+ for algorithms like MD4, DES, or
+-    # Blowfish (the first two are required for EAP-MSCHAPv2). If disabled, the
+-    # default provider is loaded, or those configured in the OpenSSL config
+-    # (e.g. the fips provider).
+-    # load_legacy = yes
+-
+ }
+-
+--- a/conf/plugins/osx-attr.conf
++++ b/conf/plugins/osx-attr.conf
+@@ -1,12 +1,3 @@
+ osx-attr {
+-
+-    # Whether DNS servers are appended to existing entries, instead of replacing
+-    # them.
+-    # append = yes
+-
+-    # Whether to load the plugin. Can also be an integer to increase the
+-    # priority of this plugin.
+     load = yes
+-
+ }
+-
+--- a/conf/plugins/p-cscf.conf
++++ b/conf/plugins/p-cscf.conf
+@@ -1,18 +1,5 @@
+ p-cscf {
+-
+-    # Whether to load the plugin. Can also be an integer to increase the
+-    # priority of this plugin.
+     load = yes
+-
+-    # Section to enable requesting P-CSCF server addresses for individual
+-    # connections.
+     enable {
+-
+-        # <conn> is the name of a connection with an ePDG from which to request
+-        # P-CSCF server addresses.
+-        # <conn> = no
+-
+     }
+-
+ }
+-
+--- a/conf/plugins/pkcs11.conf
++++ b/conf/plugins/pkcs11.conf
+@@ -1,47 +1,7 @@
+ pkcs11 {
+-
+-    # Whether to load the plugin. Can also be an integer to increase the
+-    # priority of this plugin.
+     load = yes
+-
+-    # Reload certificates from all tokens if charon receives a SIGHUP.
+-    # reload_certs = no
+-
+-    # Whether the PKCS#11 modules should be used for DH and ECDH (see use_ecc
+-    # option).
+-    # use_dh = no
+-
+-    # Whether the PKCS#11 modules should be used for ECDH and ECDSA public key
+-    # operations. ECDSA private keys can be used regardless of this option.
+-    # use_ecc = no
+-
+-    # Whether the PKCS#11 modules should be used to hash data.
+-    # use_hasher = no
+-
+-    # Whether the PKCS#11 modules should be used for public key operations, even
+-    # for keys not stored on tokens.
+-    # use_pubkey = no
+-
+-    # Whether the PKCS#11 modules should be used as RNG.
+-    # use_rng = no
+-
+-    # List of available PKCS#11 modules.
+     modules {
+-
+         <name> {
+-
+-            # Whether to automatically load certificates from tokens.
+-            # load_certs = yes
+-
+-            # Whether OS locking should be enabled for this module.
+-            # os_locking = no
+-
+-            # Full path to the shared object file of this PKCS#11 module.
+-            # path =
+-
+         }
+-
+     }
+-
+ }
+-
+--- a/conf/plugins/radattr.conf
++++ b/conf/plugins/radattr.conf
+@@ -1,15 +1,3 @@
+ radattr {
+-
+-    # Directory where RADIUS attributes are stored in client-ID specific files.
+-    # dir =
+-
+-    # Whether to load the plugin. Can also be an integer to increase the
+-    # priority of this plugin.
+     load = yes
+-
+-    # Add attributes to all IKE_AUTH messages (-1) or only to the one with the
+-    # given message ID.
+-    # message_id = -1
+-
+ }
+-
+--- a/conf/plugins/random.conf
++++ b/conf/plugins/random.conf
+@@ -1,18 +1,3 @@
+ random {
+-
+-    # Whether to load the plugin. Can also be an integer to increase the
+-    # priority of this plugin.
+     load = yes
+-
+-    # File to read random bytes from.
+-    # random = ${random_device}
+-
+-    # If set to yes the RNG_STRONG class reads random bytes from the same source
+-    # as the RNG_TRUE class.
+-    # strong_equals_true = no
+-
+-    # File to read pseudo random bytes from.
+-    # urandom = ${urandom_device}
+-
+ }
+-
+--- a/conf/plugins/resolve.conf
++++ b/conf/plugins/resolve.conf
+@@ -1,18 +1,5 @@
+ resolve {
+-
+-    # File where to add DNS server entries.
+-    # file = /etc/resolv.conf
+-
+-    # Whether to load the plugin. Can also be an integer to increase the
+-    # priority of this plugin.
+     load = yes
+-
+     resolvconf {
+-
+-        # Prefix used for interface names sent to resolvconf(8).
+-        # iface_prefix = lo.inet.ipsec.
+-
+     }
+-
+ }
+-
+--- a/conf/plugins/revocation.conf
++++ b/conf/plugins/revocation.conf
+@@ -1,14 +1,3 @@
+ revocation {
+-
+-    # Whether CRL validation should be enabled.
+-    # enable_crl = yes
+-
+-    # Whether OCSP validation should be enabled.
+-    # enable_ocsp = yes
+-
+-    # Whether to load the plugin. Can also be an integer to increase the
+-    # priority of this plugin.
+     load = yes
+-
+ }
+-
+--- a/conf/plugins/save-keys.conf
++++ b/conf/plugins/save-keys.conf
+@@ -1,16 +1,3 @@
+ save-keys {
+-
+-    # Whether to save ESP keys.
+-    # esp = no
+-
+-    # Whether to save IKE keys.
+-    # ike = no
+-
+-    # Whether to load the plugin.
+     load = no
+-
+-    # Directory where the keys are stored in the format supported by Wireshark
+-    # wireshark_keys =
+-
+ }
+-
+--- a/conf/plugins/socket-default.conf
++++ b/conf/plugins/socket-default.conf
+@@ -1,23 +1,3 @@
+ socket-default {
+-
+-    # Firewall mark to set on outbound packets.
+-    # fwmark =
+-
+-    # Whether to load the plugin. Can also be an integer to increase the
+-    # priority of this plugin.
+     load = yes
+-
+-    # Set source address on outbound packets, if possible.
+-    # set_source = yes
+-
+-    # Force sending interface on outbound packets, if possible.
+-    # set_sourceif = no
+-
+-    # Listen on IPv4, if possible.
+-    # use_ipv4 = yes
+-
+-    # Listen on IPv6, if possible.
+-    # use_ipv6 = yes
+-
+ }
+-
+--- a/conf/plugins/sql.conf
++++ b/conf/plugins/sql.conf
+@@ -1,15 +1,3 @@
+ sql {
+-
+-    # Database URI for charon's SQL plugin. If it contains a password, make sure
+-    # to adjust the permissions of the config file accordingly.
+-    # database =
+-
+-    # Whether to load the plugin. Can also be an integer to increase the
+-    # priority of this plugin.
+     load = yes
+-
+-    # Loglevel for logging to SQL database.
+-    # loglevel = -1
+-
+ }
+-
+--- a/conf/plugins/stroke.conf
++++ b/conf/plugins/stroke.conf
+@@ -1,32 +1,3 @@
+ stroke {
+-
+-    # Analyze addresses/hostnames in left|right to detect which side is local
+-    # and swap configuration options if necessary. If disabled left is always
+-    # local.
+-    # allow_swap = yes
+-
+-    # Treat certificates in ipsec.d/cacerts and ipsec.conf ca sections as CA
+-    # certificates even if they don't contain a CA basic constraint.
+-    # ignore_missing_ca_basic_constraint = no
+-
+-    # Whether to load the plugin. Can also be an integer to increase the
+-    # priority of this plugin.
+     load = yes
+-
+-    # Maximum number of stroke messages handled concurrently.
+-    # max_concurrent = 4
+-
+-    # If enabled log level changes via stroke socket are not allowed.
+-    # prevent_loglevel_changes = no
+-
+-    # Location of the ipsec.secrets file
+-    # secrets_file = ${sysconfdir}/ipsec.secrets
+-
+-    # Socket provided by the stroke plugin.
+-    # socket = unix://${piddir}/charon.ctl
+-
+-    # Timeout in ms for any stroke command. Use 0 to disable the timeout.
+-    # timeout = 0
+-
+ }
+-
+--- a/conf/plugins/systime-fix.conf
++++ b/conf/plugins/systime-fix.conf
+@@ -1,26 +1,3 @@
+ systime-fix {
+-
+-    # Interval in seconds to check system time for validity. 0 disables the
+-    # check.
+-    # interval = 0
+-
+-    # Whether to load the plugin. Can also be an integer to increase the
+-    # priority of this plugin.
+     load = yes
+-
+-    # Whether to use reauth or delete if an invalid cert lifetime is detected.
+-    # reauth = no
+-
+-    # Threshold date where system time is considered valid. Disabled if not
+-    # specified.
+-    # threshold =
+-
+-    # strptime(3) format used to parse threshold option.
+-    # threshold_format = %Y
+-
+-    # How long to wait for a valid system time if an interval is configured. 0
+-    # to recheck indefinitely.
+-    # timeout = 0s
+-
+ }
+-
+--- a/conf/plugins/tnc-ifmap.conf
++++ b/conf/plugins/tnc-ifmap.conf
+@@ -1,30 +1,3 @@
+ tnc-ifmap {
+-
+-    # Path to X.509 certificate file of IF-MAP client.
+-    # client_cert =
+-
+-    # Path to private key file of IF-MAP client.
+-    # client_key =
+-
+-    # Unique name of strongSwan server as a PEP and/or PDP device.
+-    # device_name =
+-
+-    # Whether to load the plugin. Can also be an integer to increase the
+-    # priority of this plugin.
+     load = yes
+-
+-    # Interval in seconds between periodic IF-MAP RenewSession requests.
+-    # renew_session_interval = 150
+-
+-    # Path to X.509 certificate file of IF-MAP server.
+-    # server_cert =
+-
+-    # URI of the form [https://]servername[:port][/path].
+-    # server_uri = https://localhost:8444/imap
+-
+-    # Credentials of IF-MAP client of the form username:password. If set, make
+-    # sure to adjust the permissions of the config file accordingly.
+-    # username_password =
+-
+ }
+-
+--- a/conf/plugins/tnc-imc.conf
++++ b/conf/plugins/tnc-imc.conf
+@@ -1,14 +1,3 @@
+ tnc-imc {
+-
+-    # Unload IMC after use.
+-    # dlclose = yes
+-
+-    # Whether to load the plugin. Can also be an integer to increase the
+-    # priority of this plugin.
+     load = yes
+-
+-    # Preferred language for TNC recommendations.
+-    # preferred_language = en
+-
+ }
+-
+--- a/conf/plugins/tnc-imv.conf
++++ b/conf/plugins/tnc-imv.conf
+@@ -1,14 +1,3 @@
+ tnc-imv {
+-
+-    # Unload IMV after use.
+-    # dlclose = yes
+-
+-    # Whether to load the plugin. Can also be an integer to increase the
+-    # priority of this plugin.
+     load = yes
+-
+-    # TNC recommendation policy, one of default, any, or all.
+-    # recommendation_policy = default
+-
+ }
+-
+--- a/conf/plugins/tnc-pdp.conf
++++ b/conf/plugins/tnc-pdp.conf
+@@ -1,41 +1,7 @@
+ tnc-pdp {
+-
+-    # Whether to load the plugin. Can also be an integer to increase the
+-    # priority of this plugin.
+     load = yes
+-
+-    # Name of the strongSwan PDP as contained in the AAA certificate.
+-    # server =
+-
+-    # Timeout in seconds before closing incomplete connections.
+-    # timeout =
+-
+     pt_tls {
+-
+-        # Enable PT-TLS protocol on the strongSwan PDP.
+-        # enable = yes
+-
+-        # PT-TLS server port the strongSwan PDP is listening on.
+-        # port = 271
+-
+     }
+-
+     radius {
+-
+-        # Enable RADIUS protocol on the strongSwan PDP.
+-        # enable = yes
+-
+-        # EAP tunnel method to be used.
+-        # method = ttls
+-
+-        # RADIUS server port the strongSwan PDP is listening on.
+-        # port = 1812
+-
+-        # Shared RADIUS secret between strongSwan PDP and NAS. If set, make sure
+-        # to adjust the permissions of the config file accordingly.
+-        # secret =
+-
+     }
+-
+ }
+-
+--- a/conf/plugins/tnccs-11.conf
++++ b/conf/plugins/tnccs-11.conf
+@@ -1,11 +1,3 @@
+ tnccs-11 {
+-
+-    # Whether to load the plugin. Can also be an integer to increase the
+-    # priority of this plugin.
+     load = yes
+-
+-    # Maximum size of a PA-TNC message (XML & Base64 encoding).
+-    # max_message_size = 45000
+-
+ }
+-
+--- a/conf/plugins/tnccs-20.conf
++++ b/conf/plugins/tnccs-20.conf
+@@ -1,27 +1,5 @@
+ tnccs-20 {
+-
+-    # Whether to load the plugin. Can also be an integer to increase the
+-    # priority of this plugin.
+     load = yes
+-
+-    # Maximum size of a PB-TNC batch (upper limit via PT-EAP = 65529).
+-    # max_batch_size = 65522
+-
+-    # Maximum size of a PA-TNC message (upper limit via PT-EAP = 65497).
+-    # max_message_size = 65490
+-
+-    # Enable PB-TNC mutual protocol.
+-    # mutual = no
+-
+     tests {
+-
+-        # Send an unsupported PB-TNC message type with the NOSKIP flag set.
+-        # pb_tnc_noskip = no
+-
+-        # Send a PB-TNC batch with a modified PB-TNC version.
+-        # pb_tnc_version = 2
+-
+     }
+-
+ }
+-
+--- a/conf/plugins/tpm.conf
++++ b/conf/plugins/tpm.conf
+@@ -1,34 +1,5 @@
+ tpm {
+-
+-    # Handle of the RSA or ECC Endorsement Key (EK) to be used to set up an
+-    # authenticated session with a TPM 2.0 (e.g. 0x81010001).
+-    # ek_handle =
+-
+-    # Is the TPM 2.0 FIPS-186-4 compliant, forcing e.g. the use of the default
+-    # salt length instead of maximum salt length with RSAPSS padding.
+-    # fips_186_4 = no
+-
+-    # Whether to load the plugin. Can also be an integer to increase the
+-    # priority of this plugin.
+     load = yes
+-
+-    # Whether the TPM should be used as RNG. For security reasons enable only if
+-    # an authenticated session can be set up (see ek_handle option).
+-    # use_rng = no
+-
+     tcti {
+-
+-        # Name of TPM 2.0 TCTI library. Valid values: tabrmd, device or mssim.
+-        # Defaults are device if the /dev/tpmrm0 in-kernel TPM 2.0 resource
+-        # manager device exists, and tabrmd otherwise, requiring the d-bus based
+-        # TPM 2.0 access broker and resource manager to be available.
+-        # name = device|tabrmd
+-
+-        # Options for the TPM 2.0 TCTI library. Defaults are /dev/tpmrm0 if the
+-        # TCTI library name is device and no options otherwise.
+-        # opts = /dev/tpmrm0|<none>
+-
+     }
+-
+ }
+-
+--- a/conf/plugins/unbound.conf
++++ b/conf/plugins/unbound.conf
+@@ -1,17 +1,3 @@
+ unbound {
+-
+-    # File to read trusted keys for DLV (DNSSEC Lookaside Validation) from.
+-    # dlv_anchors =
+-
+-    # Whether to load the plugin. Can also be an integer to increase the
+-    # priority of this plugin.
+     load = yes
+-
+-    # File to read DNS resolver configuration from.
+-    # resolv_conf = /etc/resolv.conf
+-
+-    # File to read DNSSEC trust anchors from (usually root zone KSK).
+-    # trust_anchors = /etc/ipsec.d/dnssec.keys
+-
+ }
+-
+--- a/conf/plugins/updown.conf
++++ b/conf/plugins/updown.conf
+@@ -1,12 +1,4 @@
+ updown {
+-
+-    # Whether the updown script should handle assigned DNS servers (if enabled
+-    # they can't be handled by other plugins, like resolve).
+     dns_handler = yes
+-
+-    # Whether to load the plugin. Can also be an integer to increase the
+-    # priority of this plugin.
+     load = yes
+-
+ }
+-
+--- a/conf/plugins/vici.conf
++++ b/conf/plugins/vici.conf
+@@ -1,11 +1,3 @@
+ vici {
+-
+-    # Whether to load the plugin. Can also be an integer to increase the
+-    # priority of this plugin.
+     load = yes
+-
+-    # Socket the vici plugin serves clients.
+-    # socket = unix://${piddir}/charon.vici
+-
+ }
+-
+--- a/conf/plugins/whitelist.conf
++++ b/conf/plugins/whitelist.conf
+@@ -1,14 +1,3 @@
+ whitelist {
+-
+-    # Enable loaded whitelist plugin.
+-    # enable = yes
+-
+-    # Whether to load the plugin. Can also be an integer to increase the
+-    # priority of this plugin.
+     load = yes
+-
+-    # Socket provided by the whitelist plugin.
+-    # socket = unix://${piddir}/charon.wlst
+-
+ }
+-
+--- a/conf/plugins/wolfssl.conf
++++ b/conf/plugins/wolfssl.conf
+@@ -1,11 +1,3 @@
+ wolfssl {
+-
+-    # Enable to prevent loading the plugin if wolfSSL is not in FIPS mode.
+-    # fips_mode = no
+-
+-    # Whether to load the plugin. Can also be an integer to increase the
+-    # priority of this plugin.
+     load = yes
+-
+ }
+-
+--- a/conf/plugins/xauth-eap.conf
++++ b/conf/plugins/xauth-eap.conf
+@@ -1,11 +1,3 @@
+ xauth-eap {
+-
+-    # EAP plugin to be used as backend for XAuth credential verification.
+-    # backend = radius
+-
+-    # Whether to load the plugin. Can also be an integer to increase the
+-    # priority of this plugin.
+     load = yes
+-
+ }
+-
+--- a/conf/plugins/xauth-pam.conf
++++ b/conf/plugins/xauth-pam.conf
+@@ -1,18 +1,3 @@
+ xauth-pam {
+-
+-    # Whether to load the plugin. Can also be an integer to increase the
+-    # priority of this plugin.
+     load = yes
+-
+-    # PAM service to be used for authentication.
+-    # pam_service = login
+-
+-    # Open/close a PAM session for each active IKE_SA.
+-    # session = no
+-
+-    # If an email address is received as an XAuth username, trim it to just the
+-    # username part.
+-    # trim_email = yes
+-
+ }
+-
+--- a/conf/strongswan.conf
++++ b/conf/strongswan.conf
+@@ -1,14 +1,7 @@
+-# strongswan.conf - strongSwan configuration file
+-#
+-# Refer to the strongswan.conf(5) manpage for details
+-#
+-# Configuration changes should be made in the included files
+-
+ charon {
+ 	load_modular = yes
+ 	plugins {
+ 		include strongswan.d/charon/*.conf
+ 	}
+ }
+-
+ include strongswan.d/*.conf

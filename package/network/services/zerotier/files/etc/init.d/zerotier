@@ -102,6 +102,9 @@ setup_instance() {
 start_service() {
 	config_load "zerotier"
 	config_foreach setup_instance "instance"
+	if [ "$(/etc/init.d/mwan3 status)" = "running" ]; then
+		/etc/init.d/mwan3 reload
+	fi
 }
 
 stop_service() {

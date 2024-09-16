@@ -52,6 +52,15 @@
 				],
 				[ "rm", "/dev/%DEVNAME%" ]
 			]
+		],
+		"change" : [
+			[ "if",
+				[ "and",
+					[ "eq", "OF_NAME", "qcom,mss" ],
+					[ "eq", "DRIVER", "pil-q6v5-mss" ]
+				],
+				[ "exec", "/sbin/hotplug-call", "reset" ]
+			]
 		]
 	} ],
 	[ "if",

@@ -434,6 +434,13 @@ typedef enum {
 } lgsm_frouting_attrs_t;
 
 typedef enum {
+	LGSM_QSIMDET_ENABLED,
+	LGSM_QSIMDET_INSERT_LEVEL,
+	LGSM_QSIMDET_IS_DEFAULT,
+	LGSM_QSIMDET_MAX,
+} lgsm_qsimdet_attrs_t;
+
+typedef enum {
 	LGSM_SET_IMS_RESTART,
 	LGSM_SET_IMS_MAX,
 } lgsm_set_ims_attrs_t;
@@ -827,6 +834,10 @@ typedef enum {
 	LGSM_UBUS_GET_USBCFG,
 	LGSM_UBUS_GET_FROUTING_STATE,
 	LGSM_UBUS_SET_FROUTING_STATE,
+	LGSM_UBUS_GET_5G_EXTENDED_PARAMS,
+	LGSM_UBUS_SET_5G_EXTENDED_PARAMS,
+	LGSM_UBUS_GET_QSIMDET,
+	LGSM_UBUS_SET_QSIMDET,
 	//------
 	__LGSM_UBUS_MAX,
 } lgsm_method_t;
@@ -1276,6 +1287,12 @@ typedef struct {
 } lgsm_mtu_info_t;
 
 typedef struct {
+	bool enabled;
+	int insert_level;
+	bool is_default;
+} lgsm_qsimdet_t;
+
+typedef struct {
 	int restore_cnt;
 	enum cefs_restore_state_id restore_state;
 } lgsm_flash_state_t;
@@ -1389,6 +1406,7 @@ typedef enum {
 	LGSM_LABEL_GEA_ALGO_T,
 	LGSM_LABEL_GET_IPV6_NDP_T,
 	LGSM_LABEL_FROUTING_STATE_T,
+	LGSM_LABEL_QSIMDET_STATE_T,
 	LGSM_LABEL_ERROR,
 } lgsm_resp_label_t;
 
@@ -1470,6 +1488,7 @@ typedef union {
 	enum dpo_mode_id dpo_mode;
 	enum disable_nr5g_mode_id disable_5g_mode;
 	enum ipv6_ndp_state_t ipv6_ndp;
+	lgsm_qsimdet_t qsimdet;
 } lgsm_resp_data;
 
 typedef struct {
@@ -2562,8 +2581,20 @@ lgsm_err_t lgsm_set_m2m_state(struct ubus_context *ctx, enum m2m_state_id id, fu
  * @param[in]   modem_num   Modem identification number.
  * @return lgsm_err_t. Return function status code.
  */
-lgsm_err_t lgsm_set_frouting_state(struct ubus_context *ctx, bool enable, func_t *resp,
-				   uint32_t modem_num);
+lgsm_err_t lgsm_set_frouting_state(struct ubus_context *ctx, bool enable, func_t *resp, uint32_t modem_num);
+
+/**
+ * Set QSIMDET state
+ * @param[ptr]  ctx   	    Ubus ctx.
+ * @param[char] resp   	    Response from modem for the executed AT command.
+ * @param[in]   id 	    	Frouting state to be set.
+ * @param[in]   modem_num   Modem identification number.
+ * @param[in]   enable      State to be set.
+ * @param[in]   insert_level Insertion level to be set.
+ * @return lgsm_err_t. Return function status code.
+ */
+lgsm_err_t lgsm_set_qsimdet_state(struct ubus_context *ctx, bool enable, int insert_level, func_t *resp,
+				  uint32_t modem_num);
 
 /**
  * Set SIM initdelay
@@ -3008,6 +3039,16 @@ lgsm_err_t lgsm_set_gnss_oper_mode(struct ubus_context *ctx, func_t *resp, enum 
  */
 lgsm_err_t lgsm_set_urc_cause_support(struct ubus_context *ctx, bool enabled, func_t *resp,
 				      uint32_t modem_num);
+
+/**
+ * Set 5g extended params configuration
+ * @param[ptr]  ctx         Ubus ctx.
+ * @param[in]   enabled	    Is 5g extended params enabled.
+ * @param[char] resp        Response from modem for the executed AT command.
+ * @param[in]   modem_num   Modem identification number.
+ */
+lgsm_err_t lgsm_set_5g_extended_params(struct ubus_context *ctx, bool enabled, func_t *resp,
+				       uint32_t modem_num);
 
 /**
  * Set DPO operation mode
@@ -3636,6 +3677,13 @@ void handle_get_gnss_oper_mode_rsp(struct blob_attr *info, lgsm_structed_info_t 
 void handle_get_urc_cause_support(struct blob_attr *info, lgsm_structed_info_t *parsed);
 
 /**
+   * Parse 5g extended params method response
+   * @param[ptr]   info      Blob from gsmd.
+   * @param[ptr]   parsed    Parsed union readable information.
+   */
+void handle_get_5g_extended_params_rsp(struct blob_attr *info, lgsm_structed_info_t *parsed);
+
+/**
    * Parse DPO mode method response
    * @param[ptr]   info      Blob from gsmd.
    * @param[ptr]   parsed    Parsed union readable information.
@@ -3676,6 +3724,13 @@ void handle_get_ipv6_ndp_rsp(struct blob_attr *info, lgsm_structed_info_t *parse
    * @param[ptr]   parsed    Parsed union readable information.
    */
 void handle_get_usbcfg_rsp(struct blob_attr *info, lgsm_structed_info_t *parsed);
+
+/**
+   * Parse qsimdet state method response
+   * @param[ptr]   info      Blob from gsmd.
+   * @param[ptr]   parsed    Parsed union readable information.
+   */
+void handle_get_qsimdet_rsp(struct blob_attr *info, lgsm_structed_info_t *parsed);
 /*********************
 *  STRUCT HANDLERS  *
 *********************/

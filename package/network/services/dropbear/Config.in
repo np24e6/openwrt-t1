@@ -12,7 +12,7 @@ config DROPBEAR_CURVE25519
 
 config DROPBEAR_ECC
 	bool "Elliptic curve cryptography (ECC)"
-	default y
+	default n
 	help
 		Enables basic support for elliptic curve cryptography (ECC)
 		in key exchange and public key authentication.
@@ -57,6 +57,16 @@ config DROPBEAR_ED25519
 		  ssh-ed25519
 
 		Increases binary size by about 12 kB (MIPS).
+
+config DROPBEAR_SHA1
+	bool "SHA1 support"
+	default n
+	help
+		This enables the following algorithms:
+		  diffie-hellman-group14-sha1
+		  hmac-sha1
+		  hmac-sha1-96
+		  ssh-rsa
 
 config DROPBEAR_CHACHA20POLY1305
 	bool "Chacha20-Poly1305 support"

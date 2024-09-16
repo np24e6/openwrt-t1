@@ -97,6 +97,9 @@ define Package/xl2tpd/install
 	$(INSTALL_DIR) $(1)/usr/share/l2tp
 	$(INSTALL_BIN) ./files/19-l2tp.hotplug $(1)/usr/share/l2tp/19-l2tp.hotplug
 
+	$(INSTALL_DIR) $(1)/etc/hotplug.d/iface
+	$(INSTALL_BIN) ./files/00-l2tp_slow_retry.hotplug $(1)/etc/hotplug.d/iface/00-l2tp_slow_retry
+
 endef
 
 $(eval $(call BuildPackage,xl2tpd))

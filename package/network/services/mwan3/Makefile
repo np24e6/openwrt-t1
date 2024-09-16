@@ -44,7 +44,7 @@ endef
 
 define Package/mwan3/conffiles
 /etc/config/mwan3
-/etc/mwan3.user
+/etc/mwan3/mwan3.user
 endef
 
 define Package/mwan3/postinst
@@ -112,9 +112,9 @@ define Package/mwan3/install
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/files/usr/sbin/mwan3track \
 		$(1)/usr/sbin/
 
-	$(INSTALL_DIR) $(1)/etc
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/files/etc/mwan3.user \
-		$(1)/etc/
+	$(INSTALL_DIR) $(1)/etc/mwan3
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/files/etc/mwan3/mwan3.user \
+		$(1)/etc/mwan3/
 
 	$(INSTALL_DIR) $(1)/etc/uci-defaults
 	$(INSTALL_DATA) $(PKG_BUILD_DIR)/files/mwan3.defaults $(1)/etc/uci-defaults/

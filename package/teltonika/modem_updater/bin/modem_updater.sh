@@ -359,6 +359,8 @@ mount_sshfs() {
     # Mounting remote partition
     if [ "$DEVICE" = "QuectelUNISOC" ]; then
         exec_sshfs "RG500U//$VERSION" "$FW_PATH"
+    elif [[ $MODEM =~ "RG520NEB" ]]; then
+        exec_sshfs "RG520N-EB//$VERSION" "$FW_PATH"
     else
         exec_sshfs "$VERSION" "$FW_PATH"
     fi
@@ -513,7 +515,7 @@ get_fw_list() {
     elif [ "$DEVICE" = "QuectelUNISOC" ]; then
         get_compatible_fw_list "RG500U/fwlist.txt"
     elif [[ $MODEM =~ "RG520NEB" ]]; then
-        get_compatible_fw_list "RG520NEB/fwlist.txt"
+        get_compatible_fw_list "RG520N-EB/fwlist.txt"
     else
         get_compatible_fw_list "fwlist.txt"
     fi

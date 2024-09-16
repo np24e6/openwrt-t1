@@ -7,7 +7,7 @@ include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=mobifd
 
-PKG_SOURCE_VERSION:=5.0
+PKG_SOURCE_VERSION:=5.2.4
 
 PKG_LICENSE:=Teltonika-closed
 

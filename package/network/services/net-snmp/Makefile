@@ -41,7 +41,7 @@ define Package/libnetsnmp
 $(call Package/net-snmp/Default)
   SECTION:=libs
   CATEGORY:=Libraries
-  DEPENDS:=+libnl-tiny +libpci +libpcre +libopenssl +libuci +libubus
+  DEPENDS:=+libnl-tiny +libpci +libpcre +libopenssl +libuci +libubus +libubox
   TITLE:=Open source SNMP implementation (libraries)
 endef
 
@@ -184,6 +184,7 @@ SNMP_TRANSPORTS_EXCLUDED = TCP TCPIPv6
 
 TARGET_CFLAGS += $(FPIC)
 TARGET_CPPFLAGS += -I$(STAGING_DIR)/usr/include/libnl-tiny
+TARGET_LDFLAGS += -L$(TOOLCHAIN_DIR)/usr/lib -lubus -lubox
 
 CONFIGURE_ARGS += \
 	--enable-mfd-rewrites \
@@ -213,7 +214,7 @@ CONFIGURE_ARGS += \
 	--disable-perl-cc-checks \
 	--disable-embedded-perl \
 	--without-perl-modules \
-	--with-libs="-luci -lubus"
+	--with-libs="-luci"
 
 CONFIGURE_VARS += \
 	ac_cv_header_netlink_netlink_h=yes \
@@ -222,8 +223,6 @@ CONFIGURE_VARS += \
 ifeq ($(CONFIG_IPV6),y)
 SNMP_TRANSPORTS_INCLUDED+= UDPIPv6
 endif
-
-TARGET_LDFLAGS += -L$(TOOLCHAIN_DIR)/usr/lib
 
 define Build/Compile
 	$(MAKE) -C $(PKG_BUILD_DIR) \

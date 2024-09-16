@@ -1,0 +1,272 @@
+Index: net-snmp-5.9.1/agent/snmp_agent.c
+===================================================================
+--- net-snmp-5.9.1.orig/agent/snmp_agent.c
++++ net-snmp-5.9.1/agent/snmp_agent.c
+@@ -1118,6 +1118,12 @@ netsnmp_agent_check_packet(netsnmp_sessi
+     snmp_increment_statistic(STAT_SNMPINPKTS);
+ 
+     if (addr_string != NULL) {
++        if (!session->source_addr || strcmp(addr_string, session->source_addr)) {
++            free(session->source_addr);
++            session->source_addr = NULL;
++            session->source_addr = strdup(addr_string);
++            session->bruteforce_err = SNMPERR_SUCCESS;
++        }
+         netsnmp_addrcache_add(addr_string);
+         SNMP_FREE(addr_string);
+     }
+Index: net-snmp-5.9.1/include/net-snmp/types.h
+===================================================================
+--- net-snmp-5.9.1.orig/include/net-snmp/types.h
++++ net-snmp-5.9.1/include/net-snmp/types.h
+@@ -39,6 +39,8 @@ typedef pid_t netsnmp_pid_t;
+ 
+ #include <net-snmp/library/oid.h>
+ 
++extern int g_snmp_needs_unblock;
++
+ #ifdef __cplusplus
+ extern "C" {
+ #endif
+@@ -417,6 +419,14 @@ struct snmp_session {
+      * XXX: or should we add a new field into this structure?
+      */
+     void           *myvoid;
++
++    /*
++     * SNMPv3 bruteforce prevention fields
++     */
++    /** session source address IP */
++    char           *source_addr;
++    /** error only for bruteforce prevention */
++    int             bruteforce_err;
+ };
+ 
+ 
+Index: net-snmp-5.9.1/snmplib/snmpusm.c
+===================================================================
+--- net-snmp-5.9.1.orig/snmplib/snmpusm.c
++++ net-snmp-5.9.1/snmplib/snmpusm.c
+@@ -57,6 +57,9 @@
+ #include <unistd.h>
+ #endif
+ 
++#include <libubus.h>
++#include <libubox/blobmsg.h>
++
+ #include <net-snmp/types.h>
+ #include <net-snmp/output_api.h>
+ #include <net-snmp/config_api.h>
+@@ -76,6 +79,8 @@
+ #include <net-snmp/library/transform_oids.h>
+ #include <net-snmp/library/snmp_enum.h>
+
++#include <net-snmp/agent/ds_agent.h>
++
+ netsnmp_feature_child_of(usm_all, libnetsnmp);
+ netsnmp_feature_child_of(usm_support, usm_all);
+
+@@ -2721,6 +2726,14 @@ usm_check_secLevel(int level, struct usm
+     DEBUGMSGOID(("comparex", usmNoPrivProtocol,
+                  sizeof(usmNoPrivProtocol) / sizeof(oid)));
+     DEBUGMSG(("comparex", "\n"));
++
++    if (level == SNMP_SEC_LEVEL_NOAUTH
++        && netsnmp_oid_equals
++         (user->authProtocol, user->authProtocolLen, usmNoAuthProtocol,
++          sizeof(usmNoAuthProtocol) / sizeof(oid))) {
++        return 1;
++    }
++
+     if (level == SNMP_SEC_LEVEL_AUTHPRIV
+         && (netsnmp_oid_equals(user->privProtocol, user->privProtocolLen,
+                              usmNoPrivProtocol,
+@@ -2752,6 +2765,71 @@ usm_check_secLevel(int level, struct usm
+     return 0;
+ }                               /* end usm_check_secLevel() */
+ 
++
++void ip_block_invoke(const char *command, char *source_addr)
++{
++    struct ubus_context *ubus = NULL;
++    struct blob_buf b         = { 0 };
++    uint32_t id               = 0;
++    char source[40];
++    char *port;
++    char *start;
++    char *end;
++
++    if (!source_addr) {
++        snmp_log(LOG_WARNING, "IP %s failed - source address not provided\n", command);
++        return;
++    }
++
++    ubus = ubus_connect(NULL);
++    if (!ubus) {
++        snmp_log(LOG_WARNING, "IP %s failed - failed to connect to ubus\n", command);
++        return;
++    }
++
++    if (ubus_lookup_id(ubus, "ip_block", &id)) {
++        snmp_log(LOG_WARNING, "IP %s failed - could not find 'ip_block' object\n", command);
++        goto end;
++    }
++
++    start = strstr(source_addr, "[");
++    if (!start) {
++        snmp_log(LOG_WARNING, "IP %s failed - opening '[' not found in source address %s\n",
++                 command, source_addr);
++        goto end;
++    }
++
++    start++;
++    end = strchr(start, ']');
++    if (!end) {
++        snmp_log(LOG_WARNING, "IP %s failed - closing ']' not found in source address %s\n",
++                 command, source_addr);
++        goto end;
++    }
++
++    size_t len = end - start;
++    if (len > 39) {
++        snmp_log(LOG_WARNING, "IP %s failed - Invalid source IP\n", command);
++        goto end;
++    }
++    strncpy(source, start, len);
++    source[len] = '\0';
++
++    port = netsnmp_ds_get_string(NETSNMP_DS_APPLICATION_ID, NETSNMP_DS_AGENT_PORTS);
++    port = strrchr(port, ':');
++    port++;
++
++    blob_buf_init(&b, 0);
++    blobmsg_add_string(&b, "ip", source);
++    blobmsg_add_string(&b, "port", port);
++    blobmsg_add_string(&b, "proto", "SNMP");
++
++    ubus_invoke(ubus, id, command, b.head, NULL, NULL, 1000);
++    blob_buf_free(&b);
++end:
++    ubus_free(ubus);
++}
++
+ /*******************************************************************-o-******
+  * usm_process_in_msg
+  *
+@@ -2941,6 +3019,8 @@ usm_process_in_msg(int msgProcModel,
+         == NULL) {
+         DEBUGMSGTL(("usm", "Unknown User(%s)\n", secName));
+         snmp_increment_statistic(STAT_USMSTATSUNKNOWNUSERNAMES);
++        ip_block_invoke("push", sess->source_addr);
++        g_snmp_needs_unblock = TRUE;
+         error = SNMPERR_USM_UNKNOWNSECURITYNAME;
+         goto err;
+     }
+@@ -2961,6 +3041,8 @@ usm_process_in_msg(int msgProcModel,
+         DEBUGMSGTL(("usm", "Unsupported Security Level (%d).\n",
+                     secLevel));
+         snmp_increment_statistic(STAT_USMSTATSUNSUPPORTEDSECLEVELS);
++        ip_block_invoke("push", sess->source_addr);
++        g_snmp_needs_unblock = TRUE;
+         error = SNMPERR_USM_UNSUPPORTEDSECURITYLEVEL;
+         goto err;
+     } else if (rc != 0) {
+@@ -2969,6 +3051,11 @@ usm_process_in_msg(int msgProcModel,
+         goto err;
+     }
+ 
++    if (secLevel == SNMP_SEC_LEVEL_NOAUTH && g_snmp_needs_unblock) {
++        ip_block_invoke("unblock", sess->source_addr);
++        g_snmp_needs_unblock = FALSE;
++    }
++
+     /*
+      * Check the authentication credentials of the message.
+      */
+@@ -2983,10 +3070,16 @@ usm_process_in_msg(int msgProcModel,
+             snmp_increment_statistic(STAT_USMSTATSWRONGDIGESTS);
+ 	    snmp_log(LOG_WARNING, "Authentication failed for %s\n",
+ 				user->name);
++            ip_block_invoke("push", sess->source_addr);
++            g_snmp_needs_unblock = TRUE;
+             error = SNMPERR_USM_AUTHENTICATIONFAILURE;
+             goto err;
+         }
+ 
++        if (secLevel == SNMP_SEC_LEVEL_AUTHNOPRIV && g_snmp_needs_unblock) {
++            ip_block_invoke("unblock", sess->source_addr);
++            g_snmp_needs_unblock = FALSE;
++        }
+         DEBUGMSGTL(("usm", "Verification succeeded.\n"));
+     }
+ 
+Index: net-snmp-5.9.1/include/net-snmp/library/snmpusm.h
+===================================================================
+--- net-snmp-5.9.1.orig/include/net-snmp/library/snmpusm.h
++++ net-snmp-5.9.1/include/net-snmp/library/snmpusm.h
+@@ -187,6 +187,8 @@ extern          "C" {
+     NETSNMP_IMPORT
+     const oid      *get_default_privtype(size_t *);
+ 
++    void ip_block_invoke(const char *command, char *source_addr);
++
+ #ifdef __cplusplus
+ }
+ #endif
+Index: net-snmp-5.9.1/snmplib/snmp_api.c
+===================================================================
+--- net-snmp-5.9.1.orig/snmplib/snmp_api.c
++++ net-snmp-5.9.1/snmplib/snmp_api.c
+@@ -150,6 +150,8 @@ static void     _init_snmp(void);
+ 
+ static int      _snmp_store_needed = 0;
+ 
++int g_snmp_needs_unblock;
++
+ #include "../agent/mibgroup/agentx/protocol.h"
+ #include <net-snmp/library/transform_oids.h>
+ #ifndef timercmp
+@@ -1939,6 +1941,7 @@ snmp_free_session(netsnmp_session * s)
+         SNMP_FREE(s->securityAuthProto);
+         SNMP_FREE(s->securityPrivProto);
+         SNMP_FREE(s->paramName);
++        SNMP_FREE(s->source_addr);
+ #ifndef NETSNMP_NO_TRAP_STATS
+         SNMP_FREE(s->trap_stats);
+ #endif /* NETSNMP_NO_TRAP_STATS */
+@@ -4571,10 +4574,22 @@ snmp_parse(struct session_list *slp,
+ 
+     rc = _snmp_parse(slp, pss, pdu, data, length);
+     if (rc) {
++        if (rc == SNMPERR_ASN_PARSE_ERR &&
++            pss->bruteforce_err != SNMPERR_ASN_PARSE_ERR) {
++            pss->bruteforce_err = SNMPERR_ASN_PARSE_ERR;
++            g_snmp_needs_unblock = TRUE;
++            ip_block_invoke("push", pss->source_addr);
++        }
+         if (!pss->s_snmp_errno) {
+             pss->s_snmp_errno = SNMPERR_BAD_PARSE;
+         }
+         SET_SNMP_ERROR(pss->s_snmp_errno);
++    } else {
++        pss->bruteforce_err = SNMPERR_SUCCESS;
++        if (g_snmp_needs_unblock) {
++            ip_block_invoke("unblock", pss->source_addr);
++            g_snmp_needs_unblock = FALSE;
++        }
+     }
+ 
+     return rc;
+Index: net-snmp-5.9.1/agent/snmpd.c
+===================================================================
+--- net-snmp-5.9.1.orig/agent/snmpd.c
++++ net-snmp-5.9.1/agent/snmpd.c
+@@ -1178,6 +1178,8 @@ receive(void)
+     netsnmp_large_fd_set_init(&writefds, FD_SETSIZE);
+     netsnmp_large_fd_set_init(&exceptfds, FD_SETSIZE);
+ 
++    g_snmp_needs_unblock = TRUE;
++
+     /*
+      * ignore early sighup during startup
+      */

@@ -68,7 +68,7 @@ define Package/zerotier/conffiles
 endef
 
 define Package/zerotier/install
-	$(INSTALL_DIR) $(1)/usr/bin $(1)/etc/config
+	$(INSTALL_DIR) $(1)/usr/bin $(1)/etc/config $(1)/etc/mwan3
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/zerotier-one $(1)/usr/bin/
 	$(LN) zerotier-one $(1)/usr/bin/zerotier-cli
 	$(LN) zerotier-one $(1)/usr/bin/zerotier-idtool
@@ -78,7 +78,8 @@ ifeq ($(CONFIG_ZEROTIER_ENABLE_SELFTEST),y)
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/zerotier-selftest $(1)/usr/bin/
 endif
 
-	$(CP) ./files/* $(1)/
+	$(CP) ./files/etc/init.d $(1)/etc/
+	$(INSTALL_BIN) ./files/etc/mwan3/mwan3.zerotier $(1)/etc/mwan3/
 endef
 
 define Package/zerotier/prerm

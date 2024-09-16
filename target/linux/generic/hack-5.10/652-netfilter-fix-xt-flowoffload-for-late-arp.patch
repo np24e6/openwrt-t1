@@ -1,0 +1,75 @@
+Under certain synthetic scenarios an edge case occurs where nf_dev_forward_path()
+runs before the mac address for the destination host is known, leading to malformed
+flowoffload entries and no offloading. Add error propagation to skip offloading under
+this scenario, effectively deferring offloading until the neighbor entry is filled.
+
+Index: linux-5.10.210/net/netfilter/xt_FLOWOFFLOAD.c
+===================================================================
+--- linux-5.10.210.orig/net/netfilter/xt_FLOWOFFLOAD.c
++++ linux-5.10.210/net/netfilter/xt_FLOWOFFLOAD.c
+@@ -400,7 +400,7 @@ out:
+ 	return dev_fill_forward_path(dev, ha, stack);
+ }
+ 
+-static void nf_dev_forward_path(struct nf_flow_route *route,
++static int nf_dev_forward_path(struct nf_flow_route *route,
+ 				const struct nf_conn *ct,
+ 				enum ip_conntrack_dir dir,
+ 				struct net_device **devs)
+@@ -409,14 +409,19 @@ static void nf_dev_forward_path(struct n
+ 	struct net_device_path_stack stack;
+ 	struct nf_forward_info info = {};
+ 	unsigned char ha[ETH_ALEN];
++	int ret;
+ 	int i;
+ 
+-	if (nf_dev_fill_forward_path(route, dst, ct, dir, ha, &stack) >= 0)
+-		nf_dev_path_info(&stack, &info, ha);
++	ret = nf_dev_fill_forward_path(route, dst, ct, dir, ha, &stack);
++	if (ret < 0) {
++		return -1;
++	}
+ 
+-	devs[!dir] = (struct net_device *)info.indev;
++	nf_dev_path_info(&stack, &info, ha);
+ 	if (!info.indev)
+-		return;
++		return -1;
++
++	devs[!dir] = (struct net_device *)info.indev;
+ 
+ 	route->tuple[!dir].in.ifindex = info.indev->ifindex;
+ 	for (i = 0; i < info.num_encaps; i++) {
+@@ -433,6 +438,8 @@ static void nf_dev_forward_path(struct n
+ 		route->tuple[dir].out.hw_ifindex = info.hw_outdev->ifindex;
+ 		route->tuple[dir].xmit_type = info.xmit_type;
+ 	}
++
++	return 0;
+ }
+ 
+ static int
+@@ -444,6 +451,7 @@ xt_flowoffload_route(struct sk_buff *skb
+ 	struct dst_entry *this_dst = skb_dst(skb);
+ 	struct dst_entry *other_dst = NULL;
+ 	struct flowi fl;
++	int ret;
+ 
+ 	memset(&fl, 0, sizeof(fl));
+ 	switch (xt_family(par)) {
+@@ -467,8 +475,13 @@ xt_flowoffload_route(struct sk_buff *skb
+ 
+ 	if (route->tuple[dir].xmit_type	== FLOW_OFFLOAD_XMIT_NEIGH &&
+ 	    route->tuple[!dir].xmit_type == FLOW_OFFLOAD_XMIT_NEIGH) {
+-		nf_dev_forward_path(route, ct, dir, devs);
+-		nf_dev_forward_path(route, ct, !dir, devs);
++		ret = nf_dev_forward_path(route, ct, dir, devs);
++		if (ret)
++			return ret;
++
++		ret = nf_dev_forward_path(route, ct, !dir, devs);
++		if (ret)
++			return ret;
+ 	}
+ 
+ 	return 0;

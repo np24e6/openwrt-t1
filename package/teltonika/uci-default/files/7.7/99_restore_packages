@@ -31,5 +31,6 @@ check_config() {
 
 check_config "samba" "samba" "enabled" "vuci-app-samba-ui" "Network shares"
 check_config "wireless" "wifi-iface" "hs20" "vuci-app-hotspot2-ui" "Hotspot 2.0"
+check_config "telnetd" "telnetd" "enable" "vuci-app-telnet-api" "Telnet"
 
 exit 0

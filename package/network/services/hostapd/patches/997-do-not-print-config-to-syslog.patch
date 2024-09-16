@@ -1,0 +1,15 @@
+Index: hostapd-2023-09-08-e5ccbfc6/src/ap/hostapd.c
+===================================================================
+--- hostapd-2023-09-08-e5ccbfc6.orig/src/ap/hostapd.c	2024-05-28 16:49:35.854147745 +0300
++++ hostapd-2023-09-08-e5ccbfc6/src/ap/hostapd.c	2024-05-28 17:09:07.175998528 +0300
+@@ -2924,8 +2924,8 @@
+ 		}
+ 	}
+ 
+-	wpa_printf(MSG_INFO, "Configuration file: %s (phy %s)%s",
+-		   config_fname, phy, iface ? "" : " --> new PHY");
++	wpa_printf(MSG_INFO, "Initializing BSS (phy %s)%s",
++		   phy, iface ? "" : " --> new PHY");
+ 	if (iface) {
+ 		struct hostapd_config *conf;
+ 		struct hostapd_bss_config **tmp_conf;

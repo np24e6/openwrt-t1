@@ -116,6 +116,7 @@ kill_remaining() { # [ <signal> [ <loop> ] ]
 			v "Failed to kill all processes."
 			exit 1
 		}
+		sleep 1
 	done
 	_v
 }
@@ -132,7 +133,7 @@ killall -9 ash
 
 kill_remaining TERM
 sleep 3
-kill_remaining KILL 1
+kill_remaining KILL 10
 
 sleep 1
 

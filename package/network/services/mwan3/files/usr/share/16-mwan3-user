@@ -1,6 +1,6 @@
 #!/bin/sh
 
-[ -f "/etc/mwan3.user" ] && {
+[ -d "/etc/mwan3" ] && {
 	. /lib/functions.sh
 	. /lib/mwan3/mwan3.sh
 	initscript=/etc/init.d/mwan3
@@ -19,7 +19,9 @@
 		exit 0
 	}
 
-	env -i ACTION="$ACTION" INTERFACE="$INTERFACE" DEVICE="$DEVICE" /etc/mwan3.user
+	for file in $(find /etc/mwan3/ ! -type d -perm +111); do
+		env -i ACTION="$ACTION" INTERFACE="$INTERFACE" DEVICE="$DEVICE" "$file"
+	done
 }
 
 exit 0

@@ -1,0 +1,10 @@
+[ "$(uci get "network.$INTERFACE.proto" | head -c 4)" != "l2tp" ] && exit 0
+[ "$ACTION" = "ifup-failed" ] && {
+	mkdir -p /tmp/l2tp
+	fail_count="0"
+	[ -f "/tmp/l2tp/$INTERFACE.failcount" ] && fail_count="$(cat "/tmp/l2tp/$INTERFACE.failcount")"
+	echo "$((fail_count + 1))" > "/tmp/l2tp/$INTERFACE.failcount"
+	exit 0
+}
+rm -f "/tmp/l2tp/$INTERFACE.failcount"
+exit 0

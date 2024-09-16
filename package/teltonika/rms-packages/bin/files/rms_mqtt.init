@@ -15,6 +15,30 @@ start_service() {
 
 	[ "$enabled" -eq 0 ] && return
 
+	local uci_changes="0"
+	local opts="rms_id demo_rms_id local_rms_id"
+	for opt_name in $opts; do
+		local opt_val_cfg
+		config_get opt_val_cfg "rms_mqtt" $opt_name ""
+		local opt_val_file=$(cat "/log/$opt_name" 2>/dev/null)
+
+		[ -z "$opt_val_cfg" ] && [ -n "$opt_val_file" ] && {
+			uci -q set "rms_mqtt.rms_mqtt.$opt_name=$opt_val_file"
+			uci_changes="1"
+		}
+		[ -n "$opt_val_cfg" ] && [ -z "$opt_val_file" ] && {
+			echo -n "$opt_val_cfg" > "/log/$opt_name"
+		}
+		[ -n "$opt_val_file" ] && [ -n "$opt_val_cfg" ] && [ "$opt_val_file" != "$opt_val_cfg" ] && {
+			uci -q set "rms_mqtt.rms_mqtt.$opt_name=$opt_val_file"
+			uci_changes="1"
+		}
+	done
+
+	[ "$uci_changes" -eq "1" ] && {
+		uci commit rms_mqtt
+	}
+
 	procd_open_instance rms_mqtt
 	procd_set_param respawn 0 60 0
 	procd_set_param stderr 1

@@ -421,6 +421,9 @@
 		"vuci_dep": "vuci-app-apn-database-api",
 		"name": "apn_database_webui"
 	},
+	"vuci-app-telnet-api": {
+		"name": "telnet"
+	},
 	"vuci-app-vrf-ui": {
 		"kmod_dep": "kmod-vrf",
 		"vuci_dep": "vuci-app-vrf-api",

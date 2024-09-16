@@ -39,6 +39,14 @@ proto_l2tpv3_init_config() {
 proto_l2tpv3_setup() {
 	local config="$1"
 	local iface="$2"
+
+	sleep 1
+	local fail_count="0"
+	[ -f "/tmp/l2tp/$config.failcount" ] && fail_count="$(cat "/tmp/l2tp/$config.failcount")"
+	local sleep_time="$(($fail_count * 30))"
+	[ "$sleep_time" -gt "180" ] && sleep_time="180"
+	sleep "$sleep_time"
+
 	local link="l2v3-$config"
 
 	#~ check if l2tp configurator is available

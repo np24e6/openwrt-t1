@@ -87,7 +87,7 @@ manage_serial() {
 	[ -f "$file" ] || file="/etc/board.json"
 
 	# skip modems
-	modem_id="$(jsonfilter -i $file -e '@.modem[0].id')"
+	modem_id="$(jsonfilter -i $file -e '@.modems[0].id')"
 	strstr "$DEVPATH" "$modem_id" && exit 0
 
 	idx=0

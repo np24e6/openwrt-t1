@@ -263,12 +263,14 @@ fwtool_check_image() {
 
 fwtool_check_backup() {
 	local backup_dir="$1"
-	local size=7
+	local size
 
 	[ -n "$backup_dir" ] || return 1
 
 	local this_device_code=$(mnf_info --name)
 	local device_code_in_the_new_config=$(uci -q -c "${backup_dir}/etc/config" get system.system.device_code)
+
+	[ "${this_device_code:0:4}" = "RUT2" ] && size=8 || size=7
 
 	if [ "${#this_device_code}" -ne 12 ] || [ "${#device_code_in_the_new_config}" -ne 12 ] ||
 			[ "${this_device_code:0:$size}" != "${device_code_in_the_new_config:0:$size}" ]; then

@@ -587,7 +587,7 @@ struct public_ip_shadow
     a_uint32_t   use_cnt;
 };
 
-static struct public_ip_shadow public_ip_shadow[MAX_PUBLIC_IP_CNT]= {{0}};
+struct public_ip_shadow public_ip_shadow[MAX_PUBLIC_IP_CNT]= {{0}};
 static a_uint32_t public_ip_cnt = 0;
 
 a_int32_t

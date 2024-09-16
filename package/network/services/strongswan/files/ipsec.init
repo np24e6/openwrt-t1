@@ -21,7 +21,7 @@ WAIT_FOR_INTF=0
 ENABLED=0
 
 file_reset() {
-	: > "$1"
+	[ -d "$(dirname "$1")" ] && : > "$1"
 }
 
 xappend() {

@@ -380,26 +380,44 @@ remove_section() {
 	[ -n "$value" ] && uci_remove "$config" "$section"
 }
 
-remove_section_containing_option() {
+remove_prepare() {
+	local config="$1"
 	CONFIG_PATH="${UCI_CONFIG_DIR:-"/etc/config"}"
 	TMP_CONFIG_PATH="/tmp/original_config"
 
+	mkdir -p "$TMP_CONFIG_PATH"
+	cp -f "${CONFIG_PATH}/${config}" "${TMP_CONFIG_PATH}/"
+	config_load "$config"
+}
+
+remove_section_containing_option() {
 	local config="$1"
 	local section="$2"
 	local option="$3"
 
-	mkdir -p "$TMP_CONFIG_PATH"
-	cp "${CONFIG_PATH}/${config}" "${TMP_CONFIG_PATH}/"
-
-	config_load "$config"
+	remove_prepare "$config"
 	config_foreach remove_section "$section" "$config" "$option"
-	uci_commit
+	uci_commit "$config"
 }
 
-restore_config() {
+remove_option() {
 	local config="$1"
+	local section="$2"
+	local option="$3"
+	local value
 
-	mv -f "${TMP_CONFIG_PATH}/${config}" "${CONFIG_PATH}/"
+	remove_prepare "$config"
+	config_get value "$section" "$option" ""
+	[ -n "$value" ] && {
+		uci_remove "$config" "$section" "$option"
+		uci_commit "$config"
+	}
+}
+
+restore_configs() {
+	for config in "$@"; do
+		mv -f "${TMP_CONFIG_PATH}/${config}" "${CONFIG_PATH}/"
+	done
 }
 
 missing_lines() {
@@ -453,8 +471,37 @@ restore_sme_fstab() {
 	fi
 }
 
+restore_rms_ids() {
+	local opts="rms_id demo_rms_id local_rms_id"
+	for opt_name in $opts; do
+		local opt_val_file=$(cat "/log/$opt_name" 2>/dev/null)
+
+		[ -n "$opt_val_file" ] && {
+			uci -q -c "/tmp/new_config_dir/etc/config" set "rms_mqtt.rms_mqtt.$opt_name=$opt_val_file"
+		} || {
+			uci -q -c "/tmp/new_config_dir/etc/config" delete "rms_mqtt.rms_mqtt.$opt_name"
+		}
+	done
+	uci -c "/tmp/new_config_dir/etc/config" commit rms_mqtt
+}
+
+restore_rms_auth_code() {
+	local config="rms_mqtt"
+
+	[ -s "/etc/config/$config" ] || return
+	[ -s "/tmp/new_config_dir/etc/config/$config" ] || return
+
+	local auth_code="$(uci -q get $config.rms_connect_mqtt.auth_code)"
+	uci -c "/tmp/new_config_dir/etc/config" batch <<-EOF
+		set $config.rms_connect_mqtt.auth_code="$auth_code"
+		commit $config
+	EOF
+}
+
 apply_backup() {
+	restore_rms_ids
 	restore_sme_fstab
+	restore_rms_auth_code
 	/etc/init.d/mdcollectd stop
 	/etc/init.d/simcard reload >/dev/null 2>/dev/null
 	rm -f /tmp/new_config_dir/etc/config/hwinfo /tmp/new_config_dir/etc/inittab 2>/dev/null
@@ -505,8 +552,9 @@ if [ -n "$CONF_BACKUP" ]; then
 		uci_commit profiles
 	}
 	remove_section_containing_option "network" "device" "macaddr"
+	remove_option "rms_mqtt" "rms_connect_mqtt" "auth_code"
 	do_save_conffiles "$CONF_BACKUP"
-	restore_config "network"
+	restore_configs "network" "rms_mqtt"
 	exit $?
 fi
 

@@ -34,6 +34,14 @@ check_bind() {
 
 proto_l2tp_setup() {
 	local interface="$1"
+
+	sleep 1
+	local fail_count="0"
+	[ -f "/tmp/l2tp/$interface.failcount" ] && fail_count="$(cat "/tmp/l2tp/$interface.failcount")"
+	local sleep_time="$(($fail_count * 30))"
+	[ "$sleep_time" -gt "180" ] && sleep_time="180"
+	sleep "$sleep_time"
+
 	local optfile="/tmp/l2tp/options.${interface}"
 	local static_opt="/etc/ppp/options.l2tp"
 	local ip serv_addr server host defaultroute

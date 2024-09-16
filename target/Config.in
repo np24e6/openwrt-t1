@@ -164,6 +164,7 @@ config MULTI_DEVICE_QUIRK
 
 config HIGH_WATCHDOG_PRIORITY
 	bool
+	default y
 
 config AP_DEVICE
 	bool

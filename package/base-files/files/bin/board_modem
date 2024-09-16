@@ -37,7 +37,7 @@ add_modem_features() {
 	json_add_boolean csd "$csd"
 	json_add_boolean wwan_gnss_conflict "$wwan_gnss_conflict"
 	json_add_boolean framed_routing "$framed_routing"
-
+	
 	# Adds supported band array
 	json_is_a band_list array || {
 		json_add_array band_list
@@ -103,8 +103,10 @@ default_modem_func="$3"
 
 lock /var/run/board_modem.lock
 
+
 board_config_update
 json_for_each_item setup_modem modems
+
 board_config_flush
 
 lock -u /var/run/board_modem.lock

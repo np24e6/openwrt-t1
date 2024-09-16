@@ -193,7 +193,10 @@ proto_pppmobile_setup() {
 	json_set_namespace $old_cb
 
 # 	Restart if check failed
-	[ "$active_sim" -ge 1 ] && [ "$active_sim" -le 2 ] || echo "Bad active sim: $active_sim." && return
+	if [ "$active_sim" -lt 1 ] || [ "$active_sim" -gt 2 ]; then
+		echo "Bad active sim: $active_sim."
+		return
+	fi
 
 # 	check if current sim and interface sim match
 	[ "$active_sim" = "$sim" ] || {

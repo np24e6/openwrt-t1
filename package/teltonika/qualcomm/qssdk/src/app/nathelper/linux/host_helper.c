@@ -1247,6 +1247,14 @@ static unsigned int arp_in(void *priv, struct sk_buff *skb, struct nf_hook_state
 #endif
 
 #ifdef NAT_BACKGROUND_TASK
+#define MAX_PUBLIC_IP_CNT 16
+struct public_ip_shadow
+{
+    a_uint32_t   ip;
+    a_uint32_t   use_cnt;
+};
+extern struct public_ip_shadow public_ip_shadow[MAX_PUBLIC_IP_CNT];
+
 static unsigned int arp_in_bg_handle(struct nat_helper_bg_msg *msg)
 {
 	struct arphdr *arp = NULL;
@@ -1255,6 +1263,10 @@ static unsigned int arp_in_bg_handle(struct nat_helper_bg_msg *msg)
 	uint8_t dev_is_lan = 0;
 	uint32_t sport = 0, vid = 0, neigh_ip = 0;
 	a_bool_t prvbasemode = 1;
+	a_uint32_t sip_h;
+	a_uint32_t lan_ip;
+	a_uint32_t lan_mask;
+	uint8_t ip_is_lan;
 
 	a_int32_t arp_entry_id = -1;
 	struct net_device *in  = msg->arp_in.in;
@@ -1313,12 +1325,37 @@ static unsigned int arp_in_bg_handle(struct nat_helper_bg_msg *msg)
 	}
 #endif
 
+	if (sport == 0) {
+		HNAT_PRINTK("Not the expected arp, ignore it!\n");
+		return 0;
+	}
+
 	arp  = arp_hdr(skb);
 	smac = ((uint8_t *)arp) + ARP_HEADER_LEN;
 	sip  = smac + MAC_LEN;
 	dmac = sip + IP_LEN;
 	dip  = dmac + MAC_LEN;
 	memcpy(&neigh_ip, sip, 4);
+
+	sip_h = ntohl(*(uint32_t*)sip);
+	lan_ip = nat_hw_prv_base_get();
+	lan_mask = nat_hw_prv_mask_get();
+
+	// Reject hosts pretending to be the router
+	if (sip_h == lan_ip) {
+		return 0;
+	}
+
+	// Reject LAN ip's from WAN ports and vice-versa
+	ip_is_lan = (sip_h & lan_mask) == (lan_ip & lan_mask);
+	if (ip_is_lan != dev_is_lan) {
+		return 0;
+	}
+	for (int i = 0; i < MAX_PUBLIC_IP_CNT; i++) {
+		if (public_ip_shadow[i].use_cnt != 0 && public_ip_shadow[i].ip == sip_h) {
+			return 0;
+		}
+	}
 
 	neigh = __ipv4_neigh_lookup(in, (__force u32)neigh_ip);
 	if (!neigh) {

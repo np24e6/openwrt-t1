@@ -1,3 +1,42 @@
+# 2024-06-10 00.07.07.2
+
+### Improvements
+
+* Zerotier: added backup WAN interface blacklisting if WAN failover is enabled (ID: 17069)
+* Network: improved software routing performance when under stateless bidirectional RFC2544 tests for all routers (ID: 17501)
+* SSH: removed weak SSH algorithms (ID: 17682)
+* Mobile: improved parsing of multiple 5G bands on the RG520N modem (ID: 17700)
+* Telnet: changed telnet to an installable package (ID: 18282)
+* Upgrade: improved procd-watchdog handling during firmware upgrade process (ID: 18302)
+* Mobile: improved communication stability with eSIM (ID: 17293)
+* SNMP: added bruteforce attack prevention when using SNMP v3 user (ID: 18187)
+* L2TP: improved l2tp reconnect attempt logic (ID: 18302)
+* Wireless: removed unnecessary information from system logs (ID: 18470)
+* System: improved failsafe boot protection during firmware upgrades on RUTM devices (ID: 18323)
+
+### Fix
+
+* Uboot: fixed firmware recovery update via uboot on Windows for rut3x, trb2x, tap100, rut14x, tcr1x, rut9m, rut2m, rut206 devices (ID: 18461)
+* IP Block: fixed blocking of UDP traffic (ID: 18187)
+* Mobile: fixed forced apn configuration (ID: 18350)
+* Serial: improved recovery from serial connection loss after modem reboot on TRB1 family devices (ID: 17979)
+* FRR: patched CVE-2024-31948 vulnerability (ID: 17642)
+* FRR: patched CVE-2023-46752 and CVE-2023-46753 vulnerabilities for RUT300, TRB2XX devices (ID: 18374)
+* Mobile: fixed a SIM detection issue on some devices from RUTM family and RUT361 (ID: 18182)
+* Ledman: fixed WiFi LED indication when WiFi configuration is changed (ID: 17894)
+* DMVPN: fixed duplicate NHRP map entries creation (ID: 17758)
+* Serial: fixed kernel panic when "full-duplex" mode for RS485 is quickly switched on and off for TRB145 (ID: 17627)
+* Wireless: fixed connection issues after disabling encryption for RUTX family devices (ID: 17646)
+* Hotspot: fixed walled garden changes to take effect after save, added walled garden to backup (ID: 17646)
+* GPS: fixed outages on RUTX50 (ID: 16709)
+* HNAT: fixed cases of unintended forwarding when LAN and WAN subnets overlap on RUTX devices (ID: 18021)
+* HNAT: fixed instances of device misrouting packets to wired LAN when 'Hardware Flow Offloading' was enabled on RUTX devices (ID: 18322)
+* Backup: fixed backup validation for RUT200 devices (ID: 17947)
+* BGP: fixed instance migration issues (ID: 18515)
+* OpenVPN: added fixes for the insecure tls-cert-profile option usage (ID: 18594)
+* Sysupgrade: prevent reboot before update completes (ID: 18626)
+* ETH driver: fixed connection loss after changing of IP address for TRB500 devices (ID: 18605)
+
 # 2024-04-29 00.07.07.1
 
 ### Improvements

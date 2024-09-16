@@ -28,11 +28,18 @@ define gpl_install_mixed
 		mkdir -p "$(1)"; \
 		cp -rf . "$(1)"; \
 		$(if $(PKG_UPSTREAM_URL), \
-			printf "'$(PKG_SOURCE_URL)' '%s/Makefile'\0" "$$(a=$(CURDIR) && echo $${a#$(TOPDIR)/})" >>"$(TOPDIR)/tmp/SOURCE_URLs" && \
-			sed -i'' -E \
-				-e '/ *PKG_SOURCE_URL *[:?]?=.*$$/d' \
-				-e "s#PKG_UPSTREAM_URL( *[:?]?=.*$$)#PKG_SOURCE_URL\1#" \
-				"$(1)/Makefile" \
+			$(if $(PKG_SOURCE_URL), \
+				printf "'$(PKG_SOURCE_URL)' '%s/Makefile'\0" "$$(a=$(CURDIR) && echo $${a#$(TOPDIR)/})" >>"$(TOPDIR)/tmp/SOURCE_URLs" && \
+				sed -i'' -E \
+					-e '/ *PKG_SOURCE_URL *[:?]?=.*$$/d' \
+					-e "s#PKG_UPSTREAM_URL( *[:?]?=.*$$)#PKG_SOURCE_URL\1#" \
+					"$(1)/Makefile"; \
+			, \
+				sed -i'' -E \
+					-e '/ *PKG_UPSTREAM_URL *[:?]?=.*$$/d' \
+					"$(1)/Makefile"; \
+			) \
+			sed -i'' -E -e '/ *PKG_UPSTREAM_FILE *[:?]?=.*$$/d' "$(1)/Makefile"; \
 		, \
 			$(if $(findstring $(TLT_GIT),$(PKG_SOURCE_URL)), \
 				mkdir -p "$(1)/src"; \
@@ -40,7 +47,8 @@ define gpl_install_mixed
 				sed --in-place='' --regexp-extended \
 					--expression="/^ *PKG_SOURCE_PROTO *[:?]?=/d" \
 					--expression="/^ *PKG_MIRROR_HASH *[:?]?=/d" \
-					--expression="/^ *PKG_SOURCE_URL *[:?]?=/d" "$(1)/Makefile"; \
+					--expression="/^ *PKG_SOURCE_URL *[:?]?=/d" \
+					"$(1)/Makefile"; \
 			) \
 		) \
 	)
