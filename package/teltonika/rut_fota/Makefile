@@ -7,7 +7,7 @@ include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=rut_fota
 
-PKG_SOURCE_VERSION:=2.14
+PKG_SOURCE_VERSION:=2.14.1
 
 PKG_LICENSE:=Teltonika-closed
 

@@ -29,8 +29,8 @@ function generateChangelogGit(device) {
             .map((depend) => `${depend.name}${depend.type !== 'device' ? ` ${depend.type}` : ''}`)
           // 'for' only shown in global changelog when change has depends
           const forText = !device && parsedDepends?.length > 0 ? ` for ${parsedDepends.join(', ')}` : ''
-          if (type === 'CVE Patches') return `* patched ${change} (ID: ${caseId})`
-          if (type === 'Updates') return `* ${topic}: updated version to  ${change} (ID: ${caseId})`
+          if (type === 'CVE Patches') return `* ${change}${forText} (ID: ${caseId})`
+          if (type === 'Updates') return `* ${topic}: updated version to  ${change}${forText} (ID: ${caseId})`
           return `* ${topic}: ${change}${forText} (ID: ${caseId})`
         })
         .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
@@ -39,7 +39,7 @@ function generateChangelogGit(device) {
     })
   typeText = typeText.filter((e) => e)
   if (typeText.length > 0) return `## Changelog\n\n${typeText.join('\n\n')}\n`
-  return 'No changes'
+  return ''
 }
 
 /**
@@ -58,7 +58,7 @@ function generateChangelogWiki(device) {
       if (type === 'CVE Patches') {
         categoryText = changes
           .sort((a, b) => a.change.localeCompare(b.change, undefined, { numeric: true }))
-          .map((change) => `** Patched ${change.change}`)
+          .map((change) => `** ${change.change}`)
       } else {
         const changesByCat = groupBy(changes, (change) => change.category)
         categoryText = Object.entries(changesByCat)
@@ -89,7 +89,7 @@ function generateChangelogWiki(device) {
       return `* <b>${type}</b>\n${categoryText.join('\n')}`
     })
   typeText = typeText.filter((e) => e)
-  if (typeText.length === 0) return 'No changes'
+  if (typeText.length === 0) return ''
   return typeText.join('\n')
 }
 
@@ -141,7 +141,7 @@ function modifyChangelog(changelogs) {
         ...changelog,
         type: 'Improvements',
         change: `updated version to ${changelog.change}`,
-        depends: [],
+        depends: changelog.depends ?? [],
         oldType: 'Updates',
       }
     else return changelog

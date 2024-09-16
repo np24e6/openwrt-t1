@@ -6,6 +6,7 @@ let isVuciPrepared = false
 async function prepareVuci() {
   if (isVuciPrepared) return
   try {
+    if (!globalThis.supressInfo) console.log('Updating vuci feeds. This might take a while...')
     execSync('./scripts/feeds update vuci', { cwd: '../../', stdio: 'ignore' })
   } catch (e) {
     console.log('Failed to update vuci: ' + e)
@@ -120,6 +121,8 @@ module.exports = {
       { type: 'hw', name: 'port_link', value: false },
       { type: 'hw', name: 'usb' },
       { type: 'hw', name: 'usb', value: false },
+      { type: 'hw', name: 'flash16mb' },
+      { type: 'hw', name: 'flash16mb', value: false },
       { type: 'hw', name: 'poe' },
     ]
   },

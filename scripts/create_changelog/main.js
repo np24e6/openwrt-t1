@@ -24,14 +24,15 @@ if (process.argv.length === 2 || process.argv[2] === 'create') {
   console.log('Everything is valid')
   process.exit()
 } else if (process.argv[2] === 'generate') {
-  validateDatabase()
-  validateChangelogFiles()
+  globalThis.supressInfo = true
   const type = process.argv[3]
+  const device = process.argv[4]
   if (!['wiki', 'git', 'json'].includes(type)) {
     console.log('First parameter should be [wiki|git|json]')
     process.exit(1)
   }
-  const device = process.argv[4]
+  validateDatabase()
+  validateChangelogFiles()
   const devices = dataGetters.getDevices(true)
   if (device && !devices.includes(device)) {
     console.log(

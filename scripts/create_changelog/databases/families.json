@@ -21,11 +21,11 @@
   },
   {
     "name": "RUT2M",
-    "devices": ["RUT200", "RUT241", "RUT260"]
+    "devices": ["RUT200", "RUT241", "RUT260", "RUT271"]
   },
   {
     "name": "RUT9M",
-    "devices": ["RUT901", "RUT951", "RUT956", "RUT906"]
+    "devices": ["RUT901", "RUT951", "RUT956", "RUT906", "RUT976"]
   },
   {
     "name": "RUTC",
