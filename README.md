@@ -7,7 +7,7 @@
 	You might succeed with other distributions.
 
 	It is recommended to use Docker environment to build RUTOS firmware which
-	is accessible from "RUTX_R_GPL_00.07.08.2/scripts/dockerbuild".
+	is accessible from "RUTX_R_GPL_00.07.08.3/scripts/dockerbuild".
 
 ## Building with Docker environment
 
@@ -15,12 +15,12 @@
 
 	2. Extract the  archive to an empty folder
 
-		$ mkdir RUTX_R_GPL_00.07.08.2
-		$ tar -xzf ~/Downloads/RUTX_R_GPL_00.07.08.2.tar.gz -C RUTX_R_GPL_00.07.08.2
+		$ mkdir RUTX_R_GPL_00.07.08.3
+		$ tar -xzf ~/Downloads/RUTX_R_GPL_00.07.08.3.tar.gz -C RUTX_R_GPL_00.07.08.3
 
 	3. Update feeds
 
-		$ cd RUTX_R_GPL_00.07.08.2
+		$ cd RUTX_R_GPL_00.07.08.3
 		$ ./scripts/dockerbuild ./scripts/feeds update -a
 
 	4. Build the image
@@ -31,7 +31,7 @@
 
 		$ ./scripts/dockerbuild make pm
 
-		After this you can find packages in "RUTX_R_GPL_00.07.08.2/bin/packages/<arch_name>/zipped_packages".
+		After this you can find packages in "RUTX_R_GPL_00.07.08.3/bin/packages/<arch_name>/zipped_packages".
 
 	6. Sign the image with local keys (optional):
 
@@ -68,12 +68,12 @@
 
 	3. Extract the  archive to an empty folder
 
-		$ mkdir RUTX_R_GPL_00.07.08.2
-		$ tar -xzf ~/Downloads/RUTX_R_GPL_00.07.08.2.tar.gz -C RUTX_R_GPL_00.07.08.2
+		$ mkdir RUTX_R_GPL_00.07.08.3
+		$ tar -xzf ~/Downloads/RUTX_R_GPL_00.07.08.3.tar.gz -C RUTX_R_GPL_00.07.08.3
 
 	4. Update feeds
 
-		$ cd RUTX_R_GPL_00.07.08.2
+		$ cd RUTX_R_GPL_00.07.08.3
 		$ ./scripts/feeds update -a
 
 	5. Build the image
@@ -84,7 +84,7 @@
 
 		$ make pm
 
-		After this you can find packages in "RUTX_R_GPL_00.07.08.2/bin/packages/<arch_name>/zipped_packages".
+		After this you can find packages in "RUTX_R_GPL_00.07.08.3/bin/packages/<arch_name>/zipped_packages".
 
 	7. Sign the image with local keys (optional):
 
@@ -96,7 +96,7 @@
 ## Installation
 
 	After successful build you will get the firmware file in
-		"RUTX_R_GPL_00.07.08.2/bin/targets/ipq40xx/generic/tltFws".
+		"RUTX_R_GPL_00.07.08.3/bin/targets/ipq40xx/generic/tltFws".
 
 	Update the new firmware via the web interface on your device.
 
@@ -122,7 +122,7 @@
 
 ## WebUI rebranding
 
-	All changes should be done in "RUTX_R_GPL_00.07.08.2/package/feeds/vuci/vuci-ui-core/bin/dist" folder.
+	All changes should be done in "RUTX_R_GPL_00.07.08.3/package/feeds/vuci/vuci-ui-core/bin/dist" folder.
 
 	WebUI Colors can be changed in "brand/brand.css" file.
 	Company information can be changed in "brand/brand.json" file.
@@ -145,7 +145,7 @@
 
 	2. Use figlet tool to generate needed text:
 
-		$ figlet YOUR_TEXT > "RUTX_R_GPL_00.07.08.2/package/base-files/files/etc/banner.logo"
+		$ figlet YOUR_TEXT > "RUTX_R_GPL_00.07.08.3/package/base-files/files/etc/banner.logo"
 
 ## Firmware Version Change
 
@@ -165,5 +165,5 @@
 
 ## Default Password Change
 
-	To change the default device password changes need to be made inside "RUTX_R_GPL_00.07.08.2/package/base-files/files/lib/preinit/84_set_password" file.
+	To change the default device password changes need to be made inside "RUTX_R_GPL_00.07.08.3/package/base-files/files/lib/preinit/84_set_password" file.
 	Change "admin01" to your password on line [ -z "$passwd" ] && passwd="$(mkpasswd admin01)"
