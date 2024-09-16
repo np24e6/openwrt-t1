@@ -62,6 +62,9 @@ proto_qmux_setup() {
 	json_get_vars pdp device modem pdptype sim delay method mtu dhcp dhcpv6 ip4table ip6table \
 	leasetime mac $PROTO_DEFAULT_OPTIONS
 
+	# wait for shutdown to complete
+	wait_for_shutdown_complete "$interface"
+
 	local gsm_modem="$(find_mdm_ubus_obj "$modem")"
 
 	[ -z "$gsm_modem" ] && {
@@ -84,6 +87,19 @@ proto_qmux_setup() {
 	verify_active_esim "$esim_profile_index" "$interface" || return
 	deny_roaming=$(get_deny_roaming "$active_sim" "$modem" "$esim_profile_index")
 #~ ---------------------------------------------------------------------
+
+	gsm_info=$(ubus call $gsm_modem info)
+	red_cap=$(jsonfilter -s "$gsm_info" -e '@.red_cap')
+
+	if [ "$red_cap" = "true" ] && [ "$deny_roaming" = "1" ]; then
+		reg_stat_str=$(jsonfilter -s "$gsm_info" -e '@.cache.reg_stat_str')
+		if [ "$reg_stat_str" = "Roaming" ]; then
+			echo "Roaming detected. Stopping connection"
+			proto_notify_error "$interface" "Roaming detected"
+			proto_block_restart "$interface"
+			return
+		fi
+	fi
 
 	get_qmimux_by_id() {
 		local interface
@@ -175,17 +191,22 @@ required driver attribute: /sys/class/net/$ifname/qmi/raw_ip"
 
 	[ "$deny_roaming" -ne "0" ] && deny_roaming="yes" || deny_roaming="no"
 
-	cid="$(uqmi -d "$device" $options --get-client-id wds)"
-	qmi_error_handle "$cid" "$error_cnt" "$modem" || return 1
+	if [ "$red_cap" != "true" ]; then
+		cid="$(uqmi -d "$device" $options --get-client-id wds)"
+		qmi_error_handle "$cid" "$error_cnt" "$modem" || return 1
 
-#~ Do not add TABS!
-call_uqmi_command "uqmi -d $device $options --set-client-id wds,$cid --release-client-id wds \
+		call_uqmi_command "uqmi -d $device $options --set-client-id wds,$cid --release-client-id wds \
 --modify-profile 3gpp,${pdp} --profile-name ${pdp} --roaming-disallowed-flag ${deny_roaming}"
+	fi
 
 	retry_before_reinit="$(cat /tmp/conn_retry_$interface)" 2>/dev/null
 	[ -z "$retry_before_reinit" ] && retry_before_reinit="0"
 
-	wait_for_serving_system || return 1
+	if [ "$red_cap" = "true" ]; then
+		wait_for_serving_system_via_at_commands || return 1
+	else
+		wait_for_serving_system || return 1
+	fi
 
 	[ "$pdptype" = "ip" ] || [ "$pdptype" = "ipv4v6" ] && {
 
@@ -208,8 +229,13 @@ ${ifid} --ep-iface-number ${ep_iface} --set-client-id wds,${cid_4}"
 		[ $? -ne 0 ] && return 1
 
 		#~ Start PS call
-		pdh_4=$(call_uqmi_command "uqmi -d $device $options --set-client-id wds,$cid_4 \
+		if [ "$red_cap" = "true" ]; then
+			pdh_4=$(call_uqmi_command "uqmi -d $device $options --set-client-id wds,$cid_4 \
+--start-network --profile $pdp" "true")
+		else
+			pdh_4=$(call_uqmi_command "uqmi -d $device $options --set-client-id wds,$cid_4 \
 --start-network --profile $pdp --ip-family ipv4" "true")
+		fi
 
 		echo "pdh4: $pdh_4"
 
@@ -253,7 +279,7 @@ ${ifid} --ep-iface-number ${ep_iface} --set-client-id wds,${cid_4}"
 
 		#~ Start PS call
 		pdh_6=$(call_uqmi_command "uqmi -d $device $options --set-client-id wds,$cid_6 \
---start-network --profile $pdp --ip-family ipv6" "true")
+--start-network --ip-family ipv6 --profile $pdp" "true")
 
 		echo "pdh6: $pdh_6"
 
@@ -352,9 +378,10 @@ ${ifid} --ep-iface-number ${ep_iface} --set-client-id wds,${cid_4}"
 
 	proto_export "IFACE4=$IFACE4"
 	proto_export "IFACE6=$IFACE6"
-	proto_run_command "$interface" qmuxtrack "$device" "$cid_4" "$cid_6"
+	proto_run_command "$interface" qmuxtrack "$device" "$modem" "$cid_4" "$cid_6"
 }
 #~ ---------------------------------------------------------------------
+
 proto_qmux_teardown() {
 	#~ netifd has 15 seconds timeout to finish this function
 	#~ it is killed if not finished
@@ -382,10 +409,9 @@ proto_qmux_teardown() {
 
 	rm -f "/var/run/${conn_proto}/${interface}.up" 2> /dev/null
 
-	clear_connection_values "$interface" "$device" 4 "$conn_proto"
-	ubus call network.interface down "{\"interface\":\"${interface}_4\"}"
+	background_clear_conn_values "$interface" "$device" "$conn_proto" &
 
-	clear_connection_values "$interface" "$device" 6 "$conn_proto"
+	ubus call network.interface down "{\"interface\":\"${interface}_4\"}"
 	ubus call network.interface down "{\"interface\":\"${interface}_6\"}"
 
 	[ "$method" = "bridge" ] || [ "$method" = "passthrough" ] && {

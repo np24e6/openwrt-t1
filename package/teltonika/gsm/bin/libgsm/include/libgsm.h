@@ -64,6 +64,7 @@ typedef enum {
 	LGSM_INFO_FEATURE_FRAMED_ROUTING,
 	LGSM_INFO_FEATURE_LOW_SIGNAL_RECONNECT,
 	LGSM_INFO_FEATURE_AUTO_5G_MODE,
+	LGSM_INFO_FEATURE_REDUCED_CAPABILITY,
 	LGSM_INFO_DEFAULT_IMS,
 	LGSM_INFO_BUILTIN,
 	LGSM_INFO_MAX,
@@ -1114,6 +1115,7 @@ typedef struct {
 	bool builtin;
 	bool csd_support;
 	bool auto_5g_mode;
+	bool red_cap;
 	uint32_t default_ims;
 	lgsm_net_info_t net_info;
 	lgsm_op_slc_mode_t op_slc;
@@ -3090,7 +3092,7 @@ lgsm_err_t lgsm_set_5g_extended_params(struct ubus_context *ctx, bool enabled, f
  * @param[in]   modem_num   Modem identification number.
  */
 lgsm_err_t lgsm_set_5g_cap_feature_general_params(struct ubus_context *ctx, bool enabled, func_t *resp,
-				       uint32_t modem_num);
+						  uint32_t modem_num);
 
 /**
  * Set DPO operation mode

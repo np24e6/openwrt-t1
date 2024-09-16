@@ -1,6 +1,11 @@
 [
   {
     "category": "Services",
+    "name": "Modbus TCP over Serial Gateway",
+    "depends": []
+  },
+  {
+    "category": "Services",
     "name": "AVL",
     "depends": [
       {

@@ -133,7 +133,72 @@ uqmi_modify_data_format() {
 
 	logger "$command"
 	ret=$(eval $command)
+	if [ "$red_cap" = "true" ] && [ "$ret" = "" ]; then
+		 return 0
+	fi
 	qmi_error_handle "$ret" "$error_cnt" "$modem" || return 1
+}
+
+wait_for_clear_connection_values()
+{
+	local interface="$1"
+	local device="$2"
+	local iptype="$3"
+	local conn_proto="$4"
+	clear_increased_timeout=30
+
+	clear_connection_values "$interface" "$device" $iptype "$conn_proto" &
+	pid_clear=$!
+	# wait for clear_connection_values to finish or until timeout is reached
+	current_timeout=0
+	while kill -0 $pid_clear 2>/dev/null; do
+		sleep 3
+		current_timeout=$((current_timeout+3))
+		if [ $current_timeout -ge $clear_increased_timeout ]; then
+			kill -9 $pid_clear
+			logger -t "qmux" "clear_connection_values $interface $iptype reached a timeout"
+			break
+		fi
+	done
+}
+
+background_clear_conn_values()
+{
+	local interface="$1"
+	local device="$2"
+	local conn_proto="$3"
+
+	touch "/tmp/shutdown_$interface"
+
+	wait_for_clear_connection_values "$interface" "$device" "4" "$conn_proto"
+
+	wait_for_clear_connection_values "$interface" "$device" "6" "$conn_proto"
+
+	logger -t "qmux" "$interface teardown successful"
+	rm "/tmp/shutdown_$interface"
+}
+
+wait_for_serving_system_via_at_commands() {
+	local reg_status=""
+	local registration_timeout=0
+	while [ "$reg_status" != "attached" ]; do
+		gsm_call=$(ubus call $gsm_modem get_ps_att_state)
+		reg_status=$(jsonfilter -s "$gsm_call" -e '@.state')
+
+		[ -z "$reg_status" ] && echo "Can't get PS registration state" && return 1
+		[ "$reg_status" = "attached" ] && return 0
+
+		if [ "$registration_timeout" -lt "$timeout" ]; then
+			let "registration_timeout += 5"
+			sleep 5
+		else
+			echo "Network registration failed"
+			proto_notify_error "$interface" NO_NETWORK
+			handle_retry "$retry_before_reinit" "$interface"
+			return 1
+		fi
+	done
+	return 0
 }
 
 wait_for_serving_system() {
@@ -182,4 +247,20 @@ set_mtu() {
 		echo "Setting $mtu_state MTU: $mtu on $interface_name"
 		ip link set mtu "$mtu" "$interface_name"
 	}
+}
+
+wait_for_shutdown_complete()
+{
+	local interface="$1"
+	shutdown_timeout=30
+
+	while [ -f "/tmp/shutdown_$interface" ]; do
+		[ $shutdown_timeout -eq 0 ] && {
+			rm "/tmp/shutdown_$interface"
+			logger -t "qmux" "shutdown_$interface flag removed after 60s timeout"
+			break
+		}
+		sleep 2
+		shutdown_timeout=$((shutdown_timeout-1))
+	done
 }

@@ -6,20 +6,21 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=zerotier
-PKG_VERSION:=1.10.1
+PKG_VERSION:=1.14.0
 PKG_RELEASE:=1
 
 PKG_SOURCE_PROTO:=git
-PKG_SOURCE_VERSION:=1.10.1
+PKG_SOURCE_VERSION:=1.14.0
 PKG_SOURCE_URL:=https://github.com/zerotier/ZeroTierOne.git
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
-PKG_HASH:=1cc6b5da059486aff588fa6e6f43d20a7063569cc108bbe7254969f1cf72c968
-PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-$(PKG_VERSION)
+PKG_HASH:=7191623a81b0d1b552b9431e8864dd3420783ee518394ac1376cee6aaf033291
+PKG_BUILD_DIR:=$(BUILD_DIR)/zerotier-$(PKG_VERSION)
 
 PKG_MAINTAINER:=Moritz Warning <moritzwarning@web.de>
 PKG_LICENSE:=BUSL-1.1
 PKG_LICENSE_FILES:=LICENSE.txt
+
 PKG_ASLR_PIE:=0
 PKG_BUILD_PARALLEL:=1
 PKG_BUILD_FLAGS:=gc-sections
@@ -29,7 +30,7 @@ include $(INCLUDE_DIR)/package.mk
 define Package/zerotier
   SECTION:=net
   CATEGORY:=Network
-  DEPENDS:=+libpthread +libstdcpp +kmod-tun +ip +libminiupnpc +libnatpmp
+  DEPENDS:=+libpthread +libstdcpp +kmod-tun +ip +libminiupnpc +libnatpmp +libatomic
   TITLE:=Create flat virtual Ethernet networks of almost unlimited size
   URL:=https://www.zerotier.com
   SUBMENU:=VPN
@@ -63,7 +64,8 @@ endif
 endef
 
 # Make binary smaller
-TARGET_LDFLAGS += -Wl,--gc-sections,--as-needed
+TARGET_CFLAGS += -Wl,-z,noexecstack
+TARGET_LDFLAGS += -Wl,--as-needed -Wl,-z,noexecstack
 
 define Package/zerotier/conffiles
 /etc/config/zerotier

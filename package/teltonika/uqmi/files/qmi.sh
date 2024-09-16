@@ -52,12 +52,15 @@ proto_qmi_setup() {
 	json_get_vars device modem pdptype sim delay method mtu dhcp ip4table ip6table dhcpv6 \
 	leasetime mac $PROTO_DEFAULT_OPTIONS
 
-        local gsm_modem="$(find_mdm_ubus_obj "$modem")"
+	# wait for shutdown to complete
+	wait_for_shutdown_complete "$interface"
 
-        [ -z "$gsm_modem" ] && {
-                echo "Failed to find gsm modem ubus object, exiting."
-                return 1
-        }
+	local gsm_modem="$(find_mdm_ubus_obj "$modem")"
+
+	[ -z "$gsm_modem" ] && {
+		echo "Failed to find gsm modem ubus object, exiting."
+		return 1
+	}
 
 	pdp=$(get_pdp "$interface")
 
@@ -297,7 +300,7 @@ call_uqmi_command "uqmi -d $device $options --set-client-id wds,$cid --release-c
 
 	proto_export "IFACE4=$IFACE4"
 	proto_export "IFACE6=$IFACE6"
-	proto_run_command "$interface" qmuxtrack "$device" "$cid_4" "$cid_6"
+	proto_run_command "$interface" qmuxtrack "$device" "$modem" "$cid_4" "$cid_6"
 }
 #~ ---------------------------------------------------------------------
 proto_qmi_teardown() {
@@ -320,10 +323,9 @@ proto_qmi_teardown() {
 	method=$(grep -o 'method:[^ ]*' $braddr_f 2> /dev/null | cut -d':' -f2)
 	bridge_ipaddr=$(grep -o 'bridge_ipaddr:[^ ]*' $braddr_f 2> /dev/null | cut -d':' -f2)
 
-	clear_connection_values $interface $device "4" $conn_proto
-	ubus call network.interface down "{\"interface\":\"${interface}_4\"}"
+	background_clear_conn_values "$interface" "$device" "$conn_proto" &
 
-	clear_connection_values $interface $device "6" $conn_proto
+	ubus call network.interface down "{\"interface\":\"${interface}_4\"}"
 	ubus call network.interface down "{\"interface\":\"${interface}_6\"}"
 
 	[ "$method" = "bridge" ] || [ "$method" = "passthrough" ] && {

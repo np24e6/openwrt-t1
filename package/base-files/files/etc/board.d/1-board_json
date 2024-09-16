@@ -207,6 +207,7 @@ setup_json() {
 	RUT361* |\
 	RUT200* |\
 	RUT241* |\
+	RUT271* |\
 	RUT260*)
 		ucidef_set_led_switch "lan" "LAN" "eth1_led" "switch0" "0x2"
 		ucidef_set_led_switch "wan" "WAN" "eth2_led" "switch0" "0x1"
@@ -225,7 +226,8 @@ setup_json() {
 			ucidef_set_esim
 			opt_sim="dual_sim"
 		}
-		ucidef_set_network_options "vlans" 16 "max_mtu" 1500 "readonly_vlans" 2
+		[ "${model::6}" = "RUT271" ] && ucidef_set_release_version "7.8.1"
+		ucidef_set_network_options "vlans" 16 "max_mtu" 1500 "readonly_vlans" 2 "vlan0" true
 		ucidef_set_hwinfo mobile wifi ethernet nat_offloading port_link "$opt_io" "$opt_sim"
 		[ "${model::4}" = "RUT2" ] && ucidef_check_dual_sim
 		;;
@@ -294,7 +296,8 @@ setup_json() {
 		ucidef_set_network_options "vlans" 16 "max_mtu" 1500
 		;;
 	RUT901* |\
-	RUT951*)
+	RUT951* |\
+	RUT971*)
 		ucidef_set_led_switch "lan1" "LAN1" "eth1_led" "switch0" "0x01"
 		ucidef_set_led_switch "lan2" "LAN2" "eth2_led" "switch0" "0x02"
 		ucidef_set_led_switch "lan3" "LAN3" "eth3_led" "switch0" "0x04"
@@ -308,11 +311,13 @@ setup_json() {
 		[ "${model:7:1}" = "6" ] && ucidef_set_hwinfo dual_sim mobile nat_offloading port_link \
 		wifi ethernet || ucidef_set_hwinfo dual_sim mobile wifi ethernet ios nat_offloading port_link
 		[ "${model:4:2}" = "01" ] && ucidef_set_release_version "7.3.1"
+		[ "${model:4:2}" = "71" ] && ucidef_set_release_version "7.8.1"
 		ucidef_set_network_options "vlans" 16 "max_mtu" 1500 "readonly_vlans" 2 "vlan0" true
 		[ "${model:7:1}" = "1" ] && [ "${model::6}" = "RUT901" ] && ucidef_set_esim
 		;;
 	RUT906* |\
-	RUT956*)
+	RUT956* |\
+	RUT976*)
 		ucidef_set_led_switch "lan1" "LAN1" "eth1_led" "switch0" "0x01"
 		ucidef_set_led_switch "lan2" "LAN2" "eth2_led" "switch0" "0x02"
 		ucidef_set_led_switch "lan3" "LAN3" "eth3_led" "switch0" "0x04"
@@ -329,6 +334,7 @@ setup_json() {
 		ucidef_set_hwinfo dual_sim usb gps nat_offloading port_link \
 		mobile wifi ethernet rs232 rs485 "$sd_opt" "$io_opt"
 		[ "${model:4:2}" = "06" ] && ucidef_set_release_version "7.4.2"
+		[ "${model::6}" = "RUT976" ] && ucidef_set_release_version "7.8.1"
 		ucidef_add_serial_capabilities "rs232" \
 			"300 600 1200 2400 4800 9600 19200 38400 57600 115200" \
 			"5 6 7 8" \

@@ -1,3 +1,39 @@
+# 2024-08-02 00.07.08.2
+
+### New
+
+* Mobile: added firmware downgrade validation for SLM750 and SLM770A modules (ID: 19153)
+* Mobile: added RG255C modem support (ID: 17499)
+
+### Improvements
+
+* Mobile: improved firmware downgrade validation for Quectel modules (ID: 19305)
+
+### Fix
+
+* Ledman: fixed SIM LEDs indication for RUTXR1 (ID: 19081)
+* MBus Client: fixed FCB toggle button not working (ID: 19609)
+* Mobile: fixed an issue where in some cases mobile network interfaces would not be brought down properly (ID: 19246)
+* Mobile: fixed illegal instruction fault on modem control services (ID: 19510)
+* Mobile: fixed memory fault while allowlist and denied data roaming enabled (ID: 19498)
+* Mobile: fixed wrong bandwidth parsing on 5G devices (ID: 19205)
+* Modbus TCP over Serial Gateway: fixed serial connection not working after reboot (ID: 19585)
+* Network: fixed default route not being added for PPPoE connections (ID: 19601)
+* OPC UA Client: fixed connections not being closed after using testing functionality (ID: 19243)
+* WebUI: fixed SDK WebUI package compilation (ID: 19547)
+
+### Updates
+
+* Zerotier: updated version to  1.14.0 (ID: 18932)
+# 2024-07-19 00.07.08.1
+
+### New
+
+* Mobile: added firmware downgrade validation for SLM750 and SLM770A modules (ID: 19153)
+
+### Improvements
+
+* Mobile: improved firmware downgrade validation for Quectel modules (ID: 19305)
 No changesNo changes# 2024-05-03 00.07.06.11
 
 ### New

@@ -557,19 +557,47 @@ get_fw_list() {
     fi
 }
 
-# Returns 0 if firmware can not be upgraded due to embargo
-check_blocked() {
-    local current_firmware="$1"
-    local new_firmware="$2"
+# Returns 0 if firmware can not be downgraded due to embargo
+check_blocked_quectel() {
+    local from="${1##*_}"
+    local to="${2##*_}"
 
     local R1="R[0-9]{2}A2[0-9]"
-    local R2="_[0-9]{2}.2[0-9]{2}.[0-9]{2}.2[0-9]{2}$"
+    local R2="[0-9]{2}.2[0-9]{2}.[0-9]{2}.2[0-9]{2}$"
 
-    ([ "$(echo "$current_firmware" | grep -oEi "$R1")" != "" ] ||
-        [ "$(echo "$current_firmware" | grep -oEi "$R2")" != "" ]) &&
-        ([ "$(echo "$new_firmware" | grep -oEi "$R1")" == "" ] &&
-            [ "$(echo "$new_firmware" | grep -oEi "$R2")" == "" ]) && return 0
+    # Downgrade from embargo FW
+    ([[ "$from" =~ $R1 ]] || [[ "$from" =~ $R2 ]]) &&
+    !([[ "$to" =~ $R1 ]] || [[ "$to" =~ $R2 ]]) && return 0
 
+    return 1
+}
+
+# Checks SLM770A version string if it has a downgrade prevention
+# Only firmwares having .57. in the middle and newer should have it
+slm770a_blocked_fw() {
+    local fw_string="$1"
+    local embargo="$(echo "$fw_string" | awk -F '[-_.]' '{print $3}')"
+    local version="$(echo "$fw_string" | awk -F '[-_.]' '{print $4}')"
+    ! [[ "${embargo:-0}" -eq 57 ]] && [ "${version:-0}" -le 28 ] && return 1
+    return 0
+}
+
+# Checks SLM750 version string if it has a downgrade prevention
+# Only firmwares version >= 24 should have it
+slm750_blocked_fw() {
+    local fw_string="$1"
+    local version="$(echo "$fw_string" | awk -F '[-_.]' '{print $5}')"
+    [ "${version:-0}" -lt 24 ] && return 1
+    return 0
+}
+
+# Returns 0 if firmware can not be downgraded due to embargo
+check_blocked_meiglink() {
+    local from="$1"
+    local to="$2"
+    local model="${1%%[-_.]*}"
+    [ "$model" == "SLM750" ] && slm750_blocked_fw $from && ! slm750_blocked_fw $to && return 0
+    [ "$model" == "SLM770A" ] && slm770a_blocked_fw $from && ! slm770a_blocked_fw $to && return 0
     return 1
 }
 
@@ -635,8 +663,10 @@ common_validation() {
         [ "$VERSION" != "" ]; then
         exec_ubus_call "$MODEM_N" "get_firmware"
         MODEM_FW=$(parse_from_ubus_rsp "firmware")
-        case "$MODEM_FW" in
-        *$VERSION*)
+        UNDERSCORE_MODEM_FW=$(echo "$MODEM_FW" | tr '.-' '_')
+        UNDERSCORE_VERSION=$(echo "$VERSION" | tr '.-' '_')
+        case "$UNDERSCORE_MODEM_FW" in
+        *$UNDERSCORE_VERSION*)
             echo "[ERROR] Specified firmware is already installed. Exiting.."
             graceful_exit
             ;;
@@ -653,10 +683,6 @@ common_validation() {
                     graceful_exit
                 }
             fi
-            if check_blocked "$MODEM_FW" "$VERSION"; then
-                echo "[ERROR] Modem firmware upgrade is disabled for this modem version. Exiting.."
-                graceful_exit
-            fi
         fi
         #Meiglink
         if [ "$DEVICE" = "Meiglink" ]; then
@@ -666,6 +692,18 @@ common_validation() {
             if [ "$DEV_MODULE" != "$DEV_MOD" ]; then
                 echo "$DEV_MODULE != $DEV_MOD"
                 echo "[ERROR] Specified firmware is not intended for this module. Exiting.."
+                graceful_exit
+            fi
+        fi
+
+        if [ "$DEVICE" = "Quectel" ] || [ "$DEVICE" = "QuectelASR" ] || [ "$DEVICE" = "QuectelUNISOC" ]; then
+            if check_blocked_quectel "$MODEM_FW" "$VERSION"; then
+                echo "[ERROR] Modem firmware flashing is not allowed for this modem version. Exiting.."
+                graceful_exit
+            fi
+        elif [ "$DEVICE" = "Meiglink" ] || [ "$DEVICE" = "MeiglinkASR" ]; then
+            if check_blocked_meiglink "$MODEM_FW" "$VERSION"; then
+                echo "[ERROR] Modem firmware flashing is not allowed for this modem version. Exiting.."
                 graceful_exit
             fi
         fi

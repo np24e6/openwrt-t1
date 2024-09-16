@@ -52,6 +52,9 @@ proto_connm_setup() {
 	json_get_vars device modem pdptype sim delay method mtu dhcp dhcpv6 ip4table ip6table \
 	leasetime mac $PROTO_DEFAULT_OPTIONS
 
+	# wait for shutdown to complete
+	wait_for_shutdown_complete "$interface"
+
 	pdp=$(get_pdp "$interface")
 
 	[ -n "$delay" ] || [ "$pdp" = "1" ] && delay=0 || delay=3
@@ -265,7 +268,7 @@ call_uqmi_command "uqmi -d $device $options --set-client-id wds,$cid --release-c
 	proto_export "IFACE4=$IFACE4"
 	proto_export "IFACE6=$IFACE6"
 	proto_export "OPTIONS=$options"
-	proto_run_command "$interface" qmuxtrack "$device" "$cid_4" "$cid_6"
+	proto_run_command "$interface" qmuxtrack "$device" "$modem" "$cid_4" "$cid_6"
 }
 
 proto_connm_teardown() {
@@ -285,10 +288,9 @@ proto_connm_teardown() {
 		bridge_ipaddr=$(get_braddr_var bridge_ipaddr "$interface")
 	}
 
-	clear_connection_values $interface $device "4" $conn_proto
-	ubus call network.interface down "{\"interface\":\"${interface}_4\"}"
+	background_clear_conn_values "$interface" "$device" "$conn_proto" &
 
-	clear_connection_values $interface $device "6" $conn_proto
+	ubus call network.interface down "{\"interface\":\"${interface}_4\"}"
 	ubus call network.interface down "{\"interface\":\"${interface}_6\"}"
 
 	[ "$method" = "bridge" ] || [ "$method" = "passthrough" ] && {
