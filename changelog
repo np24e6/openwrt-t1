@@ -1,3 +1,10 @@
+# 2023-11-07 00.07.05.4
+
+### Improvements
+
+* Webui: imporoved asynchronous pagination in events log pages (ID: 14912)
+* Data Sender: changed collection and input parsing (ID: 15098)
+
 # 2023-09-25 00.07.05.3
 
 ### New
