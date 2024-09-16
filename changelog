@@ -1,3 +1,34 @@
+# 2023-09-25 00.07.05.3
+
+### New
+
+* U-boot: added support for GD5F2GM7 and GD5F2GQ5 GigaDevice nands (ID: 14785)
+
+### Improvements
+
+* Overview: improved performance on RUT2 devices (ID: 14912)
+
+### Fix
+
+* MODEM: fixed device crashes when using IPv6 for modem connections. Affects RUT, RUTX, RUTM, TRB2xx (ID: 15035)
+
+# 2023-09-25 00.07.05.2
+
+### Fix
+
+* ADB: disabled ADB service on TRB14X devices (ID: 15075)
+
+# 2023-09-23 00.07.05.1
+
+### Fix
+
+* DNS: fixed tap200.rutos.net DNS lookup (ID: 14939)
+
+### Improvements
+
+* U-boot: perform NAND image verification during firmware flashing on RUTX devices (ID: 14384)
+* U-boot: decrease firmware flashing duration on RUTX devices (ID: 14384)
+
 # 2023-09-27 00.07.05
 
 ### New

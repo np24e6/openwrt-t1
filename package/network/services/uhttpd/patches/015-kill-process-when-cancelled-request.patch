@@ -1,0 +1,11 @@
+--- a/proc.c
++++ b/proc.c
+@@ -255,6 +255,8 @@ static void proc_free(struct client *cl)
+ {
+ 	struct dispatch_proc *p = &cl->dispatch.proc;
+ 
++	uh_relay_kill(cl, &p->r);
++
+ 	uloop_timeout_cancel(&p->timeout);
+ 	blob_buf_free(&p->hdr);
+ 	proc_write_close(cl);

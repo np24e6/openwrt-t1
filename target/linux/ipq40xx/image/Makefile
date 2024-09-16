@@ -59,7 +59,7 @@ define Device/teltonika_rutx
 	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	HW_SUPPORT := io_expander%stm32:shiftreg_1
 
-	HW_MODS := mod1%W25N02KV
+	HW_MODS := mod1%W25N02KV mod2%NAND_GD5F2GXX
 
 endef
 TARGET_DEVICES += teltonika_rutx

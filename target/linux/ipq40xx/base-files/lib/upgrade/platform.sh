@@ -54,8 +54,12 @@ platform_check_hw_support() {
 
 	if prepare_metadata_hw_mods "$1"; then
 		# nand type validation
-		grep -q '^W25N02KV$' "$nand_model_file" && { ! find_hw_mod "W25N02KV"; } && {
+		grep -q '^W25N02KV' "$nand_model_file" && { ! find_hw_mod "W25N02KV"; } && {
 			echo "Winbond NAND detected but fw does not support it"
+			return 1
+		}
+		grep -q '^GD5F2GM7\|^GD5F2GQ5' "$nand_model_file" && { ! find_hw_mod "NAND_GD5F2GXX"; } && {
+			echo "GigaDevices NAND detected but fw does not support it"
 			return 1
 		}
 	else

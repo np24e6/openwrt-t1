@@ -3,6 +3,7 @@
 import re
 from argparse import ArgumentParser
 from glob import glob
+from hashlib import sha256
 from logging import error
 from os import getenv, path
 
@@ -399,6 +400,7 @@ def split_path(file):
 def upload_to_AWS(args, fw_files, prefix_env, dir_prefix="", dir_postfix="", fw_table=None, files_table=None):
     try:
         # We don't need these values directly, but we need to check them because they're later used by AWS
+        commit_sha = getenv_or_error("CI_COMMIT_SHA")
         getenv_or_error("AWS_ACCESS_KEY_ID")
         getenv_or_error("AWS_SECRET_ACCESS_KEY")
 
@@ -423,7 +425,12 @@ def upload_to_AWS(args, fw_files, prefix_env, dir_prefix="", dir_postfix="", fw_
             fw_files.remove((file_path, fw_file))
             continue
 
-        aws_path = aws.upload(f"{dir_prefix}{version}{dir_postfix}", file_path, fw_file, args.dry_run)
+        if re.search("MASTER_STENDUI\.bin$", fw_file):
+            postfix = dir_postfix + "/" + sha256(f"{version}|{dir_postfix}|{commit_sha}".encode('utf-8')).hexdigest()
+        else:
+            postfix = dir_postfix
+
+        aws_path = aws.upload(f"{dir_prefix}{version}{postfix}", file_path, fw_file, args.dry_run)
         if aws_path is None:
             print(f"Failed to upload '{fw_file}'")
             failure_count["AWS"] += 1

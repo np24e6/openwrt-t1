@@ -132,6 +132,11 @@ config NFTABLES_SUPORT
 	imply PACKAGE_kmod-nft-netdev
 	imply PACKAGE_nftables-nojson
 
+config EBTABLES_DNS_SUPPORT
+	bool
+	depends on AP_DEVICE
+	default y
+	imply PACKAGE_ebtables-dns
 #
 # vpn, tunnels, etc
 #

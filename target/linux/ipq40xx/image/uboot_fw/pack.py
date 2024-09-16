@@ -515,7 +515,7 @@ class NorScript(FlashScript):
         if size > 0:
             self.append("sf write $fileaddr 0x%08x 0x%08x" % (offset, size))
 
-    def nand_write(self, offset, part_size, img_size):
+    def nand_write(self, offset, part_size, img_size, verif_addr):
         """Handle the NOR + NAND case
            All binaries upto HLOS will go to NOR and Root FS will go to NAND
            Assumed all nand page sizes are less than are equal to 8KB
@@ -527,6 +527,9 @@ class NorScript(FlashScript):
 
         if img_size > 0:
             self.append("nand write $fileaddr 0x%08x 0x%08x" % (offset, img_size))
+            if verif_addr != "0":
+                self.append("nand read %s 0x%08x 0x%08x" % (verif_addr, offset, img_size))
+                self.append("cmp.b %s $fileaddr 0x%08x" % (verif_addr, img_size))
 
 
     def probe(self):
@@ -716,6 +719,11 @@ class Pack(object):
             except ConfigParserError as e:
                 primary = "0"
 
+            try:
+                verif_addr = info.get(section, "verif_addr")
+            except ConfigParserError as e:
+                verif_addr = "0"
+
             if include.lower() in ["0", "no"]:
                 continue
 
@@ -782,7 +790,7 @@ class Pack(object):
                 if self.flinfo.type == 'norplusnand':
                     offset = count * Pack.norplusnand_rootfs_img_size
                     part_size = Pack.norplusnand_rootfs_img_size
-                    script.nand_write(offset, part_size, img_size)
+                    script.nand_write(offset, part_size, img_size, verif_addr)
                     count = count + 1
             else:
                 if part_info.which_flash == 0:
@@ -791,7 +799,7 @@ class Pack(object):
                     script.write(offset, img_size, yaffs)
                 else:
                     offset = part_info.offset
-                    script.nand_write(offset, part_info.length, img_size)
+                    script.nand_write(offset, part_info.length, img_size, verif_addr)
 
             script.finish_activity()
 

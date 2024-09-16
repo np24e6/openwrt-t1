@@ -4,8 +4,8 @@
 
 max_requests="$(uci_get uhttpd main max_requests)"
 
-if [ "$max_requests" != 7 ]; then
-	uci_set "uhttpd" "main" "max_requests" "7"
+if [ "$max_requests" != 10 ]; then
+	uci_set "uhttpd" "main" "max_requests" "10"
 	uci_commit "uhttpd"
 fi
 

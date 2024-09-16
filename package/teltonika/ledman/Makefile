@@ -7,7 +7,7 @@ include $(INCLUDE_DIR)/download.mk
 
 PKG_NAME:=ledman
 
-PKG_SOURCE_VERSION:=2.13
+PKG_SOURCE_VERSION:=2.13.3
 
 include $(INCLUDE_DIR)/package.mk
 

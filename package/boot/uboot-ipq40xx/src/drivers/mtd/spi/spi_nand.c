@@ -42,6 +42,7 @@ struct nand_chip nand_chip[CONFIG_SYS_MAX_NAND_DEVICE];
 int verify_4bit_ecc(int status);
 int verify_3bit_ecc(int status);
 int verify_2bit_ecc(int status);
+int gd2_verify_2bit_ecc(int status);
 int verify_dummy_ecc(int status);
 void gigadevice_norm_read_cmd(u8 *cmd, int column);
 void xtx_norm_read_cmd(u8 *cmd, int column);
@@ -69,6 +70,23 @@ static struct spi_nand_flash_params spi_nand_flash_tbl[] = {
 		.verify_ecc = verify_3bit_ecc,
 		.die_select = NULL,
 		.name = "GD5F2GQ4XB",
+		.no_of_planes = 1,
+	},
+	{
+		.id = { 0x00, 0xc8, 0x92, 0xc8 },
+		.page_size = 2048,
+		.erase_size = 0x00020000, // block size (page size * number of pages in block)
+		.no_of_dies = 1,
+		.prev_die_id = INT_MAX,
+		.pages_per_die = 0x20000, // pages * blocks (pages_per_sector * nr_sectors)
+		.pages_per_sector = 64, // pages per block
+		.nr_sectors = 2048, // number of blocks
+		.oob_size = 128, // slice of page size
+		.protec_bpx = 0xC7, // write protect bit mask
+		.norm_read_cmd = winbond_norm_read_cmd, // 03h, (dummy<3-0>)A15-A8, A7-A0, dummy
+		.verify_ecc = gd2_verify_2bit_ecc,
+		.die_select = NULL,
+		.name = "GD5F2GM7UE",
 		.no_of_planes = 1,
 	},
 	{
@@ -678,6 +696,19 @@ int verify_3bit_ecc(int status)
 	if (ecc_status == SPINAND_3BIT_ECC_ERROR)
 		return ECC_ERR;
 	else if (ecc_status >= SPINAND_3BIT_ECC_BF_THRESHOLD)
+		return ECC_CORRECTED;
+	else
+		return 0;
+}
+
+int gd2_verify_2bit_ecc(int status)
+{
+	int ecc_status = (status & SPINAND_2BIT_ECC_MASK);
+
+	if (ecc_status == SPINAND_2BIT_ECC_ERROR)
+		return ECC_ERR;
+	else if ((ecc_status == SPINAND_2BIT_ECC_CORRECTED) ||
+		(ecc_status == SPINAND_2BIT_ECC_MASK))
 		return ECC_CORRECTED;
 	else
 		return 0;

@@ -865,11 +865,7 @@ endef
 
 define KernelPackage/br-netfilter/install
 	$(INSTALL_DIR) $(1)/etc/sysctl.d
-	if [ -e "./files/sysctl-br-netfilter.conf-$(call device_shortname)" ]; then \
-		$(INSTALL_DATA) ./files/sysctl-br-netfilter.conf-$(call device_shortname) $(1)/etc/sysctl.d/11-br-netfilter.conf; \
-	else \
-		$(INSTALL_DATA) ./files/sysctl-br-netfilter.conf $(1)/etc/sysctl.d/11-br-netfilter.conf; \
-	fi;
+	$(INSTALL_DATA) ./files/sysctl-br-netfilter.conf $(1)/etc/sysctl.d/11-br-netfilter.conf
 endef
 
 $(eval $(call KernelPackage,br-netfilter))
