@@ -16,7 +16,6 @@ PKG_SOURCE:=$(PKG_NAME)-$(PKG_SOURCE_VERSION)-stable-src.tar.gz
 PKG_SOURCE_URL:=@SF/ijbswa
 
 PKG_HASH:=c61de4008c62445ec18f1f270407cbf2372eaba93beaccdc9e3238bb2defeed7
-PKG_BUILD_DIR:=$(BUILD_DIR)/privoxy-$(PKG_VERSION)-stable
 PKG_FIXUP:=autoreconf
 PKG_INSTALL:=1
 

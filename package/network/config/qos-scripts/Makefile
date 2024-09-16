@@ -16,8 +16,6 @@ PKG_ORIGIN_URL:=https://github.com/openwrt/openwrt/tree/openwrt-21.02/package/ne
 
 PKG_MAINTAINER:=Felix Fietkau <nbd@nbd.name>
 
-PKG_BUILD_DIR := $(BUILD_DIR)/$(PKG_NAME)
-
 include $(INCLUDE_DIR)/package.mk
 
 define Package/qos-scripts

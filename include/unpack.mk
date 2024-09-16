@@ -3,8 +3,13 @@
 # Copyright (C) 2006-2020 OpenWrt.org
 
 HOST_TAR:=$(TAR)
-TAR_CMD=$(HOST_TAR) -C $(1)/.. $(TAR_OPTIONS)
-UNZIP_CMD=unzip -q -d $(1)/.. $(DL_DIR)/$(PKG_SOURCE)
+TAR_CMD=$(HOST_TAR) -C $(1)/$(if $(filter -1,$(STRIP_COMPONENTS)),../) --strip-components=$(if $(filter -1,$(STRIP_COMPONENTS)),0,$(if $(STRIP_COMPONENTS),$(STRIP_COMPONENTS),1)) $(TAR_OPTIONS)
+UNZIP_CMD=unzip -q -d $(1)/$(if $(filter -1,$(STRIP_COMPONENTS)),../) $(DL_DIR)/$(PKG_SOURCE) && for _ in $$$$(seq '$(if $(filter -1,$(STRIP_COMPONENTS)),0,$(if $(STRIP_COMPONENTS),$(STRIP_COMPONENTS),1))'); do \
+	find "$(1)" -mindepth 1 -maxdepth 1 -type d | while read -r dir; do \
+		find "$$$$dir" -mindepth 1 -maxdepth 1 | xargs mv --target-directory="$(1)/"; \
+		rm -r "$$$$dir"; \
+	done \
+done
 
 ifeq ($(PKG_SOURCE),)
   PKG_UNPACK ?= true

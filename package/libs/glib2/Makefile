@@ -22,7 +22,6 @@ PKG_LICENSE:=LGPL-2.1-or-later
 PKG_LICENSE_FILES:=COPYING
 PKG_CPE_ID:=cpe:/a:gnome:glib
 
-PKG_BUILD_DIR:=$(BUILD_DIR)/glib-$(PKG_VERSION)
 HOST_BUILD_DIR:=$(BUILD_DIR_HOST)/glib-$(PKG_VERSION)
 PKG_BUILD_DEPENDS:=meson/host gettext-full libiconv-full/host
 HOST_BUILD_DEPENDS:=meson/host gettext-full/host libiconv-full/host libffi/host

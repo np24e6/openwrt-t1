@@ -27,13 +27,13 @@ include $(INCLUDE_DIR)/package.mk
 
 define Host/Compile
 	UPX_UCLDIR=$(STAGING_DIR_HOST) \
-	$(MAKE) -C $(HOST_BUILD_DIR)-src \
+	$(MAKE) -C $(HOST_BUILD_DIR) \
 		CXXFLAGS_WERROR="" LDFLAGS="$(HOST_LDFLAGS)" \
 		CXX="$(HOSTCXX)"
 endef
 
 define Host/Install
-	$(CP) $(HOST_BUILD_DIR)-src/build/release/upx $(STAGING_DIR_HOST)/bin/upx
+	$(CP) $(HOST_BUILD_DIR)/build/release/upx $(STAGING_DIR_HOST)/bin/upx
 endef
 
 define Package/upx

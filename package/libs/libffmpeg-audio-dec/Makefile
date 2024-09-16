@@ -200,12 +200,6 @@ ifneq ($(CONFIG_TARGET_x86),)
   TARGET_CFLAGS+= -fomit-frame-pointer
 endif
 
-define Build/Prepare
-	$(PKG_UNPACK)
-	mv $(PKG_BUILD_DIR)/../ffmpeg-$(PKG_VERSION)/* $(PKG_BUILD_DIR)
-	$(Build/Patch)
-endef
-
 define Build/Configure
 	( cd $(PKG_BUILD_DIR); $(FFMPEG_CONFIGURE) )
 endef

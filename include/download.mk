@@ -353,31 +353,33 @@ define Download/default-upstream
   PROTO:=$(PKG_UPSTREAM_PROTO)
   VERSION:=$(PKG_UPSTREAM_VERSION)
   HASH=skip
+  OLD_DL_DIR:=$(DL_DIR)
+  DL_DIR:=$(DL_DIR)/upstream
 endef
 
 define Download
   $(eval export DEFAULT_DOWNLOAD_SECTION:=$(1))
   $(eval $(Download/Defaults))
   $(eval $(Download/$(DEFAULT_DOWNLOAD_SECTION)))
+  $(if $(filter skip-source,$(2)),
+    download:
+  ,
   $(foreach FIELD,URL FILE $(Validate/$(call dl_method,$(URL),$(PROTO))),
     ifeq ($($(FIELD)),)
       $$(error Download/$(1) is missing the $(FIELD) field.)
     endif
-  )
+    download: $(DL_DIR)/$(FILE)
+  ))
+
+  $(DL_DIR):
+	mkdir -p $(DL_DIR)
 
   $(foreach dep,$(DOWNLOAD_RDEP),
     $(dep): $(DL_DIR)/$(FILE)
   )
-  download: $(DL_DIR)/$(FILE)
 
-  $(DL_DIR)/$(FILE):
-	mkdir -p $(DL_DIR)
-ifdef UPSTREAM_FETCH
-ifneq ($(wildcard $(TOPDIR)/dl/$(FILE)),)
-	if cp $(TOPDIR)/dl/$(FILE) $(DL_DIR)/$(FILE); then exit 0; fi
-endif
-endif
-	$(call dl_retry,5, \
+  $(DL_DIR)/$(FILE): | $(DL_DIR)
+	@$(call dl_retry,5, \
 		$(call locked, \
 			$(if $(DownloadMethod/$(call dl_method,$(URL),$(PROTO))), \
 				$(call DownloadMethod/$(call dl_method,$(URL),$(PROTO)),check,$(if $(filter default,$(1)),PKG_,Download/$(1):)), \
@@ -386,6 +388,42 @@ endif
 			$(FILE) \
 		) \
 	)
+
+  download_upstream:
+
+ifdef PKG_UPSTREAM_URL
+
+  $(DL_DIR)/upstream:
+	mkdir -p $(DL_DIR)/upstream
+
+  download_upstream: $(DL_DIR)/upstream/$(PKG_UPSTREAM_FILE)
+
+  $(eval UPSTREAM_MATCHES_SOURCE:=$(if $(filter $(PKG_UPSTREAM_FILE),$(FILE)),1))
+
+# add dependency on source file if it's the same as the upstream file
+  $(DL_DIR)/upstream/$(PKG_UPSTREAM_FILE): $(if $(UPSTREAM_MATCHES_SOURCE),$(DL_DIR)/$(FILE)) | $(DL_DIR)/upstream
+	$(eval $(Download/Defaults))
+	$(eval $(Download/default-upstream))
+
+# check if upstream filename is the same as source filename and create a symlink to it instead of re-downloading
+	$(if $(UPSTREAM_MATCHES_SOURCE), \
+		$(call MESSAGE,Reused dl/$(FILE) for upstream); \
+		ln -fs '$(shell realpath --relative-to "$(DL_DIR)" "$(OLD_DL_DIR)/$(FILE)")' '$(DL_DIR)/$(FILE)' \
+	, \
+		@$(call dl_retry,5, \
+			$(call locked, \
+				$(if $(DownloadMethod/$(call dl_method,$(URL),$(PROTO))), \
+					$(call DownloadMethod/$(call dl_method,$(URL),$(PROTO)),check,$(if $(filter default,$(1)),PKG_,Download/$(1):)), \
+					$(DownloadMethod/unknown) \
+				),\
+				$(FILE) \
+			) \
+		) \
+	)
+
+	$(eval DL_DIR:=$(OLD_DL_DIR))
+	$(if $(DEFAULT_DOWNLOAD_SECTION),$(eval $(Download/$(DEFAULT_DOWNLOAD_SECTION))))
+endif
 endef
 
 # 1 => amount of tries

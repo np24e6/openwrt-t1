@@ -13,7 +13,6 @@ PKG_SOURCE_VERSION:=2015_365
 PKG_SOURCE_URL:=http://doolittle.icarus.com/ntpclient/
 PKG_SOURCE:=$(PKG_NAME)_$(PKG_SOURCE_VERSION).tar.gz
 PKG_HASH:=95c3646919a9a2278fa384aa8e37117b250577ff8b09b8c93ba53e04e729b54b
-PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-2015
 
 
 PKG_ORIGIN_URL:=https://github.com/Telconet/ntpclient

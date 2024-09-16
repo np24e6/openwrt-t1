@@ -6,7 +6,7 @@ import sys
 
 sys.path.append(os.path.abspath(os.path.dirname(__file__) + "/.."))
 
-from deploy_to_fota import *
+from deploy_to_fota import getenv_or_error, AWS, construct_version_db, parse_client_and_version, split_path
 
 results = {
     'failed': 0,
@@ -38,12 +38,12 @@ def test_getenv_or_raise_error(results):
     for arg in data:
         try:
             os.environ[arg] = data[arg]
-            check(data[arg], getenv_or_raise_error(arg), results)
-        except:
-            if data[arg] == '':
-                results['passed'] += 1
+            check(data[arg], getenv_or_error(arg), results)
+        except BaseException:
+            if data[arg] == "":
+                results["passed"] += 1
             else:
-                results['failed'] += 1
+                results["failed"] += 1
 
 
 def test_aws_upload(results):
@@ -64,12 +64,6 @@ def test_aws_upload(results):
         ('test/fw2', 'test5-fota', '7.3', '/builds/teltonika/rutx_open/scripts/../bin/targets/ipq40xx/generic/tltFws/',
          '', None),
 
-        ('test00/a_firmware', 'test999-rut-fota', None, '/builds/teltonika/rutx_open/scripts/../bin/targets/ipq40xx/generic/tltFws/',
-         'RUTX_R_00.07.03_WEBUI.bin', None),
-
-        ('test01/a_firmware', 'test88-rut-fota', '', '/builds/teltonika/rutx_open/scripts/../bin/targets/ipq40xx/generic/tltFws/',
-         'RUTX_R_00.07.03_WEBUI.bin', None),
-
         ('test/fw3', 'test6-fota', '7.3', None,
          'RUTX_R_00.07.03_WEBUI.bin', None),
 
@@ -77,16 +71,20 @@ def test_aws_upload(results):
          'RUTX_R_00.07.03_WEBUI.bin', None),
     ]
 
+
     for arg1, arg2, subdir, file_path, file_name, ret_value in data:
         os.environ['TEST_ENV_BUCKET_PATH'] = arg1
         os.environ['TEST_ENV_S3_BUCKET'] = arg2
 
+        if arg1 and not arg1.endswith("/"):
+            arg1 += "/"
+
         try:
             aws = AWS("TEST_ENV_")
-            check(ret_value, aws.upload(subdir, file_path, file_name, dry_run=True), results)
+            check(ret_value, aws.upload(f"{arg1}{subdir}", file_path, file_name, dry_run=True), results)
         except BaseException as err:
             print(f"Error {err=}")
-            results['failed'] += 1
+            results["failed"] += 1
 
 
 def test_construct_version_db(results):
@@ -113,18 +111,18 @@ def test_construct_version_db(results):
 
 def test_parse_client_and_version(results):
     data = {
-        'RUT30X_T_R72_00.07.01.1249_002_WEBUI.bin': (0, '7.1.1249'),
-        'somePath/RUT30X_T_R72_00.07.01.1249_002_WEBUI.bin': (0, '7.1.1249'),
-        'RUT36X_R_01.07.02.1_WEBUI.bin': (1, '7.2.1'),
-        'test_file.bin': (None, None),
-        'test_string': (None, None),
-        'RUTX_R_00.07.00_WEBUI.bin': (0, '7.0'),
-        'RUT9M_R72_00.07.000000_WEBUI.bin': (0, '7.0'),
-        'RUT9M_R72_99.07.000000_WEBUI.bin': (99, '7.0'),
-        None: (None, None),
-        '': (None, None),
-        './': (None, None),
-        '.': (None, None)
+        "RUT30X_T_R72_00.07.01.1249_002_WEBUI.bin": (0, "7.1.1249"),
+        "somePath/RUT30X_T_R72_00.07.01.1249_002_WEBUI.bin": (0, "7.1.1249"),
+        "RUT36X_R_01.07.02.1_WEBUI.bin": (1, "7.2.1"),
+        "test_file.bin": (-1, None),
+        "test_string": (-1, None),
+        "RUTX_R_00.07.00_WEBUI.bin": (0, "7.0"),
+        "RUT9M_R72_00.07.000000_WEBUI.bin": (0, "7.0"),
+        "RUT9M_R72_99.07.000000_WEBUI.bin": (99, "7.0"),
+        None: (-1, None),
+        "": (-1, None),
+        "./": (-1, None),
+        ".": (-1, None),
     }
 
     for arg in data:

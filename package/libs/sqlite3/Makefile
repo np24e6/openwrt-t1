@@ -19,8 +19,6 @@ PKG_SOURCE_VERSION:=3410200
 PKG_SOURCE_URL:=https://www.sqlite.org/2023
 PKG_SOURCE:=$(PKG_NAME)-autoconf-$(PKG_SOURCE_VERSION).tar.gz
 
-PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-autoconf-$(PKG_VERSION)
-
 PKG_BUILD_PARALLEL:=1
 
 PKG_CPE_ID:=cpe:/a:sqlite:sqlite

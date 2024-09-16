@@ -101,7 +101,7 @@ ifdef CONFIG_MIPS64_ABI
   endif
 endif
 
-DEFAULT_SUBDIR_TARGETS:=clean download prepare compile update refresh prereq dist distcheck configure check check-depends develop stage unstage ucompile uclean gpl-install unit_test unit_test_clean toolchain-dump geninfo upload
+DEFAULT_SUBDIR_TARGETS:=clean download download_upstream prepare compile update refresh prereq dist distcheck configure check check-depends develop stage unstage ucompile uclean gpl-install unit_test unit_test_clean toolchain-dump geninfo upload
 
 define DefaultTargets
 $(foreach t,$(DEFAULT_SUBDIR_TARGETS) $(1),
@@ -111,7 +111,7 @@ $(foreach t,$(DEFAULT_SUBDIR_TARGETS) $(1),
 )
 endef
 
-DL_DIR:=$(if $(call qstrip,$(CONFIG_DOWNLOAD_FOLDER)),$(call qstrip,$(CONFIG_DOWNLOAD_FOLDER)),$(TOPDIR)/dl$(if $(UPSTREAM_FETCH),/upstream))
+DL_DIR:=$(if $(call qstrip,$(CONFIG_DOWNLOAD_FOLDER)),$(call qstrip,$(CONFIG_DOWNLOAD_FOLDER)),$(TOPDIR)/dl)
 OUTPUT_DIR:=$(if $(call qstrip,$(CONFIG_BINARY_FOLDER)),$(call qstrip,$(CONFIG_BINARY_FOLDER)),$(TOPDIR)/bin)
 BIN_DIR:=$(OUTPUT_DIR)/targets/$(BOARD)/$(SUBTARGET)
 INCLUDE_DIR:=$(TOPDIR)/include

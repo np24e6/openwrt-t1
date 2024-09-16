@@ -8,6 +8,7 @@ PKG_NAME:=greengrass
 PKG_VERSION:=1.11.4
 PKG_RELEASE:=2
 
+STRIP_COMPONENTS:=0
 
 
 PKG_LICENSE:=Teltonika-3p-closed

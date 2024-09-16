@@ -223,10 +223,7 @@ $(GPL_BUILD_DIR)/package:
 	find "$(TOPDIR)/package" -maxdepth 1 -type f -exec cp "{}" "$@" \;
 	cp -rf "$(TOPDIR)/feeds" "$(GPL_BUILD_DIR)"
 
-gpl-install: $(GPL_BUILD_DIR)/package
-ifdef PKG_UPSTREAM_URL
-	UPSTREAM_FETCH=1 $(MAKE) download
-endif
+gpl-install: $(GPL_BUILD_DIR)/package download_upstream download
 	$(if $(IS_TLT_LIC), \
 		$(if $(and $(IS_NDA_SRC),$(CONFIG_GPL_INCLUDE_WEB_SOURCES)), \
 			$(call Build/InstallGPL,$(PKG_GPL_BUILD_DIR)) \

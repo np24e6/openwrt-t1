@@ -298,8 +298,7 @@ define Build/CoreTargets
 endef
 
 define Build/DefaultTargets
-  $(if $(PKG_SKIP_DOWNLOAD),,$(if $(strip $(PKG_SOURCE_URL)),$(call Download,default)))
-  $(if $(and $(strip $(PKG_UPSTREAM_URL)),$(strip $(UPSTREAM_FETCH))),$(call Download,default-upstream))
+  $(if $(PKG_SKIP_DOWNLOAD),,$(if $(or $(strip $(PKG_SOURCE_URL)),$(strip $(PKG_UPSTREAM_URL))),$(call Download,default,$(if $(strip $(PKG_SOURCE_URL)),,skip-source))))
   $(if $(DUMP),,$(Build/CoreTargets))
 
   define Build/DefaultTargets

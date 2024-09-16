@@ -1,0 +1,69 @@
+Index: Python-3.11.7/Modules/_ssl.c
+===================================================================
+--- Python-3.11.7.orig/Modules/_ssl.c
++++ Python-3.11.7/Modules/_ssl.c
+@@ -4182,32 +4182,47 @@ _ssl__SSLContext_load_dh_params(PySSLCon
+ /*[clinic end generated code: output=1c8e57a38e055af0 input=c8871f3c796ae1d6]*/
+ {
+     FILE *f;
+-    DH *dh;
++    EVP_PKEY *dhpkey = NULL;
++    EVP_PKEY_CTX *pctx = NULL;
+ 
++    /* load the DH parameters from file, avoiding deprecated methods */
+     f = _Py_fopen_obj(filepath, "rb");
+     if (f == NULL)
+         return NULL;
+ 
+-    errno = 0;
+-    PySSL_BEGIN_ALLOW_THREADS
+-    dh = PEM_read_DHparams(f, NULL, NULL, NULL);
++    /* use an EVP_PKEY context for parameter generation or assignment */
++    pctx = EVP_PKEY_CTX_new_id(EVP_PKEY_DH, NULL);
++    if (pctx == NULL) {
++        fclose(f);
++        return _setSSLError(get_state_ctx(self), NULL, 0, __FILE__, __LINE__);
++    }
++
++    /* assign the parameters to the context (this is where you could load a key from a file) */
++    if (EVP_PKEY_paramgen_init(pctx) <= 0) {
++        EVP_PKEY_CTX_free(pctx);
++        fclose(f);
++        return _setSSLError(get_state_ctx(self), NULL, 0, __FILE__, __LINE__);
++    }
++
++    /* load the parameters from the file */
++    dhpkey = PEM_read_PrivateKey(f, NULL, NULL, NULL);
+     fclose(f);
+-    PySSL_END_ALLOW_THREADS
+-    if (dh == NULL) {
+-        if (errno != 0) {
+-            PyErr_SetFromErrnoWithFilenameObject(PyExc_OSError, filepath);
+-            ERR_clear_error();
+-        }
+-        else {
+-            _setSSLError(get_state_ctx(self), NULL, 0, __FILE__, __LINE__);
+-        }
+-        return NULL;
++
++    if (dhpkey == NULL) {
++        EVP_PKEY_CTX_free(pctx);
++        return _setSSLError(get_state_ctx(self), NULL, 0, __FILE__, __LINE__);
+     }
+-    if (!SSL_CTX_set_tmp_dh(self->ctx, dh)) {
+-        DH_free(dh);
++
++    /* set the DH parameters in the SSL context */
++    if (SSL_CTX_set0_tmp_dh_pkey(self->ctx, dhpkey) <= 0) {
++        EVP_PKEY_free(dhpkey);
++        EVP_PKEY_CTX_free(pctx);
+         return _setSSLError(get_state_ctx(self), NULL, 0, __FILE__, __LINE__);
+     }
+-    DH_free(dh);
++
++    /* free the context but not the EVP_PKEY (owned by SSL_CTX now) */
++    EVP_PKEY_CTX_free(pctx);
++
+     Py_RETURN_NONE;
+ }
+ 
